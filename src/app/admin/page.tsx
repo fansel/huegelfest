@@ -4,17 +4,23 @@ import { useState, useEffect } from 'react';
 import { Announcement } from '@/lib/types';
 import AnnouncementForm from '@/components/admin/AnnouncementForm';
 import GroupColorManager from '@/components/admin/GroupColorManager';
-import { loadAnnouncements, saveAnnouncements } from '@/lib/admin';
+import MusicManager from '@/components/admin/MusicManager';
+import { loadAnnouncements, saveAnnouncements, loadMusicUrls, saveMusicUrls } from '@/lib/admin';
 
 export default function AdminPage() {
   const [announcements, setAnnouncements] = useState<Announcement[]>([]);
   const [editingAnnouncement, setEditingAnnouncement] = useState<Announcement | undefined>(undefined);
-  const [activeTab, setActiveTab] = useState<'announcements' | 'groups'>('announcements');
+  const [activeTab, setActiveTab] = useState<'announcements' | 'groups' | 'music'>('announcements');
+  const [musicUrls, setMusicUrls] = useState<string[]>([]);
 
   useEffect(() => {
     const loadData = async () => {
-      const loadedAnnouncements = await loadAnnouncements();
+      const [loadedAnnouncements, loadedMusicUrls] = await Promise.all([
+        loadAnnouncements(),
+        loadMusicUrls()
+      ]);
       setAnnouncements(loadedAnnouncements);
+      setMusicUrls(loadedMusicUrls);
     };
     loadData();
   }, []);
@@ -47,6 +53,11 @@ export default function AdminPage() {
     await saveAnnouncements(updatedAnnouncements);
   };
 
+  const handleSaveMusicUrls = async (urls: string[]) => {
+    setMusicUrls(urls);
+    await saveMusicUrls(urls);
+  };
+
   return (
     <div className="min-h-screen bg-gray-50">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
@@ -54,7 +65,7 @@ export default function AdminPage() {
           {/* Header */}
           <div className="bg-[#460b6c] p-6">
             <h1 className="text-2xl font-bold text-white">Admin Dashboard</h1>
-            <p className="text-purple-200 mt-1">Verwalten Sie Ankündigungen und Gruppen</p>
+            <p className="text-purple-200 mt-1">Verwalten Sie Ankündigungen, Gruppen und Musik</p>
           </div>
 
           {/* Tabs */}
@@ -79,6 +90,16 @@ export default function AdminPage() {
                 }`}
               >
                 Gruppen
+              </button>
+              <button
+                onClick={() => setActiveTab('music')}
+                className={`py-4 px-6 text-sm font-medium ${
+                  activeTab === 'music'
+                    ? 'border-b-2 border-[#460b6c] text-[#460b6c]'
+                    : 'text-gray-500 hover:text-gray-700 hover:border-gray-300'
+                }`}
+              >
+                Musik
               </button>
             </nav>
           </div>
@@ -142,8 +163,10 @@ export default function AdminPage() {
                   )}
                 </div>
               </div>
-            ) : (
+            ) : activeTab === 'groups' ? (
               <GroupColorManager />
+            ) : (
+              <MusicManager musicUrls={musicUrls} onSave={handleSaveMusicUrls} />
             )}
           </div>
         </div>

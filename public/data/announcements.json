@@ -53,9 +53,9 @@
     },
     {
       "id": 3,
-      "content": "Es gibt Essen! (Alles verschüttet bestellt Pizza)",
-      "date": "2025-04-25",
-      "time": "19:33",
+      "content": "Es gibt Essen! (Alles verschüttet, bestellt Pizza)",
+      "date": "2025-04-26",
+      "time": "12:46",
       "author": "Admin",
       "group": "Küche",
       "important": true,
@@ -77,6 +77,16 @@
           }
         }
       }
+    },
+    {
+      "id": 4,
+      "content": "test",
+      "date": "2025-04-26",
+      "time": "13:04",
+      "author": "Admin",
+      "group": "Küche",
+      "important": false,
+      "reactions": {}
     }
   ]
 }

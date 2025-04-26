@@ -1,7 +1,14 @@
 import { Announcement, GroupColors } from './types';
+import fs from 'fs';
+import path from 'path';
 
 const ADMIN_USERNAME = 'admin';
 const ADMIN_PASSWORD = 'huegelfest';
+
+const DATA_DIR = path.join(process.cwd(), 'data');
+const ANNOUNCEMENTS_FILE = path.join(DATA_DIR, 'announcements.json');
+const GROUP_COLORS_FILE = path.join(DATA_DIR, 'group-colors.json');
+const MUSIC_FILE = path.join(DATA_DIR, 'music.json');
 
 // Funktion zum Generieren einer zufälligen Farbe
 const generateRandomColor = (): string => {
@@ -143,4 +150,36 @@ export const addNewGroup = async (groupName: string): Promise<GroupColors> => {
   const newColors = { ...currentColors, [groupName]: generateRandomColor() };
   await saveGroupColors(newColors);
   return newColors;
-}; 
+};
+
+export async function loadMusicUrls(): Promise<string[]> {
+  try {
+    const response = await fetch('/api/music');
+    if (!response.ok) {
+      throw new Error('Fehler beim Laden der Musik-URLs');
+    }
+    return await response.json();
+  } catch (error) {
+    console.error('Fehler beim Laden der Musik-URLs:', error);
+    return [];
+  }
+}
+
+export async function saveMusicUrls(urls: string[]): Promise<void> {
+  try {
+    const response = await fetch('/api/music', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify(urls),
+    });
+
+    if (!response.ok) {
+      throw new Error('Fehler beim Speichern der Musik-URLs');
+    }
+  } catch (error) {
+    console.error('Fehler beim Speichern der Musik-URLs:', error);
+    throw error;
+  }
+} 
