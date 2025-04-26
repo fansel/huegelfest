@@ -1,14 +1,7 @@
 import { Announcement, GroupColors } from './types';
-import fs from 'fs';
-import path from 'path';
 
 const ADMIN_USERNAME = 'admin';
 const ADMIN_PASSWORD = 'huegelfest';
-
-const DATA_DIR = path.join(process.cwd(), 'data');
-const ANNOUNCEMENTS_FILE = path.join(DATA_DIR, 'announcements.json');
-const GROUP_COLORS_FILE = path.join(DATA_DIR, 'group-colors.json');
-const MUSIC_FILE = path.join(DATA_DIR, 'music.json');
 
 // Funktion zum Generieren einer zufälligen Farbe
 const generateRandomColor = (): string => {

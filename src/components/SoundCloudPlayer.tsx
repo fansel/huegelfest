@@ -2,7 +2,18 @@
 
 import { useState, useEffect, useRef } from 'react';
 import Image from 'next/image';
-import { FaPlay, FaPause, FaVolumeHigh, FaVolumeXmark, FaMinus, FaPlus } from 'react-icons/fa6';
+import { FaPlay, FaPause, FaVolumeHigh, FaVolumeXmark, FaMinus } from 'react-icons/fa6';
+
+interface SoundCloudTrack {
+  id: number;
+  title: string;
+  artwork_url: string;
+  permalink_url: string;
+  duration: number;
+  user: {
+    username: string;
+  };
+}
 
 interface SoundCloudWidget {
   play: () => void;
@@ -14,7 +25,7 @@ interface SoundCloudWidget {
   unbind: (event: string) => void;
   getVolume: () => number;
   isPaused: () => boolean;
-  getCurrentSound: (callback: (sound: any) => void) => void;
+  getCurrentSound: (callback: (sound: SoundCloudTrack) => void) => void;
 }
 
 interface SoundCloudAPI {
@@ -81,27 +92,26 @@ export default function SoundCloudPlayer() {
       iframe.style.display = 'none';
       document.body.appendChild(iframe);
 
-      const widget = (window as any).SC.Widget(iframe);
+      const widget = window.SC.Widget(iframe);
       widgetRef.current = widget;
 
-      widget.bind((window as any).SC.Widget.Events.READY, () => {
-        widget.getVolume((vol: number) => {
-          setVolume(vol);
-        });
+      widget.bind(window.SC.Widget.Events.READY, () => {
+        const currentVolume = widget.getVolume();
+        setVolume(currentVolume);
         updateCoverArt(widget);
         widget.play();
       });
 
-      widget.bind((window as any).SC.Widget.Events.PLAY, () => {
+      widget.bind(window.SC.Widget.Events.PLAY, () => {
         setIsPlaying(true);
         updateCoverArt(widget);
       });
 
-      widget.bind((window as any).SC.Widget.Events.PAUSE, () => {
+      widget.bind(window.SC.Widget.Events.PAUSE, () => {
         setIsPlaying(false);
       });
 
-      widget.bind((window as any).SC.Widget.Events.FINISH, () => {
+      widget.bind(window.SC.Widget.Events.FINISH, () => {
         setIsPlaying(false);
         updateCoverArt(widget);
       });
@@ -121,7 +131,7 @@ export default function SoundCloudPlayer() {
 
   const updateCoverArt = async (widget: SoundCloudWidget) => {
     try {
-      const sound = await new Promise<any>((resolve) => {
+      const sound = await new Promise<SoundCloudTrack>((resolve) => {
         widget.getCurrentSound(resolve);
       });
       
