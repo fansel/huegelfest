@@ -5,6 +5,7 @@ import Image from "next/image";
 import { Announcement as AnnouncementType, GroupColors, REACTION_EMOJIS, ReactionType } from "@/lib/types";
 import { loadAnnouncements, loadGroupColors, saveAnnouncements } from "@/lib/admin";
 import SoundCloudPlayer from '@/components/SoundCloudPlayer';
+import Countdown from '@/components/Countdown';
 
 export default function Home() {
   const [mounted, setMounted] = useState(false);
@@ -147,6 +148,7 @@ export default function Home() {
           <h2 className="text-xs sm:text-xl sm:text-2xl tracking-widest animate-fade-in delay-200">
             31.07.2025 - 03.08.2025
           </h2>
+          <Countdown />
         </div>
 
         {/* Main Content Sections - Mobile optimiert */}

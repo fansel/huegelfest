@@ -52,10 +52,19 @@ body {
 
   @keyframes twinkle {
     0%, 100% {
-      opacity: 0.8;
+      opacity: 1;
     }
     50% {
-      opacity: 0.2;
+      opacity: 0.5;
     }
   }
+}
+
+/* Custom Font Classes */
+.font-display {
+  font-family: var(--font-display), monospace;
+}
+
+.font-mono {
+  font-family: var(--font-mono), monospace;
 }

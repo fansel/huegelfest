@@ -1,62 +1,80 @@
 import { NextResponse } from 'next/server';
-import fs from 'fs';
+import { readFile, writeFile, mkdir } from 'fs/promises';
 import path from 'path';
 
-const DATA_DIR = path.join(process.cwd(), 'public', 'data');
+const DATA_DIR = path.join(process.cwd(), 'data');
 const MUSIC_FILE = path.join(DATA_DIR, 'music.json');
-
-// Erlaubte Domains
-const ALLOWED_DOMAINS = [
-  'huegelfest.fansel.dev',
-  'xn--hgelfest-65a.fansel.dev'
-];
 
 function isValidUrl(url: string): boolean {
   try {
-    const urlObj = new URL(url);
-    return ALLOWED_DOMAINS.includes(urlObj.hostname);
+    new URL(url);
+    return true;
   } catch {
     return false;
   }
 }
 
-// Stelle sicher, dass das Verzeichnis existiert
-if (!fs.existsSync(DATA_DIR)) {
-  fs.mkdirSync(DATA_DIR, { recursive: true });
+async function ensureDataDirectory() {
+  try {
+    await mkdir(DATA_DIR, { recursive: true });
+  } catch (error: any) {
+    if (error.code !== 'EEXIST') {
+      throw error;
+    }
+  }
 }
 
-// Stelle sicher, dass die Datei existiert
-if (!fs.existsSync(MUSIC_FILE)) {
-  fs.writeFileSync(MUSIC_FILE, JSON.stringify({ urls: [] }, null, 2));
+async function ensureMusicFile() {
+  try {
+    await readFile(MUSIC_FILE);
+  } catch {
+    await writeFile(MUSIC_FILE, JSON.stringify({ urls: [] }, null, 2));
+  }
 }
 
 export async function GET() {
   try {
-    const data = fs.readFileSync(MUSIC_FILE, 'utf8');
-    return NextResponse.json(JSON.parse(data));
-  } catch {
-    return NextResponse.json({ urls: [] });
+    await ensureDataDirectory();
+    await ensureMusicFile();
+    
+    const data = await readFile(MUSIC_FILE, 'utf8');
+    const parsedData = JSON.parse(data);
+    
+    if (!parsedData.urls || !Array.isArray(parsedData.urls)) {
+      throw new Error('Ungültiges JSON-Format');
+    }
+    
+    return NextResponse.json(parsedData.urls);
+  } catch (error) {
+    console.error('Fehler beim Lesen der Musik-Datei:', error);
+    return NextResponse.json([], { status: 500 });
   }
 }
 
 export async function POST(request: Request) {
   try {
-    const { url } = await request.json();
+    await ensureDataDirectory();
+    await ensureMusicFile();
     
-    if (!url || !isValidUrl(url)) {
-      return NextResponse.json({ error: 'Ungültige URL' }, { status: 400 });
+    const urls = await request.json();
+    
+    if (!Array.isArray(urls)) {
+      return NextResponse.json({ error: 'Ungültiges Format' }, { status: 400 });
     }
 
-    const musicData = JSON.parse(fs.readFileSync(MUSIC_FILE, 'utf-8'));
-    if (!musicData.urls) {
-      musicData.urls = [];
+    // Validiere alle URLs
+    for (const url of urls) {
+      if (!url || !isValidUrl(url)) {
+        return NextResponse.json({ error: 'Ungültige URL gefunden' }, { status: 400 });
+      }
     }
-    musicData.urls.push(url);
-    fs.writeFileSync(MUSIC_FILE, JSON.stringify(musicData, null, 2));
+
+    // Speichere das gesamte Array
+    await writeFile(MUSIC_FILE, JSON.stringify({ urls }, null, 2));
     
-    return NextResponse.json({ success: true });
+    return NextResponse.json(urls);
   } catch (error) {
-    console.error('Fehler beim Speichern der Musik-URL:', error);
+    console.error('Fehler beim Speichern der Musik-Datei:', error);
     return NextResponse.json({ error: 'Interner Serverfehler' }, { status: 500 });
   }
 } 

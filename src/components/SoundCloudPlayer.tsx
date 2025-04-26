@@ -26,6 +26,7 @@ interface SoundCloudWidget {
   getVolume: () => number;
   isPaused: () => boolean;
   getCurrentSound: (callback: (sound: SoundCloudTrack) => void) => void;
+  load: (url: string, options: any) => void;
 }
 
 interface SoundCloudAPI {
@@ -84,8 +85,12 @@ export default function SoundCloudPlayer() {
     document.body.appendChild(script);
 
     script.onload = () => {
+      // Wähle ein zufälliges Lied aus
+      const randomIndex = Math.floor(Math.random() * musicUrls.length);
+      const randomUrl = musicUrls[randomIndex];
+
       const iframe = document.createElement('iframe');
-      iframe.src = `https://w.soundcloud.com/player/?url=${encodeURIComponent(musicUrls[0])}&auto_play=true&hide_related=true&show_comments=false&show_user=false&show_reposts=false&visual=true`;
+      iframe.src = `https://w.soundcloud.com/player/?url=${encodeURIComponent(randomUrl)}&auto_play=true&hide_related=true&show_comments=false&show_user=false&show_reposts=false&visual=true`;
       iframe.style.width = '100%';
       iframe.style.height = '100%';
       iframe.style.border = 'none';
@@ -113,6 +118,17 @@ export default function SoundCloudPlayer() {
 
       widget.bind(window.SC.Widget.Events.FINISH, () => {
         setIsPlaying(false);
+        // Wenn das Lied zu Ende ist, wähle ein neues zufälliges Lied
+        const newRandomIndex = Math.floor(Math.random() * musicUrls.length);
+        const newRandomUrl = musicUrls[newRandomIndex];
+        widget.load(newRandomUrl, {
+          auto_play: true,
+          hide_related: true,
+          show_comments: false,
+          show_user: false,
+          show_reposts: false,
+          visual: true
+        });
         updateCoverArt(widget);
       });
 

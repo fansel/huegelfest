@@ -86,7 +86,51 @@
       "author": "Admin",
       "group": "Küche",
       "important": false,
-      "reactions": {}
+      "reactions": {
+        "heart": {
+          "count": 0,
+          "deviceReactions": {}
+        },
+        "laugh": {
+          "count": 1,
+          "deviceReactions": {
+            "qbjwbjwyw6m9y67v0z": "laugh"
+          }
+        },
+        "surprised": {
+          "count": 0,
+          "deviceReactions": {}
+        },
+        "clap": {
+          "count": 0,
+          "deviceReactions": {}
+        }
+      }
+    },
+    {
+      "id": 5,
+      "content": "gfd",
+      "date": "2025-04-26",
+      "time": "15:21",
+      "author": "Admin",
+      "group": "Tester44",
+      "important": false,
+      "reactions": {
+        "thumbsUp": {
+          "count": 0,
+          "deviceReactions": {}
+        },
+        "heart": {
+          "count": 1,
+          "deviceReactions": {
+            "qbjwbjwyw6m9y67v0z": "heart"
+          }
+        },
+        "clap": {
+          "count": 0,
+          "deviceReactions": {}
+        }
+      }
     }
   ]
 }
