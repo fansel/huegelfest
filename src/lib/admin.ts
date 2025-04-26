@@ -1,4 +1,4 @@
-import { Announcement, GroupColors } from './types';
+import { Announcement, GroupColors, TimelineData } from './types';
 
 const ADMIN_USERNAME = 'admin';
 const ADMIN_PASSWORD = 'huegelfest';

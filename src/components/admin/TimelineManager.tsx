@@ -1,14 +1,22 @@
 'use client';
 
 import React, { useEffect, useState } from 'react';
-import { TimelineData, Day, Event } from '@/lib/types';
+import { TimelineData } from '@/lib/types';
 import { loadTimeline, saveTimeline } from '@/lib/admin';
 import { FaPen, FaTrash, FaPlus, FaArrowLeft, FaCheck, FaTimes } from 'react-icons/fa';
+
+interface TimelineEvent {
+  id: string;
+  day: number;
+  time: string;
+  title: string;
+  description: string;
+}
 
 export default function TimelineManager() {
   const [timeline, setTimeline] = useState<TimelineData>({ days: [] });
   const [currentDay, setCurrentDay] = useState<number>(0);
-  const [newEvent, setNewEvent] = useState<Partial<Event>>({
+  const [newEvent, setNewEvent] = useState<Omit<TimelineEvent, 'id' | 'day'>>({
     time: '',
     title: '',
     description: ''
@@ -24,7 +32,7 @@ export default function TimelineManager() {
 
     const updatedDays = [...timeline.days];
     const currentDayData = { ...updatedDays[currentDay] };
-    currentDayData.events = [...currentDayData.events, newEvent as Event];
+    currentDayData.events = [...currentDayData.events, newEvent as TimelineEvent];
     updatedDays[currentDay] = currentDayData;
 
     const updatedTimeline = { ...timeline, days: updatedDays };
@@ -57,7 +65,7 @@ export default function TimelineManager() {
     const updatedDays = [...timeline.days];
     const dayData = { ...updatedDays[editingEvent.dayIndex] };
     dayData.events = dayData.events.map((event, index) => 
-      index === editingEvent.eventIndex ? newEvent as Event : event
+      index === editingEvent.eventIndex ? newEvent as TimelineEvent : event
     );
     updatedDays[editingEvent.dayIndex] = dayData;
 

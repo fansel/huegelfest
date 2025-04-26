@@ -3,7 +3,6 @@
 import { useState, useEffect, useRef } from 'react';
 import Image from 'next/image';
 import { FaPlay, FaPause } from 'react-icons/fa6';
-import styles from './SoundCloudPlayer.module.css';
 
 interface SoundCloudTrack {
   id: number;
@@ -68,7 +67,7 @@ declare global {
 }
 
 export default function SoundCloudPlayer() {
-  const [isPlaying, setIsPlaying] = useState(false);
+  const [isPlaying, setIsPlaying] = useState(true);
   const [coverUrl, setCoverUrl] = useState<string | null>(null);
   const [musicUrls, setMusicUrls] = useState<string[]>([]);
   const [trackInfo, setTrackInfo] = useState<{ title: string; artist: string } | null>(null);
@@ -76,26 +75,6 @@ export default function SoundCloudPlayer() {
   const widgetRef = useRef<SoundCloudWidget | null>(null);
   const iframeRef = useRef<HTMLIFrameElement | null>(null);
   const currentTrackRef = useRef<string | null>(null);
-
-  useEffect(() => {
-    // Lade den Player-Status aus dem localStorage
-    const savedState = localStorage.getItem('soundcloudPlayerState');
-    const savedTrack = localStorage.getItem('currentTrack');
-    if (savedState) {
-      setIsPlaying(JSON.parse(savedState));
-    }
-    if (savedTrack) {
-      currentTrackRef.current = savedTrack;
-    }
-  }, []);
-
-  useEffect(() => {
-    // Speichere den Player-Status im localStorage
-    localStorage.setItem('soundcloudPlayerState', JSON.stringify(isPlaying));
-    if (currentTrackRef.current) {
-      localStorage.setItem('currentTrack', currentTrackRef.current);
-    }
-  }, [isPlaying]);
 
   useEffect(() => {
     const handleScroll = () => {
@@ -108,13 +87,12 @@ export default function SoundCloudPlayer() {
     };
 
     window.addEventListener('scroll', handleScroll);
-    handleScroll(); // Initial check
+    handleScroll();
 
     return () => window.removeEventListener('scroll', handleScroll);
   }, []);
 
   useEffect(() => {
-    // Lade die Musik-URLs
     const loadMusicUrls = async () => {
       try {
         const response = await fetch('/api/music');
@@ -146,7 +124,7 @@ export default function SoundCloudPlayer() {
       currentTrackRef.current = trackUrl;
 
       iframe = document.createElement('iframe');
-      iframe.src = `https://w.soundcloud.com/player/?url=${encodeURIComponent(trackUrl)}&auto_play=${isPlaying}&hide_related=true&show_comments=false&show_user=false&show_reposts=false&visual=true`;
+      iframe.src = `https://w.soundcloud.com/player/?url=${encodeURIComponent(trackUrl)}&auto_play=true&hide_related=true&show_comments=false&show_user=false&show_reposts=false&visual=true`;
       iframe.style.width = '100%';
       iframe.style.height = '100%';
       iframe.style.border = 'none';
@@ -159,14 +137,11 @@ export default function SoundCloudPlayer() {
 
       widget.bind(window.SC.Widget.Events.READY, () => {
         updateCoverArt(widget);
-        if (isPlaying) {
-          widget.play();
-        }
+        widget.play();
       });
 
       widget.bind(window.SC.Widget.Events.PLAY, () => {
         setIsPlaying(true);
-        updateCoverArt(widget);
       });
 
       widget.bind(window.SC.Widget.Events.PAUSE, () => {
@@ -174,8 +149,6 @@ export default function SoundCloudPlayer() {
       });
 
       widget.bind(window.SC.Widget.Events.FINISH, () => {
-        setIsPlaying(false);
-        // Wenn das Lied zu Ende ist, wähle ein neues zufälliges Lied
         const newRandomIndex = Math.floor(Math.random() * musicUrls.length);
         const newRandomUrl = musicUrls[newRandomIndex];
         widget.load(newRandomUrl, {
@@ -186,7 +159,6 @@ export default function SoundCloudPlayer() {
           show_reposts: false,
           visual: true
         });
-        updateCoverArt(widget);
       });
     };
 
@@ -198,7 +170,7 @@ export default function SoundCloudPlayer() {
         script.parentNode.removeChild(script);
       }
     };
-  }, [musicUrls, isPlaying]);
+  }, [musicUrls]);
 
   const updateCoverArt = async (widget: SoundCloudWidget) => {
     try {

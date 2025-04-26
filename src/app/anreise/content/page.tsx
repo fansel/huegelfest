@@ -1,9 +1,8 @@
 'use client';
 
-import { useState, useEffect } from 'react';
-import Link from 'next/link';
+import { useState } from 'react';
 import styles from './content.module.css';
-import { FaTrain, FaCar, FaUser, FaMapMarkerAlt, FaCalendarAlt, FaUsers, FaArrowRight, FaPhone, FaWhatsapp } from 'react-icons/fa';
+import { FaTrain, FaCar, FaMapMarkerAlt, FaPhone, FaWhatsapp } from 'react-icons/fa';
 import carpoolData from '@/data/carpool.json';
 import Starfield from '@/components/Starfield';
 
@@ -193,14 +192,14 @@ export default function AnreiseContent() {
         <div className={`${styles.detailsSection} ${activeOption === 'car' ? styles.active : ''}`}>
           <h2 className={styles.detailsTitle}>Mit dem Auto an den Hügel</h2>
           <div className={styles.detailsContent}>
-            <p>Adresse für's Navi:</p>
+            <p>Adresse für&apos;s Navi:</p>
             <div className={styles.highlightText}>
               <FaMapMarkerAlt /> Hügelweg 123, 12345 Truchtlachingen
             </div>
             
             <p>Oder einfach auf Google Maps suchen: <span className={styles.highlightText}>Hügelfest 2025</span>.</p>
             
-            <p>Parkplätze gibt's direkt am Gelände – einfach den Schildern folgen.</p>
+            <p>Parkplätze gibt&apos;s direkt am Gelände – einfach den Schildern folgen.</p>
           </div>
 
           {/* Ride Share Section */}
@@ -394,6 +393,11 @@ export default function AnreiseContent() {
             )}
           </div>
         </div>
+
+        <p className="text-sm text-gray-300">
+          Bitte beachte, dass wir keine Garantie für die Verfügbarkeit der Mitfahrgelegenheiten übernehmen können.
+          Wir empfehlen, die Kontaktdaten der Fahrer*innen zu nutzen, um Details direkt zu klären.
+        </p>
       </div>
     </div>
   );
