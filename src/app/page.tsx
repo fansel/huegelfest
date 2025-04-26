@@ -1,16 +1,14 @@
 'use client';
 
-import Image from "next/image";
 import React, { useEffect, useState } from "react";
+import Image from "next/image";
 import { Announcement as AnnouncementType, GroupColors, REACTION_EMOJIS, ReactionType } from "@/lib/types";
 import { loadAnnouncements, loadGroupColors, saveAnnouncements } from "@/lib/admin";
-import InfoBoard from '@/components/InfoBoard';
 
 export default function Home() {
   const [mounted, setMounted] = useState(false);
   const [announcements, setAnnouncements] = useState<AnnouncementType[]>([]);
   const [groupColors, setGroupColors] = useState<GroupColors>({ default: '#460b6c' });
-  const [error, setError] = useState('');
   const [deviceId, setDeviceId] = useState<string>('');
 
   // Lade Ankündigungen und Gruppenfarben beim Mounten
@@ -72,7 +70,7 @@ export default function Home() {
         
         // Prüfe, ob das Gerät bereits reagiert hat
         const previousReaction = Object.entries(currentReactions).find(
-          ([_, data]) => data.deviceReactions?.[deviceId]
+          ([, data]) => data.deviceReactions?.[deviceId]
         );
 
         // Wenn das Gerät bereits reagiert hat, entferne die alte Reaktion
@@ -272,13 +270,13 @@ export default function Home() {
 
 function Starfield() {
   // Zufällige Sternenpositionen
-  const stars = Array.from({ length: 180 }, (_, i) => {
+  const stars = Array.from({ length: 180 }, (_, index: number) => {
     return {
-    id: i,
-    top: `${Math.random() * 100}%`,
-    left: `${Math.random() * 100}%`,
+      id: index,
+      top: `${Math.random() * 100}%`,
+      left: `${Math.random() * 100}%`,
       size: `${(Math.random() * 0.8 + 0.6) * 1.4}px`,
-    delay: `${Math.random() * 6}s`,
+      delay: `${Math.random() * 6}s`,
     };
   });
 

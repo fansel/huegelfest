@@ -27,9 +27,6 @@ export default function AdminPage() {
       const editingId = typeof editingAnnouncement.id === 'string' 
         ? parseInt(editingAnnouncement.id, 10) 
         : editingAnnouncement.id;
-      const announcementId = typeof announcement.id === 'string'
-        ? parseInt(announcement.id, 10)
-        : announcement.id;
 
       updatedAnnouncements = announcements.map(a => {
         const aId = typeof a.id === 'string' ? parseInt(a.id, 10) : a.id;

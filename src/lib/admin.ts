@@ -1,4 +1,4 @@
-import { Announcement, GroupColors, GroupColorSetting } from './types';
+import { Announcement, GroupColors } from './types';
 
 const ADMIN_USERNAME = 'admin';
 const ADMIN_PASSWORD = 'huegelfest';
@@ -12,9 +12,6 @@ const generateRandomColor = (): string => {
   }
   return color;
 };
-
-// Standardfarben
-const DEFAULT_COLORS: GroupColors = {};
 
 export const validateCredentials = (username: string, password: string): boolean => {
   return username === ADMIN_USERNAME && password === ADMIN_PASSWORD;
@@ -98,58 +95,52 @@ export async function saveGroupColors(groups: GroupColors): Promise<void> {
     }
   } catch (error) {
     console.error('Fehler beim Speichern der Gruppen:', error);
+    throw error;
   }
 }
 
-export const updateGroupColor = (group: string, color: string): GroupColors => {
-  const currentColors = loadGroupColors();
+export const updateGroupColor = async (group: string, color: string): Promise<GroupColors> => {
+  const currentColors = await loadGroupColors();
   const newColors = { ...currentColors, [group]: color };
-  saveGroupColors(newColors);
+  await saveGroupColors(newColors);
   return newColors;
 };
 
-export const renameGroup = (oldName: string, newName: string): void => {
-  // Aktualisiere die Farben
-  const colors = loadGroupColors();
-  if (colors[oldName]) {
-    const newColors = { ...colors };
-    newColors[newName] = newColors[oldName];
-    delete newColors[oldName];
-    saveGroupColors(newColors);
-  }
-
-  // Aktualisiere die Ankündigungen
-  const announcements = loadAnnouncements();
+export const renameGroup = async (oldName: string, newName: string): Promise<void> => {
+  const announcements = await loadAnnouncements();
   const updatedAnnouncements = announcements.map(announcement => {
     if (announcement.group === oldName) {
       return { ...announcement, group: newName };
     }
     return announcement;
   });
-  saveAnnouncements(updatedAnnouncements);
+  await saveAnnouncements(updatedAnnouncements);
+
+  const currentColors = await loadGroupColors();
+  if (currentColors[oldName]) {
+    const newColors = { ...currentColors };
+    newColors[newName] = newColors[oldName];
+    delete newColors[oldName];
+    await saveGroupColors(newColors);
+  }
 };
 
 export const deleteGroup = async (groupName: string): Promise<void> => {
-  // Entferne die Farbe
-  const colors = loadGroupColors();
-  const newColors = { ...colors };
-  delete newColors[groupName];
-  saveGroupColors(newColors);
-
-  // Aktualisiere die Ankündigungen
   const announcements = await loadAnnouncements();
-  const updatedAnnouncements = announcements.map(announcement => {
-    if (announcement.group === groupName) {
-      return { ...announcement, group: 'default' };
-    }
-    return announcement;
-  });
-  saveAnnouncements(updatedAnnouncements);
+  const updatedAnnouncements = announcements.filter(announcement => announcement.group !== groupName);
+  await saveAnnouncements(updatedAnnouncements);
+
+  const currentColors = await loadGroupColors();
+  if (currentColors[groupName]) {
+    const newColors = { ...currentColors };
+    delete newColors[groupName];
+    await saveGroupColors(newColors);
+  }
 };
 
-export const addNewGroup = (groupName: string): GroupColors => {
-  const colors = loadGroupColors();
-  const newColors = { ...colors, [groupName]: generateRandomColor() };
-  saveGroupColors(newColors);
+export const addNewGroup = async (groupName: string): Promise<GroupColors> => {
+  const currentColors = await loadGroupColors();
+  const newColors = { ...currentColors, [groupName]: generateRandomColor() };
+  await saveGroupColors(newColors);
   return newColors;
 }; 

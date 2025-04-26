@@ -20,6 +20,11 @@ export interface GroupColors {
   [key: string]: string;
 }
 
+export interface GroupColorSetting {
+  group: string;
+  color: string;
+}
+
 export const REACTION_EMOJIS = {
   thumbsUp: '👍',
   heart: '❤️',

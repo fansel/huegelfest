@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import { GroupColors } from '@/lib/types';
-import { loadGroupColors, saveGroupColors, updateGroupColor, renameGroup, deleteGroup } from '@/lib/admin';
+import { loadGroupColors, saveGroupColors } from '@/lib/admin';
 
 export default function GroupColorManager() {
   const [groups, setGroups] = useState<GroupColors>({ default: '#460b6c' });
