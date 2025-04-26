@@ -1,0 +1,82 @@
+{
+  "announcements": [
+    {
+      "id": 1,
+      "content": "Jolo",
+      "date": "2025-04-25",
+      "time": "18:31",
+      "author": "Admin",
+      "group": "felix",
+      "important": false,
+      "reactions": {
+        "heart": {
+          "count": 0,
+          "deviceReactions": {
+            "zk70mkhwi8m9x0qi2s": "heart"
+          }
+        },
+        "thumbsUp": {
+          "count": 0,
+          "deviceReactions": {}
+        },
+        "laugh": {
+          "count": 0,
+          "deviceReactions": {}
+        },
+        "surprised": {
+          "count": 0,
+          "deviceReactions": {}
+        },
+        "clap": {
+          "count": 1,
+          "deviceReactions": {
+            "kw5ga27t768m9x0ryq1": "clap"
+          }
+        }
+      }
+    },
+    {
+      "id": 2,
+      "content": "Jolo2",
+      "date": "2025-04-25",
+      "time": "18:31",
+      "author": "Admin",
+      "group": "felix",
+      "important": true,
+      "reactions": {
+        "thumbsUp": 9,
+        "heart": 3,
+        "laugh": 4,
+        "surprised": 2,
+        "clap": 1
+      }
+    },
+    {
+      "id": 3,
+      "content": "Es gibt Essen! (Alles verschüttet bestellt Pizza)",
+      "date": "2025-04-25",
+      "time": "19:33",
+      "author": "Admin",
+      "group": "Küche",
+      "important": true,
+      "reactions": {
+        "surprised": {
+          "count": 1,
+          "deviceReactions": {
+            "9912qab04xnm9x1n4vt": "surprised"
+          }
+        },
+        "laugh": {
+          "count": 0,
+          "deviceReactions": {}
+        },
+        "heart": {
+          "count": 1,
+          "deviceReactions": {
+            "zk70mkhwi8m9x0qi2s": "heart"
+          }
+        }
+      }
+    }
+  ]
+}
