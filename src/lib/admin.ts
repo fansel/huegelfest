@@ -175,4 +175,36 @@ export async function saveMusicUrls(urls: string[]): Promise<void> {
     console.error('Fehler beim Speichern der Musik-URLs:', error);
     throw error;
   }
-} 
+}
+
+export const loadTimeline = async (): Promise<TimelineData> => {
+  try {
+    const response = await fetch('/api/timeline');
+    if (!response.ok) {
+      throw new Error('Fehler beim Laden der Timeline');
+    }
+    return await response.json();
+  } catch (error) {
+    console.error('Fehler beim Laden der Timeline:', error);
+    return { days: [] };
+  }
+};
+
+export const saveTimeline = async (timeline: TimelineData): Promise<void> => {
+  try {
+    const response = await fetch('/api/timeline', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify(timeline),
+    });
+
+    if (!response.ok) {
+      throw new Error('Fehler beim Speichern der Timeline');
+    }
+  } catch (error) {
+    console.error('Fehler beim Speichern der Timeline:', error);
+    throw error;
+  }
+}; 

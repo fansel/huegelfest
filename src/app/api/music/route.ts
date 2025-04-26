@@ -2,7 +2,7 @@ import { NextResponse } from 'next/server';
 import { readFile, writeFile, mkdir } from 'fs/promises';
 import path from 'path';
 
-const DATA_DIR = path.join(process.cwd(), 'data');
+const DATA_DIR = path.join(process.cwd(), 'src/data');
 const MUSIC_FILE = path.join(DATA_DIR, 'music.json');
 
 function isValidUrl(url: string): boolean {

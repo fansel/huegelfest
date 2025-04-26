@@ -1,0 +1,103 @@
+{
+  "days": [
+    {
+      "title": "Donnerstag – Hallo-Tag",
+      "description": "Ankommen, entspanntes Starten",
+      "events": [
+        {
+          "time": "14:00",
+          "title": "Anreise & Check-in",
+          "description": "Ankunft und Einchecken in die Unterkünfte"
+        },
+        {
+          "time": "16:00",
+          "title": "Willkommensrunde",
+          "description": "Kennenlernen und Organisatorisches"
+        },
+        {
+          "time": "18:15",
+          "title": "Gemeinsames Abendessen",
+          "description": "Erstes gemeinsames Mahl"
+        },
+        {
+          "time": "20:00",
+          "title": "Lagerfeuer & Musik",
+          "description": "Gemütlicher Ausklang des ersten Tages"
+        }
+      ]
+    },
+    {
+      "title": "Freitag – Entdecker*innen-Tag",
+      "description": "Workshops, kreativ sein",
+      "events": [
+        {
+          "time": "10:00",
+          "title": "Workshop-Runde 1",
+          "description": "Verschiedene kreative Workshops zur Auswahl"
+        },
+        {
+          "time": "12:00",
+          "title": "Mittagspause",
+          "description": "Gemeinsames Mittagessen"
+        },
+        {
+          "time": "14:00",
+          "title": "Workshop-Runde 2",
+          "description": "Weitere Workshop-Optionen"
+        },
+        {
+          "time": "16:00",
+          "title": "Kreativ-Session",
+          "description": "Freies kreatives Arbeiten"
+        }
+      ]
+    },
+    {
+      "title": "Samstag – Spaß-Tag",
+      "description": "Baden, Feiern, DJs",
+      "events": [
+        {
+          "time": "10:00",
+          "title": "Badeausflug",
+          "description": "Gemeinsamer Ausflug zum Baden"
+        },
+        {
+          "time": "14:00",
+          "title": "Nachmittagsprogramm",
+          "description": "Verschiedene Aktivitäten zur Auswahl"
+        },
+        {
+          "time": "20:00",
+          "title": "DJ-Party",
+          "description": "Abendliche Feier mit DJs"
+        }
+      ]
+    },
+    {
+      "title": "Sonntag – Bleib-doch-Tag",
+      "description": "Chillen, Basteln, Katern",
+      "events": [
+        {
+          "time": "10:00",
+          "title": "Bastelworkshop",
+          "description": "Kreatives Basteln für alle"
+        },
+        {
+          "time": "14:00",
+          "title": "Chill-Out-Zone",
+          "description": "Entspannung und Spiele"
+        },
+        {
+          "time": "16:00",
+          "title": "Kater-Café",
+          "description": "Erholung und Snacks"
+        }
+      ]
+    },
+    {
+      "title": "Montag – Tschüss-Tag",
+      "description": "Abreisen, letzte Umarmungen",
+      "events": []
+    }
+  ]
+}

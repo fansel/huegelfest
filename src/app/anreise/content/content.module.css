@@ -1,0 +1,711 @@
+.container {
+  max-width: 1200px;
+  margin: 0 auto;
+  padding: 2rem;
+  position: relative;
+  z-index: 1;
+  background: rgba(70, 11, 108, 0.7);
+}
+
+.backButton {
+  position: fixed;
+  top: 1rem;
+  left: 1rem;
+  color: #ff9900;
+  text-decoration: none;
+  font-size: 1.2rem;
+  z-index: 3;
+}
+
+.backButton:hover {
+  text-decoration: underline;
+}
+
+.mainTitle {
+  font-size: 2.5rem;
+  text-align: center;
+  margin-bottom: 1rem;
+  color: #ff9900;
+}
+
+.subtitle {
+  font-size: 1.2rem;
+  text-align: center;
+  margin-bottom: 2rem;
+  color: #ffcc66;
+}
+
+.travelOptions {
+  display: flex;
+  justify-content: center;
+  gap: 2rem;
+  margin-bottom: 2rem;
+}
+
+.travelOption {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  padding: 1.5rem;
+  background: rgba(255, 153, 0, 0.1);
+  border: 2px solid #ff9900;
+  border-radius: 8px;
+  cursor: pointer;
+  transition: all 0.3s ease;
+  width: 200px;
+}
+
+.travelOption:hover {
+  background: rgba(255, 153, 0, 0.2);
+  transform: translateY(-2px);
+}
+
+.travelOptionIcon {
+  font-size: 2rem;
+  margin-bottom: 1rem;
+  color: #ff9900;
+}
+
+.travelOptionTitle {
+  font-size: 1.2rem;
+  color: #ff9900;
+  margin: 0;
+}
+
+.detailsSection {
+  display: none;
+  margin-top: 2rem;
+  padding: 2rem;
+  background: rgba(70, 11, 108, 0.7);
+  border: 2px solid #ff9900;
+  border-radius: 8px;
+}
+
+.detailsSection.active {
+  display: block;
+}
+
+.detailsTitle {
+  font-size: 1.5rem;
+  color: #ff9900;
+  margin-bottom: 1rem;
+}
+
+.detailsContent {
+  font-size: 1.1rem;
+  line-height: 1.6;
+}
+
+.highlightText {
+  display: inline-block;
+  background: rgba(255, 153, 0, 0.2);
+  padding: 0.2rem 0.5rem;
+  border-radius: 4px;
+  font-weight: bold;
+}
+
+.note {
+  font-style: italic;
+  color: #ffcc66;
+  margin-top: 1rem;
+}
+
+.rideShareSection {
+  margin-top: 2rem;
+}
+
+.rideShareTitle {
+  font-size: 1.5rem;
+  color: #ff9900;
+  margin-bottom: 1rem;
+}
+
+.rideShareSubtitle {
+  font-size: 1.1rem;
+  margin-bottom: 1.5rem;
+  color: #ffcc66;
+}
+
+.rideCards {
+  width: 100%;
+  margin-bottom: 1.5rem;
+}
+
+.rideCards .mobileCard {
+  display: block;
+  background: rgba(70, 11, 108, 0.7);
+  border: 1px solid rgba(255, 153, 0, 0.3);
+  border-radius: 8px;
+  padding: 1rem;
+  margin-bottom: 1rem;
+  width: 100%;
+  box-sizing: border-box;
+}
+
+.rideCards .cardRow {
+  display: flex;
+  justify-content: space-between;
+  padding: 0.5rem 0;
+  border-bottom: 1px solid rgba(255, 153, 0, 0.2);
+}
+
+.rideCards .cardRow:last-child {
+  border-bottom: none;
+}
+
+.rideCards .cardLabel {
+  font-weight: bold;
+  color: #ff9900;
+  min-width: 80px;
+}
+
+.rideCards .cardValue {
+  text-align: right;
+  flex: 1;
+}
+
+.fullText {
+  color: #ff6666;
+  font-weight: bold;
+}
+
+.cardActions {
+  display: flex;
+  gap: 2rem;
+  margin-top: 1rem;
+  padding-top: 1rem;
+  border-top: 1px solid rgba(255, 153, 0, 0.2);
+}
+
+.cardActions button {
+  flex: 0 1 auto;
+  min-width: 150px;
+  padding: 0.75rem 1.5rem;
+}
+
+.actionButton {
+  background: #ff9900;
+  color: #460b6c;
+  border: none;
+  padding: 0.75rem 1.5rem;
+  border-radius: 4px;
+  cursor: pointer;
+  font-weight: bold;
+  transition: all 0.3s ease;
+  min-width: 150px;
+  text-align: center;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  height: 44px;
+  line-height: 1;
+  margin: 0;
+}
+
+.actionButton:hover {
+  background: #ffcc66;
+}
+
+.actionButton:disabled {
+  background: #666;
+  cursor: not-allowed;
+}
+
+.deleteButton {
+  background: #ff6666;
+  color: white;
+  border: none;
+  padding: 0.75rem 1.5rem;
+  border-radius: 4px;
+  cursor: pointer;
+  font-weight: bold;
+  transition: all 0.3s ease;
+  min-width: 150px;
+  text-align: center;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  height: 44px;
+  line-height: 1;
+  margin: 0;
+}
+
+.deleteButton:hover {
+  background: #ff9999;
+}
+
+.rideDetails {
+  margin-top: 1rem;
+  padding: 1rem;
+  background: rgba(255, 153, 0, 0.1);
+  border-radius: 4px;
+}
+
+.contactInfo {
+  margin-bottom: 1rem;
+}
+
+.contactActions {
+  display: flex;
+  gap: 1rem;
+  margin-top: 0.5rem;
+}
+
+.contactButton {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  background: #ff9900;
+  color: #460b6c;
+  padding: 0.5rem 1rem;
+  border-radius: 4px;
+  text-decoration: none;
+  font-weight: bold;
+  transition: all 0.3s ease;
+}
+
+.contactButton:hover {
+  background: #ffcc66;
+}
+
+.passengerForm {
+  display: flex;
+  gap: 1rem;
+  margin-top: 1rem;
+}
+
+.passengerInput {
+  flex: 1;
+  padding: 0.5rem;
+  border: 1px solid #ff9900;
+  border-radius: 4px;
+  background: rgba(255, 255, 255, 0.1);
+  color: #ff9900;
+}
+
+.passengerList {
+  margin-top: 1rem;
+}
+
+.passengerList h4 {
+  margin-bottom: 0.5rem;
+  color: #ff9900;
+}
+
+.passengerItem {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 0.5rem;
+  background: rgba(255, 153, 0, 0.1);
+  border-radius: 4px;
+  margin-bottom: 0.5rem;
+}
+
+.removeButton {
+  background: #ff6666;
+  color: white;
+  border: none;
+  padding: 0.25rem 0.5rem;
+  border-radius: 4px;
+  cursor: pointer;
+  font-size: 0.9rem;
+}
+
+.removeButton:hover {
+  background: #ff9999;
+}
+
+.formSection {
+  margin-top: 2rem;
+  padding: 2rem;
+  background: rgba(70, 11, 108, 0.7);
+  border: 2px solid #ff9900;
+  border-radius: 8px;
+}
+
+.formTitle {
+  font-size: 1.5rem;
+  color: #ff9900;
+  margin-bottom: 1.5rem;
+}
+
+.formGroup {
+  margin-bottom: 1.5rem;
+}
+
+.formGroup label {
+  display: block;
+  margin-bottom: 0.5rem;
+  color: #ff9900;
+}
+
+.formGroup input,
+.formGroup select {
+  width: 100%;
+  padding: 0.75rem;
+  border: 1px solid #ff9900;
+  border-radius: 4px;
+  background: rgba(255, 255, 255, 0.1);
+  color: #ff9900;
+  font-size: 1rem;
+}
+
+.formGroup input:focus,
+.formGroup select:focus {
+  outline: none;
+  border-color: #ffcc66;
+  box-shadow: 0 0 0 2px rgba(255, 204, 102, 0.3);
+}
+
+@media (max-width: 768px) {
+  .container {
+    padding: 1rem;
+    padding-top: 3rem;
+  }
+
+  .desktopRow {
+    display: none;
+  }
+
+  .mainTitle {
+    font-size: 2rem;
+  }
+
+  .subtitle {
+    font-size: 1rem;
+  }
+
+  .travelOptions {
+    flex-direction: column;
+    align-items: center;
+    gap: 1rem;
+  }
+
+  .travelOption {
+    width: 100%;
+    max-width: 300px;
+  }
+
+  .rideCards {
+    display: block !important;
+    width: 100% !important;
+    margin: 0 !important;
+    padding: 0 !important;
+    border: none !important;
+  }
+
+  .rideCards table,
+  .rideCards thead,
+  .rideCards tbody,
+  .rideCards tr,
+  .rideCards th,
+  .rideCards td,
+  .rideCards .desktopRow {
+    display: none !important;
+    visibility: hidden !important;
+    height: 0 !important;
+    width: 0 !important;
+    padding: 0 !important;
+    margin: 0 !important;
+    border: none !important;
+    position: absolute !important;
+    clip: rect(0, 0, 0, 0) !important;
+  }
+
+  .rideCards .mobileCard {
+    display: block !important;
+    background: rgba(70, 11, 108, 0.7) !important;
+    border: 1px solid rgba(255, 153, 0, 0.3) !important;
+    border-radius: 8px !important;
+    padding: 1rem !important;
+    margin-bottom: 1rem !important;
+    width: 100% !important;
+    box-sizing: border-box !important;
+  }
+
+  .rideShareTitle {
+    font-size: 1.2rem !important;
+    margin-bottom: 0.5rem !important;
+    text-align: center !important;
+    padding: 0 !important;
+  }
+
+  .rideShareSubtitle {
+    font-size: 0.9rem !important;
+    margin-bottom: 1rem !important;
+    text-align: center !important;
+    color: #ffcc66 !important;
+    padding: 0 !important;
+  }
+
+  .rideCards .mobileCard .cardRow {
+    padding: 0.25rem 0 !important;
+  }
+
+  .rideCards .mobileCard .cardLabel {
+    font-size: 0.9rem !important;
+  }
+
+  .rideCards .mobileCard .cardValue {
+    text-align: right;
+    flex: 1;
+  }
+
+  .rideCards .mobileCard .routeInfo {
+    display: flex;
+    justify-content: space-between;
+    gap: 1rem;
+    margin: 0.5rem 0;
+  }
+
+  .rideCards .mobileCard .routeInfo .cardRow {
+    flex: 1;
+    border-bottom: none;
+    padding: 0;
+  }
+
+  .rideCards .mobileCard .cardActions {
+    display: flex;
+    gap: 0.5rem;
+    margin-top: 1rem;
+    padding-top: 1rem;
+    border-top: 1px solid rgba(255, 153, 0, 0.2);
+  }
+
+  .rideCards .mobileCard .cardActions button,
+  .rideCards .mobileCard .cardActions .actionButton,
+  .rideCards .mobileCard .cardActions .deleteButton {
+    flex: 1;
+    padding: 0.75rem !important;
+    text-align: center !important;
+    font-weight: bold !important;
+    border-radius: 4px !important;
+    border: none !important;
+    font-size: 1rem !important;
+    min-width: 0 !important;
+    width: 100% !important;
+    height: 44px !important;
+    line-height: 1 !important;
+    display: flex !important;
+    align-items: center !important;
+    justify-content: center !important;
+    cursor: pointer !important;
+    margin: 0 !important;
+  }
+
+  .rideCards .mobileCard .cardActions .actionButton {
+    background: #ff9900 !important;
+    color: #460b6c !important;
+  }
+
+  .rideCards .mobileCard .cardActions .deleteButton {
+    background: #ff6666 !important;
+    color: white !important;
+  }
+
+  .rideCards .mobileCard .rideDetails {
+    margin-top: 1rem;
+    padding: 1rem;
+    background: rgba(255, 153, 0, 0.05);
+    border-radius: 4px;
+  }
+
+  .rideCards .mobileCard .contactInfo {
+    margin-bottom: 1rem;
+  }
+
+  .rideCards .mobileCard .contactActions {
+    display: flex;
+    gap: 0.5rem;
+    margin-top: 1rem;
+  }
+
+  .rideCards .mobileCard .contactButton {
+    flex: 1;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 0.5rem;
+    padding: 0.75rem;
+    background: #ff9900;
+    color: #460b6c;
+    border: none;
+    border-radius: 4px;
+    text-decoration: none;
+    font-weight: bold;
+    font-size: 1rem;
+    min-width: 0;
+    width: 100%;
+    height: 44px;
+    line-height: 1;
+  }
+
+  .rideCards .mobileCard .passengerForm {
+    display: flex;
+    flex-direction: column;
+    gap: 0.5rem;
+    margin-top: 1rem;
+  }
+
+  .rideCards .mobileCard .passengerInput {
+    width: 100%;
+    padding: 0.75rem;
+    border: 1px solid #ff9900;
+    border-radius: 4px;
+    background: rgba(255, 255, 255, 0.1);
+    font-size: 16px;
+  }
+
+  .rideCards .mobileCard .passengerList {
+    margin-top: 1rem;
+  }
+
+  .rideCards .mobileCard .passengerItem {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 0.5rem;
+    background: rgba(255, 153, 0, 0.05);
+    border-radius: 4px;
+    margin-bottom: 0.5rem;
+  }
+
+  .rideCards .mobileCard .removeButton {
+    padding: 0.5rem;
+    background: #ff6666;
+    color: white;
+    border: none;
+    border-radius: 4px;
+    font-weight: bold;
+  }
+
+  .formSection {
+    padding: 1rem;
+    margin-top: 1rem;
+    background: rgba(70, 11, 108, 0.7);
+    border-radius: 8px;
+  }
+
+  .formGroup {
+    margin-bottom: 1rem;
+  }
+
+  .formGroup label {
+    display: block;
+    margin-bottom: 0.5rem;
+    color: #ff9900;
+  }
+
+  .formGroup input,
+  .formGroup select {
+    width: 100%;
+    padding: 0.75rem;
+    border: 1px solid #ff9900;
+    border-radius: 4px;
+    background: rgba(255, 255, 255, 0.1);
+    font-size: 16px;
+  }
+
+  .passengerForm {
+    display: flex;
+    flex-direction: column;
+    gap: 1rem;
+    margin-top: 1rem;
+  }
+
+  .passengerInput {
+    width: 100%;
+    padding: 0.75rem;
+    border: 1px solid #ff9900;
+    border-radius: 4px;
+    background: rgba(255, 255, 255, 0.1);
+    font-size: 16px;
+  }
+
+  .contactActions {
+    display: flex;
+    flex-direction: column;
+    gap: 0.5rem;
+    margin-top: 1rem;
+  }
+
+  .contactButton {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 0.5rem;
+    padding: 0.75rem 1rem;
+    background: #ff9900;
+    color: #460b6c;
+    border: none;
+    border-radius: 4px;
+    font-weight: bold;
+    text-decoration: none;
+    width: 100%;
+  }
+
+  .actionButton {
+    width: 100%;
+    padding: 0.75rem 1rem;
+    background: #ff9900;
+    color: #460b6c;
+    border: none;
+    border-radius: 4px;
+    font-weight: bold;
+    margin-top: 0.5rem;
+  }
+
+  .deleteButton {
+    background: #ff6666;
+    color: white;
+    padding: 0.5rem;
+    border-radius: 4px;
+    border: none;
+    font-weight: bold;
+  }
+
+  .backButton {
+    position: fixed;
+    top: 0.5rem;
+    left: 0.5rem;
+    padding: 0.5rem;
+    background: rgba(0, 0, 0, 0.5);
+    border-radius: 4px;
+    z-index: 10;
+  }
+
+  .rideCards {
+    margin-top: 0.5rem !important;
+  }
+
+  .rideCards .mobileCard {
+    margin-bottom: 1rem !important;
+    padding: 0.75rem !important;
+  }
+
+  .rideCards .mobileCard .cardRow {
+    padding: 0.25rem 0 !important;
+  }
+
+  .rideCards .mobileCard .cardLabel {
+    font-size: 0.9rem !important;
+  }
+
+  .rideCards .mobileCard .cardValue {
+    font-size: 0.9rem !important;
+  }
+
+  .cardActions {
+    gap: 0.5rem;
+  }
+
+  .cardActions button,
+  .actionButton,
+  .deleteButton {
+    flex: 1;
+    padding: 0.75rem !important;
+    min-width: 0 !important;
+    width: 100% !important;
+  }
+} 

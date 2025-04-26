@@ -6,6 +6,9 @@ import { Announcement as AnnouncementType, GroupColors, REACTION_EMOJIS, Reactio
 import { loadAnnouncements, loadGroupColors, saveAnnouncements } from "@/lib/admin";
 import SoundCloudPlayer from '@/components/SoundCloudPlayer';
 import Countdown from '@/components/Countdown';
+import Timeline from '@/components/Timeline';
+import Starfield from '@/components/Starfield';
+import Link from "next/link";
 
 export default function Home() {
   const [mounted, setMounted] = useState(false);
@@ -108,7 +111,7 @@ export default function Home() {
 
   return (
     <div className="relative w-full min-h-screen overflow-hidden bg-[#460b6c] text-[#ff9900] font-mono">
-      {mounted && <Starfield />}
+      <Starfield />
       <SoundCloudPlayer />
 
       {/* Content Wrapper */}
@@ -118,7 +121,9 @@ export default function Home() {
         <nav className="fixed top-0 left-0 right-0 sm:absolute sm:top-20 flex justify-center space-x-2 sm:space-x-8 z-30 bg-[#460b6c] bg-opacity-50 backdrop-blur-sm p-2 sm:p-0 rounded-full mx-2 sm:mx-0">
           <a href="#infoboard" className="text-[#ff9900] hover:text-orange-300 transition-colors text-xs sm:text-base px-2 sm:px-3 py-1 sm:py-2 rounded-full hover:bg-[#ff9900] hover:bg-opacity-10">InfoBoard</a>
           <a href="#timeline" className="text-[#ff9900] hover:text-orange-300 transition-colors text-xs sm:text-base px-2 sm:px-3 py-1 sm:py-2 rounded-full hover:bg-[#ff9900] hover:bg-opacity-10">Timeline</a>
-          <a href="#anreise" className="text-[#ff9900] hover:text-orange-300 transition-colors text-xs sm:text-base px-2 sm:px-3 py-1 sm:py-2 rounded-full hover:bg-[#ff9900] hover:bg-opacity-10">Anreise</a>
+          <Link href="/anreise" className="text-[#ff9900] hover:text-orange-300 transition-colors text-xs sm:text-base px-2 sm:px-3 py-1 sm:py-2 rounded-full hover:bg-[#ff9900] hover:bg-opacity-10">
+            Anreise
+          </Link>
         </nav>
 
         {/* Logo - Links */}
@@ -253,52 +258,12 @@ export default function Home() {
 
           {/* Timeline Section */}
           <section id="timeline" className="flex flex-col items-center justify-start px-2 sm:px-4">
-            <div className="w-full max-w-2xl">
-              <h2 className="text-xl sm:text-3xl font-bold mb-4 sm:mb-8 text-center">Timeline</h2>
-              <p className="text-sm sm:text-lg text-white">Timeline-Inhalt kommt bald...</p>
-            </div>
-          </section>
-
-          {/* Anreise Section */}
-          <section id="anreise" className="min-h-[calc(100vh-4rem)] sm:min-h-screen flex items-center justify-center px-2 sm:px-4">
-            <div className="text-center">
-              <h2 className="text-xl sm:text-3xl font-bold mb-2 sm:mb-4">Anreise</h2>
-              <p className="text-sm sm:text-lg text-white">Informationen zur Anreise folgen in Kürze...</p>
+            <div className="w-full max-w-4xl">
+              <Timeline />
             </div>
           </section>
         </div>
       </div>
-    </div>
-  );
-}
-
-function Starfield() {
-  // Zufällige Sternenpositionen
-  const stars = Array.from({ length: 180 }, (_, index: number) => {
-    return {
-      id: index,
-      top: `${Math.random() * 100}%`,
-      left: `${Math.random() * 100}%`,
-      size: `${(Math.random() * 0.8 + 0.6) * 1.4}px`,
-      delay: `${Math.random() * 6}s`,
-    };
-  });
-
-  return (
-    <div className="absolute inset-0 z-0 pointer-events-none">
-      {stars.map((star) => (
-        <div
-          key={star.id}
-          className="absolute bg-white rounded-full opacity-80 animate-twinkle"
-          style={{
-            top: star.top,
-            left: star.left,
-            width: star.size,
-            height: star.size,
-            animationDelay: star.delay,
-          }}
-        />
-      ))}
     </div>
   );
 }

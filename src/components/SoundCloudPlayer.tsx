@@ -2,7 +2,8 @@
 
 import { useState, useEffect, useRef } from 'react';
 import Image from 'next/image';
-import { FaPlay, FaPause, FaVolumeHigh, FaVolumeXmark, FaMinus } from 'react-icons/fa6';
+import { FaPlay, FaPause } from 'react-icons/fa6';
+import styles from './SoundCloudPlayer.module.css';
 
 interface SoundCloudTrack {
   id: number;
@@ -68,14 +69,49 @@ declare global {
 
 export default function SoundCloudPlayer() {
   const [isPlaying, setIsPlaying] = useState(false);
-  const [volume, setVolume] = useState(100);
-  const [isMuted, setIsMuted] = useState(false);
-  const [isMinimized, setIsMinimized] = useState(false);
   const [coverUrl, setCoverUrl] = useState<string | null>(null);
   const [musicUrls, setMusicUrls] = useState<string[]>([]);
   const [trackInfo, setTrackInfo] = useState<{ title: string; artist: string } | null>(null);
+  const [isScrolled, setIsScrolled] = useState(false);
   const widgetRef = useRef<SoundCloudWidget | null>(null);
   const iframeRef = useRef<HTMLIFrameElement | null>(null);
+  const currentTrackRef = useRef<string | null>(null);
+
+  useEffect(() => {
+    // Lade den Player-Status aus dem localStorage
+    const savedState = localStorage.getItem('soundcloudPlayerState');
+    const savedTrack = localStorage.getItem('currentTrack');
+    if (savedState) {
+      setIsPlaying(JSON.parse(savedState));
+    }
+    if (savedTrack) {
+      currentTrackRef.current = savedTrack;
+    }
+  }, []);
+
+  useEffect(() => {
+    // Speichere den Player-Status im localStorage
+    localStorage.setItem('soundcloudPlayerState', JSON.stringify(isPlaying));
+    if (currentTrackRef.current) {
+      localStorage.setItem('currentTrack', currentTrackRef.current);
+    }
+  }, [isPlaying]);
+
+  useEffect(() => {
+    const handleScroll = () => {
+      const footer = document.querySelector('footer');
+      if (footer) {
+        const footerRect = footer.getBoundingClientRect();
+        const windowHeight = window.innerHeight;
+        setIsScrolled(footerRect.top < windowHeight);
+      }
+    };
+
+    window.addEventListener('scroll', handleScroll);
+    handleScroll(); // Initial check
+
+    return () => window.removeEventListener('scroll', handleScroll);
+  }, []);
 
   useEffect(() => {
     // Lade die Musik-URLs
@@ -103,27 +139,29 @@ export default function SoundCloudPlayer() {
     script.async = true;
     document.body.appendChild(script);
 
-    script.onload = () => {
-      // Wähle ein zufälliges Lied aus
-      const randomIndex = Math.floor(Math.random() * musicUrls.length);
-      const randomUrl = musicUrls[randomIndex];
+    let iframe: HTMLIFrameElement | null = null;
 
-      const iframe = document.createElement('iframe');
-      iframe.src = `https://w.soundcloud.com/player/?url=${encodeURIComponent(randomUrl)}&auto_play=true&hide_related=true&show_comments=false&show_user=false&show_reposts=false&visual=true`;
+    script.onload = () => {
+      const trackUrl = currentTrackRef.current || musicUrls[Math.floor(Math.random() * musicUrls.length)];
+      currentTrackRef.current = trackUrl;
+
+      iframe = document.createElement('iframe');
+      iframe.src = `https://w.soundcloud.com/player/?url=${encodeURIComponent(trackUrl)}&auto_play=${isPlaying}&hide_related=true&show_comments=false&show_user=false&show_reposts=false&visual=true`;
       iframe.style.width = '100%';
       iframe.style.height = '100%';
       iframe.style.border = 'none';
       iframe.style.display = 'none';
       document.body.appendChild(iframe);
+      iframeRef.current = iframe;
 
       const widget = window.SC.Widget(iframe);
       widgetRef.current = widget;
 
       widget.bind(window.SC.Widget.Events.READY, () => {
-        const currentVolume = widget.getVolume();
-        setVolume(currentVolume);
         updateCoverArt(widget);
-        widget.play();
+        if (isPlaying) {
+          widget.play();
+        }
       });
 
       widget.bind(window.SC.Widget.Events.PLAY, () => {
@@ -150,19 +188,17 @@ export default function SoundCloudPlayer() {
         });
         updateCoverArt(widget);
       });
-
-      iframeRef.current = iframe;
     };
 
     return () => {
-      if (iframeRef.current) {
-        document.body.removeChild(iframeRef.current);
+      if (iframe && iframe.parentNode) {
+        iframe.parentNode.removeChild(iframe);
       }
       if (script.parentNode) {
-        document.body.removeChild(script);
+        script.parentNode.removeChild(script);
       }
     };
-  }, [musicUrls]);
+  }, [musicUrls, isPlaying]);
 
   const updateCoverArt = async (widget: SoundCloudWidget) => {
     try {
@@ -190,124 +226,45 @@ export default function SoundCloudPlayer() {
     }
   };
 
-  const toggleMute = () => {
-    if (widgetRef.current) {
-      if (isMuted) {
-        widgetRef.current.setVolume(volume);
-      } else {
-        widgetRef.current.setVolume(0);
-      }
-      setIsMuted(!isMuted);
-    }
-  };
-
-  const handleVolumeChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const newVolume = parseInt(e.target.value);
-    setVolume(newVolume);
-    if (widgetRef.current) {
-      widgetRef.current.setVolume(newVolume);
-    }
-    if (isMuted && newVolume > 0) {
-      setIsMuted(false);
-    }
-  };
-
   if (musicUrls.length === 0) {
     return null;
   }
 
   return (
-    <div className={`fixed bottom-0 right-0 z-50 transition-all duration-300 ${isMinimized ? 'translate-y-[calc(100%-60px)]' : ''}`}>
-      <div className="bg-[#460b6c] text-[#ff9900] p-3 rounded-t-lg shadow-lg w-72">
-        {!isMinimized ? (
-          <>
-            <div className="flex items-center justify-between">
-              <div className="flex items-center space-x-3">
-                <div className="w-10 h-10 relative rounded overflow-hidden bg-gray-800">
-                  {coverUrl ? (
-                    <Image
-                      src={coverUrl}
-                      alt="Cover"
-                      fill
-                      className="object-cover"
-                    />
-                  ) : (
-                    <div className="w-full h-full flex items-center justify-center">
-                      <FaPlay className="text-[#ff9900] text-lg" />
-                    </div>
-                  )}
-                </div>
-                <div className="min-w-0 max-w-[140px] overflow-hidden">
-                  <div className="flex items-center">
-                    <div className="whitespace-nowrap animate-marquee">
-                      <span className="font-bold text-xs inline-block mr-4">{trackInfo?.title || 'Kein Track'}</span>
-                      <span className="font-bold text-xs inline-block mr-4">{trackInfo?.title || 'Kein Track'}</span>
-                    </div>
-                  </div>
-                  <div className="flex items-center">
-                    <div className="whitespace-nowrap animate-marquee">
-                      <span className="text-[10px] text-[#ff9900]/80 inline-block mr-4">{trackInfo?.artist || ''}</span>
-                      <span className="text-[10px] text-[#ff9900]/80 inline-block mr-4">{trackInfo?.artist || ''}</span>
-                    </div>
-                  </div>
-                </div>
+    <div className={`fixed right-0 z-50 transition-all duration-300 ${isScrolled ? 'md:bottom-0 -bottom-16' : 'bottom-0'} w-full md:w-72 md:right-0`}>
+      <div className="bg-[#460b6c] text-[#ff9900] p-2 rounded-t-lg shadow-lg w-full">
+        <div className="grid grid-cols-[auto_1fr_auto] gap-2 items-center">
+          <div className="w-6 h-6 relative rounded overflow-hidden bg-gray-800">
+            {coverUrl ? (
+              <Image
+                src={coverUrl}
+                alt="Cover"
+                fill
+                className="object-cover"
+              />
+            ) : (
+              <div className="w-full h-full flex items-center justify-center">
+                <FaPlay className="text-[#ff9900] text-xs" />
               </div>
-              <button
-                onClick={() => setIsMinimized(!isMinimized)}
-                className="text-[#ff9900] hover:text-[#ff9900]/80"
-              >
-                <FaMinus />
-              </button>
-            </div>
-
-            <div className="mt-3">
-              <div className="flex items-center space-x-3">
-                <button
-                  onClick={togglePlay}
-                  className="w-8 h-8 rounded-full bg-[#ff9900] text-[#460b6c] flex items-center justify-center hover:bg-[#ff9900]/90"
-                >
-                  {isPlaying ? <FaPause className="text-xs" /> : <FaPlay className="text-xs" />}
-                </button>
-                <div className="flex-1">
-                  <input
-                    type="range"
-                    min="0"
-                    max="100"
-                    value={volume}
-                    onChange={handleVolumeChange}
-                    className="w-full h-1 bg-[#ff9900]/20 rounded-lg appearance-none cursor-pointer"
-                  />
-                </div>
-                <button
-                  onClick={toggleMute}
-                  className="text-[#ff9900] hover:text-[#ff9900]/80"
-                >
-                  {isMuted ? <FaVolumeXmark className="text-sm" /> : <FaVolumeHigh className="text-sm" />}
-                </button>
-              </div>
-            </div>
-          </>
-        ) : (
-          <div className="flex items-center justify-end">
-            <button
-              onClick={() => setIsMinimized(!isMinimized)}
-              className="w-11 h-11 relative rounded overflow-hidden bg-gray-800 hover:opacity-90 transition-opacity"
-            >
-              {coverUrl ? (
-                <Image
-                  src={coverUrl}
-                  alt="Cover"
-                  fill
-                  className="object-cover"
-                />
-              ) : (
-                <div className="w-full h-full flex items-center justify-center">
-                  <FaPlay className="text-[#ff9900] text-lg" />
-                </div>
-              )}
-            </button>
+            )}
           </div>
-        )}
+          <div className="overflow-hidden max-w-[calc(100%-60px)]">
+            <div className="whitespace-nowrap animate-marquee">
+              <span className="font-bold text-[10px] inline-block mr-4">{trackInfo?.title || 'Kein Track'}</span>
+              <span className="font-bold text-[10px] inline-block mr-4">{trackInfo?.title || 'Kein Track'}</span>
+            </div>
+          </div>
+          <button
+            onClick={togglePlay}
+            className="p-2 rounded-full bg-[#ff9900] hover:bg-[#ff9900]/80 transition-colors"
+          >
+            {isPlaying ? (
+              <FaPause className="text-[#460b6c] text-sm" />
+            ) : (
+              <FaPlay className="text-[#460b6c] text-sm" />
+            )}
+          </button>
+        </div>
       </div>
       <style jsx global>{`
         @keyframes marquee {

@@ -38,4 +38,20 @@ export type ReactionType = keyof typeof REACTION_EMOJIS;
 export type LoginCredentials = {
   username: string;
   password: string;
-}; 
+};
+
+export interface Event {
+  time: string;
+  title: string;
+  description: string;
+}
+
+export interface Day {
+  title: string;
+  description: string;
+  events: Event[];
+}
+
+export interface TimelineData {
+  days: Day[];
+} 

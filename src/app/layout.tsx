@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import { Geist, Geist_Mono, Rubik_Mono_One } from "next/font/google";
 import "./globals.css";
 import Footer from "@/components/Footer";
+import SoundCloudPlayer from "@/components/SoundCloudPlayer";
 
 // Sans-serif body font
 const geistSans = Geist({
@@ -56,6 +57,7 @@ export default function RootLayout({
       className={`${geistSans.variable} ${geistMono.variable} ${rubikMono.variable}`}
     >
       <body className="antialiased min-h-screen flex flex-col">
+        <SoundCloudPlayer />
         <main className="flex-grow">
           {children}
         </main>

@@ -1,0 +1,25 @@
+{
+  "announcements": [
+    {
+      "id": 0,
+      "content": "Website ist da :)",
+      "date": "2025-04-26",
+      "time": "19:06",
+      "author": "Felix",
+      "group": "Felix",
+      "important": true,
+      "reactions": {
+        "thumbsUp": {
+          "count": 0,
+          "deviceReactions": {}
+        },
+        "laugh": {
+          "count": 1,
+          "deviceReactions": {
+            "qbjwbjwyw6m9y67v0z": "laugh"
+          }
+        }
+      }
+    }
+  ]
+}

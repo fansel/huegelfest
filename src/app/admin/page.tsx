@@ -5,6 +5,7 @@ import { useRouter } from 'next/navigation';
 import AnnouncementForm from '@/components/admin/AnnouncementForm';
 import GroupColorManager from '@/components/admin/GroupColorManager';
 import MusicManager from '@/components/admin/MusicManager';
+import TimelineManager from '@/components/admin/TimelineManager';
 import { Announcement, GroupColors } from '@/lib/types';
 import { loadAnnouncements, saveAnnouncements, loadMusicUrls, saveMusicUrls, loadGroupColors } from '@/lib/admin';
 
@@ -12,7 +13,7 @@ export default function AdminPage() {
   const router = useRouter();
   const [announcements, setAnnouncements] = useState<Announcement[]>([]);
   const [editingAnnouncement, setEditingAnnouncement] = useState<Announcement | undefined>(undefined);
-  const [activeTab, setActiveTab] = useState<'announcements' | 'groups' | 'music'>('announcements');
+  const [activeTab, setActiveTab] = useState<'announcements' | 'groups' | 'music' | 'timeline'>('announcements');
   const [musicUrls, setMusicUrls] = useState<string[]>([]);
   const [groupColors, setGroupColors] = useState<GroupColors>({ default: '#460b6c' });
 
@@ -137,6 +138,16 @@ export default function AdminPage() {
               >
                 Musik
               </button>
+              <button
+                onClick={() => setActiveTab('timeline')}
+                className={`py-4 px-6 border-b-2 font-medium text-sm ${
+                  activeTab === 'timeline'
+                    ? 'border-[#460b6c] text-[#460b6c]'
+                    : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
+                }`}
+              >
+                Timeline
+              </button>
             </nav>
           </div>
 
@@ -206,6 +217,9 @@ export default function AdminPage() {
             )}
             {activeTab === 'music' && (
               <MusicManager musicUrls={musicUrls} onSave={handleSaveMusicUrls} />
+            )}
+            {activeTab === 'timeline' && (
+              <TimelineManager />
             )}
           </div>
         </div>

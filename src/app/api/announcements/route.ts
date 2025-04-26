@@ -3,7 +3,7 @@ import { readFile, writeFile, mkdir } from 'fs/promises';
 import { join } from 'path';
 import { Announcement } from '@/lib/types';
 
-const DATA_DIR = join(process.cwd(), 'data');
+const DATA_DIR = join(process.cwd(), 'src/data');
 const ANNOUNCEMENTS_FILE = join(DATA_DIR, 'announcements.json');
 
 async function ensureDataDirectory() {
