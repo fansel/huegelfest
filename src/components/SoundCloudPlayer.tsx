@@ -15,6 +15,23 @@ interface SoundCloudTrack {
   };
 }
 
+interface SoundCloudWidgetOptions {
+  auto_play?: boolean;
+  show_artwork?: boolean;
+  visual?: boolean;
+  hide_related?: boolean;
+  show_comments?: boolean;
+  show_user?: boolean;
+  show_reposts?: boolean;
+  show_teaser?: boolean;
+  single_active?: boolean;
+  buying?: boolean;
+  sharing?: boolean;
+  download?: boolean;
+  start_track?: number;
+  callback?: () => void;
+}
+
 interface SoundCloudWidget {
   play: () => void;
   pause: () => void;
@@ -26,17 +43,19 @@ interface SoundCloudWidget {
   getVolume: () => number;
   isPaused: () => boolean;
   getCurrentSound: (callback: (sound: SoundCloudTrack) => void) => void;
-  load: (url: string, options: any) => void;
+  load: (url: string, options: SoundCloudWidgetOptions) => void;
+}
+
+interface SoundCloudEvents {
+  READY: string;
+  PLAY: string;
+  PAUSE: string;
+  FINISH: string;
 }
 
 interface SoundCloudAPI {
   Widget: {
-    Events: {
-      READY: string;
-      PLAY: string;
-      PAUSE: string;
-      FINISH: string;
-    };
+    Events: SoundCloudEvents;
     (element: HTMLIFrameElement): SoundCloudWidget;
   };
 }

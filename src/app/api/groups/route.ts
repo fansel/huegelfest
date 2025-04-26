@@ -9,10 +9,11 @@ const GROUPS_FILE = join(DATA_DIR, 'groups.json');
 async function ensureDataDirectory() {
   try {
     await mkdir(DATA_DIR, { recursive: true });
-  } catch (error: any) {
-    if (error.code !== 'EEXIST') {
-      throw error;
+  } catch (error: unknown) {
+    if (error && typeof error === 'object' && 'code' in error && error.code === 'EEXIST') {
+      return;
     }
+    throw error;
   }
 }
 

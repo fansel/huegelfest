@@ -1,21 +1,12 @@
 'use client';
 
-import { useState, useEffect, useCallback, lazy, Suspense } from 'react';
+import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
+import AnnouncementForm from '@/components/admin/AnnouncementForm';
+import GroupColorManager from '@/components/admin/GroupColorManager';
+import MusicManager from '@/components/admin/MusicManager';
 import { Announcement, GroupColors } from '@/lib/types';
 import { loadAnnouncements, saveAnnouncements, loadMusicUrls, saveMusicUrls, loadGroupColors } from '@/lib/admin';
-
-// Lazy load components
-const AnnouncementForm = lazy(() => import('@/components/admin/AnnouncementForm'));
-const GroupColorManager = lazy(() => import('@/components/admin/GroupColorManager'));
-const MusicManager = lazy(() => import('@/components/admin/MusicManager'));
-
-// Loading component
-const LoadingSpinner = () => (
-  <div className="flex justify-center items-center h-32">
-    <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-[#460b6c]"></div>
-  </div>
-);
 
 export default function AdminPage() {
   const router = useRouter();
@@ -57,10 +48,11 @@ export default function AdminPage() {
     loadData();
   }, []);
 
-  const handleSaveAnnouncement = useCallback(async (announcement: Announcement) => {
+  const handleSaveAnnouncement = async (announcement: Announcement) => {
     let updatedAnnouncements: Announcement[];
     
     if (editingAnnouncement) {
+      // Konvertiere IDs zu Zahlen für den Vergleich
       const editingId = typeof editingAnnouncement.id === 'string' 
         ? parseInt(editingAnnouncement.id, 10) 
         : editingAnnouncement.id;
@@ -70,50 +62,24 @@ export default function AdminPage() {
         return aId === editingId ? announcement : a;
       });
     } else {
-      const newId = Math.max(...announcements.map(a => typeof a.id === 'string' ? parseInt(a.id, 10) : a.id), 0) + 1;
-      updatedAnnouncements = [...announcements, { ...announcement, id: newId }];
+      updatedAnnouncements = [...announcements, announcement];
     }
     
-    // Optimistic update
     setAnnouncements(updatedAnnouncements);
-    try {
-      await saveAnnouncements(updatedAnnouncements);
-    } catch (error) {
-      // Rollback bei Fehler
-      setAnnouncements(announcements);
-      console.error('Fehler beim Speichern:', error);
-    }
+    await saveAnnouncements(updatedAnnouncements);
     setEditingAnnouncement(undefined);
-  }, [announcements, editingAnnouncement]);
+  };
 
-  const handleDeleteAnnouncement = useCallback(async (id: number) => {
-    // Optimistic update
-    const previousAnnouncements = announcements;
+  const handleDeleteAnnouncement = async (id: number) => {
     const updatedAnnouncements = announcements.filter(a => a.id !== id);
     setAnnouncements(updatedAnnouncements);
-    
-    try {
-      await saveAnnouncements(updatedAnnouncements);
-    } catch (error) {
-      // Rollback bei Fehler
-      setAnnouncements(previousAnnouncements);
-      console.error('Fehler beim Löschen:', error);
-    }
-  }, [announcements]);
+    await saveAnnouncements(updatedAnnouncements);
+  };
 
-  const handleSaveMusicUrls = useCallback(async (urls: string[]) => {
-    // Optimistic update
-    const previousUrls = musicUrls;
+  const handleSaveMusicUrls = async (urls: string[]) => {
     setMusicUrls(urls);
-    
-    try {
-      await saveMusicUrls(urls);
-    } catch (error) {
-      // Rollback bei Fehler
-      setMusicUrls(previousUrls);
-      console.error('Fehler beim Speichern der Musik-URLs:', error);
-    }
-  }, [musicUrls]);
+    await saveMusicUrls(urls);
+  };
 
   const handleLogout = () => {
     document.cookie = 'isAuthenticated=; path=/; expires=Thu, 01 Jan 1970 00:00:00 GMT';
@@ -176,71 +142,71 @@ export default function AdminPage() {
 
           {/* Tab Content */}
           <div className="p-6">
-            <Suspense fallback={<LoadingSpinner />}>
-              {activeTab === 'announcements' && (
-                <div className="space-y-6">
-                  <div className="bg-gray-50 p-4 rounded-lg">
-                    <h2 className="text-lg font-semibold text-gray-900 mb-4">
-                      {editingAnnouncement ? 'Ankündigung bearbeiten' : 'Neue Ankündigung erstellen'}
-                    </h2>
-                    <AnnouncementForm
-                      initialData={editingAnnouncement}
-                      onSubmit={handleSaveAnnouncement}
-                      groups={groupColors}
-                    />
-                  </div>
+            {activeTab === 'announcements' && (
+              <div className="space-y-6">
+                <div className="bg-gray-50 p-4 rounded-lg">
+                  <h2 className="text-lg font-semibold text-gray-900 mb-4">
+                    {editingAnnouncement ? 'Ankündigung bearbeiten' : 'Neue Ankündigung erstellen'}
+                  </h2>
+                  <AnnouncementForm
+                    initialData={editingAnnouncement}
+                    onSubmit={handleSaveAnnouncement}
+                    groups={groupColors}
+                  />
+                </div>
 
-                  <div className="space-y-4">
-                    <h2 className="text-lg font-semibold text-gray-900">Bestehende Ankündigungen</h2>
-                    {announcements.length === 0 ? (
-                      <p className="text-gray-500">Keine Ankündigungen vorhanden</p>
-                    ) : (
-                      <div className="space-y-4">
-                        {announcements.map((announcement) => (
-                          <div
-                            key={announcement.id}
-                            className="bg-white border rounded-lg p-4 shadow-sm hover:shadow-md transition-shadow"
-                          >
-                            <div className="flex justify-between items-start">
-                              <div className="flex-1">
-                                <p className="text-gray-900">{announcement.content}</p>
-                                <div className="mt-2 flex items-center space-x-4 text-sm text-gray-500">
-                                  <span>{announcement.date}</span>
-                                  <span>{announcement.time}</span>
-                                  <span className="font-medium">{announcement.author}</span>
-                                  <span className="font-medium">{announcement.group}</span>
-                                  {announcement.important && (
-                                    <span className="text-red-600 font-medium">Wichtig</span>
-                                  )}
-                                </div>
-                              </div>
-                              <div className="flex space-x-2">
-                                <button
-                                  onClick={() => setEditingAnnouncement(announcement)}
-                                  className="p-2 text-blue-600 hover:text-blue-800"
-                                >
-                                  Bearbeiten
-                                </button>
-                                <button
-                                  onClick={() => handleDeleteAnnouncement(announcement.id)}
-                                  className="p-2 text-red-600 hover:text-red-800"
-                                >
-                                  Löschen
-                                </button>
+                <div className="space-y-4">
+                  <h2 className="text-lg font-semibold text-gray-900">Bestehende Ankündigungen</h2>
+                  {announcements.length === 0 ? (
+                    <p className="text-gray-500">Keine Ankündigungen vorhanden</p>
+                  ) : (
+                    <div className="space-y-4">
+                      {announcements.map((announcement) => (
+                        <div
+                          key={announcement.id}
+                          className="bg-white border rounded-lg p-4 shadow-sm hover:shadow-md transition-shadow"
+                        >
+                          <div className="flex justify-between items-start">
+                            <div className="flex-1">
+                              <p className="text-gray-900">{announcement.content}</p>
+                              <div className="mt-2 flex items-center space-x-4 text-sm text-gray-500">
+                                <span>{announcement.date}</span>
+                                <span>{announcement.time}</span>
+                                <span className="font-medium">{announcement.author}</span>
+                                <span className="font-medium">{announcement.group}</span>
+                                {announcement.important && (
+                                  <span className="text-red-600 font-medium">Wichtig</span>
+                                )}
                               </div>
                             </div>
+                            <div className="flex space-x-2">
+                              <button
+                                onClick={() => setEditingAnnouncement(announcement)}
+                                className="p-2 text-blue-600 hover:text-blue-800"
+                              >
+                                Bearbeiten
+                              </button>
+                              <button
+                                onClick={() => handleDeleteAnnouncement(announcement.id)}
+                                className="p-2 text-red-600 hover:text-red-800"
+                              >
+                                Löschen
+                              </button>
+                            </div>
                           </div>
-                        ))}
-                      </div>
-                    )}
-                  </div>
+                        </div>
+                      ))}
+                    </div>
+                  )}
                 </div>
-              )}
-              {activeTab === 'groups' && <GroupColorManager />}
-              {activeTab === 'music' && (
-                <MusicManager musicUrls={musicUrls} onSave={handleSaveMusicUrls} />
-              )}
-            </Suspense>
+              </div>
+            )}
+            {activeTab === 'groups' && (
+              <GroupColorManager />
+            )}
+            {activeTab === 'music' && (
+              <MusicManager musicUrls={musicUrls} onSave={handleSaveMusicUrls} />
+            )}
           </div>
         </div>
       </div>

@@ -1,6 +1,5 @@
 import { useState, useEffect, useCallback, memo } from 'react';
 import { Announcement, GroupColors } from '@/lib/types';
-import { loadAnnouncements } from '@/lib/admin';
 
 interface AnnouncementFormProps {
   onSubmit: (announcement: Announcement) => void;
@@ -10,7 +9,7 @@ interface AnnouncementFormProps {
 
 const AnnouncementForm = memo(({ onSubmit, initialData, groups }: AnnouncementFormProps) => {
   const [content, setContent] = useState(initialData?.content || '');
-  const [group, setGroup] = useState(initialData?.group || 'default');
+  const [group, setGroup] = useState(initialData?.group || Object.keys(groups).find(g => g !== 'default') || '');
   const [important, setImportant] = useState(initialData?.important || false);
 
   // Aktualisiere die Felder, wenn sich initialData ändert
@@ -25,12 +24,18 @@ const AnnouncementForm = memo(({ onSubmit, initialData, groups }: AnnouncementFo
   const handleSubmit = useCallback(async (e: React.FormEvent) => {
     e.preventDefault();
     
+    if (!group || group === 'default') {
+      alert('Bitte wählen Sie eine gültige Gruppe aus');
+      return;
+    }
+
+    const now = new Date();
     const newAnnouncement: Announcement = {
       id: initialData?.id || 0,
       content,
-      date: new Date().toISOString().split('T')[0],
-      time: new Date().toTimeString().slice(0, 5),
-      author: 'Admin',
+      date: now.toISOString().split('T')[0],
+      time: now.toTimeString().slice(0, 5),
+      author: group,
       group,
       important,
       reactions: initialData?.reactions || {}
@@ -41,10 +46,10 @@ const AnnouncementForm = memo(({ onSubmit, initialData, groups }: AnnouncementFo
     // Nur zurücksetzen, wenn es keine initialData gibt (neue Ankündigung)
     if (!initialData) {
       setContent('');
-      setGroup('default');
+      setGroup(Object.keys(groups).find(g => g !== 'default') || '');
       setImportant(false);
     }
-  }, [content, group, important, initialData, onSubmit]);
+  }, [content, group, important, initialData, onSubmit, groups]);
 
   const handleContentChange = useCallback((e: React.ChangeEvent<HTMLTextAreaElement>) => {
     setContent(e.target.value);
@@ -77,7 +82,9 @@ const AnnouncementForm = memo(({ onSubmit, initialData, groups }: AnnouncementFo
           value={group}
           onChange={handleGroupChange}
           className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-[#ff9900] focus:ring-[#ff9900]"
+          required
         >
+          <option value="">Bitte wählen...</option>
           {Object.keys(groups).map((groupName) => (
             groupName !== 'default' && (
               <option key={groupName} value={groupName}>

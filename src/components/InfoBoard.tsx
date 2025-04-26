@@ -61,6 +61,9 @@ export default function InfoBoard() {
 
   // Intersection Observer für Sichtbarkeit
   useEffect(() => {
+    const currentRef = boardRef.current;
+    if (!currentRef) return;
+
     const observer = new IntersectionObserver(
       ([entry]) => {
         setIsVisible(entry.isIntersecting);
@@ -68,14 +71,10 @@ export default function InfoBoard() {
       { threshold: 0.1 }
     );
 
-    if (boardRef.current) {
-      observer.observe(boardRef.current);
-    }
+    observer.observe(currentRef);
 
     return () => {
-      if (boardRef.current) {
-        observer.unobserve(boardRef.current);
-      }
+      observer.unobserve(currentRef);
     };
   }, []);
 

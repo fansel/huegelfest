@@ -108,27 +108,23 @@
       }
     },
     {
-      "id": 5,
-      "content": "gfd",
+      "id": 0,
+      "content": "sdfsdf",
       "date": "2025-04-26",
-      "time": "15:21",
-      "author": "Admin",
-      "group": "Tester44",
+      "time": "16:07",
+      "author": "felix",
+      "group": "felix",
       "important": false,
       "reactions": {
-        "thumbsUp": {
+        "heart": {
           "count": 0,
           "deviceReactions": {}
         },
-        "heart": {
+        "thumbsUp": {
           "count": 1,
           "deviceReactions": {
-            "qbjwbjwyw6m9y67v0z": "heart"
+            "qbjwbjwyw6m9y67v0z": "thumbsUp"
           }
-        },
-        "clap": {
-          "count": 0,
-          "deviceReactions": {}
         }
       }
     }
