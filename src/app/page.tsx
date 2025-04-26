@@ -4,6 +4,7 @@ import React, { useEffect, useState } from "react";
 import Image from "next/image";
 import { Announcement as AnnouncementType, GroupColors, REACTION_EMOJIS, ReactionType } from "@/lib/types";
 import { loadAnnouncements, loadGroupColors, saveAnnouncements } from "@/lib/admin";
+import SoundCloudPlayer from '@/components/SoundCloudPlayer';
 
 export default function Home() {
   const [mounted, setMounted] = useState(false);
@@ -107,6 +108,7 @@ export default function Home() {
   return (
     <div className="relative w-full min-h-screen overflow-hidden bg-[#460b6c] text-[#ff9900] font-mono">
       {mounted && <Starfield />}
+      <SoundCloudPlayer />
 
       {/* Content Wrapper */}
       <div className="relative z-20 flex flex-col items-center justify-start min-h-screen px-2 sm:px-6 py-4 sm:py-12 text-center">
