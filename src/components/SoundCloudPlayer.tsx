@@ -1,6 +1,31 @@
 'use client';
 
 import { useState, useEffect } from 'react';
+import Image from 'next/image';
+
+interface SoundCloudWidget {
+  bind: (event: string, callback: () => void) => void;
+  play: () => void;
+  pause: () => void;
+  setVolume: (volume: number) => void;
+}
+
+interface SoundCloudAPI {
+  Widget: {
+    Events: {
+      READY: string;
+      PLAY: string;
+      PAUSE: string;
+    };
+    (element: HTMLIFrameElement): SoundCloudWidget;
+  };
+}
+
+declare global {
+  interface Window {
+    SC: SoundCloudAPI;
+  }
+}
 
 export default function SoundCloudPlayer() {
   const [isPlaying, setIsPlaying] = useState(false);
@@ -12,17 +37,16 @@ export default function SoundCloudPlayer() {
     script.async = true;
     document.body.appendChild(script);
 
-    // Warte bis die SoundCloud API geladen ist
     const checkSC = setInterval(() => {
-      if ((window as any).SC) {
+      if (window.SC) {
         const iframe = document.querySelector('iframe');
         if (iframe) {
-          const widget = (window as any).SC.Widget(iframe);
-          widget.bind((window as any).SC.Widget.Events.READY, () => {
-            widget.bind((window as any).SC.Widget.Events.PLAY, () => {
+          const widget = window.SC.Widget(iframe);
+          widget.bind(window.SC.Widget.Events.READY, () => {
+            widget.bind(window.SC.Widget.Events.PLAY, () => {
               setIsPlaying(true);
             });
-            widget.bind((window as any).SC.Widget.Events.PAUSE, () => {
+            widget.bind(window.SC.Widget.Events.PAUSE, () => {
               setIsPlaying(false);
             });
           });
@@ -40,7 +64,7 @@ export default function SoundCloudPlayer() {
   const togglePlay = () => {
     const iframe = document.querySelector('iframe');
     if (iframe) {
-      const widget = (window as any).SC.Widget(iframe);
+      const widget = window.SC.Widget(iframe);
       if (isPlaying) {
         widget.pause();
       } else {
@@ -54,7 +78,7 @@ export default function SoundCloudPlayer() {
     setVolume(newVolume);
     const iframe = document.querySelector('iframe');
     if (iframe) {
-      const widget = (window as any).SC.Widget(iframe);
+      const widget = window.SC.Widget(iframe);
       widget.setVolume(newVolume * 100);
     }
   };
@@ -62,11 +86,14 @@ export default function SoundCloudPlayer() {
   return (
     <div className="fixed bottom-4 right-4 z-50">
       <div className="flex items-center space-x-4 bg-[#460b6c] bg-opacity-80 backdrop-blur-sm p-3 rounded-lg shadow-lg">
-        <div className="w-12 h-12 rounded-lg overflow-hidden">
-          <img 
+        <div className="w-12 h-12 rounded-lg overflow-hidden relative">
+          <Image 
             src="https://i1.sndcdn.com/artworks-f4ffJzJz9KxUMMDT-nfG9yQ-t1080x1080.jpg" 
             alt="Track Cover" 
-            className="w-full h-full object-cover"
+            fill
+            className="object-cover"
+            sizes="48px"
+            priority
           />
         </div>
         <div className="flex items-center space-x-3">
