@@ -24,7 +24,25 @@ const rubikMono = Rubik_Mono_One({
 
 export const metadata: Metadata = {
   title: "HÜGELFEST 2025",
-  description: "Ein privates Festival voller Magie und Musik",
+  description: "Hier geht die Post ab! 🎉 31.07.2025 - 03.08.2025",
+  openGraph: {
+    title: "HÜGELFEST 2025",
+    description: "Hier geht die Post ab! 🎉 31.07.2025 - 03.08.2025",
+    images: [
+      {
+        url: "/logo.jpg",
+        width: 1200,
+        height: 630,
+        alt: "Hügelfest Logo",
+      },
+    ],
+  },
+  twitter: {
+    card: "summary_large_image",
+    title: "HÜGELFEST 2025",
+    description: "Hier geht die Post ab! 🎉 31.07.2025 - 03.08.2025",
+    images: ["/logo.jpg"],
+  },
 };
 
 export default function RootLayout({
