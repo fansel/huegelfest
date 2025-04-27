@@ -3,7 +3,7 @@
 import React, { useEffect, useState } from 'react';
 import { TimelineData, Event } from '@/lib/types';
 import { loadTimeline, saveTimeline } from '@/lib/admin';
-import { FaPen, FaTrash, FaPlus, FaArrowLeft, FaCheck, FaTimes, FaMusic, FaUsers, FaUtensils, FaCampground, FaGamepad, FaQuestion } from 'react-icons/fa';
+import { FaMusic, FaUsers, FaUtensils, FaCampground, FaGamepad, FaQuestion } from 'react-icons/fa';
 
 const categoryOptions = [
   { value: 'music', label: 'Musik', icon: <FaMusic /> },
@@ -12,7 +12,9 @@ const categoryOptions = [
   { value: 'camp', label: 'Camp', icon: <FaCampground /> },
   { value: 'game', label: 'Spiele', icon: <FaGamepad /> },
   { value: 'other', label: 'Sonstiges', icon: <FaQuestion /> }
-];
+] as const;
+
+type Category = typeof categoryOptions[number]['value'];
 
 export default function TimelineManager() {
   const [timeline, setTimeline] = useState<TimelineData>({ days: [] });
@@ -54,13 +56,6 @@ export default function TimelineManager() {
     saveTimeline(updatedTimeline);
   };
 
-  const handleEditEvent = (dayIndex: number, eventIndex: number) => {
-    const event = timeline.days[dayIndex].events[eventIndex];
-    setEditingEvent({ dayIndex, eventIndex });
-    setNewEvent(event);
-    setCurrentDay(dayIndex);
-  };
-
   const handleSaveEdit = () => {
     if (!editingEvent || !newEvent.time || !newEvent.title || !newEvent.description) return;
 
@@ -74,11 +69,6 @@ export default function TimelineManager() {
     const updatedTimeline = { ...timeline, days: updatedDays };
     setTimeline(updatedTimeline);
     saveTimeline(updatedTimeline);
-    setEditingEvent(null);
-    setNewEvent({ time: '', title: '', description: '', category: 'other' });
-  };
-
-  const handleCancelEdit = () => {
     setEditingEvent(null);
     setNewEvent({ time: '', title: '', description: '', category: 'other' });
   };
@@ -150,7 +140,11 @@ export default function TimelineManager() {
                 </div>
                 <div className="flex gap-2 w-full sm:w-auto">
                   <button
-                    onClick={() => setEditingEvent({ dayIndex: currentDay, eventIndex })}
+                    onClick={() => {
+                      const event = timeline.days[currentDay].events[eventIndex];
+                      setEditingEvent({ dayIndex: currentDay, eventIndex });
+                      setNewEvent(event);
+                    }}
                     className="p-2 text-blue-600 hover:text-blue-800 flex-1 sm:flex-none text-sm sm:text-base"
                   >
                     Bearbeiten
@@ -188,7 +182,7 @@ export default function TimelineManager() {
                 <label className="block text-sm font-medium text-gray-700">Kategorie</label>
                 <select
                   value={newEvent.category}
-                  onChange={(e) => setNewEvent({ ...newEvent, category: e.target.value as any })}
+                  onChange={(e) => setNewEvent({ ...newEvent, category: e.target.value as Category })}
                   className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-[#ff9900] focus:ring-[#ff9900] py-2"
                   required
                 >

@@ -1,7 +1,7 @@
 'use client';
 
-import { useState, useEffect } from 'react';
-import { FaPlay, FaPause, FaTrash, FaPlus } from 'react-icons/fa';
+import React, { useState, useEffect, useCallback } from 'react';
+import { FaTrash, FaPlus } from 'react-icons/fa';
 import Image from 'next/image';
 
 interface TrackInfo {
@@ -9,6 +9,7 @@ interface TrackInfo {
   artist: string;
   coverUrl: string;
   permalink: string;
+  id: string;
 }
 
 interface MusicManagerProps {
@@ -18,42 +19,40 @@ interface MusicManagerProps {
 
 export default function MusicManager({ musicUrls, onSave }: MusicManagerProps) {
   const [newUrl, setNewUrl] = useState('');
-  const [error, setError] = useState('');
   const [trackInfos, setTrackInfos] = useState<Record<string, TrackInfo>>({});
   const [isLoading, setIsLoading] = useState(false);
 
-  const validateSoundCloudUrl = (url: string) => {
-    // Unterstützt sowohl Desktop- als auch Mobile-Links
+  const validateUrl = (url: string): boolean => {
     return url.includes('soundcloud.com');
   };
 
-  const extractTrackId = (url: string) => {
-    // Extrahiert die Track-ID aus verschiedenen SoundCloud-URL-Formaten
-    const match = url.match(/soundcloud\.com\/[^\/]+\/[^\/]+/);
-    return match ? match[0] : null;
-  };
+  const extractTrackId = useCallback((url: string): string | null => {
+    const match = url.match(/soundcloud\.com\/[^/]+\/([^/?]+)/);
+    return match ? match[1] : null;
+  }, []);
 
-  const fetchTrackInfo = async (url: string) => {
+  const fetchTrackInfo = useCallback(async (url: string): Promise<TrackInfo | null> => {
+    const trackId = extractTrackId(url);
+    if (!trackId) return null;
+
     try {
-      const trackId = extractTrackId(url);
-      if (!trackId) throw new Error('Ungültige SoundCloud URL');
-
-      const response = await fetch(`https://soundcloud.com/oembed?url=https://${trackId}&format=json`);
-      if (!response.ok) throw new Error('Fehler beim Abrufen der Track-Informationen');
-
+      const response = await fetch(`https://noembed.com/embed?url=${encodeURIComponent(url)}`);
       const data = await response.json();
+
       const trackInfo: TrackInfo = {
         title: data.title,
         artist: data.author_name,
         coverUrl: data.thumbnail_url,
-        permalink: data.permalink_url
+        permalink: data.permalink_url,
+        id: trackId
       };
 
-      setTrackInfos(prev => ({ ...prev, [url]: trackInfo }));
+      return trackInfo;
     } catch (error) {
       console.error('Fehler beim Abrufen der Track-Informationen:', error);
+      return null;
     }
-  };
+  }, [extractTrackId]);
 
   const fetchPlaylistTracks = async (playlistUrl: string) => {
     try {
@@ -71,13 +70,8 @@ export default function MusicManager({ musicUrls, onSave }: MusicManagerProps) {
   };
 
   const handleAddUrl = async () => {
-    if (!newUrl.trim()) {
-      setError('Bitte gib eine URL ein');
-      return;
-    }
-
-    if (!validateSoundCloudUrl(newUrl)) {
-      setError('Bitte gib eine gültige SoundCloud URL ein');
+    if (!validateUrl(newUrl)) {
+      alert('Bitte geben Sie eine gültige SoundCloud-URL ein.');
       return;
     }
 
@@ -98,30 +92,53 @@ export default function MusicManager({ musicUrls, onSave }: MusicManagerProps) {
       onSave(updatedUrls);
 
       // Lade Track-Informationen für alle neuen URLs
-      await Promise.all(urlsToAdd.map(url => fetchTrackInfo(url)));
+      const infos = await Promise.all(urlsToAdd.map(url => fetchTrackInfo(url)));
+      const filteredInfos = infos.filter((info): info is TrackInfo => info !== null);
+      setTrackInfos(prev => ({ ...prev, ...filteredInfos.reduce((acc, info) => ({ ...acc, [info.id]: info }), {}) }));
       
       setNewUrl('');
-      setError('');
     } catch (error) {
-      setError('Fehler beim Hinzufügen der Tracks');
+      console.error('Fehler beim Hinzufügen der Tracks:', error);
     } finally {
       setIsLoading(false);
     }
   };
 
-  const handleDeleteUrl = (index: number) => {
-    const updatedUrls = musicUrls.filter((_, i) => i !== index);
+  const handleDeleteUrl = (urlToDelete: string) => {
+    const updatedUrls = musicUrls.filter(url => url !== urlToDelete);
     onSave(updatedUrls);
+    
+    const trackId = extractTrackId(urlToDelete);
+    if (trackId) {
+      const updatedTrackInfos = { ...trackInfos };
+      delete updatedTrackInfos[trackId];
+      setTrackInfos(updatedTrackInfos);
+    }
   };
 
   useEffect(() => {
-    // Lade Track-Informationen für alle vorhandenen URLs
-    musicUrls.forEach(url => {
-      if (!trackInfos[url]) {
-        fetchTrackInfo(url);
-      }
-    });
-  }, [musicUrls]);
+    const loadTrackInfos = async () => {
+      const infos = await Promise.all(
+        musicUrls.map(async (url) => {
+          try {
+            return await fetchTrackInfo(url);
+          } catch {
+            return null;
+          }
+        })
+      );
+
+      const validInfos = infos.filter((info): info is TrackInfo => info !== null);
+      const infoMap = validInfos.reduce<Record<string, TrackInfo>>(
+        (acc, info) => ({ ...acc, [info.id]: info }),
+        {}
+      );
+      
+      setTrackInfos(infoMap);
+    };
+
+    loadTrackInfos();
+  }, [musicUrls, fetchTrackInfo]);
 
   return (
     <div className="space-y-6">
@@ -152,7 +169,6 @@ export default function MusicManager({ musicUrls, onSave }: MusicManagerProps) {
             )}
           </button>
         </div>
-        {error && <p className="mt-2 text-red-600 text-sm">{error}</p>}
       </div>
 
       <div className="space-y-4">
@@ -162,7 +178,8 @@ export default function MusicManager({ musicUrls, onSave }: MusicManagerProps) {
         ) : (
           <div className="space-y-2">
             {musicUrls.map((url, index) => {
-              const trackInfo = trackInfos[url];
+              const trackId = extractTrackId(url);
+              const trackInfo = trackId ? trackInfos[trackId] : null;
               return (
                 <div
                   key={index}
@@ -190,7 +207,7 @@ export default function MusicManager({ musicUrls, onSave }: MusicManagerProps) {
                           </p>
                         </div>
                         <button
-                          onClick={() => handleDeleteUrl(index)}
+                          onClick={() => handleDeleteUrl(url)}
                           className="p-2 text-red-600 hover:text-red-800 text-sm sm:text-base flex-shrink-0"
                           title="Track löschen"
                         >

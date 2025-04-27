@@ -5,8 +5,6 @@ import { loadGroupColors, saveGroupColors } from '@/lib/admin';
 export default function GroupColorManager() {
   const [groups, setGroups] = useState<GroupColors>({ default: '#460b6c' });
   const [newGroupName, setNewGroupName] = useState('');
-  const [editingGroup, setEditingGroup] = useState<string | null>(null);
-  const [newName, setNewName] = useState('');
   const [defaultGroup, setDefaultGroup] = useState<string>('');
   const [newGroupColor, setNewGroupColor] = useState('#460b6c');
 
@@ -14,7 +12,6 @@ export default function GroupColorManager() {
     const loadGroups = async () => {
       const loadedGroups = await loadGroupColors();
       
-      // Wenn keine Gruppen existieren, erstelle die Standardgruppen
       if (Object.keys(loadedGroups).length === 0) {
         const initialGroups: GroupColors = {
           default: '#460b6c',
@@ -52,35 +49,12 @@ export default function GroupColorManager() {
     await saveGroupColors(updatedGroups);
   };
 
-  const handleRenameStart = (group: string) => {
-    setEditingGroup(group);
-    setNewName(group);
-  };
-
-  const handleRename = async () => {
-    if (editingGroup && newName && newName !== editingGroup) {
-      const updatedGroups = { ...groups };
-      delete updatedGroups[editingGroup];
-      updatedGroups[newName] = groups[editingGroup];
-      setGroups(updatedGroups);
-      await saveGroupColors(updatedGroups);
-      setEditingGroup(null);
-      setNewName('');
-      // Aktualisiere Standardgruppe, falls nötig
-      if (editingGroup === defaultGroup) {
-        setDefaultGroup(newName);
-        localStorage.setItem('defaultGroup', newName);
-      }
-    }
-  };
-
   const handleDelete = async (group: string) => {
     if (Object.keys(groups).length > 1) {
       const updatedGroups = { ...groups };
       delete updatedGroups[group];
       setGroups(updatedGroups);
       await saveGroupColors(updatedGroups);
-      // Wenn die gelöschte Gruppe die Standardgruppe war, setze eine neue Standardgruppe
       if (group === defaultGroup) {
         const newDefault = Object.keys(updatedGroups)[0];
         setDefaultGroup(newDefault);
@@ -103,16 +77,7 @@ export default function GroupColorManager() {
           group !== 'default' && (
             <div key={`group-${group}`} className="flex flex-col sm:flex-row items-start sm:items-center gap-2 p-3 sm:p-4 bg-white rounded shadow">
               <div className="flex-1 w-full sm:w-auto">
-                {editingGroup === group ? (
-                  <input
-                    type="text"
-                    value={newName}
-                    onChange={(e) => setNewName(e.target.value)}
-                    className="w-full p-2 border rounded text-sm sm:text-base"
-                  />
-                ) : (
-                  <span className="font-medium text-sm sm:text-base">{group}</span>
-                )}
+                <span className="font-medium text-sm sm:text-base">{group}</span>
               </div>
               <div className="flex items-center gap-2 w-full sm:w-auto">
                 <input
