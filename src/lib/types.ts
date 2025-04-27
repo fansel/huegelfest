@@ -10,7 +10,10 @@ export interface Announcement {
     [key: string]: {
       count: number;
       deviceReactions: {
-        [deviceId: string]: string; // deviceId -> reactionType
+        [deviceId: string]: {
+          type: string;
+          announcementId: number;
+        };
       };
     };
   };
@@ -44,6 +47,7 @@ export interface Event {
   time: string;
   title: string;
   description: string;
+  category: 'music' | 'workshop' | 'food' | 'camp' | 'game' | 'other';
 }
 
 export interface Day {

@@ -1,7 +1,7 @@
 {
   "announcements": [
     {
-      "id": 0,
+      "id": 1,
       "content": "Website ist da :)",
       "date": "2025-04-26",
       "time": "19:06",
@@ -14,10 +14,93 @@
           "deviceReactions": {}
         },
         "laugh": {
+          "count": 0,
+          "deviceReactions": {}
+        },
+        "heart": {
           "count": 1,
           "deviceReactions": {
-            "qbjwbjwyw6m9y67v0z": "laugh"
+            "qbjwbjwyw6m9y67v0z": {
+              "type": "heart",
+              "announcementId": 1
+            }
           }
+        },
+        "clap": {
+          "count": 0,
+          "deviceReactions": {}
+        },
+        "surprised": {
+          "count": 0,
+          "deviceReactions": {}
+        }
+      }
+    },
+    {
+      "id": 2,
+      "content": "Es gibt Essen!",
+      "date": "2025-04-27",
+      "time": "11:01",
+      "author": "Küche",
+      "group": "Küche",
+      "important": true,
+      "reactions": {
+        "laugh": {
+          "count": 0,
+          "deviceReactions": {}
+        },
+        "heart": {
+          "count": 0,
+          "deviceReactions": {}
+        },
+        "clap": {
+          "count": 1,
+          "deviceReactions": {
+            "qbjwbjwyw6m9y67v0z": {
+              "type": "clap",
+              "announcementId": 2
+            }
+          }
+        },
+        "surprised": {
+          "count": 0,
+          "deviceReactions": {}
+        }
+      }
+    },
+    {
+      "id": 0,
+      "content": "test",
+      "date": "2025-04-27",
+      "time": "11:08",
+      "author": "Küche",
+      "group": "Küche",
+      "important": false,
+      "reactions": {
+        "clap": {
+          "count": 0,
+          "deviceReactions": {}
+        },
+        "surprised": {
+          "count": 0,
+          "deviceReactions": {}
+        },
+        "heart": {
+          "count": 0,
+          "deviceReactions": {}
+        },
+        "thumbsUp": {
+          "count": 1,
+          "deviceReactions": {
+            "qbjwbjwyw6m9y67v0z": {
+              "type": "thumbsUp",
+              "announcementId": 0
+            }
+          }
+        },
+        "laugh": {
+          "count": 0,
+          "deviceReactions": {}
         }
       }
     }

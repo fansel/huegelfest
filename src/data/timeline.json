@@ -7,22 +7,26 @@
         {
           "time": "14:00",
           "title": "Anreise & Check-in",
-          "description": "Ankunft und Einchecken in die Unterkünfte"
+          "description": "Ankunft und Einchecken in die Unterkünfte",
+          "category": "other"
         },
         {
           "time": "16:00",
           "title": "Willkommensrunde",
-          "description": "Kennenlernen und Organisatorisches"
+          "description": "Kennenlernen und Organisatorisches",
+          "category": "workshop"
         },
         {
           "time": "18:15",
           "title": "Gemeinsames Abendessen",
-          "description": "Erstes gemeinsames Mahl"
+          "description": "Erstes gemeinsames Mahl",
+          "category": "food"
         },
         {
           "time": "20:00",
           "title": "Lagerfeuer & Musik",
-          "description": "Gemütlicher Ausklang des ersten Tages"
+          "description": "Gemütlicher Ausklang des ersten Tages",
+          "category": "music"
         }
       ]
     },
@@ -33,22 +37,26 @@
         {
           "time": "10:00",
           "title": "Workshop-Runde 1",
-          "description": "Verschiedene kreative Workshops zur Auswahl"
+          "description": "Verschiedene kreative Workshops zur Auswahl",
+          "category": "workshop"
         },
         {
           "time": "12:00",
           "title": "Mittagspause",
-          "description": "Gemeinsames Mittagessen"
+          "description": "Gemeinsames Mittagessen",
+          "category": "food"
         },
         {
           "time": "14:00",
           "title": "Workshop-Runde 2",
-          "description": "Weitere Workshop-Optionen"
+          "description": "Weitere Workshop-Optionen",
+          "category": "workshop"
         },
         {
           "time": "16:00",
           "title": "Kreativ-Session",
-          "description": "Freies kreatives Arbeiten"
+          "description": "Freies kreatives Arbeiten",
+          "category": "workshop"
         }
       ]
     },
@@ -59,17 +67,20 @@
         {
           "time": "10:00",
           "title": "Badeausflug",
-          "description": "Gemeinsamer Ausflug zum Baden"
+          "description": "Gemeinsamer Ausflug zum Baden",
+          "category": "other"
         },
         {
           "time": "14:00",
           "title": "Nachmittagsprogramm",
-          "description": "Verschiedene Aktivitäten zur Auswahl"
+          "description": "Verschiedene Aktivitäten zur Auswahl",
+          "category": "game"
         },
         {
           "time": "20:00",
           "title": "DJ-Party",
-          "description": "Abendliche Feier mit DJs"
+          "description": "Abendliche Feier mit DJs",
+          "category": "music"
         }
       ]
     },
@@ -80,17 +91,20 @@
         {
           "time": "10:00",
           "title": "Bastelworkshop",
-          "description": "Kreatives Basteln für alle"
+          "description": "Kreatives Basteln für alle",
+          "category": "workshop"
         },
         {
           "time": "14:00",
           "title": "Chill-Out-Zone",
-          "description": "Entspannung und Spiele"
+          "description": "Entspannung und Spiele",
+          "category": "game"
         },
         {
           "time": "16:00",
           "title": "Kater-Café",
-          "description": "Erholung und Snacks"
+          "description": "Erholung und Snacks",
+          "category": "food"
         }
       ]
     },

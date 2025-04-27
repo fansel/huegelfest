@@ -15,7 +15,7 @@ export default function Footer() {
           </div>
           <div className="text-center">
             <p className="text-sm">
-              © {new Date().getFullYear()} Huegelfest. Alle Rechte vorbehalten.
+              © {new Date().getFullYear()} Hügelfest. Alle Rechte vorbehalten.
             </p>
             <p className="text-xs mt-1">
               <Link href="/impressum" className="hover:text-[#ff9900]/80 transition-colors">

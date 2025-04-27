@@ -1,25 +1,27 @@
 'use client';
 
 import React, { useEffect, useState } from 'react';
-import { TimelineData } from '@/lib/types';
+import { TimelineData, Event } from '@/lib/types';
 import { loadTimeline, saveTimeline } from '@/lib/admin';
-import { FaPen, FaTrash, FaPlus, FaArrowLeft, FaCheck, FaTimes } from 'react-icons/fa';
+import { FaPen, FaTrash, FaPlus, FaArrowLeft, FaCheck, FaTimes, FaMusic, FaUsers, FaUtensils, FaCampground, FaGamepad, FaQuestion } from 'react-icons/fa';
 
-interface TimelineEvent {
-  id: string;
-  day: number;
-  time: string;
-  title: string;
-  description: string;
-}
+const categoryOptions = [
+  { value: 'music', label: 'Musik', icon: <FaMusic /> },
+  { value: 'workshop', label: 'Workshop', icon: <FaUsers /> },
+  { value: 'food', label: 'Essen & Trinken', icon: <FaUtensils /> },
+  { value: 'camp', label: 'Camp', icon: <FaCampground /> },
+  { value: 'game', label: 'Spiele', icon: <FaGamepad /> },
+  { value: 'other', label: 'Sonstiges', icon: <FaQuestion /> }
+];
 
 export default function TimelineManager() {
   const [timeline, setTimeline] = useState<TimelineData>({ days: [] });
   const [currentDay, setCurrentDay] = useState<number>(0);
-  const [newEvent, setNewEvent] = useState<Omit<TimelineEvent, 'id' | 'day'>>({
+  const [newEvent, setNewEvent] = useState<Omit<Event, 'id'>>({
     time: '',
     title: '',
-    description: ''
+    description: '',
+    category: 'other'
   });
   const [editingEvent, setEditingEvent] = useState<{ dayIndex: number; eventIndex: number } | null>(null);
 
@@ -32,13 +34,13 @@ export default function TimelineManager() {
 
     const updatedDays = [...timeline.days];
     const currentDayData = { ...updatedDays[currentDay] };
-    currentDayData.events = [...currentDayData.events, newEvent as TimelineEvent];
+    currentDayData.events = [...currentDayData.events, newEvent];
     updatedDays[currentDay] = currentDayData;
 
     const updatedTimeline = { ...timeline, days: updatedDays };
     setTimeline(updatedTimeline);
     saveTimeline(updatedTimeline);
-    setNewEvent({ time: '', title: '', description: '' });
+    setNewEvent({ time: '', title: '', description: '', category: 'other' });
   };
 
   const handleDeleteEvent = (eventIndex: number) => {
@@ -65,7 +67,7 @@ export default function TimelineManager() {
     const updatedDays = [...timeline.days];
     const dayData = { ...updatedDays[editingEvent.dayIndex] };
     dayData.events = dayData.events.map((event, index) => 
-      index === editingEvent.eventIndex ? newEvent as TimelineEvent : event
+      index === editingEvent.eventIndex ? newEvent : event
     );
     updatedDays[editingEvent.dayIndex] = dayData;
 
@@ -73,12 +75,12 @@ export default function TimelineManager() {
     setTimeline(updatedTimeline);
     saveTimeline(updatedTimeline);
     setEditingEvent(null);
-    setNewEvent({ time: '', title: '', description: '' });
+    setNewEvent({ time: '', title: '', description: '', category: 'other' });
   };
 
   const handleCancelEdit = () => {
     setEditingEvent(null);
-    setNewEvent({ time: '', title: '', description: '' });
+    setNewEvent({ time: '', title: '', description: '', category: 'other' });
   };
 
   return (
@@ -114,6 +116,12 @@ export default function TimelineManager() {
                         <div className="text-[#ff9900] font-bold">{event.time}</div>
                         <h3 className="text-lg font-semibold text-white">{event.title}</h3>
                         <p className="text-[#ff9900] text-opacity-80">{event.description}</p>
+                        <div className="mt-2 flex items-center space-x-2 text-[#ff9900]">
+                          {categoryOptions.find(opt => opt.value === event.category)?.icon}
+                          <span className="text-sm">
+                            {categoryOptions.find(opt => opt.value === event.category)?.label}
+                          </span>
+                        </div>
                       </div>
                       <div className="flex space-x-2">
                         <button
@@ -159,6 +167,22 @@ export default function TimelineManager() {
                     onChange={(e) => setNewEvent({ ...newEvent, description: e.target.value })}
                     className="w-full p-2 rounded bg-[#460b6c] border border-[#ff9900] border-opacity-30 text-white"
                   />
+                  <div className="grid grid-cols-2 sm:grid-cols-3 gap-2">
+                    {categoryOptions.map((option) => (
+                      <button
+                        key={option.value}
+                        onClick={() => setNewEvent({ ...newEvent, category: option.value as Event['category'] })}
+                        className={`p-2 rounded-lg flex items-center space-x-2 ${
+                          newEvent.category === option.value
+                            ? 'bg-[#ff9900] text-[#460b6c]'
+                            : 'bg-[#460b6c] text-[#ff9900] hover:bg-[#ff9900] hover:bg-opacity-20'
+                        }`}
+                      >
+                        {option.icon}
+                        <span>{option.label}</span>
+                      </button>
+                    ))}
+                  </div>
                   <button
                     onClick={handleAddEvent}
                     className="w-full py-2 px-4 bg-[#ff9900] text-[#460b6c] rounded-lg hover:bg-opacity-90 transition-colors flex items-center justify-center space-x-2"
@@ -204,6 +228,22 @@ export default function TimelineManager() {
               onChange={(e) => setNewEvent({ ...newEvent, description: e.target.value })}
               className="w-full p-2 rounded bg-[#460b6c] border border-[#ff9900] border-opacity-30 text-white"
             />
+            <div className="grid grid-cols-2 sm:grid-cols-3 gap-2">
+              {categoryOptions.map((option) => (
+                <button
+                  key={option.value}
+                  onClick={() => setNewEvent({ ...newEvent, category: option.value as Event['category'] })}
+                  className={`p-2 rounded-lg flex items-center space-x-2 ${
+                    newEvent.category === option.value
+                      ? 'bg-[#ff9900] text-[#460b6c]'
+                      : 'bg-[#460b6c] text-[#ff9900] hover:bg-[#ff9900] hover:bg-opacity-20'
+                  }`}
+                >
+                  {option.icon}
+                  <span>{option.label}</span>
+                </button>
+              ))}
+            </div>
             <div className="flex space-x-2">
               <button
                 onClick={handleSaveEdit}
