@@ -17,15 +17,15 @@ export default function Footer() {
             <p className="text-sm">
               © {new Date().getFullYear()} Hügelfest. Alle Rechte vorbehalten.
             </p>
-            <p className="text-xs mt-1">
+            <p className="text-xs mt-1 flex flex-wrap justify-center gap-2">
               <Link href="/impressum" className="hover:text-[#ff9900]/80 transition-colors">
                 Impressum
               </Link>
-              {' | '}
+              <span>|</span>
               <Link href="/datenschutz" className="hover:text-[#ff9900]/80 transition-colors">
                 Datenschutz
               </Link>
-              {' | '}
+              <span>|</span>
               <Link href="/admin" className="hover:text-[#ff9900]/80 transition-colors">
                 Admin
               </Link>

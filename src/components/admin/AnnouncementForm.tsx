@@ -70,7 +70,7 @@ const AnnouncementForm = memo(({ onSubmit, initialData, groups }: AnnouncementFo
         <textarea
           value={content}
           onChange={handleContentChange}
-          className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-[#ff9900] focus:ring-[#ff9900]"
+          className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-[#ff9900] focus:ring-[#ff9900] min-h-[100px] sm:min-h-[150px]"
           rows={3}
           required
         />
@@ -81,7 +81,7 @@ const AnnouncementForm = memo(({ onSubmit, initialData, groups }: AnnouncementFo
         <select
           value={group}
           onChange={handleGroupChange}
-          className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-[#ff9900] focus:ring-[#ff9900]"
+          className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-[#ff9900] focus:ring-[#ff9900] py-2"
           required
         >
           <option value="">Bitte wählen...</option>
@@ -110,7 +110,7 @@ const AnnouncementForm = memo(({ onSubmit, initialData, groups }: AnnouncementFo
 
       <button
         type="submit"
-        className="w-full bg-[#ff9900] text-white py-2 px-4 rounded-md hover:bg-orange-600"
+        className="w-full bg-[#ff9900] text-white py-3 px-4 rounded-md hover:bg-orange-600 text-sm sm:text-base font-medium"
       >
         {initialData ? 'Aktualisieren' : 'Erstellen'}
       </button>

@@ -112,6 +112,16 @@
       "title": "Montag – Tschüss-Tag",
       "description": "Abreisen, letzte Umarmungen",
       "events": []
+    },
+    {
+      "title": "Tag 6",
+      "description": "Beschreibung für Tag 6",
+      "events": []
+    },
+    {
+      "title": "Tag 7",
+      "description": "Beschreibung für Tag 7",
+      "events": []
     }
   ]
 }

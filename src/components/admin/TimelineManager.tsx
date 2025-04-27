@@ -83,186 +83,168 @@ export default function TimelineManager() {
     setNewEvent({ time: '', title: '', description: '', category: 'other' });
   };
 
+  const handleAddDay = () => {
+    const updatedDays = [...timeline.days, { 
+      title: `Tag ${timeline.days.length + 1}`, 
+      description: `Beschreibung für Tag ${timeline.days.length + 1}`,
+      events: [] 
+    }];
+    const updatedTimeline = { ...timeline, days: updatedDays };
+    setTimeline(updatedTimeline);
+    saveTimeline(updatedTimeline);
+    setCurrentDay(updatedDays.length - 1);
+  };
+
+  const handleSubmit = (e: React.FormEvent) => {
+    e.preventDefault();
+    if (editingEvent) {
+      handleSaveEdit();
+    } else {
+      handleAddEvent();
+    }
+  };
+
   return (
-    <div className="space-y-6">
-      {!editingEvent ? (
-        <>
-          <div className="flex flex-wrap gap-2">
-            {timeline.days.map((day, index) => (
-              <button
-                key={index}
-                onClick={() => setCurrentDay(index)}
-                className={`px-4 py-2 rounded-full transition-colors ${
-                  currentDay === index
-                    ? 'bg-[#ff9900] text-[#460b6c]'
-                    : 'bg-[#460b6c] text-[#ff9900] hover:bg-[#ff9900] hover:bg-opacity-20'
-                }`}
-              >
-                {day.title}
-              </button>
-            ))}
-          </div>
+    <div className="bg-white p-4 sm:p-6 rounded-lg shadow-lg">
+      <h3 className="text-lg sm:text-xl font-bold text-[#460b6c] mb-4">Timeline verwalten</h3>
 
-          {timeline.days.length > 0 && (
-            <>
-              <div className="space-y-4">
-                {timeline.days[currentDay].events.map((event, index) => (
-                  <div
-                    key={index}
-                    className="bg-[#460b6c] bg-opacity-50 rounded-lg p-4 border border-[#ff9900] border-opacity-30"
-                  >
-                    <div className="flex justify-between items-start">
-                      <div>
-                        <div className="text-[#ff9900] font-bold">{event.time}</div>
-                        <h3 className="text-lg font-semibold text-white">{event.title}</h3>
-                        <p className="text-[#ff9900] text-opacity-80">{event.description}</p>
-                        <div className="mt-2 flex items-center space-x-2 text-[#ff9900]">
-                          {categoryOptions.find(opt => opt.value === event.category)?.icon}
-                          <span className="text-sm">
-                            {categoryOptions.find(opt => opt.value === event.category)?.label}
-                          </span>
-                        </div>
-                      </div>
-                      <div className="flex space-x-2">
-                        <button
-                          onClick={() => handleEditEvent(currentDay, index)}
-                          className="text-[#ff9900] hover:text-[#ff9900] hover:opacity-80 flex items-center space-x-1"
-                        >
-                          <FaPen className="h-4 w-4" />
-                          <span>Bearbeiten</span>
-                        </button>
-                        <button
-                          onClick={() => handleDeleteEvent(index)}
-                          className="text-red-500 hover:text-red-400 flex items-center space-x-1"
-                        >
-                          <FaTrash className="h-4 w-4" />
-                          <span>Löschen</span>
-                        </button>
-                      </div>
-                    </div>
-                  </div>
-                ))}
-              </div>
+      <div className="space-y-6">
+        {/* Day Navigation */}
+        <div className="flex flex-wrap gap-2">
+          {timeline.days.map((day, index) => (
+            <button
+              key={index}
+              onClick={() => setCurrentDay(index)}
+              className={`px-3 sm:px-4 py-2 rounded text-sm sm:text-base ${
+                currentDay === index
+                  ? 'bg-[#460b6c] text-white'
+                  : 'bg-gray-200 hover:bg-gray-300'
+              }`}
+            >
+              Tag {index + 1}
+            </button>
+          ))}
+          <button
+            onClick={handleAddDay}
+            className="px-3 sm:px-4 py-2 rounded bg-[#ff9900] text-white text-sm sm:text-base hover:bg-orange-600"
+          >
+            + Tag
+          </button>
+        </div>
 
-              <div className="space-y-4 bg-[#460b6c] bg-opacity-50 rounded-lg p-4 border border-[#ff9900] border-opacity-30">
-                <h3 className="text-lg font-semibold text-white">Neues Event hinzufügen</h3>
-                <div className="space-y-2">
-                  <input
-                    type="text"
-                    placeholder="Uhrzeit (z.B. 14:00)"
-                    value={newEvent.time}
-                    onChange={(e) => setNewEvent({ ...newEvent, time: e.target.value })}
-                    className="w-full p-2 rounded bg-[#460b6c] border border-[#ff9900] border-opacity-30 text-white"
-                  />
-                  <input
-                    type="text"
-                    placeholder="Titel"
-                    value={newEvent.title}
-                    onChange={(e) => setNewEvent({ ...newEvent, title: e.target.value })}
-                    className="w-full p-2 rounded bg-[#460b6c] border border-[#ff9900] border-opacity-30 text-white"
-                  />
-                  <textarea
-                    placeholder="Beschreibung"
-                    value={newEvent.description}
-                    onChange={(e) => setNewEvent({ ...newEvent, description: e.target.value })}
-                    className="w-full p-2 rounded bg-[#460b6c] border border-[#ff9900] border-opacity-30 text-white"
-                  />
-                  <div className="grid grid-cols-2 sm:grid-cols-3 gap-2">
-                    {categoryOptions.map((option) => (
-                      <button
-                        key={option.value}
-                        onClick={() => setNewEvent({ ...newEvent, category: option.value as Event['category'] })}
-                        className={`p-2 rounded-lg flex items-center space-x-2 ${
-                          newEvent.category === option.value
-                            ? 'bg-[#ff9900] text-[#460b6c]'
-                            : 'bg-[#460b6c] text-[#ff9900] hover:bg-[#ff9900] hover:bg-opacity-20'
-                        }`}
-                      >
-                        {option.icon}
-                        <span>{option.label}</span>
-                      </button>
-                    ))}
+        {/* Event List */}
+        <div className="space-y-4">
+          {timeline.days[currentDay]?.events.map((event, eventIndex) => (
+            <div
+              key={eventIndex}
+              className="bg-gray-50 p-4 rounded-lg border border-gray-200"
+            >
+              <div className="flex flex-col sm:flex-row justify-between items-start gap-4">
+                <div className="flex-1">
+                  <div className="flex items-center gap-2 mb-2">
+                    {categoryOptions.find(cat => cat.value === event.category)?.icon}
+                    <span className="font-medium text-sm sm:text-base">{event.title}</span>
                   </div>
+                  <p className="text-gray-600 text-sm sm:text-base">{event.time}</p>
+                  <p className="text-gray-700 mt-2 text-sm sm:text-base">{event.description}</p>
+                </div>
+                <div className="flex gap-2 w-full sm:w-auto">
                   <button
-                    onClick={handleAddEvent}
-                    className="w-full py-2 px-4 bg-[#ff9900] text-[#460b6c] rounded-lg hover:bg-opacity-90 transition-colors flex items-center justify-center space-x-2"
+                    onClick={() => setEditingEvent({ dayIndex: currentDay, eventIndex })}
+                    className="p-2 text-blue-600 hover:text-blue-800 flex-1 sm:flex-none text-sm sm:text-base"
                   >
-                    <FaPlus className="h-4 w-4" />
-                    <span>Event hinzufügen</span>
+                    Bearbeiten
+                  </button>
+                  <button
+                    onClick={() => handleDeleteEvent(eventIndex)}
+                    className="p-2 text-red-600 hover:text-red-800 flex-1 sm:flex-none text-sm sm:text-base"
+                  >
+                    Löschen
                   </button>
                 </div>
               </div>
-            </>
-          )}
-        </>
-      ) : (
-        <div className="space-y-4 bg-[#460b6c] bg-opacity-50 rounded-lg p-4 border border-[#ff9900] border-opacity-30">
-          <div className="flex justify-between items-center">
-            <h3 className="text-lg font-semibold text-white">Event bearbeiten</h3>
-            <button
-              onClick={handleCancelEdit}
-              className="text-[#ff9900] hover:text-[#ff9900] hover:opacity-80 flex items-center space-x-1"
-            >
-              <FaArrowLeft className="h-4 w-4" />
-              <span>Zurück</span>
-            </button>
-          </div>
-          <div className="space-y-2">
-            <input
-              type="text"
-              placeholder="Uhrzeit (z.B. 14:00)"
-              value={newEvent.time}
-              onChange={(e) => setNewEvent({ ...newEvent, time: e.target.value })}
-              className="w-full p-2 rounded bg-[#460b6c] border border-[#ff9900] border-opacity-30 text-white"
-            />
-            <input
-              type="text"
-              placeholder="Titel"
-              value={newEvent.title}
-              onChange={(e) => setNewEvent({ ...newEvent, title: e.target.value })}
-              className="w-full p-2 rounded bg-[#460b6c] border border-[#ff9900] border-opacity-30 text-white"
-            />
-            <textarea
-              placeholder="Beschreibung"
-              value={newEvent.description}
-              onChange={(e) => setNewEvent({ ...newEvent, description: e.target.value })}
-              className="w-full p-2 rounded bg-[#460b6c] border border-[#ff9900] border-opacity-30 text-white"
-            />
-            <div className="grid grid-cols-2 sm:grid-cols-3 gap-2">
-              {categoryOptions.map((option) => (
-                <button
-                  key={option.value}
-                  onClick={() => setNewEvent({ ...newEvent, category: option.value as Event['category'] })}
-                  className={`p-2 rounded-lg flex items-center space-x-2 ${
-                    newEvent.category === option.value
-                      ? 'bg-[#ff9900] text-[#460b6c]'
-                      : 'bg-[#460b6c] text-[#ff9900] hover:bg-[#ff9900] hover:bg-opacity-20'
-                  }`}
-                >
-                  {option.icon}
-                  <span>{option.label}</span>
-                </button>
-              ))}
             </div>
-            <div className="flex space-x-2">
-              <button
-                onClick={handleSaveEdit}
-                className="flex-1 py-2 px-4 bg-[#ff9900] text-[#460b6c] rounded-lg hover:bg-opacity-90 transition-colors flex items-center justify-center space-x-2"
-              >
-                <FaCheck className="h-4 w-4" />
-                <span>Speichern</span>
-              </button>
-              <button
-                onClick={handleCancelEdit}
-                className="py-2 px-4 bg-[#460b6c] text-[#ff9900] border border-[#ff9900] rounded-lg hover:bg-opacity-90 transition-colors flex items-center justify-center space-x-2"
-              >
-                <FaTimes className="h-4 w-4" />
-                <span>Abbrechen</span>
-              </button>
-            </div>
-          </div>
+          ))}
         </div>
-      )}
+
+        {/* Add/Edit Event Form */}
+        <div className="bg-gray-50 p-4 rounded-lg border border-gray-200">
+          <h4 className="text-md sm:text-lg font-semibold text-[#460b6c] mb-4">
+            {editingEvent ? 'Event bearbeiten' : 'Neues Event hinzufügen'}
+          </h4>
+          <form onSubmit={handleSubmit} className="space-y-4">
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+              <div>
+                <label className="block text-sm font-medium text-gray-700">Zeit</label>
+                <input
+                  type="time"
+                  value={newEvent.time}
+                  onChange={(e) => setNewEvent({ ...newEvent, time: e.target.value })}
+                  className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-[#ff9900] focus:ring-[#ff9900] py-2"
+                  required
+                />
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-gray-700">Kategorie</label>
+                <select
+                  value={newEvent.category}
+                  onChange={(e) => setNewEvent({ ...newEvent, category: e.target.value as any })}
+                  className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-[#ff9900] focus:ring-[#ff9900] py-2"
+                  required
+                >
+                  {categoryOptions.map((cat) => (
+                    <option key={cat.value} value={cat.value}>
+                      {cat.label}
+                    </option>
+                  ))}
+                </select>
+              </div>
+            </div>
+
+            <div>
+              <label className="block text-sm font-medium text-gray-700">Titel</label>
+              <input
+                type="text"
+                value={newEvent.title}
+                onChange={(e) => setNewEvent({ ...newEvent, title: e.target.value })}
+                className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-[#ff9900] focus:ring-[#ff9900] py-2"
+                required
+              />
+            </div>
+
+            <div>
+              <label className="block text-sm font-medium text-gray-700">Beschreibung</label>
+              <textarea
+                value={newEvent.description}
+                onChange={(e) => setNewEvent({ ...newEvent, description: e.target.value })}
+                className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-[#ff9900] focus:ring-[#ff9900] min-h-[100px] sm:min-h-[150px]"
+                required
+              />
+            </div>
+
+            <div className="flex gap-2">
+              <button
+                type="submit"
+                className="flex-1 bg-[#ff9900] text-white py-2 px-4 rounded-md hover:bg-orange-600 text-sm sm:text-base font-medium"
+              >
+                {editingEvent ? 'Aktualisieren' : 'Hinzufügen'}
+              </button>
+              {editingEvent && (
+                <button
+                  type="button"
+                  onClick={() => {
+                    setEditingEvent(null);
+                    setNewEvent({ time: '', title: '', description: '', category: 'other' });
+                  }}
+                  className="flex-1 bg-gray-200 text-gray-700 py-2 px-4 rounded-md hover:bg-gray-300 text-sm sm:text-base font-medium"
+                >
+                  Abbrechen
+                </button>
+              )}
+            </div>
+          </form>
+        </div>
+      </div>
     </div>
   );
 } 

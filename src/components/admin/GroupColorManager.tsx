@@ -8,6 +8,7 @@ export default function GroupColorManager() {
   const [editingGroup, setEditingGroup] = useState<string | null>(null);
   const [newName, setNewName] = useState('');
   const [defaultGroup, setDefaultGroup] = useState<string>('');
+  const [newGroupColor, setNewGroupColor] = useState('#460b6c');
 
   useEffect(() => {
     const loadGroups = async () => {
@@ -37,10 +38,11 @@ export default function GroupColorManager() {
 
   const handleAddGroup = async () => {
     if (newGroupName && !groups[newGroupName]) {
-      const updatedGroups = { ...groups, [newGroupName]: '#460b6c' };
+      const updatedGroups = { ...groups, [newGroupName]: newGroupColor };
       setGroups(updatedGroups);
       await saveGroupColors(updatedGroups);
       setNewGroupName('');
+      setNewGroupColor('#460b6c');
     }
   };
 
@@ -93,82 +95,73 @@ export default function GroupColorManager() {
   };
 
   return (
-    <div className="bg-white p-6 rounded-lg shadow-lg">
-      <h3 className="text-xl font-bold text-[#460b6c] mb-4">Gruppenfarben verwalten</h3>
+    <div className="bg-white p-4 sm:p-6 rounded-lg shadow-lg">
+      <h3 className="text-lg sm:text-xl font-bold text-[#460b6c] mb-4">Gruppenfarben verwalten</h3>
 
       <div className="space-y-4">
         {Object.entries(groups).map(([group, color]) => (
           group !== 'default' && (
-            <div key={`group-${group}`} className="flex items-center gap-2 p-2 bg-white rounded shadow">
-              <div className="flex-1">
+            <div key={`group-${group}`} className="flex flex-col sm:flex-row items-start sm:items-center gap-2 p-3 sm:p-4 bg-white rounded shadow">
+              <div className="flex-1 w-full sm:w-auto">
                 {editingGroup === group ? (
                   <input
                     type="text"
                     value={newName}
                     onChange={(e) => setNewName(e.target.value)}
-                    className="w-full p-2 border rounded"
+                    className="w-full p-2 border rounded text-sm sm:text-base"
                   />
                 ) : (
-                  <span className="font-medium">{group}</span>
+                  <span className="font-medium text-sm sm:text-base">{group}</span>
                 )}
               </div>
-              <input
-                type="color"
-                value={color}
-                onChange={(e) => handleColorChange(group, e.target.value)}
-                className="w-8 h-8 rounded cursor-pointer"
-              />
-              <button
-                onClick={() => handleSetDefault(group)}
-                className={`px-4 py-2 rounded ${
-                  defaultGroup === group
-                    ? 'bg-purple-600 text-white'
-                    : 'bg-gray-200 hover:bg-gray-300'
-                }`}
-              >
-                {defaultGroup === group ? 'Standard' : 'Als Standard'}
-              </button>
-              {editingGroup === group ? (
+              <div className="flex items-center gap-2 w-full sm:w-auto">
+                <input
+                  type="color"
+                  value={color}
+                  onChange={(e) => handleColorChange(group, e.target.value)}
+                  className="w-8 h-8 rounded cursor-pointer"
+                />
                 <button
-                  onClick={handleRename}
-                  className="px-4 py-2 bg-green-600 text-white rounded hover:bg-green-700"
+                  onClick={() => handleSetDefault(group)}
+                  className={`px-3 sm:px-4 py-2 rounded text-sm sm:text-base ${
+                    defaultGroup === group
+                      ? 'bg-purple-600 text-white'
+                      : 'bg-gray-200 hover:bg-gray-300'
+                  }`}
                 >
-                  Speichern
+                  {defaultGroup === group ? 'Standard' : 'Als Standard'}
                 </button>
-              ) : (
-                <button
-                  onClick={() => handleRenameStart(group)}
-                  className="px-4 py-2 bg-blue-600 text-white rounded hover:bg-blue-700"
-                >
-                  Umbenennen
-                </button>
-              )}
-              {Object.keys(groups).length > 1 && (
                 <button
                   onClick={() => handleDelete(group)}
-                  className="px-4 py-2 bg-red-600 text-white rounded hover:bg-red-700"
+                  className="px-3 sm:px-4 py-2 rounded bg-red-500 text-white text-sm sm:text-base hover:bg-red-600"
                 >
                   Löschen
                 </button>
-              )}
+              </div>
             </div>
           )
         ))}
       </div>
 
-      <div className="mt-6 pt-4 border-t">
-        <h4 className="text-lg font-medium text-[#460b6c] mb-2">Neue Gruppe hinzufügen</h4>
-        <div className="flex gap-2">
+      <div className="mt-6">
+        <h4 className="text-md sm:text-lg font-semibold text-[#460b6c] mb-3">Neue Gruppe hinzufügen</h4>
+        <div className="flex flex-col sm:flex-row gap-2">
           <input
             type="text"
             value={newGroupName}
             onChange={(e) => setNewGroupName(e.target.value)}
-            placeholder="Neue Gruppe"
-            className="flex-1 p-2 border rounded"
+            placeholder="Gruppenname"
+            className="flex-1 p-2 border rounded text-sm sm:text-base"
+          />
+          <input
+            type="color"
+            value={newGroupColor}
+            onChange={(e) => setNewGroupColor(e.target.value)}
+            className="w-12 h-12 rounded cursor-pointer"
           />
           <button
             onClick={handleAddGroup}
-            className="px-4 py-2 bg-purple-600 text-white rounded hover:bg-purple-700"
+            className="px-4 py-2 rounded bg-[#ff9900] text-white text-sm sm:text-base hover:bg-orange-600"
           >
             Hinzufügen
           </button>

@@ -222,8 +222,8 @@ export default function SoundCloudPlayer() {
           </div>
           <div className="overflow-hidden max-w-[calc(100%-60px)]">
             <div className="whitespace-nowrap animate-marquee">
-              <span className="font-bold text-[10px] inline-block mr-4">{trackInfo?.title || 'Kein Track'}</span>
-              <span className="font-bold text-[10px] inline-block mr-4">{trackInfo?.title || 'Kein Track'}</span>
+              <span className="font-bold text-[10px] sm:text-xs inline-block mr-4">{trackInfo?.title || 'Kein Track'}</span>
+              <span className="font-bold text-[10px] sm:text-xs inline-block mr-4">{trackInfo?.title || 'Kein Track'}</span>
             </div>
           </div>
           <button
