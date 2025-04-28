@@ -14,8 +14,10 @@ ENV NODE_ENV=production
 ENV NEXT_TELEMETRY_DISABLED=1
 ENV NEXT_DISABLE_ESLINT=true
 
-# Erstelle .env Datei mit dem Admin-Passwort
-RUN echo "NEXT_PUBLIC_ADMIN_PASSWORD=supergeilersommer" > .env
+# Füge das Admin-Passwort zur .env Datei hinzu, wenn es nicht existiert
+RUN if [ ! -f .env ]; then \
+    echo "NEXT_PUBLIC_ADMIN_PASSWORD=supergeilersommer" > .env; \
+    fi
 
 # Baue die Anwendung
 RUN npm run build
