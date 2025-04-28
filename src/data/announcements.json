@@ -1,34 +1,100 @@
 {
   "announcements": [
     {
-      "id": 0,
-      "content": "Test",
-      "date": "2025-04-28",
-      "time": "15:50",
-      "author": "Felix",
-      "group": "Felix",
-      "important": false,
-      "reactions": {}
-    },
-    {
-      "id": 0,
+      "id": 1714316760000,
       "content": "Hallo est",
       "date": "2025-04-28",
       "time": "16:26",
       "author": "Küche",
       "group": "Küche",
       "important": false,
-      "reactions": {}
+      "reactions": {
+        "👍": {
+          "count": 0,
+          "deviceReactions": {}
+        },
+        "❤️": {
+          "count": 0,
+          "deviceReactions": {}
+        },
+        "😂": {
+          "count": 1,
+          "deviceReactions": {
+            "oyr8rmy62lma197a2j": {
+              "type": "😂",
+              "announcementId": 1714316760000
+            }
+          }
+        }
+      }
     },
     {
-      "id": 0,
+      "id": 1714319160000,
       "content": "Test",
       "date": "2025-04-28",
       "time": "17:06",
       "author": "Küche",
       "group": "Küche",
       "important": true,
-      "reactions": {}
+      "reactions": {
+        "👍": {
+          "count": 1,
+          "deviceReactions": {
+            "oyr8rmy62lma197a2j": {
+              "type": "👍",
+              "announcementId": 1714319160000
+            }
+          }
+        },
+        "😂": {
+          "count": 0,
+          "deviceReactions": {}
+        }
+      }
+    },
+    {
+      "id": 1745855567784,
+      "content": "Tedt",
+      "date": "2025-04-28",
+      "time": "17:52",
+      "author": "Küche",
+      "group": "Küche",
+      "important": false,
+      "reactions": {
+        "👍": {
+          "count": 1,
+          "deviceReactions": {
+            "oyr8rmy62lma197a2j": {
+              "type": "👍",
+              "announcementId": 1745855567784
+            }
+          }
+        }
+      }
+    },
+    {
+      "id": 1745855570893,
+      "content": "Bdbdbd",
+      "date": "2025-04-28",
+      "time": "17:52",
+      "author": "Küche",
+      "group": "Küche",
+      "important": false,
+      "reactions": {
+        "👍": {
+          "count": 1,
+          "deviceReactions": {
+            "oyr8rmy62lma197a2j": {
+              "type": "👍",
+              "announcementId": 1745855570893
+            }
+          }
+        },
+        "😢": {
+          "count": 0,
+          "deviceReactions": {}
+        }
+      }
     }
   ]
 }

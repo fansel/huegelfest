@@ -49,7 +49,8 @@ export default function Timeline({ showFavoritesOnly = false }: TimelineProps) {
   const [selectedDay, setSelectedDay] = useState<number>(0);
   const [isScrolling, setIsScrolling] = useState(false);
   const [scrollPosition, setScrollPosition] = useState(0);
-  const { isPWA } = usePWA();
+  const { isPWA, isMobile } = usePWA();
+  const [showCategoryDropdown, setShowCategoryDropdown] = useState(false);
 
   useEffect(() => {
     const loadTimeline = async () => {
@@ -156,7 +157,7 @@ export default function Timeline({ showFavoritesOnly = false }: TimelineProps) {
     return <div className="flex justify-center items-center h-64 text-[#ff9900]">Lade Timeline...</div>;
   }
 
-  const filteredEvents = timelineData.days[currentDay].events.filter(event => 
+  const filteredEvents = timelineData.days[selectedDay].events.filter(event => 
     selectedCategories.size === 0 || selectedCategories.has(event.category)
   );
 
@@ -212,6 +213,7 @@ export default function Timeline({ showFavoritesOnly = false }: TimelineProps) {
           </div>
         ) : (
           <>
+            {/* Tage-Auswahl für Desktop */}
             <div className="hidden md:grid md:grid-cols-3 lg:grid-cols-4 gap-2 mb-4">
               {timelineData.days.map((day, index) => (
                 <button
@@ -227,6 +229,8 @@ export default function Timeline({ showFavoritesOnly = false }: TimelineProps) {
                 </button>
               ))}
             </div>
+
+            {/* Tage-Auswahl für Mobile/PWA */}
             <div className="md:hidden flex space-x-2 overflow-x-auto pb-2 -mx-4 px-4">
               {timelineData.days.map((day, index) => (
                 <button
@@ -243,31 +247,55 @@ export default function Timeline({ showFavoritesOnly = false }: TimelineProps) {
               ))}
             </div>
 
-            <div className="flex space-x-2 overflow-x-auto pb-2 -mx-4 px-4 mt-2">
-              <button
-                onClick={() => setSelectedCategories(new Set())}
-                className={`flex-shrink-0 px-4 py-2 rounded-full transition-colors duration-200 flex items-center space-x-2 ${
-                  selectedCategories.size === 0
-                    ? 'bg-[#ff9900] text-[#460b6c]'
-                    : 'bg-[#460b6c] text-[#ff9900] border border-[#ff9900]/20'
-                }`}
-              >
-                <span>Alle</span>
-              </button>
-              {categoryOptions.map((option) => (
+            {/* Kategoriefilter für Mobile/PWA */}
+            <div className="mt-4">
+              <div className="flex flex-wrap gap-1.5 justify-center">
                 <button
-                  key={option.value}
-                  onClick={() => toggleCategory(option.value)}
-                  className={`flex-shrink-0 px-4 py-2 rounded-full transition-colors duration-200 flex items-center space-x-2 ${
-                    selectedCategories.has(option.value)
+                  onClick={() => setSelectedCategories(new Set())}
+                  className={`p-2 rounded-full transition-colors duration-200 ${
+                    selectedCategories.size === 0
                       ? 'bg-[#ff9900] text-[#460b6c]'
                       : 'bg-[#460b6c] text-[#ff9900] border border-[#ff9900]/20'
                   }`}
+                  title="Alle Kategorien"
                 >
-                  {option.icon}
-                  <span>{option.label}</span>
+                  <FaFilter className="text-base" />
                 </button>
-              ))}
+                {categoryOptions.map((option) => (
+                  <button
+                    key={option.value}
+                    onClick={() => toggleCategory(option.value)}
+                    className={`p-2 rounded-full transition-colors duration-200 ${
+                      selectedCategories.has(option.value)
+                        ? 'bg-[#ff9900] text-[#460b6c]'
+                        : 'bg-[#460b6c] text-[#ff9900] border border-[#ff9900]/20'
+                    }`}
+                    title={option.label}
+                  >
+                    {React.cloneElement(option.icon, { className: "text-base" })}
+                  </button>
+                ))}
+              </div>
+              
+              {/* Anzeige der ausgewählten Kategorien */}
+              {selectedCategories.size > 0 && (
+                <div className="mt-2 text-center">
+                  <div className="inline-flex flex-wrap gap-1.5 justify-center">
+                    {Array.from(selectedCategories).map(category => {
+                      const option = categoryOptions.find(opt => opt.value === category);
+                      return option ? (
+                        <span 
+                          key={category}
+                          className="inline-flex items-center px-2 py-1 rounded-full bg-[#ff9900]/10 text-[#ff9900] text-sm"
+                        >
+                          {React.cloneElement(option.icon, { className: "text-xs mr-1" })}
+                          {option.label}
+                        </span>
+                      ) : null;
+                    })}
+                  </div>
+                </div>
+              )}
             </div>
           </>
         )}
@@ -281,7 +309,7 @@ export default function Timeline({ showFavoritesOnly = false }: TimelineProps) {
           onTouchEnd={() => setIsScrolling(false)}
         >
           <div className="absolute left-4 top-0 bottom-0 w-0.5 bg-[#ff9900]/20" />
-          {timelineData.days[selectedDay].events.map((event, index) => (
+          {filteredEvents.map((event, index) => (
             <div
               key={event.time}
               className={`relative pl-8 mb-8 transition-opacity duration-200 ${

@@ -26,7 +26,12 @@ export default function PWAContainer() {
 
   useEffect(() => {
     const mediaQuery = window.matchMedia('(display-mode: standalone)');
-    const updateIsPWA = (e: MediaQueryListEvent | MediaQueryList) => setIsPWA(e.matches);
+    const updateIsPWA = (e: MediaQueryListEvent | MediaQueryList) => {
+      const isStandaloneMode = e.matches || 
+                             (window.navigator as any).standalone || 
+                             document.referrer.includes('android-app://');
+      setIsPWA(isStandaloneMode);
+    };
     
     updateIsPWA(mediaQuery);
     mediaQuery.addEventListener('change', updateIsPWA);

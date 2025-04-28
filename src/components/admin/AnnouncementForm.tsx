@@ -29,10 +29,16 @@ const AnnouncementForm = memo(({ onSubmit, initialData, groups }: AnnouncementFo
       return;
     }
 
+    // Überprüfe auf doppelte Ankündigungen
+    if (!initialData && content.trim() === '') {
+      alert('Bitte geben Sie einen Inhalt ein');
+      return;
+    }
+
     const now = new Date();
     const newAnnouncement: Announcement = {
-      id: initialData?.id || 0,
-      content,
+      id: initialData?.id || Date.now(),
+      content: content.trim(),
       date: now.toISOString().split('T')[0],
       time: now.toTimeString().slice(0, 5),
       author: group,

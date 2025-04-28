@@ -3,7 +3,14 @@
     {
       "title": "Donnerstag – Hallo-Tag",
       "description": "Ankommen, entspanntes Starten",
-      "events": []
+      "events": [
+        {
+          "time": "17:43",
+          "title": "Zest",
+          "description": "Chuj",
+          "category": "other"
+        }
+      ]
     },
     {
       "title": "Freitag – Entdecker*innen-Tag",
