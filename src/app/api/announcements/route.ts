@@ -1,6 +1,7 @@
 import { NextResponse } from 'next/server';
 import { getAnnouncements, saveAnnouncements } from '../../announcements/actions';
 import type { Announcement } from '@/lib/types';
+import { sendUpdateToAllClients } from '../updates/route';
 
 export async function GET() {
   try {
@@ -25,6 +26,9 @@ export async function POST(request: Request) {
     if (!result.success) {
       return NextResponse.json({ error: result.error }, { status: 500 });
     }
+    
+    // Sende Update an alle verbundenen Clients
+    sendUpdateToAllClients();
     
     return NextResponse.json({ success: true });
   } catch (error) {

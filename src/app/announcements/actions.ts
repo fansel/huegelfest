@@ -115,6 +115,15 @@ export async function saveAnnouncements(announcements: Announcement[]) {
     await writeFile(ANNOUNCEMENTS_FILE, JSON.stringify({ announcements }, null, 2));
     
     revalidatePath('/announcements');
+    
+    // Sende Update an alle verbundenen Clients
+    try {
+      const { sendUpdateToAllClients } = await import('@/app/api/updates/route');
+      sendUpdateToAllClients();
+    } catch (error) {
+      console.error('Fehler beim Senden des Updates:', error);
+    }
+    
     return { success: true };
   } catch {
     return { success: false, error: 'Interner Serverfehler' };

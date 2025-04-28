@@ -138,7 +138,7 @@ export default function PWAContainer() {
       case 'infoboard':
         return (
           <div className={`flex flex-col items-center justify-start min-h-screen px-2 sm:px-6 py-0 sm:py-12 text-center ${!showStarfield ? 'bg-[#460b6c]' : ''}`}>
-            <InfoBoard />
+            <InfoBoard isPWA={isPWA} />
           </div>
         );
       case 'favorites':

@@ -7,6 +7,7 @@ import SoundCloudPlayer from '@/components/SoundCloudPlayer';
 import Countdown from '@/components/Countdown';
 import Timeline from '@/components/Timeline';
 import Starfield from '@/components/Starfield';
+import InfoBoard from '@/components/InfoBoard';
 import { saveAnnouncements as saveAnnouncementsServer } from './announcements/actions'
 
 function InstallPrompt() {
@@ -45,6 +46,7 @@ export default function Home() {
   const [announcements, setAnnouncements] = useState<AnnouncementType[]>([]);
   const [groupColors, setGroupColors] = useState<GroupColors>({ default: '#460b6c' });
   const [deviceId, setDeviceId] = useState<string>('');
+  const [isPWA, setIsPWA] = useState(false);
 
   useEffect(() => {
     const loadData = async () => {
@@ -70,6 +72,24 @@ export default function Home() {
       localStorage.setItem('deviceId', newDeviceId);
       setDeviceId(newDeviceId);
     }
+  }, []);
+
+  useEffect(() => {
+    // PWA-Erkennung
+    const checkPWA = () => {
+      const isStandalone = window.matchMedia('(display-mode: standalone)').matches;
+      const isIOS = /iPad|iPhone|iPod/.test(navigator.userAgent) && !(window as Window & { MSStream?: unknown }).MSStream;
+      const isIOSStandalone = isIOS && (window.navigator as any).standalone;
+      const isPWA = isStandalone || isIOSStandalone;
+      setIsPWA(isPWA);
+    };
+
+    checkPWA();
+    window.matchMedia('(display-mode: standalone)').addEventListener('change', checkPWA);
+
+    return () => {
+      window.matchMedia('(display-mode: standalone)').removeEventListener('change', checkPWA);
+    };
   }, []);
 
   const sortedAnnouncements = [...announcements].sort((a, b) => {
@@ -188,96 +208,7 @@ export default function Home() {
           <section id="infoboard" className="flex flex-col items-center justify-start px-2 sm:px-4">
             <div className="w-full">
               <h2 className="text-xl sm:text-3xl font-bold mb-4 sm:mb-8 text-center">InfoBoard</h2>
-              <div className="space-y-3 sm:space-y-4">
-                {sortedAnnouncements.map((announcement) => {
-                  const groupColor = groupColors[announcement.group] || groupColors.default;
-                  return (
-                    <div 
-                      key={`announcement-${announcement.id}-${announcement.date}-${announcement.time}`}
-                      className={`p-3 sm:p-4 rounded-lg border ${
-                        announcement.important 
-                          ? 'border-2 shadow-lg transform hover:scale-[1.02] transition-transform' 
-                          : 'border-opacity-30'
-                      }`}
-                      style={{
-                        backgroundColor: `${groupColor}${announcement.important ? '15' : '10'}`,
-                        borderColor: groupColor
-                      }}
-                    >
-                      <div className="flex-1 min-w-0">
-                        <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between space-y-1 sm:space-y-0">
-                          <div className="flex items-center space-x-2">
-                            <span 
-                              className="text-[10px] sm:text-xs px-1.5 sm:px-2 py-0.5 sm:py-1 rounded-full"
-                              style={{ 
-                                backgroundColor: `${groupColor}20`,
-                                color: groupColor
-                              }}
-                            >
-                              {announcement.group}
-                            </span>
-                            {announcement.important && (
-                              <span 
-                                className="text-[10px] sm:text-xs px-1.5 sm:px-2 py-0.5 sm:py-1 rounded-full font-bold"
-                                style={{ 
-                                  backgroundColor: '#ff000020',
-                                  color: '#ff0000'
-                                }}
-                              >
-                                WICHTIG
-                              </span>
-                            )}
-                          </div>
-                          <div className="flex items-center space-x-2">
-                            <p className="text-[10px] sm:text-xs" style={{ color: `${groupColor}70` }}>
-                              {new Date(announcement.date).toLocaleDateString('de-DE', {
-                                day: '2-digit',
-                                month: '2-digit',
-                                year: 'numeric'
-                              })}
-                            </p>
-                            <p className="text-[10px] sm:text-xs" style={{ color: `${groupColor}70` }}>
-                              {announcement.time}
-                            </p>
-                          </div>
-                        </div>
-                        <p 
-                          className={`mt-1 text-sm sm:text-base ${
-                            announcement.important ? 'font-semibold' : ''
-                          }`}
-                          style={{ color: announcement.important ? groupColor : 'white' }}
-                        >
-                          {announcement.content}
-                        </p>
-                        
-                        <div className="mt-3 flex items-center space-x-2">
-                          {Object.entries(REACTION_EMOJIS).map(([type, emoji]) => {
-                            const reactionData = announcement.reactions?.[type] || { count: 0, deviceReactions: {} };
-                            const hasReacted = reactionData.deviceReactions?.[deviceId]?.announcementId === announcement.id;
-                            return (
-                              <button
-                                key={`reaction-${announcement.id}-${type}`}
-                                onClick={() => handleReaction(announcement.id, type as ReactionType)}
-                                className={`flex items-center space-x-1 px-2 py-1 rounded-full transition-colors ${
-                                  hasReacted 
-                                    ? 'bg-white bg-opacity-20' 
-                                    : 'hover:bg-white hover:bg-opacity-20'
-                                }`}
-                                style={{ color: groupColor }}
-                              >
-                                <span className="text-lg">{emoji}</span>
-                                {reactionData.count > 0 && (
-                                  <span className="text-xs">{reactionData.count}</span>
-                                )}
-                              </button>
-                            );
-                          })}
-                        </div>
-                      </div>
-                    </div>
-                  );
-                })}
-              </div>
+              <InfoBoard isPWA={isPWA} />
             </div>
           </section>
         </div>
