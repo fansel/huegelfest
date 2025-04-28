@@ -1,7 +1,7 @@
 'use client';
 
 import { useState, useEffect } from 'react';
-import { Calendar, MapPin, Megaphone, Settings, Heart } from 'lucide-react';
+import { Calendar, MapPin, Megaphone, Settings as SettingsIcon, Heart } from 'lucide-react';
 import Timeline from './Timeline';
 import InfoBoard from './InfoBoard';
 import Anreise from '../app/anreise/page';
@@ -9,6 +9,7 @@ import Admin from '../app/admin/page';
 import Login from './Login';
 import Starfield from './Starfield';
 import PushNotificationSettings from './PushNotificationSettings';
+import Settings from './settings/Settings';
 
 type View = 'home' | 'anreise' | 'infoboard' | 'settings' | 'admin' | 'favorites';
 
@@ -80,7 +81,7 @@ export default function PWAContainer() {
     { id: 'anreise', icon: MapPin, label: 'Anreise' },
     { id: 'infoboard', icon: Megaphone, label: 'News' },
     { id: 'favorites', icon: Heart, label: 'Favoriten' },
-    { id: 'settings', icon: Settings, label: 'Einstellungen' }
+    { id: 'settings', icon: SettingsIcon, label: 'Einstellungen' }
   ];
 
   // Admin-Navigation entfernen
@@ -147,75 +148,17 @@ export default function PWAContainer() {
       case 'settings':
         return (
           <div className="flex flex-col items-center justify-start min-h-screen px-2 sm:px-6 py-0 sm:py-12 text-center">
-            <div className="w-full max-w-md mx-auto bg-[#460b6c]/40 backdrop-blur-sm rounded-lg p-6 border border-[#ff9900]/20">
-              <h2 className="text-3xl font-bold mb-6 text-center text-[#ff9900]">Einstellungen</h2>
-              
-              <div className="space-y-6">
-                <div className="flex items-center justify-between">
-                  <span className="text-[#ff9900]">Starfield Hintergrund</span>
-                  <button
-                    onClick={toggleStarfield}
-                    className={`relative inline-flex h-7 w-14 items-center rounded-full transition-colors duration-200 ${
-                      showStarfield ? 'bg-[#ff9900]' : 'bg-gray-300'
-                    }`}
-                  >
-                    <span
-                      className={`inline-block h-5 w-5 transform rounded-full bg-white transition-transform duration-200 ${
-                        showStarfield ? 'translate-x-8' : 'translate-x-1'
-                      }`}
-                    />
-                  </button>
-                </div>
-                
-                <div className="flex items-center justify-between">
-                  <span className="text-[#ff9900]">Admin-Oberfläche</span>
-                  <button
-                    onClick={toggleAdmin}
-                    className={`relative inline-flex h-7 w-14 items-center rounded-full transition-colors duration-200 ${
-                      showAdmin ? 'bg-[#ff9900]' : 'bg-gray-300'
-                    }`}
-                  >
-                    <span
-                      className={`inline-block h-5 w-5 transform rounded-full bg-white transition-transform duration-200 ${
-                        showAdmin ? 'translate-x-8' : 'translate-x-1'
-                      }`}
-                    />
-                  </button>
-                </div>
-
-                {showAdmin && (
-                  <div className="pt-4 border-t border-[#ff9900]/20">
-                    {isAuthenticated ? (
-                      <div className="space-y-4">
-                        <h3 className="text-xl font-semibold text-[#ff9900]">Admin-Bereich</h3>
-                        <button
-                          onClick={() => setCurrentView('admin')}
-                          className="w-full py-2 px-4 bg-[#ff9900] text-[#460b6c] rounded-lg font-medium hover:bg-[#ff9900]/90 transition-colors"
-                        >
-                          Zum Admin-Bereich
-                        </button>
-                        <button
-                          onClick={handleLogout}
-                          className="w-full py-2 px-4 bg-red-500 text-white rounded-lg font-medium hover:bg-red-600 transition-colors"
-                        >
-                          Ausloggen
-                        </button>
-                      </div>
-                    ) : (
-                      <div className="space-y-4">
-                        <h3 className="text-xl font-semibold text-[#ff9900]">Admin-Login</h3>
-                        <Login onLogin={handleLogin} error={loginError} />
-                      </div>
-                    )}
-                  </div>
-                )}
-                
-                <div className="pt-4 border-t border-[#ff9900]/20">
-                  <h3 className="text-xl font-semibold mb-4 text-[#ff9900]">Push-Benachrichtigungen</h3>
-                  <PushNotificationSettings />
-                </div>
-              </div>
-            </div>
+            <Settings
+              showStarfield={showStarfield}
+              onToggleStarfield={toggleStarfield}
+              showAdmin={showAdmin}
+              onToggleAdmin={toggleAdmin}
+              isAuthenticated={isAuthenticated}
+              onLogout={handleLogout}
+              onLogin={handleLogin}
+              loginError={loginError}
+              onNavigateToAdmin={() => setCurrentView('admin')}
+            />
           </div>
         );
       case 'admin':

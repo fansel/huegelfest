@@ -4,6 +4,7 @@ import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import { Announcement, GroupColors } from '@/lib/types';
 import { loadAnnouncements, saveAnnouncements, loadMusicUrls, saveMusicUrls, loadGroupColors, saveGroupColors } from '@/lib/admin';
+import { addAnnouncement, deleteAnnouncement } from '@/app/announcements/actions';
 import DesktopAdminDashboard from '@/components/admin/DesktopAdminDashboard';
 import MobileAdminDashboard from '@/components/admin/MobileAdminDashboard';
 import { usePWA } from '@/contexts/PWAContext';
@@ -49,19 +50,20 @@ export default function AdminPage() {
   }, []);
 
   const handleSaveAnnouncement = async (announcement: Announcement) => {
-    const updatedAnnouncements = editingAnnouncement
-      ? announcements.map(a => a.id === announcement.id ? announcement : a)
-      : [...announcements, announcement];
-    
-    setAnnouncements(updatedAnnouncements);
-    await saveAnnouncements(updatedAnnouncements);
+    if (editingAnnouncement) {
+      const updatedAnnouncements = announcements.map(a => a.id === announcement.id ? announcement : a);
+      setAnnouncements(updatedAnnouncements);
+      await saveAnnouncements(updatedAnnouncements);
+    } else {
+      await addAnnouncement(announcement);
+      setAnnouncements(prev => [announcement, ...prev]);
+    }
     setEditingAnnouncement(undefined);
   };
 
   const handleDeleteAnnouncement = async (id: number) => {
-    const updatedAnnouncements = announcements.filter(a => a.id !== id);
-    setAnnouncements(updatedAnnouncements);
-    await saveAnnouncements(updatedAnnouncements);
+    await deleteAnnouncement(id);
+    setAnnouncements(prev => prev.filter(a => a.id !== id));
   };
 
   const handleSaveMusicUrls = async (urls: string[]) => {

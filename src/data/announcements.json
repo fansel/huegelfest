@@ -1,42 +1,72 @@
 {
   "announcements": [
     {
-      "id": 1714316760000,
-      "content": "Hallo est",
+      "id": 1745865284735,
+      "content": "muss kacki",
       "date": "2025-04-28",
-      "time": "16:26",
-      "author": "Küche",
-      "group": "Küche",
-      "important": false,
-      "reactions": {}
-    },
-    {
-      "id": 1714319160000,
-      "content": "Test",
-      "date": "2025-04-28",
-      "time": "17:06",
+      "time": "20:34",
       "author": "Küche",
       "group": "Küche",
       "important": true,
       "reactions": {}
     },
     {
-      "id": 1745855567784,
-      "content": "Tedt",
+      "id": 1745865211630,
+      "content": "sdf",
       "date": "2025-04-28",
-      "time": "17:52",
-      "author": "Küche",
-      "group": "Küche",
+      "time": "20:33",
+      "author": "Felix",
+      "group": "Felix",
       "important": false,
       "reactions": {}
     },
     {
-      "id": 1745855570893,
-      "content": "Bdbdbd",
+      "id": 1745865187524,
+      "content": "sdfsd",
       "date": "2025-04-28",
-      "time": "17:52",
-      "author": "Küche",
-      "group": "Küche",
+      "time": "20:33",
+      "author": "Felix",
+      "group": "Felix",
+      "important": false,
+      "reactions": {}
+    },
+    {
+      "id": 1745865184086,
+      "content": "sfd",
+      "date": "2025-04-28",
+      "time": "20:33",
+      "author": "Felix",
+      "group": "Felix",
+      "important": false,
+      "reactions": {}
+    },
+    {
+      "id": 1745865148205,
+      "content": "test",
+      "date": "2025-04-28",
+      "time": "20:32",
+      "author": "Felix",
+      "group": "Felix",
+      "important": false,
+      "reactions": {}
+    },
+    {
+      "id": 1745865062865,
+      "content": "etst",
+      "date": "2025-04-28",
+      "time": "20:31",
+      "author": "Felix",
+      "group": "Felix",
+      "important": false,
+      "reactions": {}
+    },
+    {
+      "id": 1745865006903,
+      "content": "tew",
+      "date": "2025-04-28",
+      "time": "20:30",
+      "author": "Felix",
+      "group": "Felix",
       "important": false,
       "reactions": {}
     }

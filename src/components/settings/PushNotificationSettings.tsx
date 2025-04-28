@@ -147,140 +147,66 @@ export default function PushNotificationSettings() {
   };
 
   return (
-    <div className="space-y-4 w-full px-4 sm:px-6">
-      <div className="bg-[#460b6c]/30 rounded-lg overflow-hidden">
-        {/* Header */}
-        <div className="p-4 sm:p-6 border-b border-[#460b6c]/20">
-          <h2 className="text-[#ff9900] font-semibold text-xl">Einstellungen</h2>
-          <p className="text-[#ff9900]/60 text-sm mt-1">Passe deine App-Einstellungen an</p>
+    <div className="p-4 sm:p-6">
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+        <div className="flex flex-col space-y-1">
+          <span className="text-[#ff9900] font-medium">Push-Benachrichtigungen</span>
+          <span className="text-[#ff9900]/60 text-sm">Erhalte Updates über neue Nachrichten</span>
         </div>
-
-        {/* Einstellungen */}
-        <div className="divide-y divide-[#460b6c]/20">
-          {/* Push-Benachrichtigungen */}
-          <div className="p-4 sm:p-6">
-            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
-              <div className="flex flex-col space-y-1">
-                <span className="text-[#ff9900] font-medium">Push-Benachrichtigungen</span>
-                <span className="text-[#ff9900]/60 text-sm">Erhalte Updates über neue Nachrichten</span>
-              </div>
-              <div className="flex items-center gap-4">
-                {!isSupported ? (
-                  <span className="text-[#ff9900]/60 text-sm px-3 py-1 bg-[#460b6c]/20 rounded-full">Nicht unterstützt</span>
-                ) : (
-                  <>
-                    <label className="relative inline-flex items-center cursor-pointer">
-                      <input
-                        type="checkbox"
-                        className="sr-only peer"
-                        checked={isEnabled}
-                        onChange={isEnabled ? handleUnsubscribe : handleSubscribe}
-                        disabled={isLoading}
-                      />
-                      <div className="w-12 h-6 bg-gray-200 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-[#ff9900] hover:bg-gray-300"></div>
-                    </label>
-                    {isEnabled && (
-                      <button
-                        onClick={() => {
-                          new Notification('Demo-Benachrichtigung', {
-                            body: 'Dies ist eine Test-Benachrichtigung',
-                            icon: '/icon-192x192.png'
-                          });
-                        }}
-                        className="text-[#ff9900]/60 hover:text-[#ff9900] transition-colors p-2 hover:bg-[#460b6c]/20 rounded-full"
-                        title="Demo-Benachrichtigung senden"
-                      >
-                        <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                          <path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9" />
-                          <path d="M13.73 21a2 2 0 0 1-3.46 0" />
-                        </svg>
-                      </button>
-                    )}
-                  </>
-                )}
-
+        <div className="flex items-center gap-4">
+          {!isSupported ? (
+            <span className="text-[#ff9900]/60 text-sm px-3 py-1 bg-[#460b6c]/20 rounded-full">Nicht unterstützt</span>
+          ) : (
+            <>
+              <label className="relative inline-flex items-center cursor-pointer">
+                <input
+                  type="checkbox"
+                  className="sr-only peer"
+                  checked={isEnabled}
+                  onChange={isEnabled ? handleUnsubscribe : handleSubscribe}
+                  disabled={isLoading}
+                />
+                <div className="w-12 h-6 bg-gray-200 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-[#ff9900] hover:bg-gray-300"></div>
+              </label>
+              {isEnabled && (
                 <button
-                  onClick={() => setShowDebug(!showDebug)}
+                  onClick={() => {
+                    new Notification('Demo-Benachrichtigung', {
+                      body: 'Dies ist eine Test-Benachrichtigung',
+                      icon: '/icon-192x192.png'
+                    });
+                  }}
                   className="text-[#ff9900]/60 hover:text-[#ff9900] transition-colors p-2 hover:bg-[#460b6c]/20 rounded-full"
-                  title="Debug anzeigen/ausblenden"
+                  title="Demo-Benachrichtigung senden"
                 >
                   <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                    <path d="M12 2a10 10 0 1 0 10 10 4 4 0 0 1-5-5 4 4 0 0 1-5-5" />
-                    <path d="M8.5 8.5v.01" />
-                    <path d="M16 15.5v.01" />
-                    <path d="M12 12v.01" />
-                    <path d="M11 17v.01" />
-                    <path d="M7 14v.01" />
+                    <path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9" />
+                    <path d="M13.73 21a2 2 0 0 1-3.46 0" />
                   </svg>
                 </button>
-              </div>
-            </div>
-          </div>
+              )}
+            </>
+          )}
 
-          {/* Dark Mode */}
-          <div className="p-4 sm:p-6">
-            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
-              <div className="flex flex-col space-y-1">
-                <span className="text-[#ff9900] font-medium">Dark Mode</span>
-                <span className="text-[#ff9900]/60 text-sm">Aktiviere den dunklen Modus</span>
-              </div>
-              <div className="flex items-center gap-4">
-                <label className="relative inline-flex items-center cursor-pointer">
-                  <input
-                    type="checkbox"
-                    className="sr-only peer"
-                    disabled
-                  />
-                  <div className="w-12 h-6 bg-gray-200 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-[#ff9900] hover:bg-gray-300 opacity-50"></div>
-                </label>
-              </div>
-            </div>
-          </div>
-
-          {/* Offline-Modus */}
-          <div className="p-4 sm:p-6">
-            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
-              <div className="flex flex-col space-y-1">
-                <span className="text-[#ff9900] font-medium">Offline-Modus</span>
-                <span className="text-[#ff9900]/60 text-sm">Speichere Inhalte für Offline-Nutzung</span>
-              </div>
-              <div className="flex items-center gap-4">
-                <label className="relative inline-flex items-center cursor-pointer">
-                  <input
-                    type="checkbox"
-                    className="sr-only peer"
-                    disabled
-                  />
-                  <div className="w-12 h-6 bg-gray-200 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-[#ff9900] hover:bg-gray-300 opacity-50"></div>
-                </label>
-              </div>
-            </div>
-          </div>
-
-          {/* Datenschutz */}
-          <div className="p-4 sm:p-6">
-            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
-              <div className="flex flex-col space-y-1">
-                <span className="text-[#ff9900] font-medium">Datenschutz</span>
-                <span className="text-[#ff9900]/60 text-sm">Verwalte deine Datenschutzeinstellungen</span>
-              </div>
-              <div className="flex items-center gap-4">
-                <button
-                  className="text-[#ff9900]/60 hover:text-[#ff9900] transition-colors p-2 hover:bg-[#460b6c]/20 rounded-full"
-                  title="Datenschutz öffnen"
-                >
-                  <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                    <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z" />
-                  </svg>
-                </button>
-              </div>
-            </div>
-          </div>
+          <button
+            onClick={() => setShowDebug(!showDebug)}
+            className="text-[#ff9900]/60 hover:text-[#ff9900] transition-colors p-2 hover:bg-[#460b6c]/20 rounded-full"
+            title="Debug anzeigen/ausblenden"
+          >
+            <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+              <path d="M12 2a10 10 0 1 0 10 10 4 4 0 0 1-5-5 4 4 0 0 1-5-5" />
+              <path d="M8.5 8.5v.01" />
+              <path d="M16 15.5v.01" />
+              <path d="M12 12v.01" />
+              <path d="M11 17v.01" />
+              <path d="M7 14v.01" />
+            </svg>
+          </button>
         </div>
       </div>
 
       {error && (
-        <div className="p-4 bg-red-500/20 text-red-200 rounded-lg border border-red-500/30">
+        <div className="p-4 bg-red-500/20 text-red-200 rounded-lg border border-red-500/30 mt-4">
           <p className="flex items-center gap-2">
             <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
               <circle cx="12" cy="12" r="10" />
@@ -293,7 +219,7 @@ export default function PushNotificationSettings() {
       )}
 
       {showDebug && (
-        <div className="p-4 sm:p-6 bg-[#460b6c]/10 rounded-lg space-y-4 border border-[#460b6c]/20">
+        <div className="p-4 sm:p-6 bg-[#460b6c]/10 rounded-lg space-y-4 border border-[#460b6c]/20 mt-4">
           <div className="flex items-center justify-between mb-4">
             <h3 className="text-[#ff9900] font-medium">Debug-Informationen</h3>
             <div className="flex gap-1">

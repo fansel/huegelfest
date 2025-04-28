@@ -5,16 +5,20 @@ import { readFile } from 'fs/promises'
 import { join } from 'path'
 
 // VAPID-Schlüssel
-const NEXT_PUBLIC_VAPID_PUBLIC_KEY = 'BGaY-2eeg8pi2yNRIsLdm4SN4RmHTKdVwaeEdZeUpJSMv9isl12K0TadiH9GDDWo96r7OFFMPdurXoSEiu0nnH4'
-const VAPID_PRIVATE_KEY = '19N-DzH4SjTHGvhapCSm3o61V0iGaqJu6zGWvJ5zrsI'
+const vapidPublicKey = process.env.NEXT_PUBLIC_VAPID_PUBLIC_KEY;
+const vapidPrivateKey = process.env.VAPID_PRIVATE_KEY;
+
+if (!vapidPublicKey || !vapidPrivateKey) {
+  throw new Error('VAPID-Schlüssel fehlen in den Umgebungsvariablen');
+}
 
 const DATA_DIR = join(process.cwd(), 'src/data')
 const SUBSCRIPTIONS_FILE = join(DATA_DIR, 'subscribers.json')
 
 webpush.setVapidDetails(
-  'mailto:info@huegelfest.de',
-  NEXT_PUBLIC_VAPID_PUBLIC_KEY,
-  VAPID_PRIVATE_KEY
+  'mailto:vapid@hey.fansel.dev',
+  vapidPublicKey,
+  vapidPrivateKey
 )
 
 export async function POST(request: Request) {

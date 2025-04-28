@@ -12,13 +12,17 @@ const ANNOUNCEMENTS_FILE = join(DATA_DIR, 'announcements.json')
 const SUBSCRIPTIONS_FILE = join(DATA_DIR, 'subscribers.json')
 
 // VAPID-Schlüssel
-const NEXT_PUBLIC_VAPID_PUBLIC_KEY = 'BGaY-2eeg8pi2yNRIsLdm4SN4RmHTKdVwaeEdZeUpJSMv9isl12K0TadiH9GDDWo96r7OFFMPdurXoSEiu0nnH4'
-const VAPID_PRIVATE_KEY = '19N-DzH4SjTHGvhapCSm3o61V0iGaqJu6zGWvJ5zrsI'
+const vapidPublicKey = process.env.NEXT_PUBLIC_VAPID_PUBLIC_KEY;
+const vapidPrivateKey = process.env.VAPID_PRIVATE_KEY;
+
+if (!vapidPublicKey || !vapidPrivateKey) {
+  throw new Error('VAPID-Schlüssel fehlen in den Umgebungsvariablen');
+}
 
 webpush.setVapidDetails(
-  'mailto:info@huegelfest.de',
-  NEXT_PUBLIC_VAPID_PUBLIC_KEY,
-  VAPID_PRIVATE_KEY
+  'mailto:vapid@hey.fansel.dev',
+  vapidPublicKey,
+  vapidPrivateKey
 )
 
 async function ensureDataDirectory() {
@@ -40,7 +44,7 @@ async function ensureAnnouncementsFile() {
   }
 }
 
-async function sendNotification(message: string, type: string) {
+async function sendNotification(message: string, type: string, group?: string) {
   try {
     // Lese die Subscriptions aus der Datei
     const subscriptionsData = await readFile(SUBSCRIPTIONS_FILE, 'utf-8')
@@ -53,7 +57,7 @@ async function sendNotification(message: string, type: string) {
     
     // Erstelle die Payload für die Push-Benachrichtigung
     const notificationPayload = {
-      title: '',
+      title: group ? `Neue Ankündigung von ${group}` : '',
       body: message,
       icon: '/logo.jpg',
       badge: '/logo.jpg',
@@ -107,13 +111,8 @@ export async function saveAnnouncements(announcements: Announcement[]) {
       throw new Error('Ungültiges Format');
     }
     
+    // Speichere die Ankündigungen
     await writeFile(ANNOUNCEMENTS_FILE, JSON.stringify({ announcements }, null, 2));
-    
-    // Sende Push-Benachrichtigung für die neueste Ankündigung
-    if (announcements.length > 0) {
-      const latestAnnouncement = announcements[announcements.length - 1];
-      await sendNotification(latestAnnouncement.content, 'infoboard');
-    }
     
     revalidatePath('/announcements');
     return { success: true };
@@ -128,12 +127,26 @@ export async function addAnnouncement(announcement: Announcement) {
     announcements.unshift(announcement)
     await saveAnnouncements(announcements)
     
-    // Sende Push-Benachrichtigung
-    await sendNotification(announcement.content, 'announcements')
+    // Sende Push-Benachrichtigung mit Gruppenname
+    await sendNotification(announcement.content, 'announcements', announcement.group)
     
     return { success: true }
   } catch (error) {
     console.error('Fehler beim Hinzufügen der Ankündigung:', error)
+    return { success: false, error: 'Interner Serverfehler' }
+  }
+}
+
+export async function deleteAnnouncement(id: number) {
+  try {
+    const announcements = await getAnnouncements()
+    const updatedAnnouncements = announcements.filter(a => a.id !== id)
+    await saveAnnouncements(updatedAnnouncements)
+    
+    // Keine Push-Benachrichtigung beim Löschen
+    return { success: true }
+  } catch (error) {
+    console.error('Fehler beim Löschen der Ankündigung:', error)
     return { success: false, error: 'Interner Serverfehler' }
   }
 } 
