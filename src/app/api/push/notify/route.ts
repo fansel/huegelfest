@@ -1,6 +1,6 @@
 import { NextResponse } from 'next/server'
 import webpush from 'web-push'
-import type { NotificationType } from '../types'
+import type { PushSubscription } from 'web-push'
 import { readFile } from 'fs/promises'
 import { join } from 'path'
 
@@ -43,7 +43,7 @@ export async function POST(request: Request) {
     }
     
     // Sende die Push-Benachrichtigung an alle Subscriptions
-    const promises = subscriptions.map(async (subscription: any) => {
+    const promises = subscriptions.map(async (subscription: PushSubscription) => {
       try {
         await webpush.sendNotification(subscription, JSON.stringify(notificationPayload))
       } catch (error) {

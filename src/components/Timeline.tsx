@@ -42,15 +42,10 @@ const categoryOptions = [
 
 export default function Timeline({ showFavoritesOnly = false }: TimelineProps) {
   const [timelineData, setTimelineData] = useState<TimelineData | null>(null);
-  const [currentDay, setCurrentDay] = useState<number>(0);
   const [selectedCategories, setSelectedCategories] = useState<Set<string>>(new Set());
-  const [showMobileCategories, setShowMobileCategories] = useState(false);
-  const [currentTime, setCurrentTime] = useState(new Date());
   const [selectedDay, setSelectedDay] = useState<number>(0);
   const [isScrolling, setIsScrolling] = useState(false);
-  const [scrollPosition, setScrollPosition] = useState(0);
-  const { isPWA, isMobile } = usePWA();
-  const [showCategoryDropdown, setShowCategoryDropdown] = useState(false);
+  const { isPWA } = usePWA();
 
   useEffect(() => {
     const loadTimeline = async () => {
@@ -82,23 +77,8 @@ export default function Timeline({ showFavoritesOnly = false }: TimelineProps) {
     loadTimeline();
   }, []);
 
-  useEffect(() => {
-    const timer = setInterval(() => {
-      setCurrentTime(new Date());
-    }, 1000);
-
-    return () => clearInterval(timer);
-  }, []);
-
-  const formatTime = (date: Date) => {
-    return date.toLocaleTimeString('de-DE', {
-      hour: '2-digit',
-      minute: '2-digit'
-    });
-  };
-
-  const handleScroll = (e: React.UIEvent<HTMLDivElement>) => {
-    setScrollPosition(e.currentTarget.scrollTop);
+  const handleScroll = () => {
+    setIsScrolling(true);
   };
 
   const toggleCategory = (category: string) => {
@@ -185,8 +165,8 @@ export default function Timeline({ showFavoritesOnly = false }: TimelineProps) {
                   <div key={dayTitle} className="bg-[#460b6c]/40 backdrop-blur-sm rounded-lg p-3 border border-[#ff9900]/20">
                     <h4 className="text-[#ff9900] font-medium mb-2">{dayTitle}</h4>
                     <div className="space-y-2">
-                      {events.map((event: Event, index: number) => (
-                        <div key={index} className="bg-[#460b6c]/60 backdrop-blur-sm rounded-lg p-2 border border-[#ff9900]/10">
+                      {events.map((event: Event) => (
+                        <div key={`${event.time}-${event.title}`} className="bg-[#460b6c]/60 backdrop-blur-sm rounded-lg p-2 border border-[#ff9900]/10">
                           <div className="flex items-center justify-between">
                             <div>
                               <h5 className="text-[#ff9900] font-medium">{event.time} - {event.title}</h5>
@@ -309,9 +289,9 @@ export default function Timeline({ showFavoritesOnly = false }: TimelineProps) {
           onTouchEnd={() => setIsScrolling(false)}
         >
           <div className="absolute left-4 top-0 bottom-0 w-0.5 bg-[#ff9900]/20" />
-          {filteredEvents.map((event, index) => (
+          {filteredEvents.map((event) => (
             <div
-              key={event.time}
+              key={`${event.time}-${event.title}`}
               className={`relative pl-8 mb-8 transition-opacity duration-200 ${
                 isScrolling ? 'opacity-50' : 'opacity-100'
               }`}

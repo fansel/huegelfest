@@ -2,9 +2,10 @@
 
 import { headers } from 'next/headers'
 import { webpush } from '@/lib/webpush'
+import type { PushSubscription as WebPushSubscription } from 'web-push'
 
-export async function subscribeUser(subscription: PushSubscription) {
-  const headersList = headers()
+export async function subscribeUser(subscription: WebPushSubscription) {
+  const headersList = await headers()
   const host = headersList.get('host')
   const protocol = process.env.NODE_ENV === 'development' ? 'http' : 'https'
   const origin = `${protocol}://${host}`
@@ -22,8 +23,4 @@ export async function subscribeUser(subscription: PushSubscription) {
 
 export async function unsubscribeUser() {
   // Hier können wir später die Subscription aus der Datenbank entfernen
-}
-
-export async function sendNotification(message: string) {
-  // Hier können wir später die Notification an alle Subscriber senden
 } 

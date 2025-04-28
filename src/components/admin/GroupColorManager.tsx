@@ -1,8 +1,12 @@
 import { useState, useEffect } from 'react';
 import { GroupColors } from '@/lib/types';
-import { loadGroupColors, saveGroupColors } from '@/lib/admin';
+import { loadGroupColors } from '@/lib/admin';
 
-export default function GroupColorManager() {
+interface GroupColorManagerProps {
+  onSaveGroupColors: (colors: GroupColors) => Promise<void>;
+}
+
+export default function GroupColorManager({ onSaveGroupColors }: GroupColorManagerProps) {
   const [groups, setGroups] = useState<GroupColors>({ default: '#460b6c' });
   const [newGroupName, setNewGroupName] = useState('');
   const [newGroupColor, setNewGroupColor] = useState('#460b6c');
@@ -20,20 +24,20 @@ export default function GroupColorManager() {
           "Organisation": "#ff9900"
         };
         setGroups(initialGroups);
-        await saveGroupColors(initialGroups);
+        await onSaveGroupColors(initialGroups);
       } else {
         setGroups(loadedGroups);
       }
     };
     
     loadGroups();
-  }, []);
+  }, [onSaveGroupColors]);
 
   const handleAddGroup = async () => {
     if (newGroupName && !groups[newGroupName]) {
       const updatedGroups = { ...groups, [newGroupName]: newGroupColor };
       setGroups(updatedGroups);
-      await saveGroupColors(updatedGroups);
+      await onSaveGroupColors(updatedGroups);
       setNewGroupName('');
       setNewGroupColor('#460b6c');
     }
@@ -42,7 +46,7 @@ export default function GroupColorManager() {
   const handleColorChange = async (group: string, color: string) => {
     const updatedGroups = { ...groups, [group]: color };
     setGroups(updatedGroups);
-    await saveGroupColors(updatedGroups);
+    await onSaveGroupColors(updatedGroups);
   };
 
   const handleDelete = async (group: string) => {
@@ -50,7 +54,7 @@ export default function GroupColorManager() {
       const updatedGroups = { ...groups };
       delete updatedGroups[group];
       setGroups(updatedGroups);
-      await saveGroupColors(updatedGroups);
+      await onSaveGroupColors(updatedGroups);
     }
   };
 

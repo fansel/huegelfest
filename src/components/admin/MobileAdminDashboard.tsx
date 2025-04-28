@@ -13,6 +13,7 @@ interface MobileAdminDashboardProps {
   onSaveAnnouncement: (announcement: Announcement) => Promise<void>;
   onDeleteAnnouncement: (id: number) => Promise<void>;
   onSaveMusicUrls: (urls: string[]) => Promise<void>;
+  onSaveGroupColors: (colors: GroupColors) => Promise<void>;
   setEditingAnnouncement: (announcement: Announcement | undefined) => void;
 }
 
@@ -24,6 +25,7 @@ export default function MobileAdminDashboard({
   onSaveAnnouncement,
   onDeleteAnnouncement,
   onSaveMusicUrls,
+  onSaveGroupColors,
   setEditingAnnouncement,
 }: MobileAdminDashboardProps) {
   const [activeTab, setActiveTab] = useState<'announcements' | 'groups' | 'music' | 'timeline'>('announcements');
@@ -145,7 +147,7 @@ export default function MobileAdminDashboard({
             </div>
           )}
           {activeTab === 'groups' && (
-            <GroupColorManager />
+            <GroupColorManager onSaveGroupColors={onSaveGroupColors} />
           )}
           {activeTab === 'music' && (
             <MusicManager musicUrls={musicUrls} onSave={onSaveMusicUrls} />

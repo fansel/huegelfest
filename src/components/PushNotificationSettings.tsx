@@ -10,19 +10,6 @@ export default function PushNotificationSettings() {
   const [permission, setPermission] = useState<NotificationPermission>('default');
   const [subscription, setSubscription] = useState<PushSubscription | null>(null);
   const [isEnabled, setIsEnabled] = useState(false);
-  const [showDebug, setShowDebug] = useState(false);
-  const [serviceWorkerStatus, setServiceWorkerStatus] = useState<'active' | 'inactive' | 'error'>('inactive');
-  const [debugInfo, setDebugInfo] = useState<{
-    notificationsSupported: boolean;
-    serviceWorkerSupported: boolean;
-    pushManagerSupported: boolean;
-    serviceWorkerRegistration: boolean;
-  }>({
-    notificationsSupported: false,
-    serviceWorkerSupported: false,
-    pushManagerSupported: false,
-    serviceWorkerRegistration: false
-  });
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
@@ -32,13 +19,6 @@ export default function PushNotificationSettings() {
       const notificationsSupported = 'Notification' in window;
       const serviceWorkerSupported = 'serviceWorker' in navigator;
       const pushManagerSupported = 'PushManager' in window;
-      
-      setDebugInfo({
-        notificationsSupported,
-        serviceWorkerSupported,
-        pushManagerSupported,
-        serviceWorkerRegistration: false
-      });
 
       if (notificationsSupported && serviceWorkerSupported && pushManagerSupported) {
         setIsSupported(true);
@@ -53,15 +33,11 @@ export default function PushNotificationSettings() {
           await navigator.serviceWorker.ready;
           console.log('Service Worker ist bereit');
           
-          setDebugInfo(prev => ({ ...prev, serviceWorkerRegistration: true }));
-          setServiceWorkerStatus('active');
-          
           const existingSubscription = await registration.pushManager.getSubscription();
           setSubscription(existingSubscription);
           setIsEnabled(!!existingSubscription);
         } catch (error) {
           console.error('Service Worker Fehler:', error);
-          setServiceWorkerStatus('error');
         }
       }
     };

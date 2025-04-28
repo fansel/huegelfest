@@ -4,7 +4,6 @@ import { useState } from 'react';
 import styles from './content.module.css';
 import { FaTrain, FaCar, FaMapMarkerAlt, FaPhone, FaWhatsapp } from 'react-icons/fa';
 import carpoolData from '@/data/carpool.json';
-import { Metadata } from 'next';
 
 interface Ride {
   id: number;

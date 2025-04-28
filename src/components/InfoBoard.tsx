@@ -1,20 +1,10 @@
 import { useState, useEffect, useRef } from 'react';
-import { Announcement, GroupColors, ReactionType } from '@/lib/types';
-import { loadAnnouncements, loadGroupColors, saveAnnouncements } from '@/lib/admin';
-
-const REACTION_EMOJIS = {
-  '👍': '👍',
-  '❤️': '❤️',
-  '😂': '😂',
-  '😮': '😮',
-  '😢': '😢',
-  '🙏': '🙏'
-};
+import { Announcement, GroupColors } from '@/lib/types';
+import { loadAnnouncements, loadGroupColors } from '@/lib/admin';
 
 export default function InfoBoard() {
   const [announcements, setAnnouncements] = useState<Announcement[]>([]);
   const [groupColors, setGroupColors] = useState<GroupColors>({ default: '#460b6c' });
-  const [deviceId, setDeviceId] = useState<string>('');
   const boardRef = useRef<HTMLDivElement>(null);
   const [isVisible, setIsVisible] = useState(false);
   const eventSourceRef = useRef<EventSource | null>(null);
@@ -31,18 +21,6 @@ export default function InfoBoard() {
     };
 
     loadData();
-  }, []);
-
-  // Device ID initialisieren
-  useEffect(() => {
-    const storedDeviceId = localStorage.getItem('deviceId');
-    if (storedDeviceId) {
-      setDeviceId(storedDeviceId);
-    } else {
-      const newDeviceId = Math.random().toString(36).substring(2) + Date.now().toString(36);
-      localStorage.setItem('deviceId', newDeviceId);
-      setDeviceId(newDeviceId);
-    }
   }, []);
 
   // SSE für Updates
@@ -100,75 +78,6 @@ export default function InfoBoard() {
     };
   }, []);
 
-  const handleReaction = async (announcementId: number, reactionType: ReactionType) => {
-    if (!deviceId) return;
-
-    const updatedAnnouncements = announcements.map(announcement => {
-      if (announcement.id === announcementId) {
-        const currentReactions = announcement.reactions || {};
-        const currentReaction = currentReactions[reactionType] || { 
-          count: 0, 
-          deviceReactions: {} 
-        };
-        
-        const hasReacted = currentReaction.deviceReactions?.[deviceId]?.announcementId === announcementId;
-        
-        if (hasReacted) {
-          const newReactions = { ...currentReactions };
-          if (currentReaction.count <= 1) {
-            delete newReactions[reactionType];
-          } else {
-            const updatedDeviceReactions = { ...currentReaction.deviceReactions };
-            delete updatedDeviceReactions[deviceId];
-            newReactions[reactionType] = {
-              count: currentReaction.count - 1,
-              deviceReactions: updatedDeviceReactions
-            };
-          }
-          return {
-            ...announcement,
-            reactions: newReactions
-          };
-        }
-
-        const cleanedReactions = { ...currentReactions };
-        Object.keys(cleanedReactions).forEach(type => {
-          if (type !== reactionType) {
-            const deviceReactions = cleanedReactions[type].deviceReactions;
-            if (deviceId in deviceReactions) {
-              const updatedDeviceReactions = { ...deviceReactions };
-              delete updatedDeviceReactions[deviceId];
-              cleanedReactions[type] = {
-                count: Object.keys(updatedDeviceReactions).length,
-                deviceReactions: updatedDeviceReactions
-              };
-            }
-          }
-        });
-
-        cleanedReactions[reactionType] = {
-          count: (currentReaction.count || 0) + 1,
-          deviceReactions: {
-            ...currentReaction.deviceReactions,
-            [deviceId]: {
-              type: reactionType,
-              announcementId: announcementId
-            }
-          }
-        };
-
-        return {
-          ...announcement,
-          reactions: cleanedReactions
-        };
-      }
-      return announcement;
-    });
-
-    setAnnouncements(updatedAnnouncements);
-    await saveAnnouncements(updatedAnnouncements);
-  };
-
   return (
     <div className="relative min-h-screen w-full">
       <div ref={boardRef} className="relative z-10 px-0 sm:px-6 w-full">
@@ -216,31 +125,21 @@ export default function InfoBoard() {
                     <p className="mt-3 text-base sm:text-base text-white whitespace-pre-wrap">
                       {announcement.content}
                     </p>
-                    <div className="mt-3 flex flex-wrap gap-2">
-                      {Object.entries(REACTION_EMOJIS).map(([type, emoji]) => {
-                        const reactionData = announcement.reactions?.[type] || { count: 0, deviceReactions: {} };
-                        const hasReacted = reactionData.deviceReactions?.[deviceId]?.announcementId === announcement.id;
-                        return (
-                          <button
-                            key={`reaction-${announcement.id}-${type}`}
-                            onClick={() => handleReaction(announcement.id, type as ReactionType)}
-                            className={`flex items-center space-x-1 px-2 py-1 rounded-full transition-colors ${
-                              hasReacted 
-                                ? 'bg-white bg-opacity-20' 
-                                : 'hover:bg-white hover:bg-opacity-20'
-                            }`}
-                            style={{ color: groupColor }}
+                    {Object.entries(announcement.reactions).length > 0 && (
+                      <div className="mt-3 flex flex-wrap gap-2">
+                        {Object.entries(announcement.reactions).map(([type, reaction]) => (
+                          <div
+                            key={type}
+                            className="flex items-center space-x-1 text-xs sm:text-sm"
                           >
-                            <span className="text-lg">{emoji}</span>
-                            {reactionData.count > 0 && (
-                              <span className="text-xs">{reactionData.count}</span>
-                            )}
-                          </button>
-                        );
-                      })}
-                    </div>
-                  </div>
+                            <span className="text-[#ff9900]">{type}</span>
+                            <span className="text-white/80">({reaction.count})</span>
+                          </div>
+                        ))}
+                      </div>
+                    )}
                 </div>
+              </div>
             );
           })
         )}

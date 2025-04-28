@@ -5,6 +5,7 @@ import { readFile, writeFile, mkdir } from 'fs/promises'
 import { join } from 'path'
 import { Announcement } from '@/lib/types'
 import webpush from 'web-push'
+import type { PushSubscription } from 'web-push'
 
 const DATA_DIR = join(process.cwd(), 'src/data')
 const ANNOUNCEMENTS_FILE = join(DATA_DIR, 'announcements.json')
@@ -63,7 +64,7 @@ async function sendNotification(message: string, type: string) {
     }
     
     // Sende die Push-Benachrichtigung an alle Subscriptions
-    const promises = subscriptions.map(async (subscription: any) => {
+    const promises = subscriptions.map(async (subscription: PushSubscription) => {
       try {
         await webpush.sendNotification(subscription, JSON.stringify(notificationPayload))
       } catch (error) {
@@ -116,7 +117,7 @@ export async function saveAnnouncements(announcements: Announcement[]) {
     
     revalidatePath('/announcements');
     return { success: true };
-  } catch (error) {
+  } catch {
     return { success: false, error: 'Interner Serverfehler' };
   }
 }

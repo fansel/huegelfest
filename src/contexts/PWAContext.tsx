@@ -23,7 +23,7 @@ export function PWAProvider({ children }: { children: React.ReactNode }) {
   useEffect(() => {
     // PWA Erkennung
     const isStandaloneMode = window.matchMedia('(display-mode: standalone)').matches || 
-                           (window.navigator as any).standalone || 
+                           (window.navigator as Navigator & { standalone?: boolean }).standalone || 
                            document.referrer.includes('android-app://');
     
     // Mobile Erkennung

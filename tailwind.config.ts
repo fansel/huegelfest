@@ -19,12 +19,11 @@ const config: Config = {
       },
     },
   },
-  plugins: [],
-  variants: {
-    extend: {
-      display: ['pwa'],
+  plugins: [
+    function({ addVariant }: { addVariant: (name: string, definition: string) => void }) {
+      addVariant('pwa', '&[data-pwa="true"]');
     },
-  },
+  ],
 };
 
 export default config; 

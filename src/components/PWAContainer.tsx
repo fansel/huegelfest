@@ -1,13 +1,12 @@
 'use client';
 
 import { useState, useEffect } from 'react';
-import { Calendar, MapPin, Megaphone, Settings, User, Heart } from 'lucide-react';
+import { Calendar, MapPin, Megaphone, Settings, Heart } from 'lucide-react';
 import Timeline from './Timeline';
 import InfoBoard from './InfoBoard';
 import Anreise from '../app/anreise/page';
 import Admin from '../app/admin/page';
 import Login from './Login';
-import { useRouter } from 'next/navigation';
 import Starfield from './Starfield';
 import PushNotificationSettings from './PushNotificationSettings';
 
@@ -22,13 +21,12 @@ export default function PWAContainer() {
   const [isNavVisible, setIsNavVisible] = useState(true);
   const [touchStart, setTouchStart] = useState(0);
   const [showStarfield, setShowStarfield] = useState(true);
-  const router = useRouter();
 
   useEffect(() => {
     const mediaQuery = window.matchMedia('(display-mode: standalone)');
     const updateIsPWA = (e: MediaQueryListEvent | MediaQueryList) => {
       const isStandaloneMode = e.matches || 
-                             (window.navigator as any).standalone || 
+                             (window.navigator as Navigator & { standalone?: boolean }).standalone || 
                              document.referrer.includes('android-app://');
       setIsPWA(isStandaloneMode);
     };

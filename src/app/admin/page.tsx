@@ -58,7 +58,7 @@ export default function AdminPage() {
     setEditingAnnouncement(undefined);
   };
 
-  const handleDeleteAnnouncement = async (id: string) => {
+  const handleDeleteAnnouncement = async (id: number) => {
     const updatedAnnouncements = announcements.filter(a => a.id !== id);
     setAnnouncements(updatedAnnouncements);
     await saveAnnouncements(updatedAnnouncements);
@@ -74,10 +74,6 @@ export default function AdminPage() {
     await saveGroupColors(colors);
   };
 
-  const handleEditAnnouncement = (announcement: Announcement) => {
-    setEditingAnnouncement(announcement);
-  };
-
   return (
     <div className="w-full max-w-7xl mx-auto px-4 py-8">
       {isPWA || isMobile ? (
@@ -89,8 +85,8 @@ export default function AdminPage() {
           onSaveAnnouncement={handleSaveAnnouncement}
           onSaveMusicUrls={handleSaveMusicUrls}
           onSaveGroupColors={handleSaveGroupColors}
-          onEditAnnouncement={handleEditAnnouncement}
           onDeleteAnnouncement={handleDeleteAnnouncement}
+          setEditingAnnouncement={setEditingAnnouncement}
         />
       ) : (
         <DesktopAdminDashboard
@@ -101,8 +97,8 @@ export default function AdminPage() {
           onSaveAnnouncement={handleSaveAnnouncement}
           onSaveMusicUrls={handleSaveMusicUrls}
           onSaveGroupColors={handleSaveGroupColors}
-          onEditAnnouncement={handleEditAnnouncement}
           onDeleteAnnouncement={handleDeleteAnnouncement}
+          setEditingAnnouncement={setEditingAnnouncement}
         />
       )}
     </div>

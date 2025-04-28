@@ -2,13 +2,12 @@
 import React, { useEffect, useState } from "react";
 import Image from "next/image";
 import { Announcement as AnnouncementType, GroupColors, REACTION_EMOJIS, ReactionType } from "@/lib/types";
-import { loadAnnouncements, loadGroupColors, saveAnnouncements } from "@/lib/admin";
+import { loadAnnouncements, loadGroupColors } from "@/lib/admin";
 import SoundCloudPlayer from '@/components/SoundCloudPlayer';
 import Countdown from '@/components/Countdown';
 import Timeline from '@/components/Timeline';
 import Starfield from '@/components/Starfield';
-import Link from "next/link";
-import { getAnnouncements, saveAnnouncements as saveAnnouncementsServer } from './announcements/actions'
+import { saveAnnouncements as saveAnnouncementsServer } from './announcements/actions'
 
 function InstallPrompt() {
   const [isIOS, setIsIOS] = useState(false)
@@ -16,7 +15,7 @@ function InstallPrompt() {
  
   useEffect(() => {
     setIsIOS(
-      /iPad|iPhone|iPod/.test(navigator.userAgent) && !(window as any).MSStream
+      /iPad|iPhone|iPod/.test(navigator.userAgent) && !(window as Window & { MSStream?: unknown }).MSStream
     )
  
     setIsStandalone(window.matchMedia('(display-mode: standalone)').matches)
@@ -34,7 +33,7 @@ function InstallPrompt() {
         <p>
           To install this app on your iOS device, tap the share button
           <span role="img" aria-label="share icon"> ⎋ </span>
-          and then "Add to Home Screen"
+          and then &ldquo;Add to Home Screen&rdquo;
           <span role="img" aria-label="plus icon"> ➕ </span>.
         </p>
       )}
