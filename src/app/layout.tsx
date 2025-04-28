@@ -1,5 +1,6 @@
 import type { Metadata, Viewport } from "next";
-import { Geist, Geist_Mono, Rubik_Mono_One } from "next/font/google";
+import { Inter } from "next/font/google";
+import { GeistSans, GeistMono } from 'geist/font';
 import "./globals.css";
 import Footer from "@/components/Footer";
 import SoundCloudPlayer from "@/components/SoundCloudPlayer";
@@ -7,13 +8,13 @@ import PWAContainer from "@/components/PWAContainer";
 import { PWAProvider } from "@/contexts/PWAContext";
 
 // Sans-serif body font
-const geistSans = Geist({ variable: "--font-geist-sans", subsets: ["latin"] });
+const inter = Inter({ variable: "--font-sans", subsets: ["latin"] });
 
 // Monospaced font for code / secondary text
-const geistMono = Geist_Mono({ variable: "--font-geist-sans", subsets: ["latin"] });
+const geistMono = GeistMono;
 
 // Bold display font just for the title (HÜGELFEST)
-const rubikMono = Rubik_Mono_One({ variable: "--font-display", subsets: ["latin"], weight: ["400"] });
+const geistSans = GeistSans;
 
 export const metadata: Metadata = {
   title: 'Hügelfest',
@@ -45,7 +46,7 @@ export default function RootLayout({
   children: React.ReactNode;
 }) {
   return (
-    <html lang="de" className={`${geistSans.variable} ${geistMono.variable} ${rubikMono.variable}`}>
+    <html lang="de" className={`${inter.variable} ${geistMono.variable} ${geistSans.variable}`}>
       <head>
         <link rel="icon" type="image/png" sizes="32x32" href="/favicon-32x32.png" />
         <link rel="icon" type="image/png" sizes="16x16" href="/favicon-16x16.png" />
