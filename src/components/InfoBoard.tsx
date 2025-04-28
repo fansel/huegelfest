@@ -79,50 +79,58 @@ export default function InfoBoard() {
   }, []);
 
   return (
-    <div ref={boardRef} className="bg-white rounded-lg shadow-lg p-6">
-      <h2 className="text-2xl font-bold text-[#460b6c] mb-6">Aktuelle Informationen</h2>
-      <div className="space-y-4">
+    <div className="relative min-h-screen">
+      <div ref={boardRef} className="relative z-10 p-4 sm:p-6">
+        <div className="space-y-3 sm:space-y-4">
         {announcements.length === 0 ? (
-          <p className="text-gray-500 text-center">Keine aktuellen Informationen</p>
+            <p className="text-gray-400 text-center">Keine aktuellen Informationen</p>
         ) : (
           announcements.map((announcement) => {
             const groupColor = groupColors[announcement.group] || groupColors.default;
             return (
               <div
                 key={announcement.id}
-                className="border-l-4 p-4 rounded-r-lg transition-all duration-300 hover:shadow-md"
+                  className={`p-3 sm:p-4 rounded-lg border ${
+                    announcement.important 
+                      ? 'border-2 shadow-lg transform hover:scale-[1.02] transition-transform' 
+                      : 'border-opacity-30'
+                  }`}
                 style={{
-                  borderLeftColor: groupColor,
+                    backgroundColor: `${groupColor}${announcement.important ? '15' : '10'}`,
                   borderColor: groupColor
                 }}
               >
-                <div className="flex justify-between items-start">
-                  <div className="flex-1">
-                    <p 
-                      className="text-gray-900"
-                      style={{ color: groupColor }}
-                    >
-                      {announcement.content}
-                    </p>
-                    <div className="mt-2 flex items-center space-x-4 text-sm">
-                      <span className="text-gray-500">{announcement.date}</span>
-                      <span className="text-gray-500">{announcement.time}</span>
+                  <div className="flex-1 min-w-0">
+                    <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between space-y-1 sm:space-y-0">
+                      <div className="flex items-center space-x-2">
                       <span 
-                        className="font-medium"
-                        style={{ color: groupColor }}
+                          className="text-[10px] sm:text-xs px-1.5 sm:px-2 py-0.5 sm:py-1 rounded-full"
+                          style={{ 
+                            backgroundColor: `${groupColor}20`,
+                            color: groupColor
+                          }}
                       >
                         {announcement.group}
                       </span>
                       {announcement.important && (
-                        <span className="text-red-600 font-medium">Wichtig</span>
+                          <span className="text-[10px] sm:text-xs px-1.5 sm:px-2 py-0.5 sm:py-1 bg-red-100 text-red-600 rounded-full">
+                            Wichtig
+                          </span>
                       )}
+                      </div>
+                      <div className="text-xs sm:text-sm text-gray-400">
+                        {announcement.date} {announcement.time}
+                      </div>
                     </div>
-                  </div>
+                    <p className="mt-2 text-sm sm:text-base text-white whitespace-pre-wrap">
+                      {announcement.content}
+                    </p>
                 </div>
               </div>
             );
           })
         )}
+        </div>
       </div>
     </div>
   );

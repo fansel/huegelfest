@@ -3,32 +3,7 @@
     {
       "title": "Donnerstag – Hallo-Tag",
       "description": "Ankommen, entspanntes Starten",
-      "events": [
-        {
-          "time": "14:00",
-          "title": "Anreise & Check-in",
-          "description": "Ankunft und Einchecken in die Unterkünfte",
-          "category": "other"
-        },
-        {
-          "time": "16:00",
-          "title": "Willkommensrunde",
-          "description": "Kennenlernen und Organisatorisches",
-          "category": "workshop"
-        },
-        {
-          "time": "18:15",
-          "title": "Gemeinsames Abendessen",
-          "description": "Erstes gemeinsames Mahl",
-          "category": "food"
-        },
-        {
-          "time": "20:00",
-          "title": "Lagerfeuer & Musik",
-          "description": "Gemütlicher Ausklang des ersten Tages",
-          "category": "music"
-        }
-      ]
+      "events": []
     },
     {
       "title": "Freitag – Entdecker*innen-Tag",

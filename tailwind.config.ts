@@ -20,6 +20,11 @@ const config: Config = {
     },
   },
   plugins: [],
+  variants: {
+    extend: {
+      display: ['pwa'],
+    },
+  },
 };
 
 export default config; 

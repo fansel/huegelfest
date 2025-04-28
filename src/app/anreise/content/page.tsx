@@ -4,7 +4,7 @@ import { useState } from 'react';
 import styles from './content.module.css';
 import { FaTrain, FaCar, FaMapMarkerAlt, FaPhone, FaWhatsapp } from 'react-icons/fa';
 import carpoolData from '@/data/carpool.json';
-import Starfield from '@/components/Starfield';
+import { Metadata } from 'next';
 
 interface Ride {
   id: number;
@@ -146,10 +146,8 @@ export default function AnreiseContent() {
   };
 
   return (
-    <div className="min-h-screen bg-[#460b6c] text-[#ff9900] font-mono">
-      <Starfield />
-      <div className={styles.container}>
-        <h1 className={styles.mainTitle}>Wie kommst du zum Hügel?</h1>
+    <div className="relative min-h-screen">
+      <div className="relative z-10 p-4 sm:p-6">
         <p className={styles.subtitle}>
           Ob Bahn, Auto oder Mitfahrgelegenheit – hier findest du alles, damit du entspannt beim Hügelfest ankommst.
         </p>

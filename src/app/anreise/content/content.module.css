@@ -4,7 +4,7 @@
   padding: 2rem;
   position: relative;
   z-index: 1;
-  background: rgba(70, 11, 108, 0.7);
+  background: rgba(70, 11, 108, 0.3);
 }
 
 .backButton {
@@ -76,7 +76,7 @@
   display: none;
   margin-top: 2rem;
   padding: 2rem;
-  background: rgba(70, 11, 108, 0.7);
+  background: rgba(70, 11, 108, 0.3);
   border: 2px solid #ff9900;
   border-radius: 8px;
 }
@@ -133,7 +133,7 @@
 
 .rideCards .mobileCard {
   display: block;
-  background: rgba(70, 11, 108, 0.7);
+  background: rgba(70, 11, 108, 0.3);
   border: 1px solid rgba(255, 153, 0, 0.3);
   border-radius: 8px;
   padding: 1rem;
@@ -319,7 +319,7 @@
 .formSection {
   margin-top: 2rem;
   padding: 2rem;
-  background: rgba(70, 11, 108, 0.7);
+  background: rgba(70, 11, 108, 0.3);
   border: 2px solid #ff9900;
   border-radius: 8px;
 }
@@ -415,7 +415,7 @@
 
   .rideCards .mobileCard {
     display: block !important;
-    background: rgba(70, 11, 108, 0.7) !important;
+    background: rgba(70, 11, 108, 0.3) !important;
     border: 1px solid rgba(255, 153, 0, 0.3) !important;
     border-radius: 8px !important;
     padding: 1rem !important;
@@ -583,7 +583,7 @@
   .formSection {
     padding: 1rem;
     margin-top: 1rem;
-    background: rgba(70, 11, 108, 0.7);
+    background: rgba(70, 11, 108, 0.3);
     border-radius: 8px;
   }
 

@@ -5,7 +5,6 @@ import { loadGroupColors, saveGroupColors } from '@/lib/admin';
 export default function GroupColorManager() {
   const [groups, setGroups] = useState<GroupColors>({ default: '#460b6c' });
   const [newGroupName, setNewGroupName] = useState('');
-  const [defaultGroup, setDefaultGroup] = useState<string>('');
   const [newGroupColor, setNewGroupColor] = useState('#460b6c');
 
   useEffect(() => {
@@ -22,11 +21,8 @@ export default function GroupColorManager() {
         };
         setGroups(initialGroups);
         await saveGroupColors(initialGroups);
-        setDefaultGroup("Küche");
-        localStorage.setItem('defaultGroup', "Küche");
       } else {
         setGroups(loadedGroups);
-        setDefaultGroup(localStorage.getItem('defaultGroup') || Object.keys(loadedGroups)[0]);
       }
     };
     
@@ -55,17 +51,7 @@ export default function GroupColorManager() {
       delete updatedGroups[group];
       setGroups(updatedGroups);
       await saveGroupColors(updatedGroups);
-      if (group === defaultGroup) {
-        const newDefault = Object.keys(updatedGroups)[0];
-        setDefaultGroup(newDefault);
-        localStorage.setItem('defaultGroup', newDefault);
-      }
     }
-  };
-
-  const handleSetDefault = (group: string) => {
-    setDefaultGroup(group);
-    localStorage.setItem('defaultGroup', group);
   };
 
   return (
@@ -75,9 +61,10 @@ export default function GroupColorManager() {
       <div className="space-y-4">
         {Object.entries(groups).map(([group, color]) => (
           group !== 'default' && (
-            <div key={`group-${group}`} className="flex flex-col sm:flex-row items-start sm:items-center gap-2 p-3 sm:p-4 bg-white rounded shadow">
-              <div className="flex-1 w-full sm:w-auto">
-                <span className="font-medium text-sm sm:text-base">{group}</span>
+            <div key={`group-${group}`} className="bg-gray-50 p-4 rounded-lg border border-gray-200">
+              <div className="flex flex-col sm:flex-row justify-between items-start gap-4">
+                <div className="flex-1">
+                  <span className="font-medium text-sm sm:text-base text-gray-700">{group}</span>
               </div>
               <div className="flex items-center gap-2 w-full sm:w-auto">
                 <input
@@ -87,28 +74,19 @@ export default function GroupColorManager() {
                   className="w-8 h-8 rounded cursor-pointer"
                 />
                 <button
-                  onClick={() => handleSetDefault(group)}
-                  className={`px-3 sm:px-4 py-2 rounded text-sm sm:text-base ${
-                    defaultGroup === group
-                      ? 'bg-purple-600 text-white'
-                      : 'bg-gray-200 hover:bg-gray-300'
-                  }`}
-                >
-                  {defaultGroup === group ? 'Standard' : 'Als Standard'}
-                </button>
-                <button
                   onClick={() => handleDelete(group)}
-                  className="px-3 sm:px-4 py-2 rounded bg-red-500 text-white text-sm sm:text-base hover:bg-red-600"
+                    className="p-2 text-red-600 hover:text-red-800 text-sm sm:text-base"
                 >
                   Löschen
                 </button>
+                </div>
               </div>
             </div>
           )
         ))}
       </div>
 
-      <div className="mt-6">
+      <div className="mt-6 bg-gray-50 p-4 rounded-lg border border-gray-200">
         <h4 className="text-md sm:text-lg font-semibold text-[#460b6c] mb-3">Neue Gruppe hinzufügen</h4>
         <div className="flex flex-col sm:flex-row gap-2">
           <input
@@ -116,7 +94,7 @@ export default function GroupColorManager() {
             value={newGroupName}
             onChange={(e) => setNewGroupName(e.target.value)}
             placeholder="Gruppenname"
-            className="flex-1 p-2 border rounded text-sm sm:text-base"
+            className="flex-1 p-2 border border-gray-300 rounded text-sm sm:text-base bg-white text-gray-700 placeholder-gray-400"
           />
           <input
             type="color"
@@ -126,7 +104,7 @@ export default function GroupColorManager() {
           />
           <button
             onClick={handleAddGroup}
-            className="px-4 py-2 rounded bg-[#ff9900] text-white text-sm sm:text-base hover:bg-orange-600"
+            className="px-4 py-2 rounded bg-[#ff9900] text-white text-sm sm:text-base hover:bg-orange-600 transition-colors"
           >
             Hinzufügen
           </button>

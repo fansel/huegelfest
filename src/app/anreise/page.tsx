@@ -2,17 +2,22 @@
 
 import Link from 'next/link';
 import Content from './content/page';
-import Starfield from '@/components/Starfield';
 import styles from "./page.module.css";
+import { usePWA } from '@/contexts/PWAContext';
 
 export default function Anreise() {
+  const { isPWA } = usePWA();
+
   return (
-    <div className={styles.container}>
-      <Link href="/" className={styles.backButton}>
-        ← Zurück zur Startseite
-      </Link>
-      <Starfield />
+    <>
+      {!isPWA && (
+        <Link href="/" className={styles.backButton}>
+          ← Zurück zur Startseite
+        </Link>
+      )}
+      <div className={styles.container}>
       <Content />
     </div>
+    </>
   );
 } 

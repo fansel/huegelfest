@@ -1,13 +1,16 @@
 'use client';
 
 import React, { useEffect, useState } from 'react';
-import { FaMusic, FaUsers, FaUtensils, FaCampground, FaGamepad, FaQuestion, FaFilter } from 'react-icons/fa';
+import { FaMusic, FaUsers, FaUtensils, FaCampground, FaGamepad, FaQuestion, FaFilter, FaHeart, FaRegHeart } from 'react-icons/fa';
+import { usePWA } from '../contexts/PWAContext';
+import Image from 'next/image';
 
 interface Event {
   time: string;
   title: string;
   description: string;
   category: 'music' | 'workshop' | 'food' | 'camp' | 'game' | 'other';
+  favorite?: boolean;
 }
 
 interface Day {
@@ -20,6 +23,14 @@ interface TimelineData {
   days: Day[];
 }
 
+interface FavoriteEventsByDay {
+  [dayTitle: string]: Event[];
+}
+
+interface TimelineProps {
+  showFavoritesOnly?: boolean;
+}
+
 const categoryOptions = [
   { value: 'music', label: 'Musik', icon: <FaMusic className="text-[#ff9900]" /> },
   { value: 'workshop', label: 'Workshop', icon: <FaUsers className="text-[#ff9900]" /> },
@@ -29,18 +40,39 @@ const categoryOptions = [
   { value: 'other', label: 'Sonstiges', icon: <FaQuestion className="text-[#ff9900]" /> }
 ];
 
-export default function Timeline() {
+export default function Timeline({ showFavoritesOnly = false }: TimelineProps) {
   const [timelineData, setTimelineData] = useState<TimelineData | null>(null);
   const [currentDay, setCurrentDay] = useState<number>(0);
   const [selectedCategories, setSelectedCategories] = useState<Set<string>>(new Set());
   const [showMobileCategories, setShowMobileCategories] = useState(false);
+  const [currentTime, setCurrentTime] = useState(new Date());
+  const [selectedDay, setSelectedDay] = useState<number>(0);
+  const [isScrolling, setIsScrolling] = useState(false);
+  const [scrollPosition, setScrollPosition] = useState(0);
+  const { isPWA } = usePWA();
 
   useEffect(() => {
     const loadTimeline = async () => {
       try {
         const response = await fetch('/api/timeline');
         const data = await response.json();
-        setTimelineData(data);
+        
+        // Lade Favoriten aus dem localStorage
+        const favorites = JSON.parse(localStorage.getItem('favorites') || '{}');
+        
+        // Markiere favorisierte Events
+        const timelineWithFavorites = {
+          ...data,
+          days: data.days.map((day: Day) => ({
+            ...day,
+            events: day.events.map((event: Event) => ({
+              ...event,
+              favorite: favorites[`${day.title}-${event.time}-${event.title}`] || false
+            }))
+          }))
+        };
+        
+        setTimelineData(timelineWithFavorites);
       } catch (error) {
         console.error('Fehler beim Laden der Timeline:', error);
       }
@@ -48,6 +80,25 @@ export default function Timeline() {
 
     loadTimeline();
   }, []);
+
+  useEffect(() => {
+    const timer = setInterval(() => {
+      setCurrentTime(new Date());
+    }, 1000);
+
+    return () => clearInterval(timer);
+  }, []);
+
+  const formatTime = (date: Date) => {
+    return date.toLocaleTimeString('de-DE', {
+      hour: '2-digit',
+      minute: '2-digit'
+    });
+  };
+
+  const handleScroll = (e: React.UIEvent<HTMLDivElement>) => {
+    setScrollPosition(e.currentTarget.scrollTop);
+  };
 
   const toggleCategory = (category: string) => {
     const newCategories = new Set(selectedCategories);
@@ -59,6 +110,48 @@ export default function Timeline() {
     setSelectedCategories(newCategories);
   };
 
+  const toggleFavorite = (dayTitle: string, event: Event) => {
+    if (!timelineData) return;
+
+    const eventKey = `${dayTitle}-${event.time}-${event.title}`;
+    const favorites = JSON.parse(localStorage.getItem('favorites') || '{}');
+    const newFavoriteState = !event.favorite;
+    
+    // Aktualisiere localStorage
+    favorites[eventKey] = newFavoriteState;
+    localStorage.setItem('favorites', JSON.stringify(favorites));
+    
+    // Aktualisiere Timeline-Daten
+    const updatedTimeline = {
+      ...timelineData,
+      days: timelineData.days.map(day => ({
+        ...day,
+        events: day.events.map(e => 
+          e.time === event.time && e.title === event.title
+            ? { ...e, favorite: newFavoriteState }
+            : e
+        )
+      }))
+    };
+    
+    setTimelineData(updatedTimeline);
+  };
+
+  const getFavoriteEvents = (): FavoriteEventsByDay => {
+    if (!timelineData) return {};
+    
+    const favoriteEventsByDay: FavoriteEventsByDay = {};
+    
+    for (const day of timelineData.days) {
+      const dayFavorites = day.events.filter(event => event.favorite);
+      if (dayFavorites.length > 0) {
+        favoriteEventsByDay[day.title] = dayFavorites;
+      }
+    }
+    
+    return favoriteEventsByDay;
+  };
+
   if (!timelineData) {
     return <div className="flex justify-center items-center h-64 text-[#ff9900]">Lade Timeline...</div>;
   }
@@ -68,124 +161,163 @@ export default function Timeline() {
   );
 
   return (
-    <div className="w-full">
-      <div className="flex flex-col items-center mb-8">
-        <div className="flex flex-wrap justify-center gap-2 mb-6">
-          {timelineData.days.map((day, index) => (
-            <button
-              key={index}
-              onClick={() => setCurrentDay(index)}
-              className={`px-4 py-2 rounded-full transition-colors ${
-                currentDay === index
-                  ? 'bg-[#ff9900] text-[#460b6c]'
-                  : 'bg-[#460b6c] text-[#ff9900] hover:bg-[#ff9900] hover:bg-opacity-20'
-              }`}
-            >
-              {day.title.split(' – ')[0]}
-            </button>
-          ))}
+    <div className="w-full max-w-4xl mx-auto">
+      <div className="sticky top-0 z-10 bg-[#460b6c]/90 backdrop-blur-sm py-4 px-4">
+        <div className="flex items-center justify-start mb-4">
+          {isPWA && (
+            <Image
+              src="/android-chrome-192x192.png"
+              alt="Hügelfest Logo"
+              width={40}
+              height={40}
+              className="rounded-full"
+            />
+          )}
         </div>
-        <div className="w-full">
-          <div className="hidden md:flex flex-wrap justify-center gap-2 mb-6">
-            {categoryOptions.map((option) => (
-              <button
-                key={option.value}
-                onClick={() => toggleCategory(option.value)}
-                className={`px-4 py-2 rounded-full transition-colors flex items-center space-x-2 ${
-                  selectedCategories.has(option.value)
-                    ? 'bg-[#ff9900] text-[#460b6c]'
-                    : 'bg-[#460b6c] text-[#ff9900] hover:bg-[#ff9900] hover:bg-opacity-20'
-                }`}
-              >
-                {option.icon}
-                <span>{option.label}</span>
-              </button>
-            ))}
-          </div>
-          <div className="md:hidden flex justify-center mb-6">
-            <div className="relative">
-              <button
-                onClick={() => setShowMobileCategories(!showMobileCategories)}
-                className="px-4 py-2 rounded-full bg-[#460b6c] text-[#ff9900] hover:bg-[#ff9900] hover:bg-opacity-20 transition-colors flex items-center space-x-2"
-              >
-                <FaFilter />
-                <span>
-                  {selectedCategories.size === 0 
-                    ? 'Alle Kategorien' 
-                    : `${selectedCategories.size} Kategorie${selectedCategories.size > 1 ? 'n' : ''} ausgewählt`}
-                </span>
-              </button>
-              {showMobileCategories && (
-                <div className="absolute top-full left-0 mt-2 w-64 bg-[#460b6c] rounded-lg shadow-lg p-2 z-10">
-                  <div className="flex flex-col gap-2">
-                    <button
-                      onClick={() => {
-                        setSelectedCategories(new Set());
-                        setShowMobileCategories(false);
-                      }}
-                      className={`w-full px-4 py-2 rounded-lg transition-colors flex items-center space-x-2 ${
-                        selectedCategories.size === 0
-                          ? 'bg-[#ff9900] text-[#460b6c]'
-                          : 'bg-[#460b6c] text-[#ff9900] hover:bg-[#ff9900] hover:bg-opacity-20'
-                      }`}
-                    >
-                      <span>Alle Kategorien</span>
-                    </button>
-                    {categoryOptions.map((option) => (
-                      <button
-                        key={option.value}
-                        onClick={() => {
-                          toggleCategory(option.value);
-                        }}
-                        className={`w-full px-4 py-2 rounded-lg transition-colors flex items-center space-x-2 ${
-                          selectedCategories.has(option.value)
-                            ? 'bg-[#ff9900] text-[#460b6c]'
-                            : 'bg-[#460b6c] text-[#ff9900] hover:bg-[#ff9900] hover:bg-opacity-20'
-                        }`}
-                      >
-                        {option.icon}
-                        <span>{option.label}</span>
-                      </button>
-                    ))}
-                  </div>
-                </div>
-              )}
-            </div>
-          </div>
-        </div>
-      </div>
-
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-        {Array.from({ length: 6 }).map((_, index) => {
-          const event = filteredEvents[index];
-          return (
-            <div
-              key={index}
-              className={`bg-[#460b6c] bg-opacity-50 rounded-lg p-4 hover:bg-opacity-70 transition-all border border-[#ff9900] border-opacity-30 ${
-                !event ? 'hidden md:block' : ''
-              }`}
-            >
-              {event ? (
-                <>
-                  <div className="flex items-center justify-between mb-2">
-                    <div className="text-[#ff9900] font-bold">{event.time}</div>
-                    <div className="flex items-center gap-2">
-                      {categoryOptions.find(opt => opt.value === event.category)?.icon}
-                      <span className="text-[#ff9900] text-sm">
-                        {categoryOptions.find(opt => opt.value === event.category)?.label}
-                      </span>
+        
+        {showFavoritesOnly ? (
+          <div className="mb-4">
+            <h3 className="text-lg font-medium mb-2 text-[#ff9900]">Meine Favoriten</h3>
+            <div className="space-y-4">
+              {Object.keys(getFavoriteEvents()).length > 0 ? (
+                Object.entries(getFavoriteEvents()).map(([dayTitle, events]) => (
+                  <div key={dayTitle} className="bg-[#460b6c]/40 backdrop-blur-sm rounded-lg p-3 border border-[#ff9900]/20">
+                    <h4 className="text-[#ff9900] font-medium mb-2">{dayTitle}</h4>
+                    <div className="space-y-2">
+                      {events.map((event: Event, index: number) => (
+                        <div key={index} className="bg-[#460b6c]/60 backdrop-blur-sm rounded-lg p-2 border border-[#ff9900]/10">
+                          <div className="flex items-center justify-between">
+                            <div>
+                              <h5 className="text-[#ff9900] font-medium">{event.time} - {event.title}</h5>
+                              {event.description && (
+                                <p className="text-[#ff9900]/60 text-xs mt-1">{event.description}</p>
+                              )}
+                            </div>
+                            <button
+                              onClick={() => toggleFavorite(dayTitle, event)}
+                              className="text-[#ff9900] p-1"
+                            >
+                              <FaHeart />
+                            </button>
+                          </div>
+                        </div>
+                      ))}
                     </div>
                   </div>
-                  <h3 className="text-lg font-semibold mb-2 text-white">{event.title}</h3>
-                  <p className="text-[#ff9900] text-opacity-80">{event.description}</p>
-                </>
+                ))
               ) : (
-                <div className="text-[#ff9900] text-opacity-50 text-center py-8">...</div>
+                <p className="text-[#ff9900]/60 text-center py-4">Keine Favoriten vorhanden</p>
               )}
             </div>
-          );
-        })}
+          </div>
+        ) : (
+          <>
+            <div className="hidden md:grid md:grid-cols-3 lg:grid-cols-4 gap-2 mb-4">
+              {timelineData.days.map((day, index) => (
+                <button
+                  key={day.title}
+                  onClick={() => setSelectedDay(index)}
+                  className={`px-4 py-2 rounded-full transition-colors duration-200 ${
+                    selectedDay === index
+                      ? 'bg-[#ff9900] text-[#460b6c]'
+                      : 'bg-[#460b6c] text-[#ff9900] border border-[#ff9900]/20'
+                  }`}
+                >
+                  {day.title}
+                </button>
+              ))}
+            </div>
+            <div className="md:hidden flex space-x-2 overflow-x-auto pb-2 -mx-4 px-4">
+              {timelineData.days.map((day, index) => (
+                <button
+                  key={day.title}
+                  onClick={() => setSelectedDay(index)}
+                  className={`flex-shrink-0 px-4 py-2 rounded-full transition-colors duration-200 ${
+                    selectedDay === index
+                      ? 'bg-[#ff9900] text-[#460b6c]'
+                      : 'bg-[#460b6c] text-[#ff9900] border border-[#ff9900]/20'
+                  }`}
+                >
+                  {day.title}
+                </button>
+              ))}
+            </div>
+
+            <div className="flex space-x-2 overflow-x-auto pb-2 -mx-4 px-4 mt-2">
+              <button
+                onClick={() => setSelectedCategories(new Set())}
+                className={`flex-shrink-0 px-4 py-2 rounded-full transition-colors duration-200 flex items-center space-x-2 ${
+                  selectedCategories.size === 0
+                    ? 'bg-[#ff9900] text-[#460b6c]'
+                    : 'bg-[#460b6c] text-[#ff9900] border border-[#ff9900]/20'
+                }`}
+              >
+                <span>Alle</span>
+              </button>
+              {categoryOptions.map((option) => (
+                <button
+                  key={option.value}
+                  onClick={() => toggleCategory(option.value)}
+                  className={`flex-shrink-0 px-4 py-2 rounded-full transition-colors duration-200 flex items-center space-x-2 ${
+                    selectedCategories.has(option.value)
+                      ? 'bg-[#ff9900] text-[#460b6c]'
+                      : 'bg-[#460b6c] text-[#ff9900] border border-[#ff9900]/20'
+                  }`}
+                >
+                  {option.icon}
+                  <span>{option.label}</span>
+                </button>
+              ))}
+            </div>
+          </>
+        )}
       </div>
+
+      {!showFavoritesOnly && (
+        <div 
+          className="relative px-4"
+          onScroll={handleScroll}
+          onTouchStart={() => setIsScrolling(true)}
+          onTouchEnd={() => setIsScrolling(false)}
+        >
+          <div className="absolute left-4 top-0 bottom-0 w-0.5 bg-[#ff9900]/20" />
+          {timelineData.days[selectedDay].events.map((event, index) => (
+            <div
+              key={event.time}
+              className={`relative pl-8 mb-8 transition-opacity duration-200 ${
+                isScrolling ? 'opacity-50' : 'opacity-100'
+              }`}
+            >
+              <div className="absolute left-0 w-4 h-4 rounded-full bg-[#ff9900] transform -translate-x-2" />
+              <div className="bg-[#460b6c]/40 backdrop-blur-sm rounded-lg p-4 border border-[#ff9900]/20">
+                <div className="flex items-center justify-between mb-2">
+                  <span className="text-[#ff9900] font-medium">{event.time}</span>
+                  <div className="flex items-center gap-2">
+                    {categoryOptions.find(opt => opt.value === event.category)?.icon}
+                    <span className="text-[#ff9900]/60 text-sm">
+                      {categoryOptions.find(opt => opt.value === event.category)?.label}
+                    </span>
+                    <button
+                      onClick={() => toggleFavorite(timelineData.days[selectedDay].title, event)}
+                      className={`p-1 rounded-full transition-colors duration-200 ${
+                        event.favorite
+                          ? 'text-[#ff9900]'
+                          : 'text-[#ff9900]/40 hover:text-[#ff9900]/60'
+                      }`}
+                    >
+                      {event.favorite ? <FaHeart /> : <FaRegHeart />}
+                    </button>
+                  </div>
+                </div>
+                <h3 className="text-lg font-medium mb-1">{event.title}</h3>
+                {event.description && (
+                  <p className="text-[#ff9900]/80 text-sm">{event.description}</p>
+                )}
+              </div>
+            </div>
+          ))}
+        </div>
+      )}
     </div>
   );
 } 

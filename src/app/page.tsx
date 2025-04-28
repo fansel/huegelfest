@@ -1,5 +1,4 @@
 'use client';
-
 import React, { useEffect, useState } from "react";
 import Image from "next/image";
 import { Announcement as AnnouncementType, GroupColors, REACTION_EMOJIS, ReactionType } from "@/lib/types";
@@ -9,6 +8,39 @@ import Countdown from '@/components/Countdown';
 import Timeline from '@/components/Timeline';
 import Starfield from '@/components/Starfield';
 import Link from "next/link";
+import { getAnnouncements, saveAnnouncements as saveAnnouncementsServer } from './announcements/actions'
+
+function InstallPrompt() {
+  const [isIOS, setIsIOS] = useState(false)
+  const [isStandalone, setIsStandalone] = useState(false)
+ 
+  useEffect(() => {
+    setIsIOS(
+      /iPad|iPhone|iPod/.test(navigator.userAgent) && !(window as any).MSStream
+    )
+ 
+    setIsStandalone(window.matchMedia('(display-mode: standalone)').matches)
+  }, [])
+ 
+  if (isStandalone) {
+    return null
+  }
+ 
+  return (
+    <div>
+      <h3>Install App</h3>
+      <button>Add to Home Screen</button>
+      {isIOS && (
+        <p>
+          To install this app on your iOS device, tap the share button
+          <span role="img" aria-label="share icon"> ⎋ </span>
+          and then "Add to Home Screen"
+          <span role="img" aria-label="plus icon"> ➕ </span>.
+        </p>
+      )}
+    </div>
+  )
+}
 
 export default function Home() {
   const [announcements, setAnnouncements] = useState<AnnouncementType[]>([]);
@@ -113,7 +145,7 @@ export default function Home() {
     });
 
     setAnnouncements(updatedAnnouncements);
-    await saveAnnouncements(updatedAnnouncements);
+    await saveAnnouncementsServer(updatedAnnouncements);
   };
 
   return (
@@ -125,9 +157,6 @@ export default function Home() {
         <nav className="absolute top-0 left-0 right-0 z-40 flex justify-center space-x-1 sm:space-x-8 p-1 sm:p-0 rounded-full mx-1 sm:mx-0 pt-[env(safe-area-inset-top)]">
           <a href="#infoboard" className="text-[#ff9900] hover:text-orange-300 transition-colors text-xs sm:text-base px-1.5 sm:px-3 py-1 sm:py-2 rounded-full hover:bg-[#ff9900] hover:bg-opacity-10 backdrop-blur-sm">InfoBoard</a>
           <a href="#programm" className="text-[#ff9900] hover:text-orange-300 transition-colors text-xs sm:text-base px-1.5 sm:px-3 py-1 sm:py-2 rounded-full hover:bg-[#ff9900] hover:bg-opacity-10 backdrop-blur-sm">Programm</a>
-          <Link href="/anreise" className="text-[#ff9900] hover:text-orange-300 transition-colors text-xs sm:text-base px-1.5 sm:px-3 py-1 sm:py-2 rounded-full hover:bg-[#ff9900] hover:bg-opacity-10 backdrop-blur-sm">
-            Anreise
-          </Link>
         </nav>
 
         <div className="absolute top-[env(safe-area-inset-top)] left-4 w-[60px] sm:w-[150px] h-[50px] sm:h-[150px] z-50">
@@ -135,10 +164,9 @@ export default function Home() {
             <Image
               src="/logo.jpg"
               alt="Hügelfest Logo"
-              fill
-              sizes="(max-width: 768px) 60px, 150px"
-              className="object-contain animate-fade-in"
-              priority
+              width={200}
+              height={200}
+              className="rounded-full hover:scale-105 transition-transform cursor-pointer"
             />
           </div>
         </div>
@@ -255,6 +283,7 @@ export default function Home() {
           </section>
         </div>
       </div>
+      <InstallPrompt />
     </div>
   );
 } 

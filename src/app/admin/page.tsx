@@ -2,18 +2,17 @@
 
 import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
-import AnnouncementForm from '@/components/admin/AnnouncementForm';
-import GroupColorManager from '@/components/admin/GroupColorManager';
-import MusicManager from '@/components/admin/MusicManager';
-import TimelineManager from '@/components/admin/TimelineManager';
 import { Announcement, GroupColors } from '@/lib/types';
-import { loadAnnouncements, saveAnnouncements, loadMusicUrls, saveMusicUrls, loadGroupColors } from '@/lib/admin';
+import { loadAnnouncements, saveAnnouncements, loadMusicUrls, saveMusicUrls, loadGroupColors, saveGroupColors } from '@/lib/admin';
+import DesktopAdminDashboard from '@/components/admin/DesktopAdminDashboard';
+import MobileAdminDashboard from '@/components/admin/MobileAdminDashboard';
+import { usePWA } from '@/contexts/PWAContext';
 
 export default function AdminPage() {
   const router = useRouter();
+  const { isPWA, isMobile } = usePWA();
   const [announcements, setAnnouncements] = useState<Announcement[]>([]);
   const [editingAnnouncement, setEditingAnnouncement] = useState<Announcement | undefined>(undefined);
-  const [activeTab, setActiveTab] = useState<'announcements' | 'groups' | 'music' | 'timeline'>('announcements');
   const [musicUrls, setMusicUrls] = useState<string[]>([]);
   const [groupColors, setGroupColors] = useState<GroupColors>({ default: '#460b6c' });
 
@@ -50,28 +49,16 @@ export default function AdminPage() {
   }, []);
 
   const handleSaveAnnouncement = async (announcement: Announcement) => {
-    let updatedAnnouncements: Announcement[];
-    
-    if (editingAnnouncement) {
-      // Konvertiere IDs zu Zahlen für den Vergleich
-      const editingId = typeof editingAnnouncement.id === 'string' 
-        ? parseInt(editingAnnouncement.id, 10) 
-        : editingAnnouncement.id;
-
-      updatedAnnouncements = announcements.map(a => {
-        const aId = typeof a.id === 'string' ? parseInt(a.id, 10) : a.id;
-        return aId === editingId ? announcement : a;
-      });
-    } else {
-      updatedAnnouncements = [...announcements, announcement];
-    }
+    const updatedAnnouncements = editingAnnouncement
+      ? announcements.map(a => a.id === announcement.id ? announcement : a)
+      : [...announcements, announcement];
     
     setAnnouncements(updatedAnnouncements);
     await saveAnnouncements(updatedAnnouncements);
     setEditingAnnouncement(undefined);
   };
 
-  const handleDeleteAnnouncement = async (id: number) => {
+  const handleDeleteAnnouncement = async (id: string) => {
     const updatedAnnouncements = announcements.filter(a => a.id !== id);
     setAnnouncements(updatedAnnouncements);
     await saveAnnouncements(updatedAnnouncements);
@@ -82,148 +69,42 @@ export default function AdminPage() {
     await saveMusicUrls(urls);
   };
 
-  const handleLogout = () => {
-    document.cookie = 'isAuthenticated=; path=/; expires=Thu, 01 Jan 1970 00:00:00 GMT';
-    router.push('/');
+  const handleSaveGroupColors = async (colors: GroupColors) => {
+    setGroupColors(colors);
+    await saveGroupColors(colors);
+  };
+
+  const handleEditAnnouncement = (announcement: Announcement) => {
+    setEditingAnnouncement(announcement);
   };
 
   return (
-    <div className="min-h-screen bg-gray-50">
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-4 sm:py-8">
-        <div className="bg-white rounded-lg shadow-lg overflow-hidden">
-          {/* Header */}
-          <div className="bg-[#460b6c] p-4 sm:p-6 flex flex-col sm:flex-row justify-between items-center gap-4">
-            <div>
-              <h1 className="text-xl sm:text-2xl font-bold text-white">Admin Dashboard</h1>
-              <p className="text-purple-200 mt-1 text-sm sm:text-base">Verwalten Sie Ankündigungen, Gruppen und Musik</p>
-            </div>
-            <button
-              onClick={handleLogout}
-              className="bg-red-500 hover:bg-red-700 text-white font-bold py-2 px-4 rounded w-full sm:w-auto text-sm sm:text-base"
-            >
-              Logout
-            </button>
-          </div>
-
-          {/* Tabs */}
-          <div className="border-b border-gray-200 overflow-x-auto">
-            <nav className="-mb-px flex flex-nowrap">
-              <button
-                onClick={() => setActiveTab('announcements')}
-                className={`py-4 px-3 sm:px-6 border-b-2 font-medium text-xs sm:text-sm whitespace-nowrap ${
-                  activeTab === 'announcements'
-                    ? 'border-[#460b6c] text-[#460b6c]'
-                    : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
-                }`}
-              >
-                Ankündigungen
-              </button>
-              <button
-                onClick={() => setActiveTab('groups')}
-                className={`py-4 px-3 sm:px-6 border-b-2 font-medium text-xs sm:text-sm whitespace-nowrap ${
-                  activeTab === 'groups'
-                    ? 'border-[#460b6c] text-[#460b6c]'
-                    : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
-                }`}
-              >
-                Gruppen
-              </button>
-              <button
-                onClick={() => setActiveTab('music')}
-                className={`py-4 px-3 sm:px-6 border-b-2 font-medium text-xs sm:text-sm whitespace-nowrap ${
-                  activeTab === 'music'
-                    ? 'border-[#460b6c] text-[#460b6c]'
-                    : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
-                }`}
-              >
-                Musik
-              </button>
-              <button
-                onClick={() => setActiveTab('timeline')}
-                className={`py-4 px-3 sm:px-6 border-b-2 font-medium text-xs sm:text-sm whitespace-nowrap ${
-                  activeTab === 'timeline'
-                    ? 'border-[#460b6c] text-[#460b6c]'
-                    : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
-                }`}
-              >
-                Timeline
-              </button>
-            </nav>
-          </div>
-
-          {/* Tab Content */}
-          <div className="p-4 sm:p-6">
-            {activeTab === 'announcements' && (
-              <div className="space-y-6">
-                <div className="bg-gray-50 p-4 rounded-lg">
-                  <h2 className="text-lg font-semibold text-gray-900 mb-4">
-                    {editingAnnouncement ? 'Ankündigung bearbeiten' : 'Neue Ankündigung erstellen'}
-                  </h2>
-                  <AnnouncementForm
-                    initialData={editingAnnouncement}
-                    onSubmit={handleSaveAnnouncement}
-                    groups={groupColors}
-                  />
-                </div>
-
-                <div className="space-y-4">
-                  <h2 className="text-lg font-semibold text-gray-900">Bestehende Ankündigungen</h2>
-                  {announcements.length === 0 ? (
-                    <p className="text-gray-500">Keine Ankündigungen vorhanden</p>
-                  ) : (
-                    <div className="space-y-4">
-                      {announcements.map((announcement) => (
-                        <div
-                          key={announcement.id}
-                          className="bg-white border rounded-lg p-4 shadow-sm hover:shadow-md transition-shadow"
-                        >
-                          <div className="flex flex-col sm:flex-row justify-between items-start gap-4">
-                            <div className="flex-1">
-                              <p className="text-gray-900 break-words text-sm sm:text-base">{announcement.content}</p>
-                              <div className="mt-2 flex flex-wrap items-center gap-2 text-xs sm:text-sm text-gray-500">
-                                <span>{announcement.date}</span>
-                                <span>{announcement.time}</span>
-                                <span className="font-medium">{announcement.author}</span>
-                                <span className="font-medium">{announcement.group}</span>
-                                {announcement.important && (
-                                  <span className="text-red-600 font-medium">Wichtig</span>
-                                )}
-                              </div>
-                            </div>
-                            <div className="flex gap-2 w-full sm:w-auto">
-                              <button
-                                onClick={() => setEditingAnnouncement(announcement)}
-                                className="p-2 text-blue-600 hover:text-blue-800 flex-1 sm:flex-none text-sm sm:text-base"
-                              >
-                                Bearbeiten
-                              </button>
-                              <button
-                                onClick={() => handleDeleteAnnouncement(announcement.id)}
-                                className="p-2 text-red-600 hover:text-red-800 flex-1 sm:flex-none text-sm sm:text-base"
-                              >
-                                Löschen
-                              </button>
-                            </div>
-                          </div>
-                        </div>
-                      ))}
-                    </div>
-                  )}
-                </div>
-              </div>
-            )}
-            {activeTab === 'groups' && (
-              <GroupColorManager />
-            )}
-            {activeTab === 'music' && (
-              <MusicManager musicUrls={musicUrls} onSave={handleSaveMusicUrls} />
-            )}
-            {activeTab === 'timeline' && (
-              <TimelineManager />
-            )}
-          </div>
-        </div>
-      </div>
+    <div className="w-full max-w-7xl mx-auto px-4 py-8">
+      {isPWA || isMobile ? (
+        <MobileAdminDashboard
+          announcements={announcements}
+          editingAnnouncement={editingAnnouncement}
+          musicUrls={musicUrls}
+          groupColors={groupColors}
+          onSaveAnnouncement={handleSaveAnnouncement}
+          onSaveMusicUrls={handleSaveMusicUrls}
+          onSaveGroupColors={handleSaveGroupColors}
+          onEditAnnouncement={handleEditAnnouncement}
+          onDeleteAnnouncement={handleDeleteAnnouncement}
+        />
+      ) : (
+        <DesktopAdminDashboard
+          announcements={announcements}
+          editingAnnouncement={editingAnnouncement}
+          musicUrls={musicUrls}
+          groupColors={groupColors}
+          onSaveAnnouncement={handleSaveAnnouncement}
+          onSaveMusicUrls={handleSaveMusicUrls}
+          onSaveGroupColors={handleSaveGroupColors}
+          onEditAnnouncement={handleEditAnnouncement}
+          onDeleteAnnouncement={handleDeleteAnnouncement}
+        />
+      )}
     </div>
   );
 } 

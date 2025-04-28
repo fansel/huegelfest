@@ -7,24 +7,16 @@
   --font-display: var(--font-display);
 }
 
-/* Farben (werden hauptsächlich durch Tailwind-Klassen in page.tsx gesetzt) */
-:root {
-  --background: #460b6c;
-  --foreground: #ff9900;
-}
-
-@media (prefers-color-scheme: dark) {
-  :root {
-    --background: #460b6c;
-    --foreground: #ffb347;
-  }
-}
-
-/* Body-Reset, Schriftarten, Farbe */
+/* Body-Reset, Schriftarten */
 body {
-  background-color: var(--background);
-  color: var(--foreground);
   font-family: var(--font-sans), sans-serif;
+}
+
+/* PWA-spezifische Styles */
+@media all and (display-mode: standalone) {
+  .desktop-only {
+    display: none !important;
+  }
 }
 
 /* Animationen & Custom Utilities */
