@@ -1,20 +1,11 @@
 import type { Metadata, Viewport } from "next";
-import { Inter } from "next/font/google";
-import { GeistSans, GeistMono } from 'geist/font';
+import { GeistSans } from 'geist/font/sans';
+import { GeistMono } from 'geist/font/mono';
 import "./globals.css";
 import Footer from "@/components/Footer";
 import SoundCloudPlayer from "@/components/SoundCloudPlayer";
 import PWAContainer from "@/components/PWAContainer";
 import { PWAProvider } from "@/contexts/PWAContext";
-
-// Sans-serif body font
-const inter = Inter({ variable: "--font-sans", subsets: ["latin"] });
-
-// Monospaced font for code / secondary text
-const geistMono = GeistMono;
-
-// Bold display font just for the title (HÜGELFEST)
-const geistSans = GeistSans;
 
 export const metadata: Metadata = {
   title: 'Hügelfest',
@@ -46,7 +37,7 @@ export default function RootLayout({
   children: React.ReactNode;
 }) {
   return (
-    <html lang="de" className={`${inter.variable} ${geistMono.variable} ${geistSans.variable}`}>
+    <html lang="de" className={GeistMono.className}>
       <head>
         <link rel="icon" type="image/png" sizes="32x32" href="/favicon-32x32.png" />
         <link rel="icon" type="image/png" sizes="16x16" href="/favicon-16x16.png" />
