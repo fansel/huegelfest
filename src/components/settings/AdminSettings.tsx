@@ -7,9 +7,20 @@ interface AdminSettingsProps {
   onToggle: (value: boolean) => void;
   isAuthenticated: boolean;
   onLogout: () => void;
+  onLogin: (password: string) => void;
+  loginError: string;
+  onNavigateToAdmin: () => void;
 }
 
-export default function AdminSettings({ showAdmin, onToggle, isAuthenticated, onLogout }: AdminSettingsProps) {
+export default function AdminSettings({ 
+  showAdmin, 
+  onToggle, 
+  isAuthenticated, 
+  onLogout,
+  onLogin,
+  loginError,
+  onNavigateToAdmin
+}: AdminSettingsProps) {
   return (
     <div className="p-4 sm:p-6">
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
@@ -27,7 +38,7 @@ export default function AdminSettings({ showAdmin, onToggle, isAuthenticated, on
             />
             <div className="w-12 h-6 bg-gray-200 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-[#ff9900] hover:bg-gray-300"></div>
           </label>
-          {isAuthenticated && (
+          {isAuthenticated ? (
             <button
               onClick={onLogout}
               className="text-[#ff9900]/60 hover:text-[#ff9900] transition-colors p-2 hover:bg-[#460b6c]/20 rounded-full"
@@ -37,6 +48,21 @@ export default function AdminSettings({ showAdmin, onToggle, isAuthenticated, on
                 <path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4" />
                 <polyline points="16 17 21 12 16 7" />
                 <line x1="21" y1="12" x2="9" y2="12" />
+              </svg>
+            </button>
+          ) : (
+            <button
+              onClick={onNavigateToAdmin}
+              className="text-[#ff9900]/60 hover:text-[#ff9900] transition-colors p-2 hover:bg-[#460b6c]/20 rounded-full"
+              title="Zum Admin-Bereich"
+            >
+              <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                <path d="M12 2a10 10 0 1 0 10 10 4 4 0 0 1-5-5 4 4 0 0 1-5-5" />
+                <path d="M8.5 8.5v.01" />
+                <path d="M16 15.5v.01" />
+                <path d="M12 12v.01" />
+                <path d="M11 17v.01" />
+                <path d="M7 14v.01" />
               </svg>
             </button>
           )}

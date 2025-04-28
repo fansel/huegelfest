@@ -1,4 +1,9 @@
 /** @type {import('next').NextConfig} */
+const { logServerStart, logError } = require('./src/lib/logger');
+
+// Logge Server-Start
+logServerStart();
+
 const nextConfig = {
   images: {
     domains: ['i1.sndcdn.com', 'i2.sndcdn.com', 'i3.sndcdn.com', 'i4.sndcdn.com', 'i.scdn.co'],
@@ -61,6 +66,9 @@ const nextConfig = {
         ],
       },
     ]
+  },
+  onError: (err) => {
+    logError(err);
   },
 }
 
