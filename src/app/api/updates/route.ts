@@ -1,6 +1,8 @@
 import { NextResponse } from 'next/server';
 import { addClient, removeClient } from '@/lib/sse';
 
+export const dynamic = 'force-dynamic';
+
 // Speichere alle aktiven SSE-Verbindungen
 
 // Funktion zum Senden von Updates an alle verbundenen Clients
