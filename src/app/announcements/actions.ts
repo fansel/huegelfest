@@ -6,6 +6,7 @@ import { join } from 'path'
 import { Announcement } from '@/lib/types'
 import webpush from 'web-push'
 import type { PushSubscription } from 'web-push'
+import { sendUpdateToAllClients } from '@/lib/sse'
 
 const DATA_DIR = join(process.cwd(), 'src/data')
 const ANNOUNCEMENTS_FILE = join(DATA_DIR, 'announcements.json')
@@ -118,8 +119,8 @@ export async function saveAnnouncements(announcements: Announcement[]) {
     
     // Sende Update an alle verbundenen Clients
     try {
-      const { sendUpdateToAllClients } = await import('@/app/api/updates/route');
       sendUpdateToAllClients();
+      console.log('Update an alle Clients gesendet');
     } catch (error) {
       console.error('Fehler beim Senden des Updates:', error);
     }

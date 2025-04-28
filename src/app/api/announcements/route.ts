@@ -1,7 +1,7 @@
 import { NextResponse } from 'next/server';
 import { getAnnouncements, saveAnnouncements } from '../../announcements/actions';
 import type { Announcement } from '@/lib/types';
-import { sendUpdateToAllClients } from '../updates/route';
+import { sendUpdateToAllClients } from '@/lib/sse';
 
 export async function GET() {
   try {
