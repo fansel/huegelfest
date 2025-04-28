@@ -170,11 +170,23 @@ export default function PushNotificationSettings() {
               </label>
               {isEnabled && (
                 <button
-                  onClick={() => {
-                    new Notification('Demo-Benachrichtigung', {
-                      body: 'Dies ist eine Test-Benachrichtigung',
-                      icon: '/icon-192x192.png'
-                    });
+                  onClick={async () => {
+                    try {
+                      const registration = await navigator.serviceWorker.ready;
+                      await registration.showNotification('Demo-Benachrichtigung', {
+                        body: 'Dies ist eine Test-Benachrichtigung',
+                        icon: '/icon-192x192.png',
+                        badge: '/icon-192x192.png',
+                        data: {
+                          url: '/'
+                        },
+                        tag: 'demo-notification',
+                        requireInteraction: true
+                      });
+                    } catch (error) {
+                      console.error('Fehler beim Senden der Benachrichtigung:', error);
+                      setError('Fehler beim Senden der Test-Benachrichtigung');
+                    }
                   }}
                   className="text-[#ff9900]/60 hover:text-[#ff9900] transition-colors p-2 hover:bg-[#460b6c]/20 rounded-full"
                   title="Demo-Benachrichtigung senden"

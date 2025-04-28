@@ -1,7 +1,7 @@
 'use client';
 
 import { useState, useEffect } from 'react';
-import { Calendar, MapPin, Megaphone, Settings as SettingsIcon, Heart } from 'lucide-react';
+import { Calendar, MapPin, Megaphone, Settings as SettingsIcon, Heart, Shield } from 'lucide-react';
 import Timeline from './Timeline';
 import InfoBoard from './InfoBoard';
 import Anreise from '../app/anreise/page';
@@ -61,17 +61,20 @@ export default function PWAContainer() {
 
   const handleLogin = (password: string) => {
     if (password === 'admin') {
-      document.cookie = 'isAuthenticated=true; path=/; SameSite=Lax';
+      document.cookie = 'isAuthenticated=true; path=/; SameSite=Lax; max-age=31536000'; // 1 Jahr
       setIsAuthenticated(true);
       setLoginError('');
+      setShowAdmin(true);
     } else {
       setLoginError('Falsches Passwort');
+      setShowAdmin(false);
     }
   };
 
   const handleLogout = () => {
     document.cookie = 'isAuthenticated=; path=/; expires=Thu, 01 Jan 1970 00:00:00 GMT';
     setIsAuthenticated(false);
+    setShowAdmin(false);
     setCurrentView('home');
   };
 
@@ -84,8 +87,8 @@ export default function PWAContainer() {
     { id: 'settings', icon: SettingsIcon, label: 'Einstellungen' }
   ];
 
-  // Admin-Navigation entfernen
-  const navItems = baseNavItems;
+  // Admin-Navigation nur hinzufügen, wenn authentifiziert
+  const navItems = isAuthenticated ? [...baseNavItems, { id: 'admin', icon: Shield, label: 'Admin' }] : baseNavItems;
 
   const handleTouchStart = (e: React.TouchEvent) => {
     setTouchStart(e.touches[0].clientY);
@@ -112,7 +115,6 @@ export default function PWAContainer() {
     const newValue = !showAdmin;
     setShowAdmin(newValue);
     
-    // Wenn Admin-Oberfläche ausgeschaltet wird, nur ausloggen
     if (!newValue) {
       document.cookie = 'isAuthenticated=; path=/; expires=Thu, 01 Jan 1970 00:00:00 GMT';
       setIsAuthenticated(false);
