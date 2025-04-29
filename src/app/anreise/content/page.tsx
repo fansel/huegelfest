@@ -1,9 +1,8 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import styles from './content.module.css';
 import { FaTrain, FaCar, FaMapMarkerAlt, FaPhone, FaWhatsapp } from 'react-icons/fa';
-import carpoolData from '@/data/carpool.json';
 
 interface Ride {
   id: number;
@@ -32,7 +31,27 @@ export default function AnreiseContent() {
     contact: ''
   });
 
-  const [rides, setRides] = useState<Ride[]>(carpoolData.rides);
+  const [rides, setRides] = useState<Ride[]>([]);
+
+  useEffect(() => {
+    const loadCarpoolData = async () => {
+      try {
+        const response = await fetch('/api/carpool');
+        if (response.ok) {
+          const data = await response.json();
+          setRides(data.rides);
+        } else {
+          console.warn('Carpool-Daten nicht gefunden, verwende leeres Array');
+          setRides([]);
+        }
+      } catch (error) {
+        console.warn('Fehler beim Laden der Carpool-Daten, verwende leeres Array');
+        setRides([]);
+      }
+    };
+
+    loadCarpoolData();
+  }, []);
 
   const festivalDates = [
     { date: '2025-07-30', label: '30. Juli 2025' },
