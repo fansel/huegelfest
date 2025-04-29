@@ -3,15 +3,14 @@ services:
   app:
     build: 
       context: .
-      dockerfile: Dockerfile
+      dockerfile: Dockerfile.dev
     ports:
-      - "3000:3000"  # Für die Entwicklungsumgebung
+      - "3000:3000"
     env_file:
       - .env
     volumes:
       - .:/app
       - /app/node_modules
-    command: npm run dev
     depends_on:
       - mongodb
 
