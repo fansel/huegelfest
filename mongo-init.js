@@ -1,4 +1,15 @@
-db.auth('huegelfest_admin', 'huegelfest_admin_password')
+db = db.getSiblingDB('admin')
+
+db.createUser({
+  user: 'huegelfest_admin',
+  pwd: 'huegelfest_admin_password',
+  roles: [
+    {
+      role: 'root',
+      db: 'admin'
+    }
+  ]
+})
 
 db = db.getSiblingDB('huegelfest')
 
