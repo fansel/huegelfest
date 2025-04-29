@@ -211,11 +211,6 @@ export default function PWAContainer() {
   return (
     <div className="relative min-h-screen bg-[#460b6c] text-[#ff9900]">
       {showStarfield && <Starfield />}
-      {pushSupported && (
-        <div className="fixed top-0 left-0 right-0 bg-green-500 text-white text-center py-1 z-50">
-          Push-Benachrichtigungen werden unterstützt
-        </div>
-      )}
       {showPushDialog && (
         <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
           <div className="bg-[#460b6c] border border-[#ff9900]/20 rounded-lg p-6 max-w-sm w-full">
