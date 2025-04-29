@@ -5,10 +5,9 @@ services:
       context: .
       dockerfile: Dockerfile
     ports:
-      - "9049:3000"
-    environment:
-      - MONGODB_URI=mongodb://mongodb:27017/huegelfest
-      - NODE_ENV=development
+      - "3000:3000"  # Für die Entwicklungsumgebung
+    env_file:
+      - .env
     volumes:
       - .:/app
       - /app/node_modules
@@ -18,10 +17,11 @@ services:
 
   mongodb:
     image: mongo:latest
-    ports:
-      - "27017:27017"
+    env_file:
+      - .env
     volumes:
       - mongodb_data:/data/db
+      - ./mongo-init.js:/docker-entrypoint-initdb.d/mongo-init.js:ro
 
 volumes:
-  mongodb_data: 
+  mongodb_data:

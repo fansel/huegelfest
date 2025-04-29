@@ -5,10 +5,24 @@ set -e
 BASE_DIR="/opt/huegelfest"
 APP_DIR="$BASE_DIR/app"
 REPO_DIR="$BASE_DIR/repo"
+ENV_FILE="$BASE_DIR/.env"
 
 # Altes App-Verzeichnis löschen und neu klonen
 rm -rf $APP_DIR
 git clone $REPO_DIR $APP_DIR
+
+# .env-Datei erstellen
+cat > $APP_DIR/.env << EOL
+# MongoDB
+MONGODB_URI=mongodb://huegelfest_user:huegelfest_password@mongodb:27017/huegelfest?authSource=admin
+
+# VAPID Keys für Push-Benachrichtigungen
+NEXT_PUBLIC_VAPID_PUBLIC_KEY=your_public_key
+VAPID_PRIVATE_KEY=your_private_key
+
+# Umgebung
+NODE_ENV=production
+EOL
 
 # Docker Compose neu starten
 cd $APP_DIR
