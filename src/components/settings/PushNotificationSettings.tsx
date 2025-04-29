@@ -100,11 +100,6 @@ export default function PushNotificationSettings() {
         ...prev,
         subscription
       }));
-
-      new Notification('Juhu! Das hat geklappt', {
-        body: 'Push-Benachrichtigungen sind jetzt aktiviert.',
-        icon: '/icon-192x192.png'
-      });
     } catch (error) {
       console.error('Fehler beim Abonnieren:', error);
       setError('Fehler beim Abonnieren der Push-Benachrichtigungen');

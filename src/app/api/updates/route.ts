@@ -1,6 +1,7 @@
 import { NextResponse } from 'next/server';
 import { addClient, removeClient } from '@/lib/sse';
 
+// Markiere die Route als dynamisch
 export const dynamic = 'force-dynamic';
 
 // Speichere alle aktiven SSE-Verbindungen

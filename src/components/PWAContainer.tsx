@@ -22,27 +22,55 @@ export default function PWAContainer() {
   const [isNavVisible, setIsNavVisible] = useState(true);
   const [touchStart, setTouchStart] = useState(0);
   const [showStarfield, setShowStarfield] = useState(true);
+  const [pushSupported, setPushSupported] = useState(false);
+  const [showPushDialog, setShowPushDialog] = useState(false);
 
   useEffect(() => {
     const mediaQuery = window.matchMedia('(display-mode: standalone)');
-    const updateIsPWA = (e: MediaQueryListEvent | MediaQueryList) => {
-      const isStandaloneMode = e.matches || 
-                             (window.navigator as Navigator & { standalone?: boolean }).standalone || 
-                             document.referrer.includes('android-app://');
-      setIsPWA(isStandaloneMode);
-    };
-    
-    updateIsPWA(mediaQuery);
+    const updateIsPWA = () => setIsPWA(mediaQuery.matches);
+    updateIsPWA();
     mediaQuery.addEventListener('change', updateIsPWA);
 
-    // Starfield-Einstellung aus Cookies laden
-    const cookies = document.cookie.split(';');
-    const starfieldCookie = cookies.find(cookie => cookie.trim().startsWith('showStarfield='));
-    if (starfieldCookie) {
-      setShowStarfield(starfieldCookie.trim().split('=')[1] === 'true');
-    }
-    
-    return () => mediaQuery.removeEventListener('change', updateIsPWA);
+    // Prüfe Push-Unterstützung
+    const checkPushSupport = async () => {
+      const notificationsSupported = 'Notification' in window;
+      const serviceWorkerSupported = 'serviceWorker' in navigator;
+      const pushManagerSupported = 'PushManager' in window;
+
+      if (notificationsSupported && serviceWorkerSupported && pushManagerSupported) {
+        try {
+          const registration = await navigator.serviceWorker.register('/sw.js');
+          await navigator.serviceWorker.ready;
+          
+          // Prüfe ob der Service Worker aktiv ist
+          if (registration.active) {
+            setPushSupported(true);
+            
+            // Prüfe ob wir bereits nach Push gefragt haben
+            const cookies = document.cookie.split(';');
+            const hasAskedForPush = cookies.some(cookie => 
+              cookie.trim().startsWith('pushAsked=') && 
+              cookie.trim().split('=')[1] === 'true'
+            );
+
+            if (!hasAskedForPush) {
+              // Zeige Dialog nach kurzer Verzögerung
+              setTimeout(() => {
+                setShowPushDialog(true);
+              }, 2000);
+            }
+          }
+        } catch (error) {
+          console.error('Service Worker Fehler:', error);
+        }
+      }
+    };
+
+    checkPushSupport();
+
+    return () => {
+      mediaQuery.removeEventListener('change', updateIsPWA);
+    };
   }, []);
 
   useEffect(() => {
@@ -183,6 +211,67 @@ export default function PWAContainer() {
   return (
     <div className="relative min-h-screen bg-[#460b6c] text-[#ff9900]">
       {showStarfield && <Starfield />}
+      {pushSupported && (
+        <div className="fixed top-0 left-0 right-0 bg-green-500 text-white text-center py-1 z-50">
+          Push-Benachrichtigungen werden unterstützt
+        </div>
+      )}
+      {showPushDialog && (
+        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
+          <div className="bg-[#460b6c] border border-[#ff9900]/20 rounded-lg p-6 max-w-sm w-full">
+            <h3 className="text-[#ff9900] text-xl font-semibold mb-4">Push-Benachrichtigungen aktivieren?</h3>
+            <p className="text-[#ff9900]/80 mb-6">
+              Erhalte wichtige Updates und Neuigkeiten direkt auf deinem Gerät.
+            </p>
+            <div className="flex gap-4">
+              <button
+                onClick={async () => {
+                  setShowPushDialog(false);
+                  try {
+                    const permission = await Notification.requestPermission();
+                    // Speichere in Cookie, dass wir gefragt haben
+                    document.cookie = 'pushAsked=true; path=/; SameSite=Lax; max-age=31536000'; // 1 Jahr
+                    
+                    if (permission === 'granted') {
+                      const registration = await navigator.serviceWorker.ready;
+                      const subscription = await registration.pushManager.subscribe({
+                        userVisibleOnly: true,
+                        applicationServerKey: process.env.NEXT_PUBLIC_VAPID_PUBLIC_KEY
+                      });
+
+                      // Subscription an Server senden
+                      await fetch('/api/push/subscribe', {
+                        method: 'POST',
+                        headers: {
+                          'Content-Type': 'application/json',
+                        },
+                        body: JSON.stringify(subscription),
+                      });
+
+                      console.log('Push-Subscription erfolgreich erstellt');
+                    }
+                  } catch (error) {
+                    console.error('Fehler bei der Push-Subscription:', error);
+                  }
+                }}
+                className="flex-1 bg-[#ff9900] text-[#460b6c] py-2 px-4 rounded-lg font-medium hover:bg-[#ff9900]/90 transition-colors"
+              >
+                Aktivieren
+              </button>
+              <button
+                onClick={() => {
+                  setShowPushDialog(false);
+                  // Speichere in Cookie, dass wir gefragt haben
+                  document.cookie = 'pushAsked=true; path=/; SameSite=Lax; max-age=31536000'; // 1 Jahr
+                }}
+                className="flex-1 border border-[#ff9900] text-[#ff9900] py-2 px-4 rounded-lg font-medium hover:bg-[#ff9900]/10 transition-colors"
+              >
+                Später
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
       <main 
         className={`pb-20 ${!showStarfield ? 'bg-[#460b6c]' : ''}`}
         onTouchStart={handleTouchStart}

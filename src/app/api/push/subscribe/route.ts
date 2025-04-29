@@ -63,6 +63,26 @@ export async function POST(request: Request) {
     await saveSubscriptions(subscriptions)
     
     console.log('Aktuelle Subscriptions:', subscriptions.length)
+
+    // Willkommensnachricht senden
+    const notificationPayload = {
+      title: 'Willkommen beim Hügelfest!',
+      body: 'Du erhältst jetzt alle wichtigen Updates.',
+      icon: '/android-chrome-192x192.png',
+      badge: '/android-chrome-192x192.png',
+      data: {
+        url: '/',
+        type: 'welcome'
+      }
+    }
+
+    try {
+      await webpush.sendNotification(subscription, JSON.stringify(notificationPayload))
+      console.log('Willkommensnachricht erfolgreich gesendet')
+    } catch (error) {
+      console.error('Fehler beim Senden der Willkommensnachricht:', error)
+    }
+    
     return NextResponse.json({ message: 'Erfolgreich abonniert' })
   } catch (error) {
     console.error('Fehler beim Abonnieren:', error)
