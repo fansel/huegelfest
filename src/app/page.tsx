@@ -3,7 +3,6 @@ import React, { useEffect, useState } from "react";
 import Image from "next/image";
 import { Announcement as AnnouncementType, GroupColors, REACTION_EMOJIS, ReactionType } from "@/lib/types";
 import { loadAnnouncements, loadGroupColors } from "@/lib/admin";
-import SoundCloudPlayer from '@/components/SoundCloudPlayer';
 import Countdown from '@/components/Countdown';
 import Timeline from '@/components/Timeline';
 import Starfield from '@/components/Starfield';
@@ -153,7 +152,6 @@ export default function Home() {
   return (
     <div className="relative w-full min-h-screen overflow-hidden bg-[#460b6c] text-[#ff9900] font-mono">
       <Starfield />
-      <SoundCloudPlayer />
 
       <div className="relative z-20 flex flex-col items-center justify-start min-h-screen px-2 sm:px-6 py-0 sm:py-12 text-center">
         <nav className="absolute top-0 left-0 right-0 z-40 flex justify-center space-x-1 sm:space-x-8 p-1 sm:p-0 rounded-full mx-1 sm:mx-0 pt-[env(safe-area-inset-top)]">

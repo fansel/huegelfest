@@ -18,21 +18,22 @@ export class MusicService {
       return false;
     }
   }
-
   private static async resolveShortUrl(url: string): Promise<string> {
     logger.debug('[MusicService] Löse kurze URL auf:', url);
     try {
       const response = await fetch(url, {
-        method: 'HEAD',
+        method: 'GET',
         redirect: 'follow'
       });
       logger.debug('[MusicService] Aufgelöste URL:', response.url);
       return response.url;
     } catch (error) {
       logger.error('[MusicService] Fehler beim Auflösen der kurzen URL:', error);
-      throw error;
+      throw new Error('Fehler beim Auflösen der kurzen URL');
     }
   }
+  
+  
 
   private static async getTrackInfo(url: string): Promise<any> {
     logger.debug('[MusicService] Hole Track-Info für URL:', url);
@@ -71,6 +72,12 @@ export class MusicService {
     if (!url || !this.isValidUrl(url)) {
       logger.error('[MusicService] Ungültige URL:', url);
       throw new Error('Ungültige URL');
+    }
+
+    // Auflösen der URL, falls es sich um eine kurze URL handelt
+    if (url.includes('on.soundcloud.com')) {
+      url = await this.resolveShortUrl(url);
+      logger.info('[MusicService] Aufgelöste URL:', url);
     }
 
     const trackInfo = await this.getTrackInfo(url);

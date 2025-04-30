@@ -3,7 +3,6 @@ import { GeistSans } from 'geist/font/sans';
 import { GeistMono } from 'geist/font/mono';
 import "./globals.css";
 import Footer from "@/components/Footer";
-import SoundCloudPlayer from "@/components/SoundCloudPlayer";
 import PWAContainer from "@/components/PWAContainer";
 import { PWAProvider } from "@/contexts/PWAContext";
 
@@ -35,7 +34,6 @@ export default function RootLayout({
       </head>
       <body className="antialiased min-h-screen flex flex-col">
         <PWAProvider>
-          <SoundCloudPlayer />
           <PWAContainer />
           <div className="desktop-only">
             <main className="flex-grow pb-16 md:pb-0">{children}</main>

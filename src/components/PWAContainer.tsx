@@ -224,14 +224,9 @@ export default function PWAContainer() {
     <div className="relative min-h-screen bg-[#460b6c] text-[#ff9900]">
       {showStarfield && <Starfield />}
       <div className="flex flex-col items-center justify-center gap-2">
-        <div className="text-xs text-gray-500">
-          {isMusicActive ? 'Musik aktiv' : 'Musik inaktiv'} | 
-          {isMusicVisible ? ' Player sichtbar' : ' Player versteckt'} | 
-          {isMusicPlaying ? ' Wird abgespielt' : ' Pausiert'}
-        </div>
         <h1 className="text-2xl font-bold text-[#460b6c]">Hügelfest</h1>
         <div className="flex items-center gap-2">
-          <MusicNote isActive={isMusicActive} onClick={toggleMusic} />
+          <MusicNote onClick={() => setIsMusicActive(!isMusicActive)} />
           <button
             onClick={toggleMusicVisibility}
             className="p-2 text-[#460b6c] hover:text-[#ff9900] transition-colors"
