@@ -14,20 +14,7 @@ export default function GroupColorManager({ onSaveGroupColors }: GroupColorManag
   useEffect(() => {
     const loadGroups = async () => {
       const loadedGroups = await loadGroupColors();
-      
-      if (Object.keys(loadedGroups).length === 0) {
-        const initialGroups: GroupColors = {
-          default: '#460b6c',
-          "Küche": "#ff9900",
-          "Bar": "#ff9900",
-          "Technik": "#ff9900",
-          "Organisation": "#ff9900"
-        };
-        setGroups(initialGroups);
-        await onSaveGroupColors(initialGroups);
-      } else {
-        setGroups(loadedGroups);
-      }
+      setGroups(loadedGroups);
     };
     
     loadGroups();

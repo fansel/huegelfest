@@ -192,19 +192,31 @@ export const loadTimeline = async (): Promise<TimelineData> => {
 
 export const saveTimeline = async (timeline: TimelineData): Promise<void> => {
   try {
+    console.log('saveTimeline - Starte Speichern der Timeline');
+    console.log('saveTimeline - Timeline Daten:', JSON.stringify(timeline, null, 2));
+    
     const response = await fetch('/api/timeline', {
-      method: 'POST',
+      method: 'PUT',
       headers: {
         'Content-Type': 'application/json',
       },
       body: JSON.stringify(timeline),
     });
 
+    console.log('saveTimeline - Response Status:', response.status);
+    console.log('saveTimeline - Response Headers:', Object.fromEntries(response.headers.entries()));
+
+    const responseData = await response.json();
+    console.log('saveTimeline - Response Daten:', responseData);
+
     if (!response.ok) {
-      throw new Error('Fehler beim Speichern der Timeline');
+      console.error('saveTimeline - Fehler beim Speichern:', responseData);
+      throw new Error(responseData.error || 'Fehler beim Speichern der Timeline');
     }
+
+    console.log('saveTimeline - Erfolgreich gespeichert');
   } catch (error) {
-    console.error('Fehler beim Speichern der Timeline:', error);
+    console.error('saveTimeline - Fehler beim Speichern der Timeline:', error);
     throw error;
   }
 }; 

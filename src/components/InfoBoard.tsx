@@ -1,10 +1,27 @@
 import { useState, useEffect, useRef } from 'react';
 import { Announcement, GroupColors, REACTION_EMOJIS, ReactionType } from '@/lib/types';
 import { loadAnnouncements, loadGroupColors } from '@/lib/admin';
-import { saveAnnouncements as saveAnnouncementsServer } from '@/app/announcements/actions';
 
 interface InfoBoardProps {
   isPWA?: boolean;
+}
+
+interface Reaction {
+  count: number;
+  deviceReactions: {
+    [key: string]: {
+      type: ReactionType;
+      announcementId: string;
+    };
+  };
+}
+
+interface Reactions {
+  thumbsUp: Reaction;
+  clap: Reaction;
+  laugh: Reaction;
+  surprised: Reaction;
+  heart: Reaction;
 }
 
 export default function InfoBoard({ isPWA = false }: InfoBoardProps) {
@@ -14,6 +31,14 @@ export default function InfoBoard({ isPWA = false }: InfoBoardProps) {
   const [isVisible, setIsVisible] = useState(false);
   const eventSourceRef = useRef<EventSource | null>(null);
   const [deviceId, setDeviceId] = useState<string>('');
+
+  const getBackgroundColor = (color: string, opacity: number) => {
+    // Konvertiere Hex zu RGB
+    const r = parseInt(color.slice(1, 3), 16);
+    const g = parseInt(color.slice(3, 5), 16);
+    const b = parseInt(color.slice(5, 7), 16);
+    return `rgba(${r}, ${g}, ${b}, ${opacity})`;
+  };
 
   // Lade initiale Daten
   useEffect(() => {
@@ -109,83 +134,90 @@ export default function InfoBoard({ isPWA = false }: InfoBoardProps) {
     };
   }, []);
 
-  const handleReaction = async (announcementId: number, reactionType: ReactionType) => {
+  const handleReaction = async (announcementId: string, reactionType: ReactionType) => {
     if (!deviceId) return;
 
-    const updatedAnnouncements = announcements.map(announcement => {
-      if (announcement.id === announcementId) {
-        const currentReactions = announcement.reactions || {};
-        const currentReaction = currentReactions[reactionType] || { 
-          count: 0, 
-          deviceReactions: {} 
-        };
-        
-        const hasReacted = currentReaction.deviceReactions?.[deviceId]?.announcementId === announcementId;
-        
-        if (hasReacted) {
-          const newReactions = { ...currentReactions };
-          if (currentReaction.count <= 1) {
-            delete newReactions[reactionType];
-          } else {
-            const updatedDeviceReactions = { ...currentReaction.deviceReactions };
-            delete updatedDeviceReactions[deviceId];
-            newReactions[reactionType] = {
-              count: currentReaction.count - 1,
-              deviceReactions: updatedDeviceReactions
-            };
-          }
-          return {
-            ...announcement,
-            reactions: newReactions
-          };
-        }
+    const announcement = announcements.find(a => a.id === announcementId);
+    if (!announcement) return;
 
-        const cleanedReactions = { ...currentReactions };
-        Object.keys(cleanedReactions).forEach(type => {
-          if (type !== reactionType) {
-            const deviceReactions = cleanedReactions[type].deviceReactions;
-            if (deviceId in deviceReactions) {
-              const updatedDeviceReactions = { ...deviceReactions };
-              delete updatedDeviceReactions[deviceId];
-              cleanedReactions[type] = {
-                count: Object.keys(updatedDeviceReactions).length,
-                deviceReactions: updatedDeviceReactions
-              };
-            }
-          }
-        });
+    // Initialisiere die Reaktionen mit der korrekten Struktur
+    const currentReactions = (announcement.reactions || {
+      thumbsUp: { count: 0, deviceReactions: {} },
+      clap: { count: 0, deviceReactions: {} },
+      laugh: { count: 0, deviceReactions: {} },
+      surprised: { count: 0, deviceReactions: {} },
+      heart: { count: 0, deviceReactions: {} }
+    }) as unknown as Reactions;
 
-        cleanedReactions[reactionType] = {
-          count: (currentReaction.count || 0) + 1,
-          deviceReactions: {
-            ...currentReaction.deviceReactions,
-            [deviceId]: {
-              type: reactionType,
-              announcementId: announcementId
-            }
-          }
-        };
+    // Stelle sicher, dass alle Reaktionstypen existieren
+    const updatedReactions: Reactions = {
+      thumbsUp: { count: 0, deviceReactions: {} },
+      clap: { count: 0, deviceReactions: {} },
+      laugh: { count: 0, deviceReactions: {} },
+      surprised: { count: 0, deviceReactions: {} },
+      heart: { count: 0, deviceReactions: {} }
+    };
 
-        return {
-          ...announcement,
-          reactions: cleanedReactions
+    // Kopiere die bestehenden Reaktionen
+    Object.keys(currentReactions).forEach(type => {
+      if (currentReactions[type as keyof Reactions]) {
+        updatedReactions[type as keyof Reactions] = {
+          count: currentReactions[type as keyof Reactions].count || 0,
+          deviceReactions: { ...currentReactions[type as keyof Reactions].deviceReactions }
         };
       }
-      return announcement;
     });
 
-    setAnnouncements(updatedAnnouncements);
-    await saveAnnouncementsServer(updatedAnnouncements);
+    const hasReacted = updatedReactions[reactionType]?.deviceReactions?.[deviceId];
+
+    if (hasReacted) {
+      // Entferne die Reaktion des Geräts
+      delete updatedReactions[reactionType].deviceReactions[deviceId];
+      updatedReactions[reactionType].count = Object.keys(updatedReactions[reactionType].deviceReactions).length;
+    } else {
+      // Entferne zuerst alle bestehenden Reaktionen des Geräts
+      Object.keys(updatedReactions).forEach(type => {
+        if (updatedReactions[type as keyof Reactions].deviceReactions[deviceId]) {
+          delete updatedReactions[type as keyof Reactions].deviceReactions[deviceId];
+          updatedReactions[type as keyof Reactions].count = Object.keys(updatedReactions[type as keyof Reactions].deviceReactions).length;
+        }
+      });
+
+      // Füge die neue Reaktion hinzu
+      updatedReactions[reactionType].deviceReactions[deviceId] = {
+        type: reactionType,
+        announcementId
+      };
+      updatedReactions[reactionType].count = Object.keys(updatedReactions[reactionType].deviceReactions).length;
+    }
 
     try {
-      const response = await fetch('/api/announcements', {
-        method: 'POST',
+      const response = await fetch(`/api/announcements`, {
+        method: 'PUT',
         headers: {
-          'Content-Type': 'application/json',
+          'Content-Type': 'application/json'
         },
-        body: JSON.stringify(updatedAnnouncements),
+        body: JSON.stringify({
+          id: announcementId,
+          reactions: updatedReactions
+        })
       });
-    } catch (error) {}
+
+      if (!response.ok) {
+        throw new Error('Fehler beim Aktualisieren der Reaktion');
+      }
+
+      const data = await response.json();
+      
+      // Aktualisiere den Zustand mit den Daten vom Server
+      setAnnouncements(prevAnnouncements => 
+        prevAnnouncements.map(a => 
+          a.id === announcementId ? { ...a, reactions: data.reactions } : a
+        )
+      );
+    } catch (error) {
+      console.error('Fehler beim Aktualisieren der Reaktion:', error);
+    }
   };
 
   return (
@@ -196,17 +228,17 @@ export default function InfoBoard({ isPWA = false }: InfoBoardProps) {
             <p className="text-gray-400 text-center">Keine aktuellen Informationen</p>
         ) : (
           announcements.map((announcement) => {
-            const groupColor = groupColors[announcement.group] || groupColors.default;
+            const groupColor = announcement.groupColor || groupColors[announcement.group] || groupColors.default;
             return (
               <div
-                key={announcement.id}
+                key={announcement._id}
                 className={`w-full p-4 sm:p-4 ${isPWA ? 'rounded-2xl' : 'rounded-none sm:rounded-lg'} border ${
                   announcement.important 
                     ? 'border-2 shadow-lg transform hover:scale-[1.02] transition-transform' 
                     : 'border-opacity-30'
                 }`}
                 style={{
-                    backgroundColor: `${groupColor}${announcement.important ? (isPWA ? '40' : '25') : (isPWA ? '30' : '20')}`,
+                  backgroundColor: getBackgroundColor(groupColor, announcement.important ? (isPWA ? 0.4 : 0.25) : (isPWA ? 0.3 : 0.2)),
                   borderColor: groupColor
                 }}
               >
@@ -216,7 +248,7 @@ export default function InfoBoard({ isPWA = false }: InfoBoardProps) {
                       <span 
                           className={`${isPWA ? 'text-[10px]' : 'text-xs'} sm:text-xs px-2 sm:px-2 py-1 sm:py-1 rounded-full`}
                           style={{ 
-                            backgroundColor: `${groupColor}${isPWA ? '40' : '30'}`,
+                            backgroundColor: getBackgroundColor(groupColor, isPWA ? 0.4 : 0.3),
                             color: groupColor
                           }}
                       >
@@ -238,21 +270,23 @@ export default function InfoBoard({ isPWA = false }: InfoBoardProps) {
                     <div className={`mt-${isPWA ? '2' : '3'} flex items-center space-x-2`}>
                       {Object.entries(REACTION_EMOJIS).map(([type, emoji]) => {
                         const reactionData = announcement.reactions?.[type] || { count: 0, deviceReactions: {} };
-                        const hasReacted = reactionData.deviceReactions?.[deviceId]?.announcementId === announcement.id;
+                        const hasReacted = reactionData.deviceReactions?.[deviceId];
+                        const count = reactionData.count || 0;
+                        
                         return (
                           <button
-                            key={`reaction-${announcement.id}-${type}`}
-                            onClick={() => handleReaction(announcement.id, type as ReactionType)}
+                            key={`reaction-${announcement._id}-${type}`}
+                            onClick={() => handleReaction(announcement._id, type as ReactionType)}
                             className={`flex items-center space-x-1 px-2 py-1 rounded-full transition-colors ${
                               hasReacted 
                                 ? 'bg-white bg-opacity-20' 
                                 : 'hover:bg-white hover:bg-opacity-20'
                             }`}
-                            style={{ color: groupColor }}
+                            style={{ color: announcement.groupColor }}
                           >
                             <span className="text-lg">{emoji}</span>
-                            {reactionData.count > 0 && (
-                              <span className="text-xs">{reactionData.count}</span>
+                            {count > 0 && (
+                              <span className="text-xs">{count}</span>
                             )}
                           </button>
                         );

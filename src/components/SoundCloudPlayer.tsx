@@ -66,7 +66,11 @@ declare global {
   }
 }
 
-export default function SoundCloudPlayer() {
+interface SoundCloudPlayerProps {
+  onClose?: () => void;
+}
+
+export default function SoundCloudPlayer({ onClose }: SoundCloudPlayerProps) {
   const [isPlaying, setIsPlaying] = useState(true);
   const [coverUrl, setCoverUrl] = useState<string | null>(null);
   const [musicUrls, setMusicUrls] = useState<string[]>([]);
@@ -123,8 +127,13 @@ export default function SoundCloudPlayer() {
       const trackUrl = currentTrackRef.current || musicUrls[Math.floor(Math.random() * musicUrls.length)];
       currentTrackRef.current = trackUrl;
 
+      let playerUrl = trackUrl;
+      if (trackUrl.includes('on.soundcloud.com')) {
+        playerUrl = `https://soundcloud.com${trackUrl.split('on.soundcloud.com')[1]}`;
+      }
+
       iframe = document.createElement('iframe');
-      iframe.src = `https://w.soundcloud.com/player/?url=${encodeURIComponent(trackUrl)}&auto_play=true&hide_related=true&show_comments=false&show_user=false&show_reposts=false&visual=true`;
+      iframe.src = `https://w.soundcloud.com/player/?url=${encodeURIComponent(playerUrl)}&auto_play=true&hide_related=true&show_comments=false&show_user=false&show_reposts=false&visual=true`;
       iframe.style.width = '100%';
       iframe.style.height = '100%';
       iframe.style.border = 'none';
@@ -151,7 +160,11 @@ export default function SoundCloudPlayer() {
       widget.bind(window.SC.Widget.Events.FINISH, () => {
         const newRandomIndex = Math.floor(Math.random() * musicUrls.length);
         const newRandomUrl = musicUrls[newRandomIndex];
-        widget.load(newRandomUrl, {
+        let nextPlayerUrl = newRandomUrl;
+        if (newRandomUrl.includes('on.soundcloud.com')) {
+          nextPlayerUrl = `https://soundcloud.com${newRandomUrl.split('on.soundcloud.com')[1]}`;
+        }
+        widget.load(nextPlayerUrl, {
           auto_play: true,
           hide_related: true,
           show_comments: false,
@@ -174,21 +187,39 @@ export default function SoundCloudPlayer() {
 
   const updateCoverArt = async (widget: SoundCloudWidget) => {
     try {
-      const sound = await new Promise<SoundCloudTrack>((resolve) => {
-        widget.getCurrentSound(resolve);
-      });
+      console.log('Starte Abruf der Track-Informationen...');
       
-      if (sound) {
-        if (sound.artwork_url) {
-          setCoverUrl(sound.artwork_url);
-        }
-        setTrackInfo({
-          title: sound.title || 'Unbekannter Titel',
-          artist: sound.user?.username || 'Unbekannter Künstler'
-        });
+      // Hole die aktuelle URL aus dem currentTrackRef
+      const currentUrl = currentTrackRef.current;
+      if (!currentUrl) {
+        console.error('Keine aktuelle URL gefunden');
+        return;
       }
+
+      // Hole die Track-Informationen von unserer API
+      const response = await fetch('/api/soundcloud', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ url: currentUrl }),
+      });
+
+      if (!response.ok) {
+        throw new Error('Fehler beim Laden der Track-Informationen');
+      }
+
+      const trackInfo = await response.json();
+      console.log('Track-Informationen von API:', trackInfo);
+
+      // Aktualisiere Cover und Track-Informationen
+      setCoverUrl(trackInfo.coverUrl);
+      setTrackInfo({
+        title: trackInfo.title,
+        artist: trackInfo.artist
+      });
     } catch (error) {
-      console.error('Fehler beim Laden des Cover-Art:', error);
+      console.error('Fehler beim Abrufen der Cover-Art:', error);
     }
   };
 
@@ -205,7 +236,7 @@ export default function SoundCloudPlayer() {
   return (
     <div className={`fixed right-0 z-50 transition-all duration-300 ${isScrolled ? 'md:bottom-0 -bottom-16' : 'bottom-0'} w-full md:w-72 md:right-0`}>
       <div className="bg-[#460b6c] text-[#ff9900] p-2 rounded-t-lg shadow-lg w-full">
-        <div className="grid grid-cols-[auto_1fr_auto] gap-2 items-center">
+        <div className="grid grid-cols-[auto_1fr_auto_auto] gap-2 items-center">
           <div className="w-6 h-6 relative rounded overflow-hidden bg-gray-800">
             {coverUrl ? (
               <Image
@@ -236,6 +267,21 @@ export default function SoundCloudPlayer() {
               <FaPlay className="text-[#460b6c] text-sm" />
             )}
           </button>
+          {onClose && (
+            <button
+              onClick={onClose}
+              className="p-2 rounded-full bg-[#ff9900] hover:bg-[#ff9900]/80 transition-colors"
+            >
+              <svg 
+                xmlns="http://www.w3.org/2000/svg" 
+                viewBox="0 0 24 24" 
+                fill="currentColor"
+                className="w-4 h-4 text-[#460b6c]"
+              >
+                <path d="M19 6.41L17.59 5 12 10.59 6.41 5 5 6.41 10.59 12 5 17.59 6.41 19 12 13.41 17.59 19 19 17.59 13.41 12z"/>
+              </svg>
+            </button>
+          )}
         </div>
       </div>
       <style jsx global>{`

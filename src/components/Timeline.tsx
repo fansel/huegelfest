@@ -2,6 +2,7 @@
 
 import React, { useEffect, useState } from 'react';
 import { FaMusic, FaUsers, FaUtensils, FaCampground, FaGamepad, FaQuestion, FaFilter, FaHeart, FaRegHeart } from 'react-icons/fa';
+import * as Icons from 'react-icons/fa';
 import { usePWA } from '../contexts/PWAContext';
 import Image from 'next/image';
 
@@ -9,7 +10,7 @@ interface Event {
   time: string;
   title: string;
   description: string;
-  category: 'music' | 'workshop' | 'food' | 'camp' | 'game' | 'other';
+  categoryId: string;
   favorite?: boolean;
 }
 
@@ -31,35 +32,39 @@ interface TimelineProps {
   showFavoritesOnly?: boolean;
 }
 
-const categoryOptions = [
-  { value: 'music', label: 'Musik', icon: <FaMusic className="text-[#ff9900]" /> },
-  { value: 'workshop', label: 'Workshop', icon: <FaUsers className="text-[#ff9900]" /> },
-  { value: 'food', label: 'Essen & Trinken', icon: <FaUtensils className="text-[#ff9900]" /> },
-  { value: 'camp', label: 'Camp', icon: <FaCampground className="text-[#ff9900]" /> },
-  { value: 'game', label: 'Spiele', icon: <FaGamepad className="text-[#ff9900]" /> },
-  { value: 'other', label: 'Sonstiges', icon: <FaQuestion className="text-[#ff9900]" /> }
-];
+interface Category {
+  value: string;
+  label: string;
+  icon: string;
+}
 
 export default function Timeline({ showFavoritesOnly = false }: TimelineProps) {
   const [timelineData, setTimelineData] = useState<TimelineData | null>(null);
   const [selectedCategories, setSelectedCategories] = useState<Set<string>>(new Set());
   const [selectedDay, setSelectedDay] = useState<number>(0);
   const [isScrolling, setIsScrolling] = useState(false);
+  const [categories, setCategories] = useState<Category[]>([]);
   const { isPWA } = usePWA();
 
   useEffect(() => {
-    const loadTimeline = async () => {
+    const loadData = async () => {
       try {
-        const response = await fetch('/api/timeline');
-        const data = await response.json();
+        // Lade Timeline-Daten
+        const timelineResponse = await fetch('/api/timeline');
+        const timelineData = await timelineResponse.json();
+        
+        // Lade Kategorien
+        const categoriesResponse = await fetch('/api/categories');
+        const categoriesData = await categoriesResponse.json();
+        setCategories(categoriesData);
         
         // Lade Favoriten aus dem localStorage
         const favorites = JSON.parse(localStorage.getItem('favorites') || '{}');
         
         // Markiere favorisierte Events
         const timelineWithFavorites = {
-          ...data,
-          days: data.days.map((day: Day) => ({
+          ...timelineData,
+          days: timelineData.days.map((day: Day) => ({
             ...day,
             events: day.events.map((event: Event) => ({
               ...event,
@@ -70,11 +75,11 @@ export default function Timeline({ showFavoritesOnly = false }: TimelineProps) {
         
         setTimelineData(timelineWithFavorites);
       } catch (error) {
-        console.error('Fehler beim Laden der Timeline:', error);
+        console.error('Fehler beim Laden der Daten:', error);
       }
     };
 
-    loadTimeline();
+    loadData();
   }, []);
 
   const handleScroll = () => {
@@ -137,8 +142,18 @@ export default function Timeline({ showFavoritesOnly = false }: TimelineProps) {
     return <div className="flex justify-center items-center h-64 text-[#ff9900]">Lade Timeline...</div>;
   }
 
+  // Überprüfe, ob der ausgewählte Tag existiert
+  if (!timelineData.days[selectedDay]) {
+    return (
+      <div className="flex flex-col items-center justify-center h-64 text-[#ff9900]">
+        <p className="text-xl font-medium mb-2">Das Programm ist noch nicht bekanntgegeben</p>
+        <p className="text-sm text-[#ff9900]/80">Schau später nochmal vorbei</p>
+      </div>
+    );
+  }
+
   const filteredEvents = timelineData.days[selectedDay].events.filter(event => 
-    selectedCategories.size === 0 || selectedCategories.has(event.category)
+    selectedCategories.size === 0 || selectedCategories.has(event.categoryId)
   );
 
   return (
@@ -241,41 +256,21 @@ export default function Timeline({ showFavoritesOnly = false }: TimelineProps) {
                 >
                   <FaFilter className="text-base" />
                 </button>
-                {categoryOptions.map((option) => (
+                {categories.map((category) => (
                   <button
-                    key={option.value}
-                    onClick={() => toggleCategory(option.value)}
+                    key={category.value}
+                    onClick={() => toggleCategory(category._id)}
                     className={`p-2 rounded-full transition-colors duration-200 ${
-                      selectedCategories.has(option.value)
+                      selectedCategories.has(category._id)
                         ? 'bg-[#ff9900] text-[#460b6c]'
                         : 'bg-[#460b6c] text-[#ff9900] border border-[#ff9900]/20'
                     }`}
-                    title={option.label}
+                    title={category.label}
                   >
-                    {React.cloneElement(option.icon, { className: "text-base" })}
+                    {React.createElement(Icons[category.icon as keyof typeof Icons], { className: "text-base" })}
                   </button>
                 ))}
               </div>
-              
-              {/* Anzeige der ausgewählten Kategorien */}
-              {selectedCategories.size > 0 && (
-                <div className="mt-2 text-center">
-                  <div className="inline-flex flex-wrap gap-1.5 justify-center">
-                    {Array.from(selectedCategories).map(category => {
-                      const option = categoryOptions.find(opt => opt.value === category);
-                      return option ? (
-                        <span 
-                          key={category}
-                          className="inline-flex items-center px-2 py-1 rounded-full bg-[#ff9900]/10 text-[#ff9900] text-sm"
-                        >
-                          {React.cloneElement(option.icon, { className: "text-xs mr-1" })}
-                          {option.label}
-                        </span>
-                      ) : null;
-                    })}
-                  </div>
-                </div>
-              )}
             </div>
           </>
         )}
@@ -301,9 +296,14 @@ export default function Timeline({ showFavoritesOnly = false }: TimelineProps) {
                 <div className="flex items-center justify-between mb-2">
                   <span className="text-[#ff9900] font-medium">{event.time}</span>
                   <div className="flex items-center gap-2">
-                    {categoryOptions.find(opt => opt.value === event.category)?.icon}
+                    {categories.find(cat => cat._id === event.categoryId)?.icon && 
+                      React.createElement(
+                        Icons[categories.find(cat => cat._id === event.categoryId)?.icon as keyof typeof Icons],
+                        { className: "text-[#ff9900]" }
+                      )
+                    }
                     <span className="text-[#ff9900]/60 text-sm">
-                      {categoryOptions.find(opt => opt.value === event.category)?.label}
+                      {categories.find(cat => cat._id === event.categoryId)?.label}
                     </span>
                     <button
                       onClick={() => toggleFavorite(timelineData.days[selectedDay].title, event)}

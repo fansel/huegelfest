@@ -5,7 +5,7 @@ import styles from './content.module.css';
 import { FaTrain, FaCar, FaMapMarkerAlt, FaPhone, FaWhatsapp } from 'react-icons/fa';
 
 interface Ride {
-  id: number;
+  _id?: string;
   driver: string;
   start: string;
   destination: string;
@@ -19,7 +19,7 @@ interface Ride {
 export default function AnreiseContent() {
   const [activeOption, setActiveOption] = useState<string | null>(null);
   const [showRideForm, setShowRideForm] = useState(false);
-  const [showRideDetails, setShowRideDetails] = useState<number | null>(null);
+  const [showRideDetails, setShowRideDetails] = useState<string | null>(null);
   const [passengerName, setPassengerName] = useState('');
   const [formData, setFormData] = useState({
     type: 'hin',
@@ -63,12 +63,16 @@ export default function AnreiseContent() {
   // Funktion zum Speichern der Daten in der JSON-Datei
   const saveRides = async (updatedRides: Ride[]) => {
     try {
-      const response = await fetch('/api/carpool', {
-        method: 'POST',
+      const ride = updatedRides[0];
+      const method = ride._id ? 'PUT' : 'POST';
+      const url = '/api/carpool';
+      
+      const response = await fetch(url, {
+        method,
         headers: {
           'Content-Type': 'application/json',
         },
-        body: JSON.stringify({ rides: updatedRides }),
+        body: JSON.stringify(ride),
       });
       
       if (!response.ok) {
@@ -93,7 +97,6 @@ export default function AnreiseContent() {
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     const newRide: Ride = {
-      id: rides.length + 1,
       driver: formData.name,
       start: formData.type === 'hin' ? formData.location : 'Hügel',
       destination: formData.type === 'hin' ? 'Hügel' : formData.location,
@@ -104,8 +107,8 @@ export default function AnreiseContent() {
       passengers: []
     };
     
-    const updatedRides = [...rides, newRide];
-    updateRides(updatedRides);
+    // Speichere die Fahrt in der Datenbank
+    saveRides([newRide]);
     
     setShowRideForm(false);
     setFormData({
@@ -119,15 +122,15 @@ export default function AnreiseContent() {
     });
   };
 
-  const handleJoinRide = (rideId: number) => {
+  const handleJoinRide = (rideId: string) => {
     setShowRideDetails(showRideDetails === rideId ? null : rideId);
   };
 
-  const handleAddPassenger = (rideId: number) => {
+  const handleAddPassenger = (rideId: string) => {
     if (!passengerName.trim()) return;
     
     const updatedRides = rides.map(ride => {
-      if (ride.id === rideId && ride.passengers.length < ride.seats) {
+      if (ride._id === rideId && ride.passengers.length < ride.seats) {
         return {
           ...ride,
           passengers: [...ride.passengers, passengerName]
@@ -140,9 +143,9 @@ export default function AnreiseContent() {
     setPassengerName('');
   };
 
-  const handleRemovePassenger = (rideId: number, passengerIndex: number) => {
+  const handleRemovePassenger = (rideId: string, passengerIndex: number) => {
     const updatedRides = rides.map(ride => {
-      if (ride.id === rideId) {
+      if (ride._id === rideId) {
         const newPassengers = [...ride.passengers];
         newPassengers.splice(passengerIndex, 1);
         return {
@@ -156,10 +159,22 @@ export default function AnreiseContent() {
     updateRides(updatedRides);
   };
 
-  const handleDeleteRide = (rideId: number) => {
+  const handleDeleteRide = async (rideId: string) => {
     if (window.confirm('Bist du sicher, dass du diese Fahrt löschen möchtest?')) {
-      const updatedRides = rides.filter(ride => ride.id !== rideId);
-      updateRides(updatedRides);
+      try {
+        const response = await fetch(`/api/carpool?id=${rideId}`, {
+          method: 'DELETE'
+        });
+        
+        if (!response.ok) {
+          throw new Error('Fehler beim Löschen der Fahrt');
+        }
+        
+        const updatedRides = rides.filter(ride => ride._id !== rideId);
+        setRides(updatedRides);
+      } catch (error) {
+        console.error('Fehler:', error);
+      }
     }
   };
 
@@ -228,7 +243,7 @@ export default function AnreiseContent() {
 
             <div className={styles.rideCards}>
               {rides.map(ride => (
-                <div key={ride.id} className={styles.mobileCard}>
+                <div key={ride._id} className={styles.mobileCard}>
                   <div className={styles.cardRow}>
                     <span className={styles.cardLabel}>Fahrer:</span>
                     <span className={styles.cardValue}>{ride.driver}</span>
@@ -254,18 +269,18 @@ export default function AnreiseContent() {
                   <div className={styles.cardActions}>
                     <button 
                       className={styles.actionButton}
-                      onClick={() => handleJoinRide(ride.id)}
+                      onClick={() => handleJoinRide(ride._id)}
                     >
-                      {showRideDetails === ride.id ? 'Details verbergen' : 'Mitfahren'}
+                      {showRideDetails === ride._id ? 'Details verbergen' : 'Mitfahren'}
                     </button>
                     <button 
                       className={styles.deleteButton}
-                      onClick={() => handleDeleteRide(ride.id)}
+                      onClick={() => handleDeleteRide(ride._id)}
                     >
                       Löschen
                     </button>
                   </div>
-                  {showRideDetails === ride.id && (
+                  {showRideDetails === ride._id && (
                     <div className={styles.rideDetails}>
                       <div className={styles.contactInfo}>
                         <p>Kontakt: {ride.contact}</p>
@@ -297,7 +312,7 @@ export default function AnreiseContent() {
                           />
                           <button
                             className={styles.actionButton}
-                            onClick={() => handleAddPassenger(ride.id)}
+                            onClick={() => handleAddPassenger(ride._id)}
                           >
                             Mitfahren
                           </button>
@@ -311,7 +326,7 @@ export default function AnreiseContent() {
                               <span>{passenger}</span>
                               <button
                                 className={styles.removeButton}
-                                onClick={() => handleRemovePassenger(ride.id, index)}
+                                onClick={() => handleRemovePassenger(ride._id, index)}
                               >
                                 Entfernen
                               </button>

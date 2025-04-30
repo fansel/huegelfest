@@ -1,8 +1,8 @@
 import { useState } from 'react';
 import AnnouncementForm from './AnnouncementForm';
 import GroupColorManager from './GroupColorManager';
-import MusicManager from './MusicManager';
-import TimelineManager from './TimelineManager';
+import MusicManager from '../MusicManager';
+import TimelineManager from './TimelineManager/index';
 import { Announcement, GroupColors } from '@/lib/types';
 
 interface DesktopAdminDashboardProps {
@@ -11,7 +11,7 @@ interface DesktopAdminDashboardProps {
   musicUrls: string[];
   groupColors: GroupColors;
   onSaveAnnouncement: (announcement: Announcement) => Promise<void>;
-  onDeleteAnnouncement: (id: number) => Promise<void>;
+  onDeleteAnnouncement: (id: string) => Promise<void>;
   onSaveMusicUrls: (urls: string[]) => Promise<void>;
   onSaveGroupColors: (colors: GroupColors) => Promise<void>;
   setEditingAnnouncement: (announcement: Announcement | undefined) => void;

@@ -1,7 +1,8 @@
 import { useState } from 'react';
+import { FaMusic, FaImage, FaCalendar, FaUsers, FaCog } from 'react-icons/fa';
 import AnnouncementForm from './AnnouncementForm';
 import GroupColorManager from './GroupColorManager';
-import MusicManager from './MusicManager';
+import MusicManager from '../MusicManager';
 import TimelineManager from './TimelineManager';
 import { Announcement, GroupColors } from '@/lib/types';
 
@@ -11,7 +12,7 @@ interface MobileAdminDashboardProps {
   musicUrls: string[];
   groupColors: GroupColors;
   onSaveAnnouncement: (announcement: Announcement) => Promise<void>;
-  onDeleteAnnouncement: (id: number) => Promise<void>;
+  onDeleteAnnouncement: (id: string) => Promise<void>;
   onSaveMusicUrls: (urls: string[]) => Promise<void>;
   onSaveGroupColors: (colors: GroupColors) => Promise<void>;
   setEditingAnnouncement: (announcement: Announcement | undefined) => void;
@@ -29,6 +30,11 @@ export default function MobileAdminDashboard({
   setEditingAnnouncement,
 }: MobileAdminDashboardProps) {
   const [activeTab, setActiveTab] = useState<'announcements' | 'groups' | 'music' | 'timeline'>('announcements');
+
+  const handleSaveMusic = (urls: string[]) => {
+    onSaveMusicUrls(urls);
+    // Hier können Sie die URLs an den Server senden
+  };
 
   return (
     <div className="min-h-screen text-[#ff9900]">
@@ -132,7 +138,7 @@ export default function MobileAdminDashboard({
                               Bearbeiten
                             </button>
                             <button
-                              onClick={() => onDeleteAnnouncement(announcement.id)}
+                              onClick={() => onDeleteAnnouncement(announcement.id.toString())}
                               className="p-2 text-red-400 hover:text-red-300 flex-1 sm:flex-none text-sm"
                             >
                               Löschen
@@ -150,7 +156,7 @@ export default function MobileAdminDashboard({
             <GroupColorManager onSaveGroupColors={onSaveGroupColors} />
           )}
           {activeTab === 'music' && (
-            <MusicManager musicUrls={musicUrls} onSave={onSaveMusicUrls} />
+            <MusicManager musicUrls={musicUrls} onSave={handleSaveMusic} />
           )}
           {activeTab === 'timeline' && (
             <TimelineManager />

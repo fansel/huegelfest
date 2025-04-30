@@ -1,8 +1,8 @@
 import { NextResponse } from 'next/server'
 import webpush from 'web-push'
 import type { PushSubscription } from '../types'
-import { writeFile, readFile, mkdir } from 'fs/promises'
-import { join } from 'path'
+import { connectDB } from '@/db/config/connector'
+import { Subscriber } from '@/db/models/Subscriber'
 
 // VAPID-Schlüssel aus den Umgebungsvariablen
 const vapidPublicKey = process.env.NEXT_PUBLIC_VAPID_PUBLIC_KEY;
@@ -12,83 +12,43 @@ if (!vapidPublicKey || !vapidPrivateKey) {
   throw new Error('VAPID-Schlüssel fehlen in den Umgebungsvariablen');
 }
 
-const DATA_DIR = join(process.cwd(), 'src/data')
-const SUBSCRIPTIONS_FILE = join(DATA_DIR, 'subscribers.json')
-
 webpush.setVapidDetails(
-  'mailto:your-email@example.com', // Ersetzen Sie dies mit Ihrer E-Mail
+  'mailto:vapid@hey.fansel.dev',
   vapidPublicKey,
   vapidPrivateKey
 )
 
-async function ensureDataDirectory() {
-  try {
-    await mkdir(DATA_DIR, { recursive: true })
-  } catch (error: unknown) {
-    if (error && typeof error === 'object' && 'code' in error && error.code === 'EEXIST') {
-      return
-    }
-    throw error
-  }
-}
-
-async function ensureSubscriptionsFile() {
-  try {
-    await readFile(SUBSCRIPTIONS_FILE)
-  } catch {
-    await writeFile(SUBSCRIPTIONS_FILE, JSON.stringify({ subscriptions: [] }, null, 2))
-  }
-}
-
-async function getSubscriptions(): Promise<PushSubscription[]> {
-  await ensureDataDirectory()
-  await ensureSubscriptionsFile()
-  const data = await readFile(SUBSCRIPTIONS_FILE, 'utf-8')
-  const parsedData = JSON.parse(data)
-  return parsedData.subscriptions || []
-}
-
-async function saveSubscriptions(subscriptions: PushSubscription[]) {
-  await ensureDataDirectory()
-  await writeFile(SUBSCRIPTIONS_FILE, JSON.stringify({ subscriptions }, null, 2))
-}
-
 export async function POST(request: Request) {
   try {
-    const subscription = await request.json()
-    console.log('Neue Subscription erhalten:', subscription)
+    const subscription = await request.json();
     
-    const subscriptions = await getSubscriptions()
-    subscriptions.push(subscription)
-    await saveSubscriptions(subscriptions)
-    
-    console.log('Aktuelle Subscriptions:', subscriptions.length)
-
-    // Willkommensnachricht senden
-    const notificationPayload = {
-      title: 'Willkommen beim Hügelfest!',
-      body: 'Du erhältst jetzt alle wichtigen Updates.',
-      icon: '/android-chrome-192x192.png',
-      badge: '/android-chrome-192x192.png',
-      data: {
-        url: '/',
-        type: 'welcome'
-      }
+    if (!subscription.endpoint || !subscription.keys) {
+      return NextResponse.json(
+        { error: 'Ungültige Subscription-Daten' },
+        { status: 400 }
+      );
     }
 
-    try {
-      await webpush.sendNotification(subscription, JSON.stringify(notificationPayload))
-      console.log('Willkommensnachricht erfolgreich gesendet')
-    } catch (error) {
-      console.error('Fehler beim Senden der Willkommensnachricht:', error)
+    await connectDB();
+
+    // Prüfe ob der Subscriber bereits existiert
+    const existingSubscriber = await Subscriber.findOne({ endpoint: subscription.endpoint });
+    if (existingSubscriber) {
+      return NextResponse.json({ message: 'Bereits abonniert' });
     }
-    
-    return NextResponse.json({ message: 'Erfolgreich abonniert' })
+
+    // Erstelle neuen Subscriber
+    await Subscriber.create({
+      endpoint: subscription.endpoint,
+      keys: subscription.keys
+    });
+
+    return NextResponse.json({ message: 'Erfolgreich abonniert' });
   } catch (error) {
-    console.error('Fehler beim Abonnieren:', error)
+    console.error('Fehler beim Abonnieren:', error);
     return NextResponse.json(
-      { error: 'Fehler beim Abonnieren' },
+      { error: 'Interner Serverfehler' },
       { status: 500 }
-    )
+    );
   }
 } 

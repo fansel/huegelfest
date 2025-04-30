@@ -1,81 +1,55 @@
-import { NextResponse } from 'next/server';
-import { readFile, writeFile, mkdir } from 'fs/promises';
-import path from 'path';
-
-const DATA_DIR = path.join(process.cwd(), 'src/data');
-const MUSIC_FILE = path.join(DATA_DIR, 'music.json');
-
-function isValidUrl(url: string): boolean {
-  try {
-    new URL(url);
-    return true;
-  } catch {
-    return false;
-  }
-}
-
-async function ensureDataDirectory() {
-  try {
-    await mkdir(DATA_DIR, { recursive: true });
-  } catch (error: unknown) {
-    if (error && typeof error === 'object' && 'code' in error && error.code === 'EEXIST') {
-      return;
-    }
-    throw error;
-  }
-}
-
-async function ensureMusicFile() {
-  try {
-    await readFile(MUSIC_FILE);
-  } catch {
-    await writeFile(MUSIC_FILE, JSON.stringify({ urls: [] }, null, 2));
-  }
-}
+import { NextRequest } from 'next/server';
+import { MusicService } from '@/services/MusicService';
+import { logger } from '@/lib/logger';
 
 export async function GET() {
+  logger.info('[API] GET /api/music - Hole alle Musik-Einträge');
   try {
-    await ensureDataDirectory();
-    await ensureMusicFile();
-    
-    const data = await readFile(MUSIC_FILE, 'utf8');
-    const parsedData = JSON.parse(data);
-    
-    if (!parsedData.urls || !Array.isArray(parsedData.urls)) {
-      throw new Error('Ungültiges JSON-Format');
-    }
-    
-    return NextResponse.json(parsedData.urls);
+    const music = await MusicService.getAllMusic();
+    logger.info('[API] GET /api/music - Erfolgreich:', music.length, 'Einträge gefunden');
+    return Response.json(music);
   } catch (error) {
-    console.error('Fehler beim Lesen der Musik-Datei:', error);
-    return NextResponse.json([], { status: 500 });
+    logger.error('[API] GET /api/music - Fehler:', error);
+    return Response.json({ error: 'Interner Serverfehler' }, { status: 500 });
   }
 }
 
-export async function POST(request: Request) {
+export async function POST(request: NextRequest) {
+  logger.info('[API] POST /api/music - Neue Anfrage');
   try {
-    await ensureDataDirectory();
-    await ensureMusicFile();
+    const { url } = await request.json();
+    logger.info('[API] POST /api/music - URL:', url);
     
-    const urls = await request.json();
-    
-    if (!Array.isArray(urls)) {
-      return NextResponse.json({ error: 'Ungültiges Format' }, { status: 400 });
+    if (!url) {
+      logger.error('[API] POST /api/music - Fehler: URL fehlt');
+      return Response.json({ error: 'URL ist erforderlich' }, { status: 400 });
     }
-
-    // Validiere alle URLs
-    for (const url of urls) {
-      if (!url || !isValidUrl(url)) {
-        return NextResponse.json({ error: 'Ungültige URL gefunden' }, { status: 400 });
-      }
-    }
-
-    // Speichere das gesamte Array
-    await writeFile(MUSIC_FILE, JSON.stringify({ urls }, null, 2));
     
-    return NextResponse.json(urls);
+    await MusicService.addMusic(url);
+    logger.info('[API] POST /api/music - Erfolgreich hinzugefügt');
+    return Response.json({ success: true });
   } catch (error) {
-    console.error('Fehler beim Speichern der Musik-Datei:', error);
-    return NextResponse.json({ error: 'Interner Serverfehler' }, { status: 500 });
+    logger.error('[API] POST /api/music - Fehler:', error);
+    return Response.json({ error: 'Interner Serverfehler' }, { status: 500 });
+  }
+}
+
+export async function DELETE(request: NextRequest) {
+  logger.info('[API] DELETE /api/music - Neue Anfrage');
+  try {
+    const { url } = await request.json();
+    logger.info('[API] DELETE /api/music - URL:', url);
+    
+    if (!url) {
+      logger.error('[API] DELETE /api/music - Fehler: URL fehlt');
+      return Response.json({ error: 'URL ist erforderlich' }, { status: 400 });
+    }
+    
+    await MusicService.removeMusic(url);
+    logger.info('[API] DELETE /api/music - Erfolgreich gelöscht');
+    return Response.json({ success: true });
+  } catch (error) {
+    logger.error('[API] DELETE /api/music - Fehler:', error);
+    return Response.json({ error: 'Interner Serverfehler' }, { status: 500 });
   }
 } 

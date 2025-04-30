@@ -8,7 +8,8 @@ import Countdown from '@/components/Countdown';
 import Timeline from '@/components/Timeline';
 import Starfield from '@/components/Starfield';
 import InfoBoard from '@/components/InfoBoard';
-import { saveAnnouncements as saveAnnouncementsServer } from './announcements/actions'
+import { usePWA } from '@/contexts/PWAContext';
+import { useRouter } from 'next/navigation';
 
 function InstallPrompt() {
   const [isIOS, setIsIOS] = useState(false)
@@ -43,10 +44,11 @@ function InstallPrompt() {
 }
 
 export default function Home() {
+  const router = useRouter();
+  const { isPWA, isMobile } = usePWA();
   const [announcements, setAnnouncements] = useState<AnnouncementType[]>([]);
   const [groupColors, setGroupColors] = useState<GroupColors>({ default: '#460b6c' });
   const [deviceId, setDeviceId] = useState<string>('');
-  const [isPWA, setIsPWA] = useState(false);
 
   useEffect(() => {
     const loadData = async () => {
@@ -74,31 +76,13 @@ export default function Home() {
     }
   }, []);
 
-  useEffect(() => {
-    // PWA-Erkennung
-    const checkPWA = () => {
-      const isStandalone = window.matchMedia('(display-mode: standalone)').matches;
-      const isIOS = /iPad|iPhone|iPod/.test(navigator.userAgent) && !(window as Window & { MSStream?: unknown }).MSStream;
-      const isIOSStandalone = isIOS && (window.navigator as any).standalone;
-      const isPWA = isStandalone || isIOSStandalone;
-      setIsPWA(isPWA);
-    };
-
-    checkPWA();
-    window.matchMedia('(display-mode: standalone)').addEventListener('change', checkPWA);
-
-    return () => {
-      window.matchMedia('(display-mode: standalone)').removeEventListener('change', checkPWA);
-    };
-  }, []);
-
   const sortedAnnouncements = [...announcements].sort((a, b) => {
     const dateA = new Date(`${a.date}T${a.time}`);
     const dateB = new Date(`${b.date}T${b.time}`);
     return dateB.getTime() - dateA.getTime();
   });
 
-  const handleReaction = async (announcementId: number, reactionType: ReactionType) => {
+  const handleReaction = async (announcementId: string, reactionType: ReactionType) => {
     if (!deviceId) return;
 
     const updatedAnnouncements = announcements.map(announcement => {
@@ -164,7 +148,6 @@ export default function Home() {
     });
 
     setAnnouncements(updatedAnnouncements);
-    await saveAnnouncementsServer(updatedAnnouncements);
   };
 
   return (

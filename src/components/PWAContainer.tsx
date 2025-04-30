@@ -10,6 +10,7 @@ import Login from './Login';
 import Starfield from './Starfield';
 import PushNotificationSettings from './PushNotificationSettings';
 import Settings from './settings/Settings';
+import MusicNote from './MusicNote';
 
 type View = 'home' | 'anreise' | 'infoboard' | 'settings' | 'admin' | 'favorites';
 
@@ -24,6 +25,9 @@ export default function PWAContainer() {
   const [showStarfield, setShowStarfield] = useState(true);
   const [pushSupported, setPushSupported] = useState(false);
   const [showPushDialog, setShowPushDialog] = useState(false);
+  const [isMusicActive, setIsMusicActive] = useState(false);
+  const [isMusicVisible, setIsMusicVisible] = useState(true);
+  const [isMusicPlaying, setIsMusicPlaying] = useState(false);
 
   useEffect(() => {
     const mediaQuery = window.matchMedia('(display-mode: standalone)');
@@ -149,6 +153,14 @@ export default function PWAContainer() {
     }
   };
 
+  const toggleMusic = () => {
+    setIsMusicActive(!isMusicActive);
+  };
+
+  const toggleMusicVisibility = () => {
+    setIsMusicVisible(!isMusicVisible);
+  };
+
   const renderContent = () => {
     switch (currentView) {
       case 'home':
@@ -211,6 +223,23 @@ export default function PWAContainer() {
   return (
     <div className="relative min-h-screen bg-[#460b6c] text-[#ff9900]">
       {showStarfield && <Starfield />}
+      <div className="flex flex-col items-center justify-center gap-2">
+        <div className="text-xs text-gray-500">
+          {isMusicActive ? 'Musik aktiv' : 'Musik inaktiv'} | 
+          {isMusicVisible ? ' Player sichtbar' : ' Player versteckt'} | 
+          {isMusicPlaying ? ' Wird abgespielt' : ' Pausiert'}
+        </div>
+        <h1 className="text-2xl font-bold text-[#460b6c]">Hügelfest</h1>
+        <div className="flex items-center gap-2">
+          <MusicNote isActive={isMusicActive} onClick={toggleMusic} />
+          <button
+            onClick={toggleMusicVisibility}
+            className="p-2 text-[#460b6c] hover:text-[#ff9900] transition-colors"
+          >
+            {isMusicVisible ? 'Musik ausblenden' : 'Musik einblenden'}
+          </button>
+        </div>
+      </div>
       {showPushDialog && (
         <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
           <div className="bg-[#460b6c] border border-[#ff9900]/20 rounded-lg p-6 max-w-sm w-full">

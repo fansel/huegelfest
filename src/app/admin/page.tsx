@@ -4,7 +4,6 @@ import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import { Announcement, GroupColors } from '@/lib/types';
 import { loadAnnouncements, saveAnnouncements, loadMusicUrls, saveMusicUrls, loadGroupColors, saveGroupColors } from '@/lib/admin';
-import { addAnnouncement, deleteAnnouncement } from '@/app/announcements/actions';
 import DesktopAdminDashboard from '@/components/admin/DesktopAdminDashboard';
 import MobileAdminDashboard from '@/components/admin/MobileAdminDashboard';
 import { usePWA } from '@/contexts/PWAContext';
@@ -55,13 +54,15 @@ export default function AdminPage() {
       setAnnouncements(updatedAnnouncements);
       await saveAnnouncements(updatedAnnouncements);
     } else {
-      await addAnnouncement(announcement);
-      setAnnouncements(prev => [announcement, ...prev]);
+      const result = await addAnnouncement(announcement.content, announcement.group, announcement.important);
+      if (result.success) {
+        setAnnouncements(prev => [announcement, ...prev]);
+      }
     }
     setEditingAnnouncement(undefined);
   };
 
-  const handleDeleteAnnouncement = async (id: number) => {
+  const handleDeleteAnnouncement = async (id: string) => {
     await deleteAnnouncement(id);
     setAnnouncements(prev => prev.filter(a => a.id !== id));
   };
@@ -74,6 +75,58 @@ export default function AdminPage() {
   const handleSaveGroupColors = async (colors: GroupColors) => {
     setGroupColors(colors);
     await saveGroupColors(colors);
+  };
+
+  const addAnnouncement = async (content: string, group?: string, important?: boolean) => {
+    try {
+      // Verwende die ausgewählte Gruppe oder finde die erste verfügbare
+      const selectedGroup = group || Object.keys(groupColors).find(g => g !== 'default');
+      if (!selectedGroup) {
+        throw new Error('Keine Gruppe verfügbar');
+      }
+
+      const response = await fetch('/api/announcements', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify({
+          content,
+          group: selectedGroup,
+          important: important || false
+        })
+      });
+
+      if (!response.ok) {
+        throw new Error('Fehler beim Hinzufügen der Ankündigung');
+      }
+
+      return { success: true };
+    } catch (error) {
+      console.error('Fehler beim Hinzufügen der Ankündigung:', error);
+      return { success: false, error: 'Interner Serverfehler' };
+    }
+  };
+
+  const deleteAnnouncement = async (id: string) => {
+    try {
+      const response = await fetch('/api/announcements', {
+        method: 'DELETE',
+        headers: {
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify({ id })
+      });
+
+      if (!response.ok) {
+        throw new Error('Fehler beim Löschen der Ankündigung');
+      }
+
+      return { success: true };
+    } catch (error) {
+      console.error('Fehler beim Löschen der Ankündigung:', error);
+      return { success: false, error: 'Interner Serverfehler' };
+    }
   };
 
   return (

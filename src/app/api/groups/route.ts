@@ -1,43 +1,21 @@
 import { NextResponse } from 'next/server';
-import { readFile, writeFile, mkdir } from 'fs/promises';
-import { join } from 'path';
+import { connectDB } from '@/db/config/connector';
+import Group from '@/db/models/Group';
 import { GroupColors } from '@/lib/types';
-
-const DATA_DIR = join(process.cwd(), 'src/data');
-const GROUPS_FILE = join(DATA_DIR, 'groups.json');
-
-async function ensureDataDirectory() {
-  try {
-    await mkdir(DATA_DIR, { recursive: true });
-  } catch (error: unknown) {
-    if (error && typeof error === 'object' && 'code' in error && error.code === 'EEXIST') {
-      return;
-    }
-    throw error;
-  }
-}
-
-async function ensureGroupsFile() {
-  try {
-    await readFile(GROUPS_FILE);
-  } catch {
-    await writeFile(GROUPS_FILE, JSON.stringify({}, null, 2));
-  }
-}
+import { sendUpdateToAllClients } from '@/lib/sse';
 
 export async function GET() {
   try {
-    await ensureDataDirectory();
-    await ensureGroupsFile();
+    await connectDB();
+    const groups = await Group.find();
     
-    const data = await readFile(GROUPS_FILE, 'utf-8');
-    const groups = JSON.parse(data);
+    // Konvertiere zu GroupColors Format
+    const groupColors: GroupColors = {};
+    groups.forEach(group => {
+      groupColors[group.name] = group.color;
+    });
     
-    if (typeof groups !== 'object' || groups === null) {
-      throw new Error('Ungültiges JSON-Format');
-    }
-    
-    return NextResponse.json(groups);
+    return NextResponse.json(groupColors);
   } catch (error) {
     console.error('Fehler beim Laden der Gruppen:', error);
     return NextResponse.json({}, { status: 500 });
@@ -46,16 +24,25 @@ export async function GET() {
 
 export async function POST(request: Request) {
   try {
-    await ensureDataDirectory();
-    await ensureGroupsFile();
+    await connectDB();
+    const groupColors: GroupColors = await request.json();
     
-    const groups: GroupColors = await request.json();
-    
-    if (typeof groups !== 'object' || groups === null) {
+    if (typeof groupColors !== 'object' || groupColors === null) {
       return NextResponse.json({ error: 'Ungültiges Format' }, { status: 400 });
     }
+
+    // Aktualisiere oder erstelle einzelne Gruppen
+    for (const [name, color] of Object.entries(groupColors)) {
+      await Group.findOneAndUpdate(
+        { name },
+        { name, color },
+        { upsert: true, new: true }
+      );
+    }
     
-    await writeFile(GROUPS_FILE, JSON.stringify(groups, null, 2));
+    // Sende Update an alle Clients
+    sendUpdateToAllClients();
+    
     return NextResponse.json({ success: true });
   } catch (error) {
     console.error('Fehler beim Speichern der Gruppen:', error);

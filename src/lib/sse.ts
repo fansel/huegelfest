@@ -1,3 +1,5 @@
+import { NextResponse } from 'next/server';
+
 // Speichere alle aktiven SSE-Verbindungen
 const clients = new Set<ReadableStreamDefaultController>();
 
@@ -5,22 +7,21 @@ const clients = new Set<ReadableStreamDefaultController>();
 export function sendUpdateToAllClients() {
   console.log(`Sende Update an ${clients.size} Clients`);
   
-  const message = JSON.stringify({ type: 'update' });
   const deadClients = new Set<ReadableStreamDefaultController>();
-
-  clients.forEach(client => {
+  
+  clients.forEach(controller => {
     try {
-      client.enqueue(new TextEncoder().encode(`data: ${message}\n\n`));
+      controller.enqueue(new TextEncoder().encode(`data: ${JSON.stringify({ type: 'update' })}\n\n`));
       console.log('Update erfolgreich gesendet');
     } catch (error) {
       console.error('Fehler beim Senden des Updates:', error);
-      deadClients.add(client);
+      deadClients.add(controller);
     }
   });
-
+  
   // Entferne tote Clients
-  deadClients.forEach(client => {
-    clients.delete(client);
+  deadClients.forEach(controller => {
+    removeClient(controller);
     console.log('Toter Client entfernt');
   });
 }
@@ -34,5 +35,30 @@ export function addClient(controller: ReadableStreamDefaultController) {
 // Funktion zum Entfernen eines Clients
 export function removeClient(controller: ReadableStreamDefaultController) {
   clients.delete(controller);
-  console.log(`Client entfernt. Verbleibende Clients: ${clients.size}`);
+  console.log(`Client entfernt. Aktive Clients: ${clients.size}`);
+}
+
+export async function GET() {
+  const stream = new ReadableStream({
+    start(controller) {
+      addClient(controller);
+      
+      // Sende initiale Nachricht
+      controller.enqueue(new TextEncoder().encode(`data: ${JSON.stringify({ type: 'connected' })}\n\n`));
+      console.log('Initiale Nachricht gesendet');
+      
+      // Cleanup bei Verbindungsabbruch
+      return () => {
+        removeClient(controller);
+      };
+    }
+  });
+
+  return new NextResponse(stream, {
+    headers: {
+      'Content-Type': 'text/event-stream',
+      'Cache-Control': 'no-cache',
+      'Connection': 'keep-alive'
+    }
+  });
 } 
