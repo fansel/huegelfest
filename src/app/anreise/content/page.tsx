@@ -269,73 +269,54 @@ export default function AnreiseContent() {
                   <div className={styles.cardActions}>
                     <button 
                       className={styles.actionButton}
-                      onClick={() => handleJoinRide(ride._id)}
+                      onClick={() => ride._id && handleJoinRide(ride._id)}
                     >
                       {showRideDetails === ride._id ? 'Details verbergen' : 'Mitfahren'}
                     </button>
-                    <button 
-                      className={styles.deleteButton}
-                      onClick={() => handleDeleteRide(ride._id)}
-                    >
-                      Löschen
-                    </button>
-                  </div>
-                  {showRideDetails === ride._id && (
-                    <div className={styles.rideDetails}>
-                      <div className={styles.contactInfo}>
-                        <p>Kontakt: {ride.contact}</p>
-                        <div className={styles.contactActions}>
-                          <a 
-                            href={`tel:${ride.contact}`}
-                            className={styles.contactButton}
-                          >
-                            <FaPhone /> Anrufen
-                          </a>
-                          <a 
-                            href={`https://wa.me/${ride.contact.replace(/\D/g, '')}`}
-                            className={styles.contactButton}
-                            target="_blank"
-                            rel="noopener noreferrer"
-                          >
-                            <FaWhatsapp /> WhatsApp
-                          </a>
-                        </div>
-                      </div>
-                      {ride.passengers.length < ride.seats && (
-                        <div className={styles.passengerForm}>
-                          <input
-                            type="text"
-                            value={passengerName}
-                            onChange={(e) => setPassengerName(e.target.value)}
-                            placeholder="Dein Name"
-                            className={styles.passengerInput}
-                          />
-                          <button
-                            className={styles.actionButton}
-                            onClick={() => handleAddPassenger(ride._id)}
-                          >
-                            Mitfahren
-                          </button>
-                        </div>
-                      )}
-                      {ride.passengers.length > 0 && (
-                        <div className={styles.passengerList}>
-                          <h4>Mitfahrer:</h4>
-                          {ride.passengers.map((passenger, index) => (
-                            <div key={index} className={styles.passengerItem}>
-                              <span>{passenger}</span>
+                    {showRideDetails === ride._id && (
+                      <div className={styles.rideDetails}>
+                        <div className={styles.passengerSection}>
+                          <h4>Mitfahrer</h4>
+                          <div className={styles.passengerList}>
+                            {ride.passengers.map((passenger, index) => (
+                              <div key={index} className={styles.passengerItem}>
+                                {passenger}
+                                <button
+                                  className={styles.removeButton}
+                                  onClick={() => ride._id && handleRemovePassenger(ride._id, index)}
+                                >
+                                  ✕
+                                </button>
+                              </div>
+                            ))}
+                          </div>
+                          {ride.passengers.length < ride.seats && (
+                            <div className={styles.addPassenger}>
+                              <input
+                                type="text"
+                                value={passengerName}
+                                onChange={(e) => setPassengerName(e.target.value)}
+                                placeholder="Dein Name"
+                                className={styles.passengerInput}
+                              />
                               <button
-                                className={styles.removeButton}
-                                onClick={() => handleRemovePassenger(ride._id, index)}
+                                className={styles.addButton}
+                                onClick={() => ride._id && handleAddPassenger(ride._id)}
                               >
-                                Entfernen
+                                Hinzufügen
                               </button>
                             </div>
-                          ))}
+                          )}
                         </div>
-                      )}
-                    </div>
-                  )}
+                        <button
+                          className={styles.deleteButton}
+                          onClick={() => ride._id && handleDeleteRide(ride._id)}
+                        >
+                          Fahrt löschen
+                        </button>
+                      </div>
+                    )}
+                  </div>
                 </div>
               ))}
             </div>
