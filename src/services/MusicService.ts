@@ -1,8 +1,10 @@
 import { connectDB } from '@/database/config/connector';
 import Music, { MusicDocument } from '@/database/models/Music';
 import { logger } from '@/lib/logger';
-import scdl from 'soundcloud-downloader';
+import { download } from '@/lib/soundcloud-downloader/download';
+import { getInfo } from '@/lib/soundcloud-downloader/get-info';
 import { FaMusic } from 'react-icons/fa';
+import axios from 'axios';
 
 interface TrackInfo {
   title: string;
@@ -15,6 +17,7 @@ interface TrackInfo {
 
 export class MusicService {
   private static clientId: string;
+  private static axiosInstance = axios.create();
 
   private static getClientId(): string {
     if (!this.clientId) {
@@ -71,7 +74,7 @@ export class MusicService {
       }
 
       // Hole Track-Info von SoundCloud
-      const trackInfo = await scdl.getInfo(url);
+      const trackInfo = await getInfo(url, clientId);
       logger.debug('[MusicService] SoundCloud Track-Info erhalten:', trackInfo);
 
       if (!trackInfo || !trackInfo.title) {
@@ -103,11 +106,11 @@ export class MusicService {
       logger.info('[MusicService] Verwende Client-ID:', clientId);
 
       logger.debug('[MusicService] Hole SoundCloud Track-Info...');
-      const trackInfo = await scdl.getInfo(url);
+      const trackInfo = await getInfo(url, clientId);
       logger.debug('[MusicService] SoundCloud Track-Info erhalten:', trackInfo);
 
       logger.debug('[MusicService] Initialisiere Download...');
-      const stream = await scdl.download(url);
+      const stream = await download(url, clientId, this.axiosInstance);
       logger.info('[MusicService] Download-Stream erfolgreich erstellt');
       
       logger.debug('[MusicService] Konvertiere Stream zu Buffer...');
@@ -199,27 +202,37 @@ export class MusicService {
       
       logger.info('[MusicService] Musik erfolgreich in Datenbank gespeichert:', {
         id: result._id,
-        url: result.url,
-        hasAudioData: !!result.audioData,
-        audioDataLength: result.audioData?.length,
-        mimeType: result.mimeType
+        title: result.trackInfo.title
       });
       
       return result;
     } catch (error) {
       logger.error('[MusicService] Fehler beim Hinzufügen der Musik:', error);
       if (error instanceof Error) {
-        logger.error('[MusicService] Fehlerdetails:', error.message);
-        logger.error('[MusicService] Stack Trace:', error.stack);
+        throw new Error(`Fehler beim Hinzufügen der Musik: ${error.message}`);
       }
-      throw error;
+      throw new Error('Unbekannter Fehler beim Hinzufügen der Musik');
     }
   }
 
   public static async removeMusic(url: string): Promise<void> {
-    logger.info('[MusicService] Entferne Musik:', url);
-    await connectDB();
-    const result = await Music.deleteOne({ url });
-    logger.info('[MusicService] Lösch-Ergebnis:', result);
+    logger.info('[MusicService] Starte Prozess zum Entfernen von Musik:', url);
+    try {
+      await connectDB();
+      const result = await Music.deleteOne({ url });
+      
+      if (result.deletedCount === 0) {
+        logger.warn('[MusicService] Keine Musik mit URL gefunden:', url);
+        throw new Error('Musik nicht gefunden');
+      }
+      
+      logger.info('[MusicService] Musik erfolgreich entfernt:', url);
+    } catch (error) {
+      logger.error('[MusicService] Fehler beim Entfernen der Musik:', error);
+      if (error instanceof Error) {
+        throw new Error(`Fehler beim Entfernen der Musik: ${error.message}`);
+      }
+      throw new Error('Unbekannter Fehler beim Entfernen der Musik');
+    }
   }
 } 
