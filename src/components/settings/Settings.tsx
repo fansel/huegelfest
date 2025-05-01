@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState } from 'react';
 import PushNotificationSettings from './PushNotificationSettings';
 import StarfieldSettings from './StarfieldSettings';
 import AdminSettings from './AdminSettings';
@@ -12,7 +12,7 @@ interface SettingsProps {
   onToggleAdmin: (value: boolean) => void;
   isAuthenticated: boolean;
   onLogout: () => void;
-  onLogin: (password: string) => void;
+  onLogin: (username: string, password: string) => Promise<void>;
   loginError: string;
   onNavigateToAdmin: () => void;
 }

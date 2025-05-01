@@ -23,6 +23,15 @@ interface PreviewData {
   message?: string;
 }
 
+function isValidSoundCloudUrl(url: string): boolean {
+  try {
+    const urlObj = new URL(url);
+    return urlObj.hostname === 'soundcloud.com' || urlObj.hostname.endsWith('.soundcloud.com');
+  } catch {
+    return false;
+  }
+}
+
 export default function MusicManager() {
   const [musicEntries, setMusicEntries] = useState<MusicEntry[]>([]);
   const [newUrl, setNewUrl] = useState('');

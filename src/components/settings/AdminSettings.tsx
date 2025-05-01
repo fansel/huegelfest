@@ -1,13 +1,13 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState } from 'react';
 
 interface AdminSettingsProps {
   showAdmin: boolean;
   onToggle: (value: boolean) => void;
   isAuthenticated: boolean;
   onLogout: () => void;
-  onLogin: (password: string) => void;
+  onLogin: (username: string, password: string) => Promise<void>;
   loginError: string;
   onNavigateToAdmin: () => void;
 }
@@ -21,25 +21,37 @@ export default function AdminSettings({
   loginError,
   onNavigateToAdmin
 }: AdminSettingsProps) {
+  const [username, setUsername] = useState('');
   const [password, setPassword] = useState('');
   const [showLoginForm, setShowLoginForm] = useState(false);
 
   const handleToggle = (value: boolean) => {
     if (value && !isAuthenticated) {
       setShowLoginForm(true);
+    } else if (!value && isAuthenticated) {
+      onLogout();
+      onToggle(false);
     } else if (isAuthenticated) {
       onToggle(value);
     }
   };
 
-  const handleLogin = (e: React.FormEvent) => {
+  const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();
-    onLogin(password);
-    setPassword('');
+    try {
+      await onLogin(username, password);
+      setUsername('');
+      setPassword('');
+      setShowLoginForm(false);
+      onToggle(true);
+    } catch (error) {
+      // Fehler wird bereits vom AuthContext behandelt
+    }
   };
 
   const handleCancel = () => {
     setShowLoginForm(false);
+    setUsername('');
     setPassword('');
   };
 
@@ -50,7 +62,7 @@ export default function AdminSettings({
           <span className="text-[#ff9900] font-medium">Admin-Oberfläche</span>
           <span className="text-[#ff9900]/60 text-sm">Aktiviere die Admin-Funktionen</span>
         </div>
-        <div className="flex items-center">
+        <div className="flex items-center gap-2">
           <label className="relative inline-flex items-center cursor-pointer">
             <input
               type="checkbox"
@@ -66,6 +78,19 @@ export default function AdminSettings({
       {showLoginForm && !isAuthenticated && (
         <div className="mt-4 p-4 bg-[#460b6c]/20 rounded-lg">
           <form onSubmit={handleLogin} className="space-y-4">
+            <div>
+              <label htmlFor="username" className="block text-[#ff9900] text-sm font-medium mb-2">
+                Benutzername
+              </label>
+              <input
+                type="text"
+                id="username"
+                value={username}
+                onChange={(e) => setUsername(e.target.value)}
+                className="w-full px-3 py-2 bg-[#460b6c]/30 border border-[#ff9900]/20 rounded-md text-[#ff9900] focus:outline-none focus:ring-2 focus:ring-[#ff9900]"
+                placeholder="Benutzername eingeben"
+              />
+            </div>
             <div>
               <label htmlFor="password" className="block text-[#ff9900] text-sm font-medium mb-2">
                 Admin-Passwort
