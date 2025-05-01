@@ -15,7 +15,7 @@ export default function CategoryList({ categories, onDeleteClick }: CategoryList
       <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-4">
         {categories.map((category) => (
           <div
-            key={category.value}
+            key={category._id}
             className="bg-white p-3 rounded-lg border border-gray-100 flex items-center justify-between"
           >
             <div className="flex items-center gap-2">
@@ -26,7 +26,7 @@ export default function CategoryList({ categories, onDeleteClick }: CategoryList
             </div>
             {!category.isDefault && (
               <button
-                onClick={() => onDeleteClick(category.value)}
+                onClick={() => onDeleteClick(category._id)}
                 className="text-red-600 hover:text-red-800 p-1"
                 title="Kategorie löschen"
               >

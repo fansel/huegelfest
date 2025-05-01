@@ -11,11 +11,16 @@ import EventForm from './EventForm';
 import CategoryModal from './CategoryModal';
 import DeleteCategoryDialog from './DeleteCategoryDialog';
 import DeleteDayDialog from './DeleteDayDialog';
-import { Category } from './types';
+import { Category, DeletingCategory } from './types';
 import MoveEventDialog from './MoveEventDialog';
 
 export default function TimelineManager() {
-  const [timeline, setTimeline] = useState<TimelineData>({ days: [] });
+  const [timeline, setTimeline] = useState<TimelineData>({ 
+    _id: '', 
+    days: [], 
+    createdAt: new Date(), 
+    updatedAt: new Date() 
+  });
   const [currentDay, setCurrentDay] = useState<number>(0);
   const [newEvent, setNewEvent] = useState<Omit<Event, 'id'>>({
     time: '',
@@ -30,7 +35,7 @@ export default function TimelineManager() {
   const [categories, setCategories] = useState<Category[]>([]);
   const [showCategoryModal, setShowCategoryModal] = useState(false);
   const [showDeleteDialog, setShowDeleteDialog] = useState(false);
-  const [deletingCategory, setDeletingCategory] = useState<{ value: string; eventCount: number } | null>(null);
+  const [deletingCategory, setDeletingCategory] = useState<{ _id: string; eventCount: number } | null>(null);
   const [showDeleteDayDialog, setShowDeleteDayDialog] = useState(false);
   const [deletingDay, setDeletingDay] = useState<{ index: number; title: string; eventCount: number } | null>(null);
   const [error, setError] = useState<string | null>(null);
@@ -54,15 +59,15 @@ export default function TimelineManager() {
     }
   };
 
-  const handleDeleteCategoryClick = (value: string) => {
-    const categoryToDelete = categories.find(cat => cat.value === value);
+  const handleDeleteCategoryClick = (_id: string) => {
+    const categoryToDelete = categories.find(cat => cat._id === _id);
     if (!categoryToDelete) return;
 
     const eventsWithCategory = timeline.days.reduce((count, day) => {
       return count + day.events.filter(event => event.categoryId === categoryToDelete._id).length;
     }, 0);
 
-    setDeletingCategory({ value, eventCount: eventsWithCategory });
+    setDeletingCategory({ _id, eventCount: eventsWithCategory });
     setShowDeleteDialog(true);
   };
 
@@ -71,8 +76,7 @@ export default function TimelineManager() {
 
     try {
       setIsLoading(true);
-      // Finde die Kategorie anhand des value
-      const categoryToDelete = categories.find(cat => cat.value === deletingCategory.value);
+      const categoryToDelete = categories.find(cat => cat._id === deletingCategory._id);
       if (!categoryToDelete) {
         alert('Kategorie nicht gefunden');
         return;
@@ -97,8 +101,8 @@ export default function TimelineManager() {
         throw new Error('Sonstiges-Kategorie nicht gefunden');
       }
 
-      // Aktualisiere die Timeline, indem alle Events der gelöschten Kategorie der "Sonstiges"-Kategorie zugeordnet werden
-      const updatedTimeline = {
+      // Aktualisiere die Timeline
+      const updatedTimeline: TimelineData = {
         ...timeline,
         days: timeline.days.map(day => ({
           ...day,
