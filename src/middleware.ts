@@ -1,5 +1,6 @@
 import { NextResponse } from 'next/server';
 import type { NextRequest } from 'next/server';
+import { verifyToken } from '@/lib/auth';
 
 // Typen für die API-Routen
 type HttpMethod = 'GET' | 'POST' | 'PUT' | 'DELETE';
@@ -27,7 +28,7 @@ const protectedApiRoutes: Record<string, RouteConfig> = {
 };
 
 export async function middleware(request: NextRequest) {
-  const isAuthenticated = request.cookies.get('isAuthenticated')?.value === 'true';
+  const authToken = request.cookies.get('auth_token');
   const isAdminRoute = request.nextUrl.pathname.startsWith('/admin');
   const isLoginRoute = request.nextUrl.pathname === '/login';
   const isApiRoute = request.nextUrl.pathname.startsWith('/api');
@@ -36,7 +37,7 @@ export async function middleware(request: NextRequest) {
   console.log('Middleware - Request:', {
     path: request.nextUrl.pathname,
     method: request.method,
-    isAuthenticated,
+    hasAuthToken: !!authToken,
     isAdminRoute,
     isLoginRoute,
     isApiRoute
@@ -44,7 +45,7 @@ export async function middleware(request: NextRequest) {
 
   // Login-Route Logik
   if (isLoginRoute) {
-    if (isAuthenticated) {
+    if (authToken) {
       console.log('Redirecting from login to admin');
       return NextResponse.redirect(new URL('/admin', request.url));
     }
@@ -53,7 +54,7 @@ export async function middleware(request: NextRequest) {
 
   // Admin-Route Logik
   if (isAdminRoute) {
-    if (!isAuthenticated) {
+    if (!authToken) {
       console.log('Redirecting from admin to login');
       return NextResponse.redirect(new URL('/login', request.url));
     }
@@ -78,7 +79,7 @@ export async function middleware(request: NextRequest) {
     const isProtectedMethod = routeConfig.methods.includes(method);
 
     // Wenn es eine geschützte Methode ist und der Benutzer nicht authentifiziert ist
-    if (isProtectedMethod && !isAuthenticated) {
+    if (isProtectedMethod && !authToken) {
       console.log('Access denied: Authentication required for:', { path, method });
       return new NextResponse(null, { status: 401 });
     }
@@ -105,7 +106,7 @@ export async function middleware(request: NextRequest) {
     console.log(`Middleware - Request: {
   path: '${request.nextUrl.pathname}',
   method: '${request.method}',
-  isAuthenticated: ${isAuthenticated},
+  hasAuthToken: ${!!authToken},
   isAdminRoute: ${isAdminRoute},
   isLoginRoute: ${isLoginRoute},
   isApiRoute: ${isApiRoute}
@@ -118,5 +119,5 @@ export async function middleware(request: NextRequest) {
 }
 
 export const config = {
-  matcher: ['/admin/:path*', '/login', '/api/:path*'],
+  matcher: ['/api/admin/:path*', '/admin/:path*'],
 }; 

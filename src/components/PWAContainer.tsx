@@ -82,35 +82,55 @@ export default function PWAContainer() {
 
   useEffect(() => {
     // Prüfe den Authentifizierungsstatus
-    const checkAuth = () => {
-      const cookies = document.cookie.split(';');
-      const auth = cookies.some(cookie => 
-        cookie.trim().startsWith('isAuthenticated=') && 
-        cookie.trim().split('=')[1] === 'true'
-      );
-      setIsAuthenticated(auth);
+    const checkAuth = async () => {
+      try {
+        const response = await fetch('/api/auth/check');
+        setIsAuthenticated(response.ok);
+      } catch (error) {
+        console.error('Fehler beim Prüfen des Auth-Status:', error);
+        setIsAuthenticated(false);
+      }
     };
 
     checkAuth();
   }, []);
 
-  const handleLogin = (password: string) => {
-    if (password === 'admin') {
-      document.cookie = 'isAuthenticated=true; path=/; SameSite=Lax; max-age=31536000'; // 1 Jahr
-      setIsAuthenticated(true);
-      setLoginError('');
-      setShowAdmin(true);
-    } else {
-      setLoginError('Falsches Passwort');
-      setShowAdmin(false);
+  const handleLogin = async (username: string, password: string) => {
+    try {
+      const response = await fetch('/api/auth/login', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ username, password }),
+      });
+
+      if (!response.ok) {
+        const data = await response.json();
+        throw new Error(data.error || 'Login fehlgeschlagen');
+      }
+
+      const data = await response.json();
+      if (data.token) {
+        setIsAuthenticated(true);
+        setCurrentView('admin');
+      } else {
+        throw new Error('Kein Token erhalten');
+      }
+    } catch (error) {
+      console.error('Login error:', error);
+      throw error;
     }
   };
 
-  const handleLogout = () => {
-    document.cookie = 'isAuthenticated=; path=/; expires=Thu, 01 Jan 1970 00:00:00 GMT';
-    setIsAuthenticated(false);
-    setShowAdmin(false);
-    setCurrentView('home');
+  const handleLogout = async () => {
+    try {
+      await fetch('/api/auth/logout', { method: 'POST' });
+      setIsAuthenticated(false);
+      setShowAdmin(false);
+    } catch (error) {
+      console.error('Fehler beim Logout:', error);
+    }
   };
 
   // Basis-Navigation
@@ -233,7 +253,17 @@ export default function PWAContainer() {
           </div>
         ) : (
           <div className="flex flex-col items-center justify-start px-2 sm:px-6 py-0 sm:py-4 text-center">
-            <Login onLogin={handleLogin} error={loginError} />
+            <Login 
+              onLogin={async (username: string, password: string) => {
+                try {
+                  await handleLogin(username, password);
+                } catch (error) {
+                  setLoginError(error instanceof Error ? error.message : 'Ein unbekannter Fehler ist aufgetreten');
+                  throw error;
+                }
+              }} 
+              error={loginError} 
+            />
           </div>
         );
       default:

@@ -1,32 +1,29 @@
 'use client';
 
-import { useState } from 'react';
-import { useRouter } from 'next/navigation';
+import { AuthProvider, useAuth } from '@/contexts/AuthContext';
 import Login from '@/components/Login';
+import { useRouter } from 'next/navigation';
 
-export default function LoginPage() {
-  const [error, setError] = useState('');
+function LoginWithAuth() {
+  const { login, error } = useAuth();
   const router = useRouter();
 
-  const handleLogin = (password: string) => {
-    if (password === 'admin') {
-      // Setze den Cookie mit korrekten Einstellungen
-      document.cookie = 'isAuthenticated=true; path=/; SameSite=Lax';
-      console.log('Cookie gesetzt');
-      
-      // Warte etwas länger und versuche die Weiterleitung
-      setTimeout(() => {
-        console.log('Versuche Weiterleitung zu /admin');
-        router.push('/admin');
-      }, 300);
-    } else {
-      setError('Falsches Passwort');
+  const handleLogin = async (username: string, password: string) => {
+    try {
+      await login(username, password);
+      router.push('/admin');
+    } catch (error) {
+      // Fehler wird bereits vom AuthContext behandelt
     }
   };
 
+  return <Login onLogin={handleLogin} error={error || undefined} />;
+}
+
+export default function LoginPage() {
   return (
-    <div className="min-h-screen flex items-center justify-center bg-[#460b6c] p-4">
-      <Login onLogin={handleLogin} error={error} />
-    </div>
+    <AuthProvider>
+      <LoginWithAuth />
+    </AuthProvider>
   );
 } 

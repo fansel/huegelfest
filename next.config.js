@@ -1,6 +1,7 @@
 /** @type {import('next').NextConfig} */
 
 const nextConfig = {
+  transpilePackages: ['jose'],
   images: {
     remotePatterns: [
       {

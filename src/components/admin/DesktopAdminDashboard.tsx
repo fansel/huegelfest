@@ -1,4 +1,5 @@
 import { useState } from 'react';
+import { useRouter } from 'next/navigation';
 import AnnouncementForm from './AnnouncementForm';
 import GroupColorManager from './GroupColorManager';
 import MusicManager from '../MusicManager';
@@ -29,15 +30,33 @@ export default function DesktopAdminDashboard({
   setEditingAnnouncement,
 }: DesktopAdminDashboardProps) {
   const [activeTab, setActiveTab] = useState<'announcements' | 'groups' | 'music' | 'timeline'>('announcements');
+  const router = useRouter();
+
+  const handleLogout = async () => {
+    try {
+      await fetch('/api/auth/logout', { method: 'POST' });
+      router.push('/login');
+    } catch (error) {
+      console.error('Fehler beim Logout:', error);
+    }
+  };
 
   return (
     <div className="min-h-screen text-[#ff9900] p-6">
       <div className="max-w-7xl mx-auto">
         <div className="bg-[#460b6c]/80 backdrop-blur-sm rounded-lg shadow-lg overflow-hidden">
           {/* Header */}
-          <div className="p-6">
-            <h1 className="text-2xl font-bold">Admin Dashboard</h1>
-            <p className="text-[#ff9900]/80 mt-2">Verwalten Sie Ankündigungen, Gruppen und Musik</p>
+          <div className="p-6 flex justify-between items-center">
+            <div>
+              <h1 className="text-2xl font-bold">Admin Dashboard</h1>
+              <p className="text-[#ff9900]/80 mt-2">Verwalten Sie Ankündigungen, Gruppen und Musik</p>
+            </div>
+            <button
+              onClick={handleLogout}
+              className="px-4 py-2 bg-red-500 text-white rounded-lg hover:bg-red-600 transition-colors"
+            >
+              Abmelden
+            </button>
           </div>
 
           {/* Tabs */}

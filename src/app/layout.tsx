@@ -6,6 +6,11 @@ import Footer from "@/components/Footer";
 import PWAContainer from "@/components/PWAContainer";
 import { PWAProvider } from "@/contexts/PWAContext";
 import ClientMusicNote from "@/components/ClientMusicNote";
+import { AuthProvider } from '@/contexts/AuthContext';
+import { initializeAdmin } from '@/lib/auth';
+
+// Initialisiere Admin beim Start
+initializeAdmin().catch(console.error);
 
 export const metadata: Metadata = {
   title: 'Hügelfest',
@@ -34,14 +39,16 @@ export default function RootLayout({
         <link rel="apple-touch-icon" href="/apple-touch-icon.png" />
       </head>
       <body className="antialiased min-h-screen flex flex-col">
-        <PWAProvider>
-          <PWAContainer />
-          <div className="desktop-only">
-            <ClientMusicNote />
-            <main className="flex-grow pb-16 md:pb-0">{children}</main>
-            <Footer />
-          </div>
-        </PWAProvider>
+        <AuthProvider>
+          <PWAProvider>
+            <PWAContainer />
+            <div className="desktop-only">
+              <ClientMusicNote />
+              <main className="flex-grow pb-16 md:pb-0">{children}</main>
+              <Footer />
+            </div>
+          </PWAProvider>
+        </AuthProvider>
       </body>
     </html>
   );
