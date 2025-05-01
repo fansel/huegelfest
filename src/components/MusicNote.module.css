@@ -1,4 +1,4 @@
-.musicNoteButton {
+.musicNote {
   position: fixed;
   top: 1rem;
   right: 1rem;
@@ -14,90 +14,148 @@
   z-index: 9999;
   backdrop-filter: blur(8px);
   box-shadow: 0 2px 8px rgba(0, 0, 0, 0.2);
+  background: rgba(70, 11, 108, 0.8);
+  color: #ff9900;
+}
+
+.musicNote::after {
+  content: 'Lange drücken';
+  position: absolute;
+  bottom: -25px;
+  left: 50%;
+  transform: translateX(-50%);
+  background: rgba(0, 0, 0, 0.8);
+  color: white;
+  padding: 4px 8px;
+  border-radius: 4px;
+  font-size: 0.7rem;
+  opacity: 0;
+  transition: opacity 0.3s ease;
+  pointer-events: none;
+  white-space: nowrap;
+}
+
+.musicNote.showTooltip::after {
+  opacity: 1;
 }
 
 .expanded {
-  width: 180px;
+  width: 280px;
   border-radius: 32px;
+  justify-content: flex-start;
+  padding: 0 0 0 0;
+  gap: 15px;
 }
 
-.navigationControls {
-  position: absolute;
-  width: 100%;
+.iconContainer {
   display: flex;
-  justify-content: space-between;
   align-items: center;
-  padding: 0 8px;
-}
-
-.navButton {
-  background: none;
-  border: none;
-  color: #ff9900;
-  padding: 8px;
-  cursor: pointer;
-  transition: all 0.2s ease;
+  justify-content: center;
+  order: 1;
   position: relative;
+  margin-left: 0;
+}
+
+.icon {
+  color: white;
+  font-size: 48px;
+  transition: transform 0.3s ease;
+}
+
+.coverArtContainer {
+  position: absolute;
+  width: 32px;
+  height: 32px;
+  border-radius: 50%;
+  overflow: hidden;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
   z-index: 2;
+  background: white;
+  padding: 2px;
+  will-change: transform;
 }
 
-.navButton:first-child {
-  margin-right: auto;
-}
-
-.navButton:last-child {
-  margin-left: auto;
-}
-
-.navButton:hover {
-  transform: scale(1.1);
-  color: #ff9900;
-}
-
-.active {
-  background: rgba(255, 255, 255, 0.1);
-  color: #ff9900;
-}
-
-.active:hover {
-  background: rgba(255, 255, 255, 0.2);
-  transform: scale(1.1);
-}
-
-.inactive {
-  background: rgba(255, 255, 255, 0.1);
-  opacity: 1;
-  color: #ff9900;
-}
-
-.inactive:hover {
-  background: rgba(255, 255, 255, 0.15);
-  transform: scale(1.1);
-}
-
-.musicNoteIcon {
-  width: 48px;
-  height: 48px;
-  color: #fff;
+.coverArt {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  border-radius: 50%;
+  will-change: transform;
 }
 
 .spinning {
   animation: spin 3s linear infinite;
-  animation-play-state: running;
-  width: 48px;
-  height: 48px;
+  transform-origin: center;
 }
 
 .paused {
-  animation: spin 3s linear infinite;
-  animation-play-state: paused;
-  width: 48px;
-  height: 48px;
+  animation: none;
 }
 
-.inactive .musicNoteIcon {
-  width: 48px;
-  height: 48px;
+.playerControls {
+  display: flex;
+  align-items: center;
+  order: 2;
+  margin-left: auto;
+  margin-right: 8px;
+}
+
+.controlButton {
+  color: white;
+  font-size: 24px;
+  cursor: pointer;
+  padding: 5px;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: all 0.2s ease;
+}
+
+.controlButton:hover {
+  background-color: rgba(255, 255, 255, 0.1);
+}
+
+.controlButton:active {
+  animation: shake 0.4s cubic-bezier(.36,.07,.19,.97) both;
+  transform: translate3d(0, 0, 0);
+  backface-visibility: hidden;
+  perspective: 1000px;
+}
+
+@keyframes shake {
+  0%, 100% {
+    transform: rotate(0deg);
+  }
+  10% {
+    transform: rotate(-15deg) scale(1.1);
+  }
+  20% {
+    transform: rotate(15deg) scale(1.1);
+  }
+  30% {
+    transform: rotate(-15deg) scale(1.1);
+  }
+  40% {
+    transform: rotate(15deg) scale(1.1);
+  }
+  50% {
+    transform: rotate(-10deg) scale(1.1);
+  }
+  60% {
+    transform: rotate(10deg) scale(1.1);
+  }
+  70% {
+    transform: rotate(-5deg) scale(1.1);
+  }
+  80% {
+    transform: rotate(5deg) scale(1.1);
+  }
+  90% {
+    transform: rotate(-2deg) scale(1.1);
+  }
 }
 
 @keyframes spin {
@@ -107,4 +165,106 @@
   to {
     transform: rotate(360deg);
   }
+}
+
+.trackInfo {
+  position: absolute;
+  right: 80px;
+  top: 50%;
+  transform: translateY(-50%);
+  color: white;
+  font-size: 0.7rem;
+  width: 120px;
+  overflow: hidden;
+  opacity: 0;
+  transition: opacity 0.3s ease;
+  pointer-events: none;
+  text-align: right;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  height: 100%;
+}
+
+.expanded .trackInfo {
+  opacity: 1;
+}
+
+.trackTitle {
+  font-weight: 500;
+  margin-bottom: 2px;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  position: relative;
+  width: 100%;
+  animation: marquee 10s linear infinite;
+}
+
+.trackTitle:hover {
+  animation-play-state: paused;
+}
+
+@keyframes marquee {
+  0% {
+    transform: translateX(100%);
+  }
+  100% {
+    transform: translateX(-100%);
+  }
+}
+
+.trackArtist {
+  font-size: 0.65rem;
+  opacity: 0.8;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  text-align: center;
+  margin-top: 2px;
+}
+
+.marquee {
+  animation: marquee 8s linear infinite;
+  display: inline-block;
+  position: relative;
+  left: 100%;
+}
+
+@keyframes marquee {
+  0% {
+    left: 100%;
+  }
+  100% {
+    left: -100%;
+  }
+}
+
+@media (min-width: 768px) {
+  .musicNote {
+    position: fixed;
+    top: 1rem;
+    right: 1rem;
+  }
+
+  .musicNote::after {
+    display: none;
+  }
+
+  .expanded {
+    width: 320px;
+  }
+
+  .trackInfo {
+    width: 160px;
+  }
+}
+
+/* ReactPlayer Styles */
+:global(.react-player) {
+  display: none !important;
+  visibility: hidden !important;
+  opacity: 0 !important;
+  position: absolute !important;
+  pointer-events: none !important;
 } 

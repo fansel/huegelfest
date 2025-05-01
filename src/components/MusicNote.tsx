@@ -2,58 +2,153 @@
 
 import { useState, useEffect, useRef } from 'react';
 import styles from './MusicNote.module.css';
-import { FaPlay, FaPause, FaCompactDisc, FaForward, FaBackward } from 'react-icons/fa6';
+import { FaCompactDisc, FaDice } from 'react-icons/fa6';
+import Image from 'next/image';
+import ReactPlayer from 'react-player';
 
 interface Track {
+  _id: string;
   title: string;
   url: string;
   author_name?: string;
+  thumbnail_url?: string;
+  trackInfo: {
+    title: string;
+    author_name: string;
+    thumbnail_url: string;
+    author_url: string;
+    description: string;
+    html: string;
+  };
 }
 
 interface MusicNoteProps {
   onClick: () => void;
+  onExpandChange?: (isExpanded: boolean) => void;
 }
 
-export default function MusicNote({ onClick }: MusicNoteProps) {
+export default function MusicNote({ onClick, onExpandChange }: MusicNoteProps) {
   const [track, setTrack] = useState<Track | null>(null);
   const [isPlaying, setIsPlaying] = useState(false);
   const [isExpanded, setIsExpanded] = useState(false);
   const [tracks, setTracks] = useState<Track[]>([]);
   const [currentTrackIndex, setCurrentTrackIndex] = useState(0);
-  const iframeRef = useRef<HTMLIFrameElement | null>(null);
+  const [showTooltip, setShowTooltip] = useState(false);
   const longPressTimer = useRef<NodeJS.Timeout | null>(null);
+  const [isTitleOverflowing, setIsTitleOverflowing] = useState(false);
+  const [isArtistOverflowing, setIsArtistOverflowing] = useState(false);
+  const titleRef = useRef<HTMLDivElement>(null);
+  const artistRef = useRef<HTMLDivElement>(null);
+  const audioRef = useRef<ReactPlayer>(null);
 
-  // Lade Tracks
+  useEffect(() => {
+    const hasSeenTooltip = localStorage.getItem('hasSeenMusicTooltip');
+    if (!hasSeenTooltip) {
+      setShowTooltip(true);
+      localStorage.setItem('hasSeenMusicTooltip', 'true');
+      setTimeout(() => {
+        setShowTooltip(false);
+      }, 3000);
+    }
+  }, []);
+
   useEffect(() => {
     console.log('[MusicNote] Starte Track-Ladung');
     fetch('/api/music')
       .then(res => {
-        console.log('[MusicNote] API Response:', {
-          status: res.status,
-          ok: res.ok,
-          type: res.type
-        });
+        console.log('[MusicNote] API Response Status:', res.status);
         return res.json();
       })
       .then(data => {
-        console.log('[MusicNote] API Data:', data);
-        const loadedTracks = data.map((item: any) => ({
-          title: item.trackInfo.title,
-          url: item.url,
-          author_name: item.trackInfo.author_name
-        }));
-        setTracks(loadedTracks);
-        setTrack(loadedTracks[0]);
+        console.log('[MusicNote] API Data:', JSON.stringify({
+          success: data.success,
+          count: data.count,
+          tracks: data.data?.length || 0,
+          firstTrack: data.data?.[0] ? {
+            id: data.data[0].id,
+            title: data.data[0].trackInfo?.title,
+            url: data.data[0].url,
+            trackInfo: data.data[0].trackInfo
+          } : null
+        }, null, 2));
+        
+        if (data.success && data.data && data.data.length > 0) {
+          console.log('[MusicNote] Setze Tracks:', data.data.length);
+          const tracks = data.data.map((track: any) => ({
+            _id: track.id,
+            title: track.trackInfo?.title,
+            url: track.url,
+            trackInfo: track.trackInfo
+          }));
+          setTracks(tracks);
+          
+          const firstTrack = tracks[0];
+          console.log('[MusicNote] Setze ersten Track:', {
+            id: firstTrack._id,
+            title: firstTrack.trackInfo?.title,
+            url: firstTrack.url
+          });
+          setTrack(firstTrack);
+        } else {
+          console.warn('[MusicNote] Keine Tracks gefunden in der Antwort');
+        }
       })
-      .catch(e => console.error('[MusicNote] API Fehler:', e));
+      .catch(e => {
+        console.error('[MusicNote] API Fehler:', e);
+        console.error('[MusicNote] Fehler-Stack:', e.stack);
+      });
   }, []);
+
+  useEffect(() => {
+    if (track && 'mediaSession' in navigator) {
+      // Konvertiere die SoundCloud-URL in eine direkte Bild-URL
+      const thumbnailUrl = track.trackInfo?.thumbnail_url?.replace('large', 't500x500') || '';
+      const proxyUrl = thumbnailUrl ? `/api/music/artwork?url=${encodeURIComponent(thumbnailUrl)}` : '';
+      
+      // Verwende das Original-Cover-Art für die MediaSession
+      const mediaSessionArtwork = proxyUrl ? [
+        { src: proxyUrl, sizes: '512x512', type: 'image/jpeg' }
+      ] : [];
+
+      navigator.mediaSession.metadata = new MediaMetadata({
+        title: track.trackInfo?.title || 'Unbekannter Titel',
+        artist: track.trackInfo?.author_name || 'Unbekannter Künstler',
+        album: 'Huegelfest',
+        artwork: mediaSessionArtwork
+      });
+
+      // Media Session Action Handler
+      navigator.mediaSession.setActionHandler('play', () => {
+        setIsPlaying(true);
+      });
+
+      navigator.mediaSession.setActionHandler('pause', () => {
+        setIsPlaying(false);
+      });
+
+      navigator.mediaSession.setActionHandler('previoustrack', () => {
+        playRandomTrack();
+      });
+
+      navigator.mediaSession.setActionHandler('nexttrack', () => {
+        playRandomTrack();
+      });
+    }
+  }, [track]);
+
+  useEffect(() => {
+    if ('mediaSession' in navigator) {
+      navigator.mediaSession.playbackState = isPlaying ? 'playing' : 'paused';
+    }
+  }, [isPlaying]);
 
   const handleMouseDown = () => {
     longPressTimer.current = setTimeout(() => {
-      setIsExpanded(!isExpanded);
-      // Stärkeres haptisches Feedback
+      const newExpandedState = !isExpanded;
+      setIsExpanded(newExpandedState);
+      onExpandChange?.(newExpandedState);
       if ('vibrate' in navigator) {
-        navigator.vibrate([100, 50, 100]); // Zwei Vibrationen mit Pause
+        navigator.vibrate([50, 30, 50]);
       }
     }, 500);
   };
@@ -67,7 +162,12 @@ export default function MusicNote({ onClick }: MusicNoteProps) {
 
   const handleTouchStart = () => {
     longPressTimer.current = setTimeout(() => {
-      setIsExpanded(!isExpanded);
+      const newExpandedState = !isExpanded;
+      setIsExpanded(newExpandedState);
+      onExpandChange?.(newExpandedState);
+      if ('vibrate' in navigator) {
+        navigator.vibrate([50, 30, 50]);
+      }
     }, 500);
   };
 
@@ -78,186 +178,138 @@ export default function MusicNote({ onClick }: MusicNoteProps) {
     }
   };
 
-  const playNextTrack = () => {
-    const nextIndex = (currentTrackIndex + 1) % tracks.length;
-    setCurrentTrackIndex(nextIndex);
-    setTrack(tracks[nextIndex]);
-    if (iframeRef.current) {
-      iframeRef.current.contentWindow?.postMessage(JSON.stringify({
-        method: 'load',
-        value: tracks[nextIndex].url
-      }), 'https://w.soundcloud.com');
-      // Stärkeres haptisches Feedback
+  const playRandomTrack = () => {
+    console.log('[MusicNote] Playing random track');
+    if (tracks.length === 1) {
+      setCurrentTrackIndex(0);
+      setTrack(tracks[0]);
       if ('vibrate' in navigator) {
-        navigator.vibrate(100); // Längere Vibration
+        navigator.vibrate(30);
       }
-    }
-  };
-
-  const playPreviousTrack = () => {
-    const prevIndex = (currentTrackIndex - 1 + tracks.length) % tracks.length;
-    setCurrentTrackIndex(prevIndex);
-    setTrack(tracks[prevIndex]);
-    if (iframeRef.current) {
-      iframeRef.current.contentWindow?.postMessage(JSON.stringify({
-        method: 'load',
-        value: tracks[prevIndex].url
-      }), 'https://w.soundcloud.com');
-      // Stärkeres haptisches Feedback
-      if ('vibrate' in navigator) {
-        navigator.vibrate(100); // Längere Vibration
-      }
-    }
-  };
-
-  // Initialisiere Player
-  useEffect(() => {
-    if (!track) return;
-
-    console.log('[MusicNote] Erstelle Player für:', track.url);
-    const iframe = document.createElement('iframe');
-    iframe.style.cssText = 'position:absolute;width:1px;height:1px;left:-9999px;opacity:0';
-    iframe.allow = 'autoplay; encrypted-media';
-    iframe.setAttribute('sandbox', 'allow-scripts allow-same-origin allow-popups allow-forms');
-    
-    const params = new URLSearchParams({
-      url: track.url,
-      hide_related: 'true',
-      show_comments: 'false',
-      show_user: 'false',
-      show_reposts: 'false',
-      visual: 'true',
-      show_artwork: 'true',
-      show_playcount: 'false',
-      show_teaser: 'false',
-      single_active: 'true',
-      buying: 'false',
-      sharing: 'false',
-      download: 'false',
-      show_bpm: 'false',
-      auto_play: 'false'
-    });
-    
-    const playerURL = `https://w.soundcloud.com/player/?${params.toString()}`;
-    console.log('[MusicNote] Player URL:', playerURL);
-    
-    iframe.src = playerURL;
-    document.body.appendChild(iframe);
-    iframeRef.current = iframe;
-
-    // Event Listener für postMessages
-    const handleMessage = (event: MessageEvent) => {
-      if (event.origin !== 'https://w.soundcloud.com') return;
-      
-      try {
-        const data = JSON.parse(event.data);
-        console.log('[MusicNote] Player Message:', data);
-        
-        if (data.method === 'ready') {
-          console.log('[MusicNote] Player Ready');
-          // Setze initial Volume auf 0
-          iframeRef.current?.contentWindow?.postMessage(JSON.stringify({
-            method: 'setVolume',
-            value: 0
-          }), 'https://w.soundcloud.com');
-        } else if (data.method === 'play') {
-          console.log('[MusicNote] Player Play');
-          // Nur setzen wenn nicht bereits gesetzt
-          if (!isPlaying) {
-            setIsPlaying(true);
-          }
-        } else if (data.method === 'pause') {
-          console.log('[MusicNote] Player Pause');
-          // Nur setzen wenn nicht bereits gesetzt
-          if (isPlaying) {
-                    setIsPlaying(false);
-          }
-        } else if (data.method === 'finish') {
-          console.log('[MusicNote] Player Finish');
-          setIsPlaying(false);
-          if (track) {
-            console.log('[MusicNote] Lade Track neu:', track.url);
-            iframeRef.current?.contentWindow?.postMessage(JSON.stringify({
-              method: 'load',
-              value: track.url
-            }), 'https://w.soundcloud.com');
-          }
-        }
-      } catch (e) {
-        console.error('[MusicNote] Message Parse Error:', e);
-      }
-    };
-
-    window.addEventListener('message', handleMessage);
-
-    return () => {
-      console.log('[MusicNote] Cleanup');
-      window.removeEventListener('message', handleMessage);
-      if (iframeRef.current) {
-        console.log('[MusicNote] Entferne Player');
-        iframeRef.current.remove();
-        iframeRef.current = null;
-      }
-    };
-  }, [track]);
-
-  const togglePlay = () => {
-    console.log('[MusicNote] Toggle Play:', { isPlaying, hasPlayer: !!iframeRef.current });
-    if (!iframeRef.current) {
-      console.log('[MusicNote] Kein Player verfügbar');
       return;
     }
-    
-    // Setze den Zustand sofort
-    setIsPlaying(!isPlaying);
-    
-    iframeRef.current.contentWindow?.postMessage(JSON.stringify({
-      method: 'toggle'
-    }), 'https://w.soundcloud.com');
-    
+
+    let randomIndex;
+    do {
+      randomIndex = Math.floor(Math.random() * tracks.length);
+    } while (randomIndex === currentTrackIndex && tracks.length > 1);
+
+    console.log('[MusicNote] Neuer Track-Index:', randomIndex);
+    setCurrentTrackIndex(randomIndex);
+    setTrack(tracks[randomIndex]);
+    setIsPlaying(true);
+
+    if ('vibrate' in navigator) {
+      navigator.vibrate(30);
+    }
+  };
+
+  const togglePlay = () => {
+    if (!track?._id) {
+      console.warn('[MusicNote] Kann nicht abspielen: Kein Track gefunden');
+      return;
+    }
+
+    console.log('[MusicNote] Toggle Play:', {
+      currentState: isPlaying ? 'playing' : 'paused',
+      trackTitle: track.trackInfo?.title,
+      trackId: track._id
+    });
+
+    setIsPlaying(prevState => !prevState);
     onClick();
   };
 
-  console.log('[MusicNote] Render:', { track, isPlaying });
-
   return (
-    <div className="relative">
-      <button 
+    <div
+      className={`${styles.musicNote} ${isExpanded ? styles.expanded : ''} ${showTooltip ? styles.showTooltip : ''}`}
+      onMouseDown={handleMouseDown}
+      onMouseUp={handleMouseUp}
+      onTouchStart={handleTouchStart}
+      onTouchEnd={handleTouchEnd}
+    >
+      <div 
+        className={styles.iconContainer}
         onClick={togglePlay}
-        onMouseDown={handleMouseDown}
-        onMouseUp={handleMouseUp}
-        onTouchStart={handleTouchStart}
-        onTouchEnd={handleTouchEnd}
-        className={`${styles.musicNoteButton} ${isPlaying ? styles.active : styles.inactive} ${isExpanded ? styles.expanded : ''}`}
-        aria-label={isPlaying ? 'Musik pausieren' : 'Musik abspielen'}
+        role="button"
+        tabIndex={0}
+        onKeyDown={(e) => {
+          if (e.key === 'Enter' || e.key === ' ') {
+            e.preventDefault();
+            togglePlay();
+          }
+        }}
       >
         <FaCompactDisc 
-          size={48} 
+          size={48}
           className={isPlaying ? styles.spinning : styles.paused} 
         />
-        {isExpanded && (
-          <div className={styles.navigationControls}>
-            <button 
-              onClick={(e) => {
-                e.stopPropagation();
-                playPreviousTrack();
+        {track?.trackInfo?.thumbnail_url && (
+          <div className={styles.coverArtContainer}>
+            <Image
+              src={track.trackInfo.thumbnail_url}
+              alt={track.trackInfo.title}
+              width={32}
+              height={32}
+              className={`${styles.coverArt} ${isPlaying ? styles.spinning : styles.paused}`}
+              onError={(e: React.SyntheticEvent<HTMLImageElement>) => {
+                const target = e.currentTarget;
+                target.style.display = 'none';
+                target.parentElement?.classList.add('bg-gradient-to-br', 'from-purple-500', 'to-pink-500');
               }}
-              className={styles.navButton}
-            >
-              <FaBackward size={24} />
-            </button>
-            <button 
-              onClick={(e) => {
-                e.stopPropagation();
-                playNextTrack();
-              }}
-              className={styles.navButton}
-            >
-              <FaForward size={24} />
-            </button>
+            />
           </div>
         )}
-      </button>
+      </div>
+      {isExpanded && (
+        <>
+          <div className={styles.trackInfo}>
+            <div 
+              ref={titleRef}
+              className={`${styles.trackTitle} ${isTitleOverflowing ? styles.marquee : ''}`}
+            >
+              {track?.trackInfo?.title}
+            </div>
+            <div 
+              ref={artistRef}
+              className={styles.trackArtist}
+            >
+              {track?.trackInfo?.author_name}
+            </div>
+          </div>
+          <div className={styles.playerControls}>
+            <div 
+              className={styles.controlButton}
+              onClick={(e) => {
+                e.stopPropagation();
+                console.log('[MusicNote] Dice button clicked');
+                playRandomTrack();
+              }}
+              role="button"
+              tabIndex={0}
+              onKeyDown={(e) => {
+                if (e.key === 'Enter' || e.key === ' ') {
+                  e.preventDefault();
+                  playRandomTrack();
+                }
+              }}
+            >
+              <FaDice size={24} />
+            </div>
+          </div>
+          {/* ReactPlayer */}
+          <ReactPlayer
+            ref={audioRef}
+            url={`/api/music/stream?id=${track?._id}`}
+            playing={isPlaying}
+            controls={false}
+            width="0"
+            height="0"
+            onEnded={() => playRandomTrack()}
+            onError={(e) => console.error('[MusicNote] ReactPlayer error:', e)}
+          />
+        </>
+      )}
     </div>
   );
-} 
+}

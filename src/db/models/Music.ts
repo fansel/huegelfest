@@ -13,6 +13,19 @@ const musicSchema = new mongoose.Schema({
     author_url: String,
     description: String,
     html: String
+  },
+  audioData: {
+    type: Buffer,
+    required: true
+  },
+  mimeType: {
+    type: String,
+    required: true,
+    default: 'audio/mpeg'
+  },
+  soundcloudResponse: {
+    type: mongoose.Schema.Types.Mixed,
+    required: true
   }
 }, {
   timestamps: true
@@ -30,6 +43,9 @@ export type MusicDocument = mongoose.Document & {
     description: string;
     html: string;
   };
+  audioData: Buffer;
+  mimeType: string;
+  soundcloudResponse: any;
   createdAt: Date;
   updatedAt: Date;
 };

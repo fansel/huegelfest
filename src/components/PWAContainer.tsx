@@ -11,6 +11,7 @@ import Starfield from './Starfield';
 import PushNotificationSettings from './PushNotificationSettings';
 import Settings from './settings/Settings';
 import MusicNote from './MusicNote';
+import Image from 'next/image';
 
 type View = 'home' | 'anreise' | 'infoboard' | 'settings' | 'admin' | 'favorites';
 
@@ -28,6 +29,8 @@ export default function PWAContainer() {
   const [isMusicActive, setIsMusicActive] = useState(false);
   const [isMusicVisible, setIsMusicVisible] = useState(true);
   const [isMusicPlaying, setIsMusicPlaying] = useState(false);
+  const [isMusicExpanded, setIsMusicExpanded] = useState(false);
+  const [lastScrollY, setLastScrollY] = useState(0);
 
   useEffect(() => {
     const mediaQuery = window.matchMedia('(display-mode: standalone)');
@@ -161,35 +164,55 @@ export default function PWAContainer() {
     setIsMusicVisible(!isMusicVisible);
   };
 
+  useEffect(() => {
+    const handleScroll = () => {
+      const currentScrollY = window.scrollY;
+      
+      // Wenn wir mehr als 50px nach unten gescrollt sind, blenden wir die Leiste aus
+      if (currentScrollY > lastScrollY && currentScrollY > 50) {
+        setIsNavVisible(false);
+      } 
+      // Wenn wir nach oben scrollen oder nah am Anfang sind, blenden wir die Leiste ein
+      else if (currentScrollY < lastScrollY || currentScrollY < 50) {
+        setIsNavVisible(true);
+      }
+      
+      setLastScrollY(currentScrollY);
+    };
+
+    window.addEventListener('scroll', handleScroll, { passive: true });
+    return () => window.removeEventListener('scroll', handleScroll);
+  }, [lastScrollY]);
+
   const renderContent = () => {
     switch (currentView) {
       case 'home':
         return (
-          <div className="flex flex-col items-center justify-start min-h-screen px-2 sm:px-6 py-0 sm:py-12 text-center">
+          <div className="flex flex-col items-center justify-start px-2 sm:px-6 py-0 sm:py-4 text-center">
             <Timeline />
           </div>
         );
       case 'anreise':
         return (
-          <div className={`flex flex-col items-center justify-start min-h-screen px-2 sm:px-6 py-0 sm:py-12 text-center ${!showStarfield ? 'bg-[#460b6c]' : ''}`}>
+          <div className={`flex flex-col items-center justify-start px-2 sm:px-6 py-0 sm:py-4 text-center ${!showStarfield ? 'bg-[#460b6c]' : ''}`}>
             <Anreise />
           </div>
         );
       case 'infoboard':
         return (
-          <div className={`flex flex-col items-center justify-start min-h-screen px-2 sm:px-6 py-0 sm:py-12 text-center ${!showStarfield ? 'bg-[#460b6c]' : ''}`}>
+          <div className={`flex flex-col items-center justify-start px-2 sm:px-6 py-0 sm:py-4 text-center ${!showStarfield ? 'bg-[#460b6c]' : ''}`}>
             <InfoBoard isPWA={isPWA} />
           </div>
         );
       case 'favorites':
         return (
-          <div className="flex flex-col items-center justify-start min-h-screen px-2 sm:px-6 py-0 sm:py-12 text-center">
+          <div className="flex flex-col items-center justify-start px-2 sm:px-6 py-0 sm:py-4 text-center">
             <Timeline showFavoritesOnly={true} />
           </div>
         );
       case 'settings':
         return (
-          <div className="flex flex-col items-center justify-start min-h-screen px-2 sm:px-6 py-0 sm:py-12 text-center">
+          <div className="flex flex-col items-center justify-start px-2 sm:px-6 py-0 sm:py-4 text-center">
             <Settings
               showStarfield={showStarfield}
               onToggleStarfield={toggleStarfield}
@@ -205,11 +228,11 @@ export default function PWAContainer() {
         );
       case 'admin':
         return isAuthenticated ? (
-          <div className="flex flex-col items-center justify-start min-h-screen px-2 sm:px-6 py-0 sm:py-12 text-center">
+          <div className="flex flex-col items-center justify-start px-2 sm:px-6 py-0 sm:py-4 text-center">
             <Admin />
           </div>
         ) : (
-          <div className="flex flex-col items-center justify-start min-h-screen px-2 sm:px-6 py-0 sm:py-12 text-center">
+          <div className="flex flex-col items-center justify-start px-2 sm:px-6 py-0 sm:py-4 text-center">
             <Login onLogin={handleLogin} error={loginError} />
           </div>
         );
@@ -221,12 +244,22 @@ export default function PWAContainer() {
   if (!isPWA) return null;
 
   return (
-    <div className="relative min-h-screen bg-[#460b6c] text-[#ff9900]">
+    <div className="relative min-h-screen bg-[#460b6c] text-[#ff9900] flex flex-col">
       {showStarfield && <Starfield />}
-      <div className="flex flex-col items-center justify-center gap-2">
-        <h1 className="text-2xl font-bold text-[#460b6c]">Hügelfest</h1>
+      <div className="flex flex-col items-center justify-center gap-2 pt-4">
+        <div className={`flex items-center justify-center w-full transition-all duration-300 transform ${isMusicExpanded ? 'opacity-0 scale-95 -translate-y-4' : 'opacity-100 scale-100 translate-y-0'}`}>
+          <Image
+            src="/android-chrome-192x192.png"
+            alt="Hügelfest Logo"
+            width={48}
+            height={48}
+          />
+        </div>
         <div className="flex items-center gap-2">
-          <MusicNote onClick={() => setIsMusicActive(!isMusicActive)} />
+          <MusicNote 
+            onClick={() => setIsMusicActive(!isMusicActive)} 
+            onExpandChange={setIsMusicExpanded}
+          />
           <button
             onClick={toggleMusicVisibility}
             className="p-2 text-[#460b6c] hover:text-[#ff9900] transition-colors"
@@ -291,11 +324,7 @@ export default function PWAContainer() {
           </div>
         </div>
       )}
-      <main 
-        className={`pb-20 ${!showStarfield ? 'bg-[#460b6c]' : ''}`}
-        onTouchStart={handleTouchStart}
-        onTouchMove={handleTouchMove}
-      >
+      <main className="flex-1 pb-20">
         {renderContent()}
       </main>
       

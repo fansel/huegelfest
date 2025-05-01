@@ -22,7 +22,7 @@ const protectedApiRoutes: Record<string, RouteConfig> = {
     methods: ['POST']
   },
   '/api/music': {
-    methods: ['POST', 'PUT', 'DELETE']
+    methods: [ 'PUT', 'DELETE']
   }
 };
 

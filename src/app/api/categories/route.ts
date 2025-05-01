@@ -6,10 +6,9 @@ import { CategoryService } from '@/services/categoryService';
 
 export async function GET() {
   try {
-    console.log('GET /api/categories - Starte Abruf der Kategorien');
+
     await connectDB();
     const categories = await Category.find({}).sort({ label: 1 });
-    console.log(`GET /api/categories - ${categories.length} Kategorien gefunden`);
     return NextResponse.json(categories);
   } catch (error) {
     console.error('Fehler beim Abrufen der Kategorien:', error);

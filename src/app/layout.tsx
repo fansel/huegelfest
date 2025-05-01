@@ -5,6 +5,7 @@ import "./globals.css";
 import Footer from "@/components/Footer";
 import PWAContainer from "@/components/PWAContainer";
 import { PWAProvider } from "@/contexts/PWAContext";
+import ClientMusicNote from "@/components/ClientMusicNote";
 
 export const metadata: Metadata = {
   title: 'Hügelfest',
@@ -36,6 +37,7 @@ export default function RootLayout({
         <PWAProvider>
           <PWAContainer />
           <div className="desktop-only">
+            <ClientMusicNote />
             <main className="flex-grow pb-16 md:pb-0">{children}</main>
             <Footer />
           </div>
