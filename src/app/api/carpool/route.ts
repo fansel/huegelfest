@@ -1,7 +1,7 @@
 import { NextResponse } from 'next/server';
 import { connectDB } from '@/database/config/connector';
 import { Ride } from '@/database/models/Ride';
-import { ValidationError } from 'mongoose';
+import mongoose from 'mongoose';
 
 export async function GET() {
   try {
@@ -45,12 +45,13 @@ export async function POST(request: Request) {
     console.error('Fehler beim Speichern der Fahrt:', error);
     
     // Prüfe ob es ein Validierungsfehler ist
-    if (error instanceof ValidationError) {
+    if (error instanceof mongoose.Error.ValidationError) {
+      const validationError = error as mongoose.Error.ValidationError;
       return NextResponse.json({ 
         error: 'Validierungsfehler',
-        details: Object.keys(error.errors).map(key => ({
+        details: Object.keys(validationError.errors).map(key => ({
           field: key,
-          message: error.errors[key].message
+          message: validationError.errors[key].message
         }))
       }, { status: 400 });
     }
