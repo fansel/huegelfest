@@ -1,6 +1,6 @@
 import { SignJWT, jwtVerify } from 'jose';
 import { SHA256 } from 'crypto-js';
-import { User } from '@/db/models/User';
+import { User } from '@/database/models/User';
 import mongoose from 'mongoose';
 
 const secret = new TextEncoder().encode(

@@ -1,6 +1,6 @@
 import { NextResponse } from 'next/server';
-import { connectDB } from '@/db/config/connector';
-import Timeline from '@/db/models/Timeline';
+import { connectDB } from '@/database/config/connector';
+import Timeline from '@/database/models/Timeline';
 
 // Hilfsfunktion zum Bereinigen der Daten
 function cleanTimelineData(data: any) {
@@ -156,7 +156,7 @@ export async function PUT(request: Request) {
     }
     
     return NextResponse.json(timeline);
-  } catch (error) {
+  } catch (error: any) {
     console.error('PUT /api/timeline - Fehler beim Aktualisieren der Timeline:', error);
     console.error('PUT /api/timeline - Fehler Details:', {
       name: error.name,

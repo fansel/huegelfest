@@ -1,6 +1,6 @@
 import { NextResponse } from 'next/server'
-import { connectDB } from '@/db/config/connector'
-import { Subscriber } from '@/db/models/Subscriber'
+import { connectDB } from '@/database/config/connector'
+import { Subscriber } from '@/database/models/Subscriber'
 
 export async function POST(request: Request) {
   try {

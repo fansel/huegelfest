@@ -1,8 +1,8 @@
 import { NextResponse } from 'next/server';
-import { connectDB } from '@/db/config/connector';
-import Announcement from '@/db/models/Announcement';
-import Group from '@/db/models/Group';
-import { Subscriber } from '@/db/models/Subscriber';
+import { connectDB } from '@/database/config/connector';
+import Announcement from '@/database/models/Announcement';
+import Group from '@/database/models/Group';
+import { Subscriber } from '@/database/models/Subscriber';
 import webpush from 'web-push';
 import { revalidatePath } from 'next/cache';
 import { sendUpdateToAllClients } from '@/lib/sse';

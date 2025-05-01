@@ -1,6 +1,7 @@
 import mongoose from 'mongoose';
-import Category from '@/db/models/Category';
-import Timeline from '@/db/models/Timeline';
+import Category from '@/database/models/Category';
+import Timeline from '@/database/models/Timeline';
+import { connectDB } from '@/database/config/connector';
 
 export class CategoryService {
   static async deleteCategory(categoryId: string) {

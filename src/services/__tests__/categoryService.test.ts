@@ -1,8 +1,8 @@
 import { describe, it, expect, beforeEach, afterEach } from 'vitest';
 import mongoose from 'mongoose';
 import { CategoryService } from '../categoryService';
-import Category from '@/db/models/Category';
-import Timeline from '@/db/models/Timeline';
+import Category from '@/database/models/Category';
+import Timeline from '@/database/models/Timeline';
 
 describe('CategoryService', () => {
   beforeEach(async () => {

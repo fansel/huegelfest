@@ -28,8 +28,17 @@ export async function POST(request: Request) {
       { status: 200 }
     );
 
+    // Auth Token setzen
     response.cookies.set('auth_token', token, {
       httpOnly: true,
+      secure: process.env.NODE_ENV === 'production',
+      sameSite: 'strict',
+      maxAge: 60 * 60 * 24 // 24 Stunden
+    });
+
+    // isAuthenticated Cookie für Client-Side Checks
+    response.cookies.set('isAuthenticated', 'true', {
+      httpOnly: false,
       secure: process.env.NODE_ENV === 'production',
       sameSite: 'strict',
       maxAge: 60 * 60 * 24 // 24 Stunden

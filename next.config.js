@@ -1,30 +1,12 @@
 /** @type {import('next').NextConfig} */
 
 const nextConfig = {
-  transpilePackages: ['jose'],
+  output: 'standalone',
   images: {
-    remotePatterns: [
-      {
-        protocol: 'https',
-        hostname: 'i1.sndcdn.com',
-      },
-      {
-        protocol: 'https',
-        hostname: 'i2.sndcdn.com',
-      },
-      {
-        protocol: 'https',
-        hostname: 'i3.sndcdn.com',
-      },
-      {
-        protocol: 'https',
-        hostname: 'i4.sndcdn.com',
-      },
-      {
-        protocol: 'https',
-        hostname: 'i.scdn.co',
-      }
-    ],
+    domains: ['localhost'],
+  },
+  experimental: {
+    serverActions: true,
   },
   poweredByHeader: false,
   reactStrictMode: true,

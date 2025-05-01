@@ -3,9 +3,17 @@ import { cookies } from 'next/headers';
 
 export async function POST() {
   try {
-    const cookieStore = await cookies();
+    const cookieStore = cookies();
     cookieStore.delete('auth_token');
-    return NextResponse.json({ success: true });
+    cookieStore.delete('isAuthenticated');
+    
+    const response = NextResponse.json({ success: true });
+    
+    // Cookies auch in der Response löschen
+    response.cookies.delete('auth_token');
+    response.cookies.delete('isAuthenticated');
+    
+    return response;
   } catch (error) {
     console.error('Logout-Fehler:', error);
     return NextResponse.json(

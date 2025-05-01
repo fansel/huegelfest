@@ -1,24 +1,57 @@
 version: '3.8'
+
 services:
   app:
-    build: 
+    build:
       context: .
       dockerfile: Dockerfile
     ports:
-      - "9049:3000"
+      - "3000:3000"
     environment:
-      - MONGODB_URI=mongodb://mongodb:27017/huegelfest
+      - NODE_ENV=production
+      - MONGODB_URI=mongodb://huegeluser:huegeluser123@mongodb:27017/huegelfest
+      - JWT_SECRET=${JWT_SECRET}
+      - NEXT_PUBLIC_SITE_URL=${NEXT_PUBLIC_SITE_URL}
     depends_on:
-      - mongodb
+      mongodb:
+        condition: service_healthy
     restart: unless-stopped
+    networks:
+      - huegelfest-network
+    healthcheck:
+      test: ["CMD", "wget", "--no-verbose", "--tries=1", "--spider", "http://localhost:3000/api/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 40s
 
   mongodb:
     image: mongo:latest
     ports:
       - "27017:27017"
+    command: ["--auth"]
+    environment:
+      - MONGO_INITDB_ROOT_USERNAME=huegeladmin
+      - MONGO_INITDB_ROOT_PASSWORD=huegeladmin123
+      - MONGO_INITDB_DATABASE=huegelfest
     volumes:
       - mongodb_data:/data/db
+      - ./database/mongo-init.js:/docker-entrypoint-initdb.d/mongo-init.js:ro
+      - ./database/init-db.js:/docker-entrypoint-initdb.d/init-db.js:ro
     restart: unless-stopped
+    networks:
+      - huegelfest-network
+    healthcheck:
+      test: echo 'db.runCommand("ping").ok' | mongosh localhost:27017/test --quiet
+      interval: 10s
+      timeout: 10s
+      retries: 5
+      start_period: 40s
 
 volumes:
-  mongodb_data: 
+  mongodb_data:
+    driver: local
+
+networks:
+  huegelfest-network:
+    driver: bridge 

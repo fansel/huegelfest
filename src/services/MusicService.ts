@@ -1,5 +1,5 @@
-import { connectDB } from '@/db/config/connector';
-import Music, { MusicDocument } from '@/db/models/Music';
+import { connectDB } from '@/database/config/connector';
+import Music, { MusicDocument } from '@/database/models/Music';
 import { logger } from '@/lib/logger';
 import scdl from 'soundcloud-downloader';
 import { FaMusic } from 'react-icons/fa';

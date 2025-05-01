@@ -1,7 +1,6 @@
 import { NextResponse } from 'next/server';
-import { connectDB } from '@/db/config/connector';
-import Category from '@/db/models/Category';
-import Timeline from '@/db/models/Timeline';
+import { connectDB } from '@/database/config/connector';
+import Category from '@/database/models/Category';
 import { CategoryService } from '@/services/categoryService';
 
 export async function GET() {

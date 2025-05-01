@@ -1,6 +1,6 @@
 import { NextRequest } from 'next/server';
-import { connectDB } from '@/db/config/connector';
-import Music from '@/db/models/Music';
+import { connectDB } from '@/database/config/connector';
+import Music from '@/database/models/Music';
 import { logger } from '@/lib/logger';
 
 export async function GET(request: NextRequest) {

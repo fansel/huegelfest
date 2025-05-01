@@ -1,6 +1,6 @@
 import { NextResponse } from 'next/server';
-import { connectDB } from '@/db/config/connector';
-import Group from '@/db/models/Group';
+import { connectDB } from '@/database/config/connector';
+import Group from '@/database/models/Group';
 import { GroupColors } from '@/lib/types';
 import { sendUpdateToAllClients } from '@/lib/sse';
 

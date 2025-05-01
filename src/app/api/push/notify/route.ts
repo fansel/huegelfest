@@ -1,7 +1,7 @@
-import { NextResponse } from 'next/server'
+import { NextRequest, NextResponse } from 'next/server'
 import webpush from 'web-push'
-import { connectDB } from '@/db/config/connector'
-import { Subscriber } from '@/db/models/Subscriber'
+import { connectDB } from '@/database/config/connector'
+import { Subscriber } from '@/database/models/Subscriber'
 
 // VAPID-Schlüssel
 const vapidPublicKey = process.env.NEXT_PUBLIC_VAPID_PUBLIC_KEY;

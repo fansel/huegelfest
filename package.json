@@ -3,8 +3,8 @@
   "version": "0.1.0",
   "private": true,
   "scripts": {
-    "dev": "next dev --turbopack --experimental-https",
-    "dev:docker": "next dev --hostname 0.0.0.0",
+    "dev": "next dev --turbopack",
+    "dev:secure": "next dev --turbopack --experimental-https",
     "build": "next build",
     "start": "next start",
     "lint": "next lint",
@@ -12,7 +12,8 @@
     "update-default-categories": "ts-node scripts/update-default-categories.ts",
     "test": "vitest",
     "test:watch": "vitest watch",
-    "test:coverage": "vitest run --coverage"
+    "test:coverage": "vitest run --coverage",
+    "init-db": "node database/init-db.js"
   },
   "dependencies": {
     "@tailwindcss/postcss": "^4.1.4",
@@ -33,7 +34,8 @@
     "react-icons": "^5.0.1",
     "react-player": "^2.16.0",
     "soundcloud-downloader": "^1.0.0",
-    "tailwindcss": "^4.1.4"
+    "tailwindcss": "^4.1.4",
+    "winston": "^3.17.0"
   },
   "devDependencies": {
     "@testing-library/jest-dom": "^6.6.3",

@@ -111,12 +111,8 @@ export default function PWAContainer() {
       }
 
       const data = await response.json();
-      if (data.token) {
-        setIsAuthenticated(true);
-        setCurrentView('admin');
-      } else {
-        throw new Error('Kein Token erhalten');
-      }
+      setIsAuthenticated(true);
+      setCurrentView('admin');
     } catch (error) {
       console.error('Login error:', error);
       throw error;

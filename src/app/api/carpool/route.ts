@@ -1,6 +1,6 @@
 import { NextResponse } from 'next/server';
-import { connectDB } from '@/db/config/connector';
-import { Ride } from '@/db/models/Ride';
+import { connectDB } from '@/database/config/connector';
+import { Ride } from '@/database/models/Ride';
 import { ValidationError } from 'mongoose';
 
 export async function GET() {

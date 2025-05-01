@@ -3,7 +3,7 @@ import mongoose from 'mongoose';
 const MONGODB_URI = process.env.MONGODB_URI;
 
 if (!MONGODB_URI) {
-  throw new Error('Please define the MONGODB_URI environment variable inside .env.local');
+  throw new Error('Bitte definieren Sie MONGODB_URI in der .env Datei');
 }
 
 interface MongooseCache {
@@ -33,10 +33,17 @@ export async function connectDB() {
       minPoolSize: 5,
       socketTimeoutMS: 45000,
       connectTimeoutMS: 10000,
+      maxRetries: 5,
+      retryDelay: 1000,
     };
 
     cached.promise = mongoose.connect(MONGODB_URI!, opts).then((mongoose) => {
+      console.log('MongoDB verbunden');
       return mongoose;
+    }).catch((error) => {
+      console.error('MongoDB Verbindungsfehler:', error);
+      cached.promise = null;
+      throw error;
     });
   }
 
@@ -45,6 +52,7 @@ export async function connectDB() {
     return cached.conn;
   } catch (e) {
     cached.promise = null;
+    console.error('MongoDB Verbindungsfehler:', e);
     throw e;
   }
 }
@@ -54,5 +62,6 @@ export async function disconnectDB() {
     await mongoose.disconnect();
     cached.conn = null;
     cached.promise = null;
+    console.log('MongoDB Verbindung geschlossen');
   }
 } 

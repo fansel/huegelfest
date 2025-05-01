@@ -1,8 +1,8 @@
-import { NextRequest } from 'next/server';
+import { NextRequest, NextResponse } from 'next/server';
 import { MusicService } from '@/services/MusicService';
 import { logger } from '@/lib/logger';
-import { connectDB } from '@/db/config/connector';
-import Music from '@/db/models/Music';
+import { connectDB } from '@/database/config/connector';
+import Music from '@/database/models/Music';
 
 export async function GET(request: NextRequest) {
   try {
