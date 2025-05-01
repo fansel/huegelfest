@@ -5,6 +5,9 @@ import { connectDB } from '../config/connector';
 export async function resetDatabase() {
   try {
     await connectDB();
+    if (!mongoose.connection.db) {
+      throw new Error('Keine Datenbankverbindung verfügbar');
+    }
     const collections = await mongoose.connection.db.collections();
 
     for (const collection of collections) {
