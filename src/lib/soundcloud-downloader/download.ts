@@ -1,6 +1,6 @@
 /** @internal @packageDocumentation */
 
-import { AxiosInstance } from 'axios'
+import { AxiosInstance, AxiosError } from 'axios'
 import m3u8stream from 'm3u8stream'
 import { handleRequestErrs, appendURL } from './util'
 import getInfo, { Transcoding } from './info'
@@ -50,7 +50,10 @@ export const fromURLBase: fromURLFunctionBase = async (url: string, clientID: st
 
     return getHLSStreamFunction(mediaUrl)
   } catch (err) {
-    throw handleRequestErrs(err)
+    if (err instanceof AxiosError) {
+      throw handleRequestErrs(err)
+    }
+    throw new Error('Unbekannter Fehler beim Herunterladen')
   }
 }
 
