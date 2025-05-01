@@ -261,10 +261,7 @@
 }
 
 /* ReactPlayer Styles */
-:global(.react-player) {
+.playerContainer :global(.react-player) {
   display: none !important;
   visibility: hidden !important;
-  opacity: 0 !important;
-  position: absolute !important;
-  pointer-events: none !important;
 } 

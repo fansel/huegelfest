@@ -1,12 +1,12 @@
-FROM node:18-alpine
+FROM node:20-alpine
 
 WORKDIR /app
 
 # Installiere Abhängigkeiten
-COPY package.json package-lock.json ./
-RUN npm ci
+COPY package*.json ./
+RUN npm install
 
-# Kopiere den Rest des Codes
+# Kopiere den Quellcode
 COPY . .
 
 # Setze Umgebungsvariablen
@@ -16,5 +16,5 @@ ENV NEXT_TELEMETRY_DISABLED=1
 # Exponiere den Port
 EXPOSE 3000
 
-# Starte die Anwendung im Entwicklungsmodus
+# Starte den Development-Server mit Host-Binding
 CMD ["npm", "run", "dev", "--", "--hostname", "0.0.0.0"] 

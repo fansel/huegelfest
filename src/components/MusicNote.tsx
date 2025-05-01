@@ -316,34 +316,36 @@ export default function MusicNote({ onClick, onExpandChange }: MusicNoteProps) {
       )}
       {/* ReactPlayer */}
       {track?._id && (
-        <ReactPlayer
-          ref={audioRef}
-          url={`/api/music/stream?id=${track._id}`}
-          playing={isPlaying}
-          controls={false}
-          width="0"
-          height="0"
-          onEnded={() => playRandomTrack()}
-          onError={(e) => {
-            console.error('[MusicNote] ReactPlayer error:', e);
-            console.error('[MusicNote] Track ID:', track?._id);
-            console.error('[MusicNote] Track URL:', track?.url);
-            console.error('[MusicNote] Is Playing:', isPlaying);
-            // Versuche den Track neu zu laden
-            if (track?._id) {
-              playRandomTrack();
-            }
-          }}
-          onReady={() => {
-            console.log('[MusicNote] ReactPlayer ready');
-          }}
-          onBuffer={() => {
-            console.log('[MusicNote] ReactPlayer buffering');
-          }}
-          onBufferEnd={() => {
-            console.log('[MusicNote] ReactPlayer buffer ended');
-          }}
-        />
+        <div className={styles.playerContainer}>
+          <ReactPlayer
+            ref={audioRef}
+            url={`/api/music/stream?id=${track._id}`}
+            playing={isPlaying}
+            controls={false}
+            width="0"
+            height="0"
+            onEnded={() => playRandomTrack()}
+            onError={(e) => {
+              console.error('[MusicNote] ReactPlayer error:', e);
+              console.error('[MusicNote] Track ID:', track?._id);
+              console.error('[MusicNote] Track URL:', track?.url);
+              console.error('[MusicNote] Is Playing:', isPlaying);
+              // Versuche den Track neu zu laden
+              if (track?._id) {
+                playRandomTrack();
+              }
+            }}
+            onReady={() => {
+              console.log('[MusicNote] ReactPlayer ready');
+            }}
+            onBuffer={() => {
+              console.log('[MusicNote] ReactPlayer buffering');
+            }}
+            onBufferEnd={() => {
+              console.log('[MusicNote] ReactPlayer buffer ended');
+            }}
+          />
+        </div>
       )}
     </div>
   );
