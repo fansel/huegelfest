@@ -1,6 +1,6 @@
 import { NextResponse } from 'next/server';
 import { resetDatabase } from '@/database/init/resetDatabase';
-import { initLogger } from '@/database/init/logger';
+import { logger } from '@/database/init/logger';
 
 export async function POST() {
   // Nur im Development-Modus erlauben
@@ -12,11 +12,11 @@ export async function POST() {
   }
 
   try {
-    initLogger.info('Starte Datenbank-Reset über API...');
+    logger.info('Starte Datenbank-Reset über API...');
     await resetDatabase();
     return NextResponse.json({ success: true });
   } catch (error) {
-    initLogger.error('Fehler beim Datenbank-Reset über API:', error);
+    logger.error('Fehler beim Datenbank-Reset über API:', error);
     return NextResponse.json(
       { error: 'Fehler beim Zurücksetzen der Datenbank' },
       { status: 500 }
