@@ -22,8 +22,9 @@ export const getExistingGroups = (announcements: Announcement[]): string[] => {
   return Array.from(groups);
 };
 
-export const generateNewId = (announcements: Announcement[]): number => {
-  return Math.max(...announcements.map(a => a.id), 0) + 1;
+export const generateNewId = (announcements: Announcement[]): string => {
+  const maxId = Math.max(...announcements.map(a => parseInt(a.id, 10)), 0);
+  return String(maxId + 1);
 };
 
 export const formatDateForInput = (date: Date): string => {
