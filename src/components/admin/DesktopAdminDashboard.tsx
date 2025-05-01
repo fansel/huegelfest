@@ -170,7 +170,7 @@ export default function DesktopAdminDashboard({
               <GroupColorManager onSaveGroupColors={onSaveGroupColors} />
             )}
             {activeTab === 'music' && (
-              <MusicManager musicUrls={musicUrls} onSave={onSaveMusicUrls} />
+              <MusicManager />
             )}
             {activeTab === 'timeline' && (
               <TimelineManager />
