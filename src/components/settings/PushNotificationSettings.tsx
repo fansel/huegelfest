@@ -5,16 +5,12 @@ import { useState, useEffect } from 'react';
 // VAPID-Schlüssel als Konstanten
 const VAPID_PUBLIC_KEY = process.env.NEXT_PUBLIC_VAPID_PUBLIC_KEY;
 
-if (!VAPID_PUBLIC_KEY) {
-  throw new Error('VAPID Public Key fehlt in den Umgebungsvariablen');
-}
-
 export default function PushNotificationSettings() {
   const [isSupported, setIsSupported] = useState(false);
   const [permission, setPermission] = useState<NotificationPermission>('default');
   const [subscription, setSubscription] = useState<PushSubscription | null>(null);
   const [isEnabled, setIsEnabled] = useState(false);
-  const [isLoading, setIsLoading] = useState(false);
+  const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [showDebug, setShowDebug] = useState(false);
   const [debugInfo, setDebugInfo] = useState<{
@@ -32,6 +28,12 @@ export default function PushNotificationSettings() {
   });
 
   useEffect(() => {
+    if (!VAPID_PUBLIC_KEY) {
+      console.warn('VAPID Public Key fehlt in den Umgebungsvariablen');
+      setIsLoading(false);
+      return;
+    }
+
     const checkSupport = async () => {
       const notificationsSupported = 'Notification' in window;
       const serviceWorkerSupported = 'serviceWorker' in navigator;
@@ -140,6 +142,16 @@ export default function PushNotificationSettings() {
       setIsLoading(false);
     }
   };
+
+  if (!VAPID_PUBLIC_KEY) {
+    return (
+      <div className="p-4 bg-yellow-50 border border-yellow-200 rounded-lg">
+        <p className="text-yellow-700">
+          Push-Benachrichtigungen sind derzeit nicht verfügbar. Bitte kontaktieren Sie den Administrator.
+        </p>
+      </div>
+    );
+  }
 
   return (
     <div className="p-4 sm:p-6">
