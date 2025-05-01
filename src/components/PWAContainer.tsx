@@ -1,25 +1,23 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Calendar, MapPin, Megaphone, Settings as SettingsIcon, Heart, Shield } from 'lucide-react';
 import Timeline from './Timeline';
 import InfoBoard from './InfoBoard';
 import Anreise from '../app/anreise/page';
 import Admin from '../app/admin/page';
-import Login from './Login';
 import Starfield from './Starfield';
 import PushNotificationSettings from './PushNotificationSettings';
 import Settings from './settings/Settings';
 import MusicNote from './MusicNote';
 import Image from 'next/image';
+import { useAuth } from '@/contexts/AuthContext';
 
 type View = 'home' | 'anreise' | 'infoboard' | 'settings' | 'admin' | 'favorites';
 
 export default function PWAContainer() {
   const [currentView, setCurrentView] = useState<View>('home');
   const [isPWA, setIsPWA] = useState(false);
-  const [isAuthenticated, setIsAuthenticated] = useState(false);
-  const [loginError, setLoginError] = useState('');
   const [showAdmin, setShowAdmin] = useState(false);
   const [isNavVisible, setIsNavVisible] = useState(true);
   const [touchStart, setTouchStart] = useState(0);
@@ -31,6 +29,7 @@ export default function PWAContainer() {
   const [isMusicPlaying, setIsMusicPlaying] = useState(false);
   const [isMusicExpanded, setIsMusicExpanded] = useState(false);
   const [lastScrollY, setLastScrollY] = useState(0);
+  const { isAuthenticated } = useAuth();
 
   useEffect(() => {
     const mediaQuery = window.matchMedia('(display-mode: standalone)');
@@ -49,11 +48,9 @@ export default function PWAContainer() {
           const registration = await navigator.serviceWorker.register('/sw.js');
           await navigator.serviceWorker.ready;
           
-          // Prüfe ob der Service Worker aktiv ist
           if (registration.active) {
             setPushSupported(true);
             
-            // Prüfe ob wir bereits nach Push gefragt haben
             const cookies = document.cookie.split(';');
             const hasAskedForPush = cookies.some(cookie => 
               cookie.trim().startsWith('pushAsked=') && 
@@ -61,7 +58,6 @@ export default function PWAContainer() {
             );
 
             if (!hasAskedForPush) {
-              // Zeige Dialog nach kurzer Verzögerung
               setTimeout(() => {
                 setShowPushDialog(true);
               }, 2000);
@@ -80,37 +76,29 @@ export default function PWAContainer() {
     };
   }, []);
 
-  useEffect(() => {
-    // Prüfe den Authentifizierungsstatus
-    const checkAuth = () => {
-      const cookies = document.cookie.split(';');
-      const auth = cookies.some(cookie => 
-        cookie.trim().startsWith('isAuthenticated=') && 
-        cookie.trim().split('=')[1] === 'true'
-      );
-      setIsAuthenticated(auth);
-    };
+  const handleTouchStart = (e: React.TouchEvent) => {
+    setTouchStart(e.touches[0].clientY);
+  };
 
-    checkAuth();
-  }, []);
+  const handleTouchMove = (e: React.TouchEvent) => {
+    const touchEnd = e.touches[0].clientY;
+    const diff = touchStart - touchEnd;
 
-  const handleLogin = (password: string) => {
-    if (password === 'admin') {
-      document.cookie = 'isAuthenticated=true; path=/; SameSite=Lax; max-age=31536000'; // 1 Jahr
-      setIsAuthenticated(true);
-      setLoginError('');
-      setShowAdmin(true);
-    } else {
-      setLoginError('Falsches Passwort');
-      setShowAdmin(false);
+    if (diff > 50) {
+      setIsNavVisible(false);
+    } else if (diff < -50) {
+      setIsNavVisible(true);
     }
   };
 
-  const handleLogout = () => {
-    document.cookie = 'isAuthenticated=; path=/; expires=Thu, 01 Jan 1970 00:00:00 GMT';
-    setIsAuthenticated(false);
-    setShowAdmin(false);
-    setCurrentView('home');
+  const toggleStarfield = () => {
+    const newValue = !showStarfield;
+    setShowStarfield(newValue);
+    document.cookie = `showStarfield=${newValue}; path=/; max-age=31536000`;
+  };
+
+  const toggleAdmin = (value: boolean) => {
+    setShowAdmin(value);
   };
 
   // Basis-Navigation
@@ -124,65 +112,6 @@ export default function PWAContainer() {
 
   // Admin-Navigation nur hinzufügen, wenn authentifiziert
   const navItems = isAuthenticated ? [...baseNavItems, { id: 'admin', icon: Shield, label: 'Admin' }] : baseNavItems;
-
-  const handleTouchStart = (e: React.TouchEvent) => {
-    setTouchStart(e.touches[0].clientY);
-  };
-
-  const handleTouchMove = (e: React.TouchEvent) => {
-    const touchEnd = e.touches[0].clientY;
-    const diff = touchStart - touchEnd;
-
-    if (diff > 50) { // Nach oben wischen
-      setIsNavVisible(false);
-    } else if (diff < -50) { // Nach unten wischen
-      setIsNavVisible(true);
-    }
-  };
-
-  const toggleStarfield = () => {
-    const newValue = !showStarfield;
-    setShowStarfield(newValue);
-    document.cookie = `showStarfield=${newValue}; path=/; max-age=31536000`; // 1 Jahr
-  };
-
-  const toggleAdmin = () => {
-    const newValue = !showAdmin;
-    setShowAdmin(newValue);
-    
-    if (!newValue) {
-      document.cookie = 'isAuthenticated=; path=/; expires=Thu, 01 Jan 1970 00:00:00 GMT';
-      setIsAuthenticated(false);
-    }
-  };
-
-  const toggleMusic = () => {
-    setIsMusicActive(!isMusicActive);
-  };
-
-  const toggleMusicVisibility = () => {
-    setIsMusicVisible(!isMusicVisible);
-  };
-
-  useEffect(() => {
-    const handleScroll = () => {
-      const currentScrollY = window.scrollY;
-      
-      // Wenn wir mehr als 50px nach unten gescrollt sind, blenden wir die Leiste aus
-      if (currentScrollY > lastScrollY && currentScrollY > 50) {
-        setIsNavVisible(false);
-      } 
-      // Wenn wir nach oben scrollen oder nah am Anfang sind, blenden wir die Leiste ein
-      else if (currentScrollY < lastScrollY || currentScrollY < 50) {
-        setIsNavVisible(true);
-      }
-      
-      setLastScrollY(currentScrollY);
-    };
-
-    window.addEventListener('scroll', handleScroll, { passive: true });
-    return () => window.removeEventListener('scroll', handleScroll);
-  }, [lastScrollY]);
 
   const renderContent = () => {
     switch (currentView) {
@@ -218,22 +147,14 @@ export default function PWAContainer() {
               onToggleStarfield={toggleStarfield}
               showAdmin={showAdmin}
               onToggleAdmin={toggleAdmin}
-              isAuthenticated={isAuthenticated}
-              onLogout={handleLogout}
-              onLogin={handleLogin}
-              loginError={loginError}
               onNavigateToAdmin={() => setCurrentView('admin')}
             />
           </div>
         );
       case 'admin':
-        return isAuthenticated ? (
+        return (
           <div className="flex flex-col items-center justify-start px-2 sm:px-6 py-0 sm:py-4 text-center">
             <Admin />
-          </div>
-        ) : (
-          <div className="flex flex-col items-center justify-start px-2 sm:px-6 py-0 sm:py-4 text-center">
-            <Login onLogin={handleLogin} error={loginError} />
           </div>
         );
       default:
@@ -241,10 +162,12 @@ export default function PWAContainer() {
     }
   };
 
-  if (!isPWA) return null;
-
   return (
-    <div className="relative min-h-screen bg-[#460b6c] text-[#ff9900] flex flex-col">
+    <div 
+      className="min-h-screen flex flex-col bg-[#460b6c] text-white"
+      onTouchStart={handleTouchStart}
+      onTouchMove={handleTouchMove}
+    >
       {showStarfield && <Starfield />}
       <div className="flex flex-col items-center justify-center gap-2 pt-4">
         <div className={`flex items-center justify-center w-full transition-all duration-300 transform ${isMusicExpanded ? 'opacity-0 scale-95 -translate-y-4' : 'opacity-100 scale-100 translate-y-0'}`}>
@@ -261,13 +184,14 @@ export default function PWAContainer() {
             onExpandChange={setIsMusicExpanded}
           />
           <button
-            onClick={toggleMusicVisibility}
+            onClick={() => setIsMusicVisible(!isMusicVisible)}
             className="p-2 text-[#460b6c] hover:text-[#ff9900] transition-colors"
           >
             {isMusicVisible ? 'Musik ausblenden' : 'Musik einblenden'}
           </button>
         </div>
       </div>
+
       {showPushDialog && (
         <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
           <div className="bg-[#460b6c] border border-[#ff9900]/20 rounded-lg p-6 max-w-sm w-full">
@@ -281,8 +205,7 @@ export default function PWAContainer() {
                   setShowPushDialog(false);
                   try {
                     const permission = await Notification.requestPermission();
-                    // Speichere in Cookie, dass wir gefragt haben
-                    document.cookie = 'pushAsked=true; path=/; SameSite=Lax; max-age=31536000'; // 1 Jahr
+                    document.cookie = 'pushAsked=true; path=/; SameSite=Lax; max-age=31536000';
                     
                     if (permission === 'granted') {
                       const registration = await navigator.serviceWorker.ready;
@@ -291,7 +214,6 @@ export default function PWAContainer() {
                         applicationServerKey: process.env.NEXT_PUBLIC_VAPID_PUBLIC_KEY
                       });
 
-                      // Subscription an Server senden
                       await fetch('/api/push/subscribe', {
                         method: 'POST',
                         headers: {
@@ -313,8 +235,7 @@ export default function PWAContainer() {
               <button
                 onClick={() => {
                   setShowPushDialog(false);
-                  // Speichere in Cookie, dass wir gefragt haben
-                  document.cookie = 'pushAsked=true; path=/; SameSite=Lax; max-age=31536000'; // 1 Jahr
+                  document.cookie = 'pushAsked=true; path=/; SameSite=Lax; max-age=31536000';
                 }}
                 className="flex-1 border border-[#ff9900] text-[#ff9900] py-2 px-4 rounded-lg font-medium hover:bg-[#ff9900]/10 transition-colors"
               >
@@ -324,6 +245,7 @@ export default function PWAContainer() {
           </div>
         </div>
       )}
+
       <main className="flex-1 pb-20">
         {renderContent()}
       </main>

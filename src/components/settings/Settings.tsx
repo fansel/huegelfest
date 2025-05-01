@@ -1,19 +1,16 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import React from 'react';
 import PushNotificationSettings from './PushNotificationSettings';
 import StarfieldSettings from './StarfieldSettings';
 import AdminSettings from './AdminSettings';
+import { useAuth } from '@/contexts/AuthContext';
 
 interface SettingsProps {
   showStarfield: boolean;
   onToggleStarfield: (value: boolean) => void;
   showAdmin: boolean;
   onToggleAdmin: (value: boolean) => void;
-  isAuthenticated: boolean;
-  onLogout: () => void;
-  onLogin: (password: string) => void;
-  loginError: string;
   onNavigateToAdmin: () => void;
 }
 
@@ -22,12 +19,10 @@ export default function Settings({
   onToggleStarfield,
   showAdmin,
   onToggleAdmin,
-  isAuthenticated,
-  onLogout,
-  onLogin,
-  loginError,
   onNavigateToAdmin
 }: SettingsProps) {
+  const { isAuthenticated } = useAuth();
+
   return (
     <div className="bg-[#460b6c]/30 rounded-lg overflow-hidden">
       {/* Header */}
@@ -43,10 +38,6 @@ export default function Settings({
         <AdminSettings 
           showAdmin={showAdmin} 
           onToggle={onToggleAdmin}
-          isAuthenticated={isAuthenticated}
-          onLogout={onLogout}
-          onLogin={onLogin}
-          loginError={loginError}
           onNavigateToAdmin={onNavigateToAdmin}
         />
       </div>

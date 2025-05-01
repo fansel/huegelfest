@@ -1,7 +1,8 @@
 import { Announcement, GroupColors, TimelineData } from './types';
 
-const ADMIN_USERNAME = 'admin';
-const ADMIN_PASSWORD = 'huegelfest';
+// Umgebungsvariablen über die Next.js Runtime-Konfiguration
+const ADMIN_USERNAME = process.env.NEXT_PUBLIC_ADMIN_USERNAME;
+const ADMIN_PASSWORD = process.env.NEXT_PUBLIC_ADMIN_PASSWORD;
 
 // Funktion zum Generieren einer zufälligen Farbe
 const generateRandomColor = (): string => {
@@ -13,9 +14,9 @@ const generateRandomColor = (): string => {
   return color;
 };
 
-export const validateCredentials = (username: string, password: string): boolean => {
+export async function verifyAdminCredentials(username: string, password: string): Promise<boolean> {
   return username === ADMIN_USERNAME && password === ADMIN_PASSWORD;
-};
+}
 
 export const getExistingGroups = (announcements: Announcement[]): string[] => {
   const groups = new Set(announcements.map(announcement => announcement.group));
