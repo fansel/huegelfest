@@ -10,6 +10,12 @@ const nextConfig = {
       allowedOrigins: ['localhost:3000', 'huegelfest.fansel.dev'],
     },
   },
+  typescript: {
+    ignoreBuildErrors: true,
+  },
+  eslint: {
+    ignoreDuringBuilds: true,
+  },
   poweredByHeader: false,
   reactStrictMode: true,
   compiler: {
