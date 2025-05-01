@@ -11,6 +11,9 @@ const AnnouncementForm = memo(({ onSubmit, initialData, groups }: AnnouncementFo
   const [content, setContent] = useState(initialData?.content || '');
   const [group, setGroup] = useState(initialData?.group || Object.keys(groups).find(g => g !== 'default') || '');
   const [important, setImportant] = useState(initialData?.important || false);
+  const [author, setAuthor] = useState(initialData?.author || '');
+  const [groupColor, setGroupColor] = useState(initialData?.groupColor || '');
+  const [title, setTitle] = useState(initialData?.title || '');
 
   // Aktualisiere die Felder, wenn sich initialData ändert
   useEffect(() => {
@@ -18,6 +21,9 @@ const AnnouncementForm = memo(({ onSubmit, initialData, groups }: AnnouncementFo
       setContent(initialData.content);
       setGroup(initialData.group);
       setImportant(initialData.important);
+      setAuthor(initialData.author || '');
+      setGroupColor(initialData.groupColor || '');
+      setTitle(initialData.title || '');
     }
   }, [initialData]);
 
@@ -37,14 +43,20 @@ const AnnouncementForm = memo(({ onSubmit, initialData, groups }: AnnouncementFo
 
     const now = new Date();
     const newAnnouncement: Announcement = {
+      _id: initialData?._id || '',
       id: initialData?.id || String(Date.now()),
       content: content.trim(),
       date: now.toISOString().split('T')[0],
       time: now.toTimeString().slice(0, 5),
-      author: group,
-      group,
-      important,
-      reactions: initialData?.reactions || {}
+      author: author.trim(),
+      group: group,
+      groupColor: groupColor,
+      important: important,
+      title: title.trim(),
+      timestamp: now,
+      createdAt: now,
+      updatedAt: now,
+      reactions: {}
     };
 
     onSubmit(newAnnouncement);
@@ -54,8 +66,11 @@ const AnnouncementForm = memo(({ onSubmit, initialData, groups }: AnnouncementFo
       setContent('');
       setGroup(Object.keys(groups).find(g => g !== 'default') || '');
       setImportant(false);
+      setAuthor('');
+      setGroupColor('');
+      setTitle('');
     }
-  }, [content, group, important, initialData, onSubmit, groups]);
+  }, [content, group, important, initialData, onSubmit, groups, author, groupColor, title]);
 
   const handleContentChange = useCallback((e: React.ChangeEvent<HTMLTextAreaElement>) => {
     setContent(e.target.value);
@@ -67,6 +82,18 @@ const AnnouncementForm = memo(({ onSubmit, initialData, groups }: AnnouncementFo
 
   const handleImportantChange = useCallback((e: React.ChangeEvent<HTMLInputElement>) => {
     setImportant(e.target.checked);
+  }, []);
+
+  const handleAuthorChange = useCallback((e: React.ChangeEvent<HTMLInputElement>) => {
+    setAuthor(e.target.value);
+  }, []);
+
+  const handleGroupColorChange = useCallback((e: React.ChangeEvent<HTMLInputElement>) => {
+    setGroupColor(e.target.value);
+  }, []);
+
+  const handleTitleChange = useCallback((e: React.ChangeEvent<HTMLInputElement>) => {
+    setTitle(e.target.value);
   }, []);
 
   return (
@@ -115,6 +142,39 @@ const AnnouncementForm = memo(({ onSubmit, initialData, groups }: AnnouncementFo
           <label htmlFor="important" className="ml-2 block text-sm text-gray-700">
             Wichtig
           </label>
+        </div>
+
+        <div>
+          <label className="block text-sm font-medium text-gray-700 mb-1">Autor</label>
+          <input
+            type="text"
+            value={author}
+            onChange={handleAuthorChange}
+            className="mt-1 block w-full rounded-md bg-white border border-gray-300 text-gray-700 placeholder-gray-400 shadow-sm focus:border-[#ff9900] focus:ring-[#ff9900] py-2 px-3"
+            required
+          />
+        </div>
+
+        <div>
+          <label className="block text-sm font-medium text-gray-700 mb-1">Gruppenfarbe</label>
+          <input
+            type="color"
+            value={groupColor}
+            onChange={handleGroupColorChange}
+            className="mt-1 block w-full rounded-md bg-white border border-gray-300 text-gray-700 shadow-sm focus:border-[#ff9900] focus:ring-[#ff9900] py-2 px-3"
+            required
+          />
+        </div>
+
+        <div>
+          <label className="block text-sm font-medium text-gray-700 mb-1">Titel</label>
+          <input
+            type="text"
+            value={title}
+            onChange={handleTitleChange}
+            className="mt-1 block w-full rounded-md bg-white border border-gray-300 text-gray-700 placeholder-gray-400 shadow-sm focus:border-[#ff9900] focus:ring-[#ff9900] py-2 px-3"
+            required
+          />
         </div>
 
         <button
