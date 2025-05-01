@@ -1,18 +1,19 @@
 import { Transcoding } from './info'
-import FORMATS from './formats'
-import STREAMING_PROTOCOLS from './protocols'
+
+export type FORMATS = 'mp3' | 'opus'
+export type STREAMING_PROTOCOLS = 'hls' | 'progressive'
 
 export interface FilterPredicateObject {
-  protocol?: STREAMING_PROTOCOLS,
   format?: FORMATS
+  protocol?: STREAMING_PROTOCOLS
 }
 
 /** @internal */
 const filterMedia = (media: Transcoding[], predicateObj: FilterPredicateObject): Transcoding[] => {
-  return media.filter(({ format }) => {
-    let match = false
-    if (predicateObj.protocol) match = format.protocol === predicateObj.protocol
-    if (predicateObj.format) match = format.mime_type === predicateObj.format
+  return media.filter(m => {
+    let match = true
+    if (predicateObj.format) match = match && m.format.mime_type.includes(predicateObj.format)
+    if (predicateObj.protocol) match = match && m.format.protocol === predicateObj.protocol
     return match
   })
 }
