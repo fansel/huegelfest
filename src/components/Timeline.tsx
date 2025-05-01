@@ -33,6 +33,7 @@ interface TimelineProps {
 }
 
 interface Category {
+  _id: string;
   value: string;
   label: string;
   icon: string;
@@ -211,7 +212,7 @@ export default function Timeline({ showFavoritesOnly = false }: TimelineProps) {
               </button>
               {categories.map((category) => (
                 <button
-                  key={category.value}
+                  key={category._id}
                   onClick={() => toggleCategory(category._id)}
                   className={`flex-shrink-0 p-2.5 rounded-full transition-colors duration-200 ${
                     selectedCategories.has(category._id)

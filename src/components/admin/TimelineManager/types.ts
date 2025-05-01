@@ -1,5 +1,5 @@
 export interface Category {
-  _id?: string;
+  _id: string;
   value: string;
   label: string;
   icon: string;
@@ -7,7 +7,7 @@ export interface Category {
 }
 
 export interface DeletingCategory {
-  value: string;
+  _id: string;
   eventCount: number;
 }
 
@@ -15,17 +15,22 @@ export interface Event {
   time: string;
   title: string;
   description: string;
-  category: string;
+  categoryId: string;
   favorite?: boolean;
 }
 
 export interface Day {
+  _id: string;
   title: string;
   description: string;
-  date?: Date;
+  date: Date;
   events: Event[];
+  formattedDate?: string;
 }
 
 export interface TimelineData {
+  _id: string;
   days: Day[];
+  createdAt?: Date;
+  updatedAt?: Date;
 } 

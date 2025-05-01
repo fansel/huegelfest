@@ -61,7 +61,7 @@ export interface Day {
   _id: string;
   title: string;
   description: string;
-  date?: Date;
+  date: Date;
   events: Event[];
   formattedDate?: string;
 }

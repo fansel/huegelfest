@@ -5,17 +5,22 @@ import Timeline from '@/database/models/Timeline';
 // Hilfsfunktion zum Bereinigen der Daten
 function cleanTimelineData(data: any) {
   const cleanedData = {
+    _id: data._id || '',
     days: data.days.map((day: any) => ({
+      _id: day._id || '',
       title: day.title,
       description: day.description,
       date: day.date,
       events: day.events.map((event: any) => ({
+        _id: event._id || '',
         time: event.time,
         title: event.title,
         description: event.description,
         categoryId: event.categoryId || 'other'
       }))
-    }))
+    })),
+    createdAt: data.createdAt || new Date(),
+    updatedAt: data.updatedAt || new Date()
   };
   return cleanedData;
 }
@@ -26,7 +31,12 @@ export async function GET() {
     const timeline = await Timeline.findOne().sort({ createdAt: -1 });
     
     if (!timeline) {
-      return NextResponse.json({ days: [] });
+      return NextResponse.json({
+        _id: '',
+        days: [],
+        createdAt: new Date(),
+        updatedAt: new Date()
+      });
     }
     
     return NextResponse.json(timeline);

@@ -186,7 +186,7 @@ export const loadTimeline = async (): Promise<TimelineData> => {
     return await response.json();
   } catch (error) {
     console.error('Fehler beim Laden der Timeline:', error);
-    return { days: [] };
+    return { _id: '', days: [], createdAt: new Date(), updatedAt: new Date() };
   }
 };
 
