@@ -16,6 +16,7 @@ export default function CategoryModal({
   onLoadCategories
 }: CategoryModalProps) {
   const [newCategory, setNewCategory] = useState<Category>({
+    _id: '',
     value: '',
     label: '',
     icon: 'FaQuestion',
