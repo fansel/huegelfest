@@ -156,7 +156,7 @@ export default function MobileAdminDashboard({
             <GroupColorManager onSaveGroupColors={onSaveGroupColors} />
           )}
           {activeTab === 'music' && (
-            <MusicManager musicUrls={musicUrls} onSave={handleSaveMusic} />
+            <MusicManager />
           )}
           {activeTab === 'timeline' && (
             <TimelineManager />
