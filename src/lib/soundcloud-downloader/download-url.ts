@@ -1,6 +1,6 @@
 /** @internal @packageDocumentation */
 
-import { AxiosInstance } from 'axios'
+import { AxiosInstance, AxiosError } from 'axios'
 import m3u8stream from 'm3u8stream'
 import { handleRequestErrs, appendURL } from './util'
 
@@ -27,7 +27,10 @@ const fromURL = async (url: string, clientID: string, axiosInstance: AxiosInstan
 
     return m3u8stream(res.data.url)
   } catch (err) {
-    throw handleRequestErrs(err)
+    if (err instanceof AxiosError) {
+      throw handleRequestErrs(err)
+    }
+    throw new Error('Unbekannter Fehler beim Herunterladen der URL')
   }
 }
 
