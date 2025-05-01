@@ -6,7 +6,9 @@ const nextConfig = {
     domains: ['localhost'],
   },
   experimental: {
-    serverActions: true,
+    serverActions: {
+      allowedOrigins: ['localhost:3000', 'huegelfest.fansel.dev'],
+    },
   },
   poweredByHeader: false,
   reactStrictMode: true,
