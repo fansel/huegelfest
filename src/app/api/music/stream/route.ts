@@ -8,7 +8,10 @@ export async function GET(request: NextRequest) {
     const { searchParams } = new URL(request.url);
     const id = searchParams.get('id');
     
+    logger.info('[API] GET /api/music/stream - Anfrage für ID:', id);
+    
     if (!id) {
+      logger.error('[API] GET /api/music/stream - Keine ID angegeben');
       return Response.json({ 
         error: 'ID ist erforderlich',
         details: 'Bitte geben Sie eine gültige Track-ID an'
@@ -26,6 +29,14 @@ export async function GET(request: NextRequest) {
       }, { status: 404 });
     }
 
+    logger.debug('[API] GET /api/music/stream - Gefundene Musik:', {
+      id: music._id,
+      url: music.url,
+      hasAudioData: !!music.audioData,
+      audioDataLength: music.audioData?.length,
+      mimeType: music.mimeType
+    });
+
     if (!music.audioData) {
       logger.error('[API] GET /api/music/stream - Keine Audio-Daten gefunden für ID:', id);
       return Response.json({ 
@@ -37,13 +48,19 @@ export async function GET(request: NextRequest) {
     // Erstelle einen ReadableStream aus dem Buffer
     const stream = new ReadableStream({
       start(controller) {
-        controller.enqueue(music.audioData);
-        controller.close();
+        try {
+          controller.enqueue(music.audioData);
+          controller.close();
+          logger.info('[API] GET /api/music/stream - Stream erfolgreich erstellt');
+        } catch (error) {
+          logger.error('[API] GET /api/music/stream - Fehler beim Erstellen des Streams:', error);
+          controller.error(error);
+        }
       }
     });
 
     // Sende den Stream mit den korrekten Headers
-    return new Response(stream, {
+    const response = new Response(stream, {
       headers: {
         'Content-Type': music.mimeType || 'audio/mpeg',
         'Content-Length': music.audioData.length.toString(),
@@ -51,6 +68,9 @@ export async function GET(request: NextRequest) {
         'Cache-Control': 'public, max-age=31536000'
       }
     });
+
+    logger.info('[API] GET /api/music/stream - Antwort gesendet');
+    return response;
   } catch (error) {
     logger.error('[API] GET /api/music/stream - Fehler:', error);
     return Response.json({ 

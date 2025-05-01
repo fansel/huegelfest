@@ -28,6 +28,7 @@ interface MusicNoteProps {
 }
 
 export default function MusicNote({ onClick, onExpandChange }: MusicNoteProps) {
+  const [mounted, setMounted] = useState(false);
   const [track, setTrack] = useState<Track | null>(null);
   const [isPlaying, setIsPlaying] = useState(false);
   const [isExpanded, setIsExpanded] = useState(false);
@@ -41,7 +42,14 @@ export default function MusicNote({ onClick, onExpandChange }: MusicNoteProps) {
   const artistRef = useRef<HTMLDivElement>(null);
   const audioRef = useRef<ReactPlayer>(null);
 
+  // Setze mounted auf true, wenn die Komponente auf dem Client gemountet ist
   useEffect(() => {
+    setMounted(true);
+  }, []);
+
+  useEffect(() => {
+    if (!mounted) return; // Nur ausführen, wenn die Komponente gemountet ist
+
     const hasSeenTooltip = localStorage.getItem('hasSeenMusicTooltip');
     if (!hasSeenTooltip) {
       setShowTooltip(true);
@@ -50,9 +58,11 @@ export default function MusicNote({ onClick, onExpandChange }: MusicNoteProps) {
         setShowTooltip(false);
       }, 3000);
     }
-  }, []);
+  }, [mounted]);
 
   useEffect(() => {
+    if (!mounted) return; // Nur ausführen, wenn die Komponente gemountet ist
+
     console.log('[MusicNote] Starte Track-Ladung');
     fetch('/api/music')
       .then(res => {
@@ -97,7 +107,7 @@ export default function MusicNote({ onClick, onExpandChange }: MusicNoteProps) {
         console.error('[MusicNote] API Fehler:', e);
         console.error('[MusicNote] Fehler-Stack:', e.stack);
       });
-  }, []);
+  }, [mounted]);
 
   useEffect(() => {
     if (track && 'mediaSession' in navigator) {
@@ -220,6 +230,11 @@ export default function MusicNote({ onClick, onExpandChange }: MusicNoteProps) {
     onClick();
   };
 
+  // Wenn die Komponente noch nicht gemountet ist, zeige einen leeren Container
+  if (!mounted) {
+    return <div className={styles.musicNote} />;
+  }
+
   return (
     <div
       className={`${styles.musicNote} ${isExpanded ? styles.expanded : ''} ${showTooltip ? styles.showTooltip : ''}`}
@@ -297,18 +312,38 @@ export default function MusicNote({ onClick, onExpandChange }: MusicNoteProps) {
               <FaDice size={24} />
             </div>
           </div>
-          {/* ReactPlayer */}
-          <ReactPlayer
-            ref={audioRef}
-            url={`/api/music/stream?id=${track?._id}`}
-            playing={isPlaying}
-            controls={false}
-            width="0"
-            height="0"
-            onEnded={() => playRandomTrack()}
-            onError={(e) => console.error('[MusicNote] ReactPlayer error:', e)}
-          />
         </>
+      )}
+      {/* ReactPlayer */}
+      {track?._id && (
+        <ReactPlayer
+          ref={audioRef}
+          url={`/api/music/stream?id=${track._id}`}
+          playing={isPlaying}
+          controls={false}
+          width="0"
+          height="0"
+          onEnded={() => playRandomTrack()}
+          onError={(e) => {
+            console.error('[MusicNote] ReactPlayer error:', e);
+            console.error('[MusicNote] Track ID:', track?._id);
+            console.error('[MusicNote] Track URL:', track?.url);
+            console.error('[MusicNote] Is Playing:', isPlaying);
+            // Versuche den Track neu zu laden
+            if (track?._id) {
+              playRandomTrack();
+            }
+          }}
+          onReady={() => {
+            console.log('[MusicNote] ReactPlayer ready');
+          }}
+          onBuffer={() => {
+            console.log('[MusicNote] ReactPlayer buffering');
+          }}
+          onBufferEnd={() => {
+            console.log('[MusicNote] ReactPlayer buffer ended');
+          }}
+        />
       )}
     </div>
   );
