@@ -13,14 +13,26 @@ services:
       - /app/node_modules
     depends_on:
       - mongodb
+    networks:
+      - huegelfest-network
 
   mongodb:
     image: mongo:latest
     env_file:
       - .env
+    environment:
+      - MONGO_INITDB_ROOT_USERNAME=${MONGO_INITDB_ROOT_USERNAME}
+      - MONGO_INITDB_ROOT_PASSWORD=${MONGO_INITDB_ROOT_PASSWORD}
+      - MONGO_INITDB_DATABASE=${MONGO_INITDB_DATABASE}
     volumes:
       - mongodb_data:/data/db
       - ./mongo-init.js:/docker-entrypoint-initdb.d/mongo-init.js:ro
+    networks:
+      - huegelfest-network
+
+networks:
+  huegelfest-network:
+    driver: bridge
 
 volumes:
   mongodb_data:
