@@ -37,7 +37,7 @@ const AnnouncementForm = memo(({ onSubmit, initialData, groups }: AnnouncementFo
 
     const now = new Date();
     const newAnnouncement: Announcement = {
-      id: initialData?.id || Date.now(),
+      id: initialData?.id || String(Date.now()),
       content: content.trim(),
       date: now.toISOString().split('T')[0],
       time: now.toTimeString().slice(0, 5),
