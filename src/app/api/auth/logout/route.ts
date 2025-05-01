@@ -3,13 +3,9 @@ import { cookies } from 'next/headers';
 
 export async function POST() {
   try {
-    const cookieStore = cookies();
-    cookieStore.delete('auth_token');
-    cookieStore.delete('isAuthenticated');
-    
     const response = NextResponse.json({ success: true });
     
-    // Cookies auch in der Response löschen
+    // Cookies in der Response löschen
     response.cookies.delete('auth_token');
     response.cookies.delete('isAuthenticated');
     
