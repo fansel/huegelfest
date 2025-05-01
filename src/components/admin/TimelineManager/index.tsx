@@ -134,6 +134,7 @@ export default function TimelineManager() {
   const handleAddDay = () => {
     const today = new Date();
     const updatedDays = [...timeline.days, { 
+      _id: String(Date.now()),
       title: `Tag ${timeline.days.length + 1}`, 
       description: `Beschreibung für Tag ${timeline.days.length + 1}`,
       date: today,
