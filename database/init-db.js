@@ -1,9 +1,8 @@
-require('dotenv').config({ path: './database/.env.db' });
 const { MongoClient } = require('mongodb');
 const { SHA256 } = require('crypto-js');
 
 async function initializeDatabase() {
-    const rootUri = `mongodb://${process.env.MONGO_ROOT_USERNAME}:${process.env.MONGO_ROOT_PASSWORD}@${process.env.MONGO_HOST}:${process.env.MONGO_PORT}`;
+    const rootUri = `mongodb://${process.env.MONGO_ROOT_USERNAME}:${process.env.MONGO_ROOT_PASSWORD}@mongodb:27017`;
     const client = new MongoClient(rootUri);
 
     try {
