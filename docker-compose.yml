@@ -12,9 +12,10 @@ services:
       - MONGODB_URI=mongodb://huegeluser:huegeluser123@mongodb:27017/huegelfest?authSource=huegelfest&authMechanism=SCRAM-SHA-256
       - JWT_SECRET=m0ZAvEBqbYUajAl8432FvN7fRqqhpewh02z1K5m0BWw=
       - NEXT_PUBLIC_SITE_URL=https://huegelfest.fansel.dev
-      - ONESIGNAL_APP_ID=your-onesignal-app-id
-      - ONESIGNAL_REST_API_KEY=your-onesignal-api-key
-      - SOUNDCLOUD_CLIENT_ID=your-soundcloud-client-id
+      - NEXT_PUBLIC_VAPID_PUBLIC_KEY=BGaY-2eeg8pi2yNRIsLdm4SN4RmHTKdVwaeEdZeUpJSMv9isl12K0TadiH9GDDWo96r7OFFMPdurXoSEiu0nnH4
+      - VAPID_PRIVATE_KEY=19N-DzH4SjTHGvhapCSm3o61V0iGaqJu6zGWvJ5zrsI
+      - NEXT_PUBLIC_ADMIN_PASSWORD=$2b$10$qQTtbrROj30/QeF5qh14wesvA8JSbJgs0OcE0q8E4t7RVMgUfeLry
+      - SOUNDCLOUD_CLIENT_ID=JtwkMxXKQNqDFvsQ3pUayFVgt4j9dS87
       - ADMIN_USERNAME=felix
       - ADMIN_PASSWORD=supergeil
     volumes:
