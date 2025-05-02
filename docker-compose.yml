@@ -6,6 +6,11 @@ services:
       context: .
       dockerfile: Dockerfile
       no_cache: true
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "10m"
+        max-file: "3"
     ports:
       - "9049:3000"
     environment:
