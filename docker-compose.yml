@@ -6,6 +6,7 @@ services:
     build:
       context: .
       dockerfile: Dockerfile
+    image: huegelfest-app:latest
     logging:
       driver: "json-file"
       options:
@@ -26,6 +27,7 @@ services:
       - ADMIN_PASSWORD=supergeil
     volumes:
       - ./database:/app/database:ro
+      - node_modules:/app/node_modules
     depends_on:
       mongodb:
         condition: service_healthy
@@ -38,8 +40,6 @@ services:
       timeout: 10s
       retries: 3
       start_period: 40s
-    command: >
-      sh -c "node /app/database/init-db.js && npm start"
 
   mongodb:
     image: mongo:latest
@@ -67,6 +67,8 @@ services:
 
 volumes:
   mongodb_data:
+    driver: local
+  node_modules:
     driver: local
 
 networks:
