@@ -17,4 +17,5 @@ chown -R fansel:fansel $APP_DIR
 cd $APP_DIR
 docker compose down
 docker rmi app-app
-docker compose up -d --build 
+docker compose build
+docker compose up -d 
