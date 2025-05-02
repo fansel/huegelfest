@@ -21,5 +21,5 @@ COPY --from=builder --chown=node:node /app/node_modules ./node_modules
 
 USER node
 
-CMD ["npm", "start"]
+CMD ["node", ".next/standalone/server.js"]
 
