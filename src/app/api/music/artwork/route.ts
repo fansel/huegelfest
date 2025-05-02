@@ -1,25 +1,62 @@
 import { NextRequest, NextResponse } from 'next/server';
+import { connectDB } from '@/database/config/connector';
+import Music from '@/database/models/Music';
+import { logger } from '@/server/lib/logger';
 
 export async function GET(request: NextRequest) {
-  const url = request.nextUrl.searchParams.get('url');
-  
-  if (!url) {
-    return new NextResponse('Missing URL parameter', { status: 400 });
-  }
-
   try {
-    const response = await fetch(url);
-    const contentType = response.headers.get('content-type');
-    const buffer = await response.arrayBuffer();
+    const { searchParams } = new URL(request.url);
+    const id = searchParams.get('id');
 
+    if (!id) {
+      logger.error('[API] Keine ID angegeben');
+      return NextResponse.json(
+        { error: 'ID ist erforderlich' },
+        { status: 400 }
+      );
+    }
+
+    await connectDB();
+    const music = await Music.findById(id);
+
+    if (!music) {
+      logger.error('[API] Musik nicht gefunden für ID:', id);
+      return NextResponse.json(
+        { error: 'Musik nicht gefunden' },
+        { status: 404 }
+      );
+    }
+
+    if (!music.trackInfo.thumbnail_url) {
+      logger.error('[API] Kein Thumbnail gefunden für ID:', id);
+      return NextResponse.json(
+        { error: 'Kein Thumbnail gefunden' },
+        { status: 404 }
+      );
+    }
+
+    // Lade das Thumbnail von SoundCloud
+    const response = await fetch(music.trackInfo.thumbnail_url);
+    if (!response.ok) {
+      logger.error('[API] Fehler beim Laden des Thumbnails:', response.status);
+      return NextResponse.json(
+        { error: 'Fehler beim Laden des Thumbnails' },
+        { status: 500 }
+      );
+    }
+
+    const buffer = await response.arrayBuffer();
     return new NextResponse(buffer, {
       headers: {
-        'Content-Type': contentType || 'image/jpeg',
-        'Cache-Control': 'public, max-age=31536000',
+        'Content-Type': 'image/jpeg',
+        'Content-Length': buffer.byteLength.toString(),
       },
     });
   } catch (error) {
-    console.error('Error fetching artwork:', error);
-    return new NextResponse('Error fetching artwork', { status: 500 });
+    logger.error('[API] Fehler beim Laden des Thumbnails:', error);
+    return NextResponse.json(
+      { error: error instanceof Error ? error.message : 'Fehler beim Laden des Thumbnails' },
+      { status: 500 }
+    );
   }
-} 
+}
