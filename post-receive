@@ -7,7 +7,7 @@ APP_DIR="$DEPLOY_DIR/app"
 
 # Git-Repository aktualisieren
 cd $REPO_DIR
-git --work-tree=$APP_DIR --git-dir=$REPO_DIR/.git checkout -f
+git --work-tree=$APP_DIR --git-dir=$REPO_DIR checkout -f
 
 # Berechtigungen setzen
 chmod -R 755 $APP_DIR
@@ -15,6 +15,5 @@ chown -R fansel:fansel $APP_DIR
 
 # Container neu starten
 cd $APP_DIR
-docker compose down
-docker build --no-cache -t huegelfest-app .
-docker compose up -d
+chmod +x build.sh
+./build.sh
