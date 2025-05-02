@@ -32,31 +32,21 @@ services:
 
   mongodb:
     image: mongo:latest
-    command: ["--auth"]
+    command: ["--auth", "--bind_ip_all"]
     environment:
       - MONGO_INITDB_ROOT_USERNAME=huegeladmin
       - MONGO_INITDB_ROOT_PASSWORD=huegeladmin123
       - MONGO_INITDB_DATABASE=huegelfest
-      - MONGO_ROOT_USERNAME=huegeladmin
-      - MONGO_ROOT_PASSWORD=huegeladmin123
-      - MONGO_HOST=localhost
-      - MONGO_PORT=27017
-      - MONGO_DB_NAME=huegelfest
-      - HUEGEL_ADMIN_USERNAME=huegeladmin
-      - HUEGEL_ADMIN_PASSWORD=huegeladmin123
-      - HUEGEL_USER_USERNAME=huegeluser
-      - HUEGEL_USER_PASSWORD=huegeluser123
     volumes:
       - mongodb_data:/data/db
       - ./database/init-db.js:/docker-entrypoint-initdb.d/init-db.js:ro
-      - ./database/.env.db:/docker-entrypoint-initdb.d/.env.db:ro
     ports:
       - "27017:27017"
     restart: unless-stopped
     networks:
       - huegelfest-network
     healthcheck:
-      test: echo 'db.runCommand("ping").ok' | mongosh localhost:27017/test --quiet
+      test: mongosh --eval "db.adminCommand('ping')"
       interval: 10s
       timeout: 10s
       retries: 5
