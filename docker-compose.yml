@@ -1,3 +1,4 @@
+# Huegelfest Docker Compose Konfiguration
 version: '3.8'
 
 services:
