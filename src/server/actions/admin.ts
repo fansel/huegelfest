@@ -1,0 +1,164 @@
+'use server';
+
+import { revalidatePath } from 'next/cache';
+import { connectDB } from '../../database/config/connector';
+import { Announcement } from '../../database/models/Announcement';
+import { Group } from '../../database/models/Group';
+import Music from '../../database/models/Music';
+import { Announcement as AnnouncementType } from '../../types/types';
+import { logger } from '../../server/lib/logger';
+import { sendUpdateToAllClients } from '../../server/lib/sse';
+
+export async function saveAnnouncements(announcements: AnnouncementType[]): Promise<void> {
+  try {
+    await connectDB();
+    
+    // Hole alle Gruppen für die Zuordnung
+    const groups = await Group.find().lean();
+    const groupMap = new Map(groups.map(g => [g.name, g._id]));
+    
+    // Logge die erste Ankündigung (normalerweise die neue)
+    if (announcements.length > 0) {
+      logger.info('[Server Action] Neue Ankündigung:', {
+        content: announcements[0].content,
+        group: announcements[0].group,
+        groupId: announcements[0].groupId,
+        groupColor: announcements[0].groupColor
+      });
+    }
+    
+    await Announcement.deleteMany({});
+    await Announcement.insertMany(announcements.map(announcement => ({
+      content: announcement.content,
+      date: announcement.date,
+      time: announcement.time,
+      groupId: groupMap.get(announcement.group) || groups[0]._id, // Fallback auf erste Gruppe
+      important: announcement.important,
+      reactions: announcement.reactions,
+      createdAt: announcement.createdAt,
+      updatedAt: announcement.updatedAt
+    })));
+    revalidatePath('/');
+    await sendUpdateToAllClients();
+    logger.info('[Server Action] Ankündigungen erfolgreich gespeichert');
+  } catch (error) {
+    logger.error('[Server Action] Fehler beim Speichern der Ankündigungen:', error);
+    if (error instanceof Error) {
+      throw new Error(`Fehler beim Speichern der Ankündigungen: ${error.message}`);
+    }
+    throw new Error('Ein unerwarteter Fehler ist beim Speichern der Ankündigungen aufgetreten');
+  }
+}
+
+export async function loadAnnouncements(): Promise<AnnouncementType[]> {
+  try {
+    await connectDB();
+    const announcements = await Announcement.find()
+      .populate('groupId')
+      .sort({ createdAt: -1 })
+      .lean();
+      
+    return announcements.map(announcement => ({
+      id: announcement._id.toString(),
+      content: announcement.content,
+      date: announcement.date || '',
+      time: announcement.time || '',
+      group: announcement.groupId?.name || 'default',
+      groupColor: announcement.groupId?.color || '#ff9900',
+      groupId: announcement.groupId?._id.toString(),
+      important: announcement.important || false,
+      reactions: announcement.reactions || {
+        thumbsUp: { count: 0, deviceReactions: {} },
+        clap: { count: 0, deviceReactions: {} },
+        laugh: { count: 0, deviceReactions: {} },
+        surprised: { count: 0, deviceReactions: {} },
+        heart: { count: 0, deviceReactions: {} }
+      },
+      timestamp: new Date(announcement.createdAt),
+      createdAt: new Date(announcement.createdAt),
+      updatedAt: new Date(announcement.updatedAt)
+    }));
+  } catch (error) {
+    logger.error('[Server Action] Fehler beim Laden der Ankündigungen:', error);
+    if (error instanceof Error) {
+      throw new Error(`Fehler beim Laden der Ankündigungen: ${error.message}`);
+    }
+    throw new Error('Ein unerwarteter Fehler ist beim Laden der Ankündigungen aufgetreten');
+  }
+}
+
+export async function loadGroupColors(): Promise<Record<string, string>> {
+  try {
+    await connectDB();
+    // @ts-ignore
+    const groups = await Group.find().exec();
+    const colors: Record<string, string> = { default: '#460b6c' };
+    groups.forEach((group) => {
+      colors[group.name] = group.color;
+    });
+    return colors;
+  } catch (error) {
+    logger.error('[Server Action] Fehler beim Laden der Gruppenfarben:', error);
+    if (error instanceof Error) {
+      throw new Error(`Fehler beim Laden der Gruppenfarben: ${error.message}`);
+    }
+    throw new Error('Ein unerwarteter Fehler ist beim Laden der Gruppenfarben aufgetreten');
+  }
+}
+
+export async function saveGroupColors(groups: Record<string, string>): Promise<void> {
+  try {
+    await connectDB();
+    await Group.deleteMany({});
+    const groupDocuments = Object.entries(groups).map(([name, color]) => ({
+      name,
+      color,
+      createdAt: new Date(),
+      updatedAt: new Date(),
+    }));
+    await Group.insertMany(groupDocuments);
+    revalidatePath('/');
+    logger.info('[Server Action] Gruppenfarben erfolgreich gespeichert');
+  } catch (error) {
+    logger.error('[Server Action] Fehler beim Speichern der Gruppenfarben:', error);
+    if (error instanceof Error) {
+      throw new Error(`Fehler beim Speichern der Gruppenfarben: ${error.message}`);
+    }
+    throw new Error('Ein unerwarteter Fehler ist beim Speichern der Gruppenfarben aufgetreten');
+  }
+}
+
+export async function loadMusicUrls(): Promise<string[]> {
+  try {
+    await connectDB();
+    const music = await Music.find().select('url').lean();
+    return music.map((m) => m.url);
+  } catch (error) {
+    logger.error('[Server Action] Fehler beim Laden der Musik-URLs:', error);
+    if (error instanceof Error) {
+      throw new Error(`Fehler beim Laden der Musik-URLs: ${error.message}`);
+    }
+    throw new Error('Ein unerwarteter Fehler ist beim Laden der Musik-URLs aufgetreten');
+  }
+}
+
+export async function saveMusicUrls(urls: string[]): Promise<void> {
+  try {
+    await connectDB();
+    await Music.deleteMany({});
+    const musicDocuments = urls.map((url) => ({
+      url,
+      createdAt: new Date(),
+      updatedAt: new Date(),
+    }));
+    await Music.insertMany(musicDocuments);
+    revalidatePath('/');
+    logger.info('[Server Action] Musik-URLs erfolgreich gespeichert');
+  } catch (error) {
+    logger.error('[Server Action] Fehler beim Speichern der Musik-URLs:', error);
+    if (error instanceof Error) {
+      throw new Error(`Fehler beim Speichern der Musik-URLs: ${error.message}`);
+    }
+    throw new Error('Ein unerwarteter Fehler ist beim Speichern der Musik-URLs aufgetreten');
+  }
+} 

@@ -1,29 +1,29 @@
 import mongoose from 'mongoose';
 
 const musicSchema = new mongoose.Schema({
-  url: {
-    type: String,
-    required: true,
+    url: {
+      type: String,
+      required: true,
     unique: true
-  },
-  trackInfo: {
+    },
+    trackInfo: {
     title: String,
     author_name: String,
     thumbnail_url: String,
     author_url: String,
     description: String,
     html: String
-  },
-  audioData: {
-    type: Buffer,
+    },
+    audioData: {
+      type: Buffer,
     required: true
-  },
-  mimeType: {
-    type: String,
-    required: true,
+    },
+    mimeType: {
+      type: String,
+      required: true,
     default: 'audio/mpeg'
-  },
-  soundcloudResponse: {
+    },
+    soundcloudResponse: {
     type: mongoose.Schema.Types.Mixed,
     required: true
   }
@@ -50,4 +50,4 @@ export type MusicDocument = mongoose.Document & {
   updatedAt: Date;
 };
 
-export default Music; 
+export default Music;
