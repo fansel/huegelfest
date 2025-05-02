@@ -52,12 +52,18 @@ export async function verifyToken(token: string) {
 
 export async function validateCredentials(username: string, password: string): Promise<{ isValid: boolean; isAdmin: boolean }> {
   try {
+    console.log('Starte validateCredentials mit:', { username });
+    
     if (!mongoose.connections[0].readyState) {
+      console.log('MongoDB nicht verbunden, versuche zu verbinden...');
       await mongoose.connect(process.env.MONGODB_URI || '');
+      console.log('MongoDB verbunden');
     }
 
     // Benutzer in der Datenbank suchen
+    console.log('Suche Benutzer in der Datenbank...');
     const user = await User.findOne({ username });
+    console.log('Gefundener Benutzer:', user ? 'Ja' : 'Nein');
 
     if (!user) {
       console.log('Benutzer nicht gefunden:', username);
@@ -82,11 +88,13 @@ export async function validateCredentials(username: string, password: string): P
 
     // Passwort-Hash vergleichen
     const isValid = hashedPassword === user.password;
+    console.log('Passwort-Validierung:', { isValid });
 
     if (isValid) {
       // LastLogin aktualisieren
       user.lastLogin = new Date();
       await user.save();
+      console.log('LastLogin aktualisiert');
     }
 
     return { 
