@@ -3,6 +3,9 @@ FROM huegelfest-base:latest
 # Kopiere nur die notwendigen Dateien
 COPY . .
 
+# Baue die App
+RUN npm run build
+
 # Setze Berechtigungen
 RUN chown -R node:node /app
 
