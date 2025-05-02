@@ -16,5 +16,5 @@ chown -R fansel:fansel $APP_DIR
 # Container neu starten
 cd $APP_DIR
 docker compose down
-docker builder prune -f
+docker rmi app-app
 docker compose up -d --build 
