@@ -62,7 +62,7 @@ export async function validateCredentials(username: string, password: string): P
 
     // Benutzer in der Datenbank suchen
     console.log('Suche Benutzer in der Datenbank...');
-    const user = await User.findOne({ username });
+    const user = await User.findOne({ username }).exec();
     console.log('Gefundener Benutzer:', user ? 'Ja' : 'Nein');
 
     if (!user) {
