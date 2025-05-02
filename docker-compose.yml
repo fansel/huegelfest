@@ -17,6 +17,17 @@ services:
       - SOUNDCLOUD_CLIENT_ID=your-soundcloud-client-id
       - ADMIN_USERNAME=felix
       - ADMIN_PASSWORD=supergeil
+      - MONGO_ROOT_USERNAME=huegeladmin
+      - MONGO_ROOT_PASSWORD=huegeladmin123
+      - MONGO_HOST=mongodb
+      - MONGO_PORT=27017
+      - MONGO_DB_NAME=huegelfest
+      - HUEGEL_ADMIN_USERNAME=huegeladmin
+      - HUEGEL_ADMIN_PASSWORD=huegeladmin123
+      - HUEGEL_USER_USERNAME=huegeluser
+      - HUEGEL_USER_PASSWORD=huegeluser123
+    volumes:
+      - ./database/init-db.js:/app/database/init-db.js:ro
     depends_on:
       mongodb:
         condition: service_healthy
@@ -29,24 +40,25 @@ services:
       timeout: 10s
       retries: 3
       start_period: 40s
+    command: >
+      sh -c "node database/init-db.js && npm start"
 
   mongodb:
     image: mongo:latest
-    command: ["--auth", "--bind_ip_all"]
+    command: ["--auth"]
     environment:
       - MONGO_INITDB_ROOT_USERNAME=huegeladmin
       - MONGO_INITDB_ROOT_PASSWORD=huegeladmin123
       - MONGO_INITDB_DATABASE=huegelfest
     volumes:
       - mongodb_data:/data/db
-      - ./database/init-db.js:/docker-entrypoint-initdb.d/init-db.js:ro
     ports:
       - "27017:27017"
     restart: unless-stopped
     networks:
       - huegelfest-network
     healthcheck:
-      test: mongosh --eval "db.adminCommand('ping')"
+      test: echo 'db.runCommand("ping").ok' | mongosh localhost:27017/test --quiet
       interval: 10s
       timeout: 10s
       retries: 5
