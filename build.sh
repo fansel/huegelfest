@@ -1,10 +1,10 @@
 #!/bin/bash
 
-# Baue das Base-Image
+# Baue das Base-Image ohne Cache
 echo "Baue Base-Image..."
-docker build -t huegelfest-base:latest -f Dockerfile.base .
+docker build --no-cache -t huegelfest-base:latest -f Dockerfile.base .
 
-# Baue das App-Image mit --no-cache um sicherzustellen, dass alle Änderungen übernommen werden
+# Baue das App-Image ohne Cache
 echo "Baue App-Image..."
 docker build --no-cache -t huegelfest-app:latest .
 
