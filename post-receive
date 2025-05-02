@@ -16,5 +16,5 @@ chown -R fansel:fansel $APP_DIR
 # Container neu starten
 cd $APP_DIR
 docker compose down
-docker build --no-cache -t app-app .
-docker compose up -d 
+docker build --no-cache -t huegelfest-app .
+docker compose up -d
