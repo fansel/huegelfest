@@ -5,8 +5,14 @@ WORKDIR /app
 # Kopiere nur package.json und package-lock.json
 COPY package*.json ./
 
-# Installiere Dependencies mit Cache
-RUN npm ci
+# Prüfe ob package-lock.json existiert und installiere entsprechend
+RUN if [ -f "package-lock.json" ]; then \
+        echo "package-lock.json gefunden, führe npm ci aus" && \
+        npm ci; \
+    else \
+        echo "Keine package-lock.json gefunden, führe npm install aus" && \
+        npm install; \
+    fi
 
 # Produktions-Image
 FROM node:20-alpine
