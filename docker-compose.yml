@@ -9,9 +9,14 @@ services:
       - "9049:3000"
     environment:
       - NODE_ENV=production
-      - MONGODB_URI=mongodb://huegeluser:huegeluser123@mongodb:27017/huegelfest
-      - JWT_SECRET=${JWT_SECRET}
-      - NEXT_PUBLIC_SITE_URL=${NEXT_PUBLIC_SITE_URL}
+      - MONGODB_URI=mongodb://huegeluser:huegeluser123@mongodb:27017/huegelfest?authSource=huegelfest&authMechanism=SCRAM-SHA-256
+      - JWT_SECRET=m0ZAvEBqbYUajAl8432FvN7fRqqhpewh02z1K5m0BWw=
+      - NEXT_PUBLIC_SITE_URL=https://huegelfest.fansel.dev
+      - ONESIGNAL_APP_ID=your-onesignal-app-id
+      - ONESIGNAL_REST_API_KEY=your-onesignal-api-key
+      - SOUNDCLOUD_CLIENT_ID=your-soundcloud-client-id
+      - ADMIN_USERNAME=felix
+      - ADMIN_PASSWORD=supergeil
     depends_on:
       mongodb:
         condition: service_healthy
@@ -32,10 +37,21 @@ services:
       - MONGO_INITDB_ROOT_USERNAME=huegeladmin
       - MONGO_INITDB_ROOT_PASSWORD=huegeladmin123
       - MONGO_INITDB_DATABASE=huegelfest
+      - MONGO_ROOT_USERNAME=huegeladmin
+      - MONGO_ROOT_PASSWORD=huegeladmin123
+      - MONGO_HOST=localhost
+      - MONGO_PORT=27017
+      - MONGO_DB_NAME=huegelfest
+      - HUEGEL_ADMIN_USERNAME=huegeladmin
+      - HUEGEL_ADMIN_PASSWORD=huegeladmin123
+      - HUEGEL_USER_USERNAME=huegeluser
+      - HUEGEL_USER_PASSWORD=huegeluser123
     volumes:
       - mongodb_data:/data/db
-      - ./database/mongo-init.js:/docker-entrypoint-initdb.d/mongo-init.js:ro
       - ./database/init-db.js:/docker-entrypoint-initdb.d/init-db.js:ro
+      - ./database/.env.db:/docker-entrypoint-initdb.d/.env.db:ro
+    ports:
+      - "27017:27017"
     restart: unless-stopped
     networks:
       - huegelfest-network
