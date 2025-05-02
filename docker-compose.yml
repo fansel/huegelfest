@@ -17,15 +17,6 @@ services:
       - SOUNDCLOUD_CLIENT_ID=your-soundcloud-client-id
       - ADMIN_USERNAME=felix
       - ADMIN_PASSWORD=supergeil
-      - MONGO_ROOT_USERNAME=huegeladmin
-      - MONGO_ROOT_PASSWORD=huegeladmin123
-      - MONGO_HOST=mongodb
-      - MONGO_PORT=27017
-      - MONGO_DB_NAME=huegelfest
-      - HUEGEL_ADMIN_USERNAME=huegeladmin
-      - HUEGEL_ADMIN_PASSWORD=huegeladmin123
-      - HUEGEL_USER_USERNAME=huegeluser
-      - HUEGEL_USER_PASSWORD=huegeluser123
     volumes:
       - ./database:/app/database:ro
     depends_on:
@@ -50,8 +41,11 @@ services:
       - MONGO_INITDB_ROOT_USERNAME=huegeladmin
       - MONGO_INITDB_ROOT_PASSWORD=huegeladmin123
       - MONGO_INITDB_DATABASE=huegelfest
+      - MONGO_INITDB_USERNAME=huegeluser
+      - MONGO_INITDB_PASSWORD=huegeluser123
     volumes:
       - mongodb_data:/data/db
+      - ./database/mongo-init.js:/docker-entrypoint-initdb.d/mongo-init.js:ro
     ports:
       - "27017:27017"
     restart: unless-stopped
