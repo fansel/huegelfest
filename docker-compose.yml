@@ -27,7 +27,7 @@ services:
       - HUEGEL_USER_USERNAME=huegeluser
       - HUEGEL_USER_PASSWORD=huegeluser123
     volumes:
-      - ./database/init-db.js:/app/database/init-db.js:ro
+      - ./database:/app/database:ro
     depends_on:
       mongodb:
         condition: service_healthy
@@ -41,7 +41,7 @@ services:
       retries: 3
       start_period: 40s
     command: >
-      sh -c "node database/init-db.js && npm start"
+      sh -c "node /app/database/init-db.js && npm start"
 
   mongodb:
     image: mongo:latest
