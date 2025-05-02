@@ -17,4 +17,5 @@ chown -R fansel:fansel $APP_DIR
 cd $APP_DIR
 docker compose down -v
 docker system prune -f
-docker compose up -d --build --no-cache 
+docker rmi app-app || true
+docker compose up -d --build 
