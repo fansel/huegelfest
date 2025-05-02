@@ -16,4 +16,5 @@ chown -R fansel:fansel $APP_DIR
 # Container neu starten
 cd $APP_DIR
 docker compose down
-docker compose up -d --build --no-cache 
+docker builder prune -f
+docker compose up -d --build 
