@@ -19,6 +19,7 @@ import PushNotificationSettings from './PushNotificationSettings';
 import Settings from './settings/Settings';
 import Image from 'next/image';
 import { useAuth } from '../../contexts/AuthContext';
+import { webPushService } from '@/server/lib/webpush';
 
 type View = 'home' | 'anreise' | 'infoboard' | 'settings' | 'admin' | 'favorites';
 
@@ -34,6 +35,7 @@ export default function PWAContainer() {
   const [pushSupported, setPushSupported] = useState(false);
   const [showPushDialog, setShowPushDialog] = useState(false);
   const [lastScrollY, setLastScrollY] = useState(0);
+  const [isLoading, setIsLoading] = useState(true);
 
   useEffect(() => {
     const mediaQuery = window.matchMedia('(display-mode: standalone)');
@@ -96,6 +98,48 @@ export default function PWAContainer() {
     };
 
     checkAuth();
+  }, []);
+
+  useEffect(() => {
+    const registerServiceWorker = async () => {
+      try {
+        if ('serviceWorker' in navigator) {
+          const registration = await navigator.serviceWorker.register('/sw.js');
+          console.log('Service Worker registriert:', registration);
+
+          // Initialisiere Push-Benachrichtigungen
+          if ('PushManager' in window) {
+            const permission = await Notification.requestPermission();
+            if (permission === 'granted') {
+              const subscription = await registration.pushManager.subscribe({
+                userVisibleOnly: true,
+                applicationServerKey: webPushService.getPublicKey()
+              });
+
+              const deviceId = localStorage.getItem('deviceId') || crypto.randomUUID();
+              localStorage.setItem('deviceId', deviceId);
+
+              await fetch('/api/push/subscribe', {
+                method: 'POST',
+                headers: {
+                  'Content-Type': 'application/json',
+                },
+                body: JSON.stringify({
+                  subscription,
+                  deviceId
+                }),
+              });
+            }
+          }
+        }
+      } catch (error) {
+        console.error('Fehler bei der Service Worker Registrierung:', error);
+      } finally {
+        setIsLoading(false);
+      }
+    };
+
+    registerServiceWorker();
   }, []);
 
   const handleLogin = async (username: string, password: string) => {
@@ -176,6 +220,42 @@ export default function PWAContainer() {
     return () => window.removeEventListener('scroll', handleScroll);
   }, [lastScrollY]);
 
+  const handlePushDialog = async () => {
+    setShowPushDialog(false);
+    try {
+      const permission = await Notification.requestPermission();
+      // Speichere in Cookie, dass wir gefragt haben
+      document.cookie = 'pushAsked=true; path=/; SameSite=Lax; max-age=31536000'; // 1 Jahr
+      
+      if (permission === 'granted') {
+        const registration = await navigator.serviceWorker.ready;
+        const subscription = await registration.pushManager.subscribe({
+          userVisibleOnly: true,
+          applicationServerKey: webPushService.getPublicKey()
+        });
+
+        const deviceId = localStorage.getItem('deviceId') || crypto.randomUUID();
+        localStorage.setItem('deviceId', deviceId);
+
+        // Subscription an Server senden
+        await fetch('/api/push/subscribe', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify({
+            subscription,
+            deviceId
+          }),
+        });
+
+        console.log('Push-Subscription erfolgreich erstellt');
+      }
+    } catch (error) {
+      console.error('Fehler bei der Push-Subscription:', error);
+    }
+  };
+
   const renderContent = () => {
     switch (currentView) {
       case 'home':
@@ -245,7 +325,9 @@ export default function PWAContainer() {
     }
   };
 
-  // if (!isPWA) return null; // Temporär auskommentiert während der Umstrukturierung
+  if (isLoading) {
+    return null;
+  }
 
   return (
     <div className="relative min-h-screen bg-[#460b6c] text-[#ff9900] flex flex-col">
@@ -269,35 +351,7 @@ export default function PWAContainer() {
             </p>
             <div className="flex gap-4">
               <button
-                onClick={async () => {
-                  setShowPushDialog(false);
-                  try {
-                    const permission = await Notification.requestPermission();
-                    // Speichere in Cookie, dass wir gefragt haben
-                    document.cookie = 'pushAsked=true; path=/; SameSite=Lax; max-age=31536000'; // 1 Jahr
-                    
-                    if (permission === 'granted') {
-                      const registration = await navigator.serviceWorker.ready;
-                      const subscription = await registration.pushManager.subscribe({
-                        userVisibleOnly: true,
-                        applicationServerKey: process.env.NEXT_PUBLIC_VAPID_PUBLIC_KEY
-                      });
-
-                      // Subscription an Server senden
-                      await fetch('/api/push/subscribe', {
-                        method: 'POST',
-                        headers: {
-                          'Content-Type': 'application/json',
-                        },
-                        body: JSON.stringify(subscription),
-                      });
-
-                      console.log('Push-Subscription erfolgreich erstellt');
-                    }
-                  } catch (error) {
-                    console.error('Fehler bei der Push-Subscription:', error);
-                  }
-                }}
+                onClick={handlePushDialog}
                 className="flex-1 bg-[#ff9900] text-[#460b6c] py-2 px-4 rounded-lg font-medium hover:bg-[#ff9900]/90 transition-colors"
               >
                 Aktivieren
