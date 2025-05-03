@@ -26,7 +26,7 @@ const protectedApiRoutes: Record<string, RouteConfig> = {
   }
 };
 
-export function middleware(request: NextRequest) {
+export async function middleware(request: NextRequest) {
   const authToken = request.cookies.get('auth_token');
   const isAdminRoute = request.nextUrl.pathname.startsWith('/admin');
   const isLoginRoute = request.nextUrl.pathname === '/login';
