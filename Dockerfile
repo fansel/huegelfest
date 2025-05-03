@@ -39,8 +39,7 @@ COPY --from=builder /app/.next/standalone ./
 COPY --from=builder /app/.next/static ./.next/static
 
 # Set permissions
-RUN mkdir .next && \
-    chown -R nextjs:nodejs .next
+RUN chown -R nextjs:nodejs .next
 
 USER nextjs
 
