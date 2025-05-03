@@ -2,6 +2,12 @@ name: Docker Build and Push
 
 on:
   workflow_dispatch:
+    inputs:
+      deploy_only:
+        description: 'Nur deployen ohne Build'
+        required: false
+        type: boolean
+        default: false
 
 env:
   DOCKERHUB_USERNAME: ${{ secrets.DOCKERHUB_USERNAME }}
@@ -9,6 +15,7 @@ env:
 
 jobs:
   build-and-push:
+    if: ${{ !inputs.deploy_only }}
     runs-on: self-hosted
     steps:
       - name: Checkout code
@@ -39,3 +46,25 @@ jobs:
           tags: |
             ${{ env.DOCKERHUB_USERNAME }}/huegelfest-web:latest
             ${{ env.DOCKERHUB_USERNAME }}/huegelfest-web:${{ github.sha }}
+
+  deploy:
+    needs: ${{ !inputs.deploy_only && 'build-and-push' || '' }}
+    runs-on: ubuntu-latest
+    steps:
+      - name: Setup SSH
+        uses: webfactory/ssh-agent@v0.8.0
+        with:
+          ssh-private-key: ${{ secrets.SSH_PRIVATE_KEY }}
+
+      - name: Add host key
+        run: |
+          mkdir -p ~/.ssh
+          ssh-keyscan -H ${{ secrets.SSH_HOST }} >> ~/.ssh/known_hosts
+
+      - name: Deploy to server
+        run: |
+          ssh ${{ secrets.SSH_USER }}@${{ secrets.SSH_HOST }} '
+            cd /opt/huegelfest && \
+            docker compose pull && \
+            docker compose up -d
+          '

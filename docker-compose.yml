@@ -1,5 +1,4 @@
 # Huegelfest Docker Compose Konfiguration
-version: '3.8'
 
 services:
   huegelfest-app:
@@ -18,8 +17,9 @@ services:
     image: mongo:latest
     command: ["--auth"]
     environment:
-      MONGO_USERNAME: ${MONGO_USERNAME}
-      MONGO_PASSWORD: ${MONGO_PASSWORD}
+      MONGO_INITDB_ROOT_USERNAME: admin
+      MONGO_INITDB_ROOT_PASSWORD: admin
+      MONGO_INITDB_DATABASE: huegelfest
     volumes:
       - mongodb_data:/data/db
       - ./mongo/init.js:/docker-entrypoint-initdb.d/init.js:ro
