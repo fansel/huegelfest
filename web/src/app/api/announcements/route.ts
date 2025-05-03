@@ -96,15 +96,20 @@ export async function POST(request: Request) {
 
     // Sende Push-Benachrichtigung nur wenn der Service initialisiert ist
     if (webPushService.isInitialized()) {
-      await webPushService.sendNotificationToAll({
-        title: 'Neue Ankündigung',
-        body: content,
-        icon: '/icon-192x192.png',
-        badge: '/badge-96x96.png',
-        data: {
-          url: '/'
-        }
-      });
+      try {
+        await webPushService.sendNotificationToAll({
+          title: 'Neue Ankündigung',
+          body: content,
+          icon: '/icon-192x192.png',
+          badge: '/badge-96x96.png',
+          data: {
+            url: '/'
+          }
+        });
+      } catch (error) {
+        console.error('Fehler beim Senden der Push-Benachrichtigung:', error);
+        // Fehler beim Senden der Push-Benachrichtigung sollte die Ankündigung nicht beeinflussen
+      }
     }
 
     revalidatePath('/announcements');

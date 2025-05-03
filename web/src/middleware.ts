@@ -1,5 +1,9 @@
 import { NextResponse } from 'next/server';
 import type { NextRequest } from 'next/server';
+import { webPushService } from '@/server/lib/webpush';
+
+// Initialisiere den WebPush-Service
+webPushService.initialize();
 
 // Typen für die API-Routen
 type HttpMethod = 'GET' | 'POST' | 'PUT' | 'DELETE';
@@ -26,7 +30,7 @@ const protectedApiRoutes: Record<string, RouteConfig> = {
   }
 };
 
-export async function middleware(request: NextRequest) {
+export function middleware(request: NextRequest) {
   const authToken = request.cookies.get('auth_token');
   const isAdminRoute = request.nextUrl.pathname.startsWith('/admin');
   const isLoginRoute = request.nextUrl.pathname === '/login';
@@ -107,7 +111,16 @@ export async function middleware(request: NextRequest) {
   return NextResponse.next();
 }
 
-// Konfiguriere die Middleware für alle Routen
+// Konfiguriere, auf welchen Pfaden die Middleware ausgeführt werden soll
 export const config = {
-  matcher: '/:path*'
+  matcher: [
+    /*
+     * Match all request paths except for the ones starting with:
+     * - _next/static (static files)
+     * - _next/image (image optimization files)
+     * - favicon.ico (favicon file)
+     * - public folder
+     */
+    '/((?!_next/static|_next/image|favicon.ico|public/).*)',
+  ],
 }; 
