@@ -87,4 +87,5 @@ export class WebPushService {
   }
 }
 
+// Erstelle eine Instanz, aber initialisiere sie nicht
 export const webPushService = WebPushService.getInstance();
