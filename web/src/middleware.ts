@@ -26,24 +26,6 @@ const protectedApiRoutes: Record<string, RouteConfig> = {
   }
 };
 
-// Hilfsfunktion zur Token-Validierung
-async function validateToken(token: string, request: NextRequest) {
-  try {
-    const response = await fetch(new URL('/api/auth/validate', request.url), {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-      },
-      body: JSON.stringify({ token }),
-    });
-    const data = await response.json();
-    return data.valid;
-  } catch (error) {
-    console.error('Token-Validierung fehlgeschlagen:', error);
-    return false;
-  }
-}
-
 export function middleware(request: NextRequest) {
   const authToken = request.cookies.get('auth_token');
   const isAdminRoute = request.nextUrl.pathname.startsWith('/admin');
@@ -64,13 +46,24 @@ export function middleware(request: NextRequest) {
       return NextResponse.redirect(new URL('/login', request.url));
     }
 
-    // Token-Validierung
-    return validateToken(authToken.value, request).then(valid => {
-    if (!valid) {
-      return NextResponse.redirect(new URL('/login', request.url));
-    }
-    return NextResponse.next();
-    });
+    // Token-Validierung über API-Route
+    return fetch(new URL('/api/auth/validate', request.url), {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({ token: authToken.value }),
+    })
+      .then(response => response.json())
+      .then(({ valid }) => {
+        if (!valid) {
+          return NextResponse.redirect(new URL('/login', request.url));
+        }
+        return NextResponse.next();
+      })
+      .catch(() => {
+        return NextResponse.redirect(new URL('/login', request.url));
+      });
   }
 
   // API-Route Logik
@@ -96,12 +89,23 @@ export function middleware(request: NextRequest) {
 
     // Wenn es eine geschützte Methode ist, validiere den Token
     if (isProtectedMethod && authToken) {
-      return validateToken(authToken.value, request).then(valid => {
-      if (!valid) {
-        return new NextResponse(null, { status: 401 });
-      }
-        return NextResponse.next();
-      });
+      return fetch(new URL('/api/auth/validate', request.url), {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ token: authToken.value }),
+      })
+        .then(response => response.json())
+        .then(({ valid }) => {
+          if (!valid) {
+            return new NextResponse(null, { status: 401 });
+          }
+          return NextResponse.next();
+        })
+        .catch(() => {
+          return new NextResponse(null, { status: 401 });
+        });
     }
 
     return NextResponse.next();
@@ -122,5 +126,4 @@ export const config = {
      */
     '/((?!_next/static|_next/image|favicon.ico|public/).*)',
   ],
-  runtime: 'nodejs'
-}; 
+};
