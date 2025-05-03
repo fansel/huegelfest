@@ -66,10 +66,10 @@ export function middleware(request: NextRequest) {
 
     // Token-Validierung
     return validateToken(authToken.value, request).then(valid => {
-      if (!valid) {
-        return NextResponse.redirect(new URL('/login', request.url));
-      }
-      return NextResponse.next();
+    if (!valid) {
+      return NextResponse.redirect(new URL('/login', request.url));
+    }
+    return NextResponse.next();
     });
   }
 
@@ -97,9 +97,9 @@ export function middleware(request: NextRequest) {
     // Wenn es eine geschützte Methode ist, validiere den Token
     if (isProtectedMethod && authToken) {
       return validateToken(authToken.value, request).then(valid => {
-        if (!valid) {
-          return new NextResponse(null, { status: 401 });
-        }
+      if (!valid) {
+        return new NextResponse(null, { status: 401 });
+      }
         return NextResponse.next();
       });
     }
@@ -122,4 +122,5 @@ export const config = {
      */
     '/((?!_next/static|_next/image|favicon.ico|public/).*)',
   ],
+  runtime: 'nodejs'
 }; 
