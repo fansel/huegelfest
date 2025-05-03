@@ -17,19 +17,19 @@ class WebPushService {
 
     // Nur zur Laufzeit prüfen, nicht beim Build
     if (typeof window === 'undefined') {
-      const vapidPublicKey = process.env.NEXT_PUBLIC_VAPID_PUBLIC_KEY;
-      const vapidPrivateKey = process.env.VAPID_PRIVATE_KEY;
+    const vapidPublicKey = process.env.NEXT_PUBLIC_VAPID_PUBLIC_KEY;
+    const vapidPrivateKey = process.env.VAPID_PRIVATE_KEY;
 
-      if (!vapidPublicKey || !vapidPrivateKey) {
-        console.warn('VAPID-Schlüssel fehlen in den Umgebungsvariablen. Push-Benachrichtigungen sind deaktiviert.');
-        return;
-      }
+    if (!vapidPublicKey || !vapidPrivateKey) {
+      console.warn('VAPID-Schlüssel fehlen in den Umgebungsvariablen. Push-Benachrichtigungen sind deaktiviert.');
+      return;
+    }
 
-      webpush.setVapidDetails(
+    webpush.setVapidDetails(
         'mailto:vapid@hey.fansel.dev',
-        vapidPublicKey,
-        vapidPrivateKey
-      );
+      vapidPublicKey,
+      vapidPrivateKey
+    );
     }
 
     this.initialized = true;
