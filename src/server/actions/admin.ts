@@ -2,14 +2,14 @@
 
 import { revalidatePath } from 'next/cache';
 import { connectDB } from '../../database/config/connector';
-import { Announcement } from '../../database/models/Announcement';
-import { Group } from '../../database/models/Group';
+import Announcement from '../../database/models/Announcement';
+import Group from '../../database/models/Group';
 import Music from '../../database/models/Music';
-import { Announcement as AnnouncementType } from '../../types/types';
+import { IAnnouncement } from '../../types/announcement';
 import { logger } from '../../server/lib/logger';
 import { sendUpdateToAllClients } from '../../server/lib/sse';
 
-export async function saveAnnouncements(announcements: AnnouncementType[]): Promise<void> {
+export async function saveAnnouncements(announcements: IAnnouncement[]): Promise<void> {
   try {
     await connectDB();
     
@@ -21,7 +21,6 @@ export async function saveAnnouncements(announcements: AnnouncementType[]): Prom
     if (announcements.length > 0) {
       logger.info('[Server Action] Neue Ankündigung:', {
         content: announcements[0].content,
-        group: announcements[0].group,
         groupId: announcements[0].groupId,
         groupColor: announcements[0].groupColor
       });
@@ -32,7 +31,7 @@ export async function saveAnnouncements(announcements: AnnouncementType[]): Prom
       content: announcement.content,
       date: announcement.date,
       time: announcement.time,
-      groupId: groupMap.get(announcement.group) || groups[0]._id, // Fallback auf erste Gruppe
+      groupId: groupMap.get(announcement.groupId) || groups[0]._id, // Fallback auf erste Gruppe
       important: announcement.important,
       reactions: announcement.reactions,
       createdAt: announcement.createdAt,
@@ -50,7 +49,7 @@ export async function saveAnnouncements(announcements: AnnouncementType[]): Prom
   }
 }
 
-export async function loadAnnouncements(): Promise<AnnouncementType[]> {
+export async function loadAnnouncements(): Promise<IAnnouncement[]> {
   try {
     await connectDB();
     const announcements = await Announcement.find()
@@ -63,9 +62,8 @@ export async function loadAnnouncements(): Promise<AnnouncementType[]> {
       content: announcement.content,
       date: announcement.date || '',
       time: announcement.time || '',
-      group: announcement.groupId?.name || 'default',
+      groupId: announcement.groupId?.name || 'default',
       groupColor: announcement.groupId?.color || '#ff9900',
-      groupId: announcement.groupId?._id.toString(),
       important: announcement.important || false,
       reactions: announcement.reactions || {
         thumbsUp: { count: 0, deviceReactions: {} },
@@ -74,7 +72,6 @@ export async function loadAnnouncements(): Promise<AnnouncementType[]> {
         surprised: { count: 0, deviceReactions: {} },
         heart: { count: 0, deviceReactions: {} }
       },
-      timestamp: new Date(announcement.createdAt),
       createdAt: new Date(announcement.createdAt),
       updatedAt: new Date(announcement.updatedAt)
     }));

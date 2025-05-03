@@ -1,31 +1,36 @@
 'use client';
-import React, { useEffect, useState } from "react";
-import Image from "next/image";
-import { Announcement as AnnouncementType, GroupColors, REACTION_EMOJIS, ReactionType } from "@/lib/types";
-import { loadAnnouncements, loadGroupColors } from "@/lib/admin";
-import Countdown from '@/components/Countdown';
-import Timeline from '@/components/Timeline';
-import Starfield from '@/components/Starfield';
-import InfoBoard from '@/components/InfoBoard';
-import { usePWA } from '@/contexts/PWAContext';
-import { useRouter } from 'next/navigation';
+import React, { useEffect, useState } from 'react';
+import Image from 'next/image';
+import {
+  Announcement as AnnouncementType,
+  GroupColors,
+  REACTION_EMOJIS,
+  ReactionType,
+} from '@/types/types';
+import { loadAnnouncements, loadGroupColors } from '@/server/actions/admin';
+import Countdown from '@/client/components/Countdown';
+import Timeline from '@/client/components/Timeline';
+import Starfield from '@/client/components/Starfield';
+import InfoBoard from '@/client/components/InfoBoard';
+import { usePWA } from '@/client/contexts/PWAContext';
 
 function InstallPrompt() {
-  const [isIOS, setIsIOS] = useState(false)
-  const [isStandalone, setIsStandalone] = useState(false)
- 
+  const [isIOS, setIsIOS] = useState(false);
+  const [isStandalone, setIsStandalone] = useState(false);
+
   useEffect(() => {
     setIsIOS(
-      /iPad|iPhone|iPod/.test(navigator.userAgent) && !(window as Window & { MSStream?: unknown }).MSStream
-    )
- 
-    setIsStandalone(window.matchMedia('(display-mode: standalone)').matches)
-  }, [])
- 
+      /iPad|iPhone|iPod/.test(navigator.userAgent) &&
+        !(window as Window & { MSStream?: unknown }).MSStream,
+    );
+
+    setIsStandalone(window.matchMedia('(display-mode: standalone)').matches);
+  }, []);
+
   if (isStandalone) {
-    return null
+    return null;
   }
- 
+
   return (
     <div>
       <h3>Install App</h3>
@@ -33,18 +38,24 @@ function InstallPrompt() {
       {isIOS && (
         <p>
           To install this app on your iOS device, tap the share button
-          <span role="img" aria-label="share icon"> ⎋ </span>
+          <span role="img" aria-label="share icon">
+            {' '}
+            ⎋{' '}
+          </span>
           and then &ldquo;Add to Home Screen&rdquo;
-          <span role="img" aria-label="plus icon"> ➕ </span>.
+          <span role="img" aria-label="plus icon">
+            {' '}
+            ➕{' '}
+          </span>
+          .
         </p>
       )}
     </div>
-  )
+  );
 }
 
 export default function Home() {
-  const router = useRouter();
-  const { isPWA, isMobile } = usePWA();
+  const { isPWA } = usePWA();
   const [announcements, setAnnouncements] = useState<AnnouncementType[]>([]);
   const [groupColors, setGroupColors] = useState<GroupColors>({ default: '#460b6c' });
   const [deviceId, setDeviceId] = useState<string>('');
@@ -53,7 +64,7 @@ export default function Home() {
     const loadData = async () => {
       const [loadedAnnouncements, loadedGroupColors] = await Promise.all([
         loadAnnouncements(),
-        loadGroupColors()
+        loadGroupColors(),
       ]);
       setAnnouncements(loadedAnnouncements);
       setGroupColors(loadedGroupColors);
@@ -69,7 +80,8 @@ export default function Home() {
     if (storedDeviceId) {
       setDeviceId(storedDeviceId);
     } else {
-      const newDeviceId = Math.random().toString(36).substring(2) + Date.now().toString(36);
+      const newDeviceId =
+        Math.random().toString(36).substring(2) + Date.now().toString(36);
       localStorage.setItem('deviceId', newDeviceId);
       setDeviceId(newDeviceId);
     }
@@ -84,16 +96,17 @@ export default function Home() {
   const handleReaction = async (announcementId: string, reactionType: ReactionType) => {
     if (!deviceId) return;
 
-    const updatedAnnouncements = announcements.map(announcement => {
+    const updatedAnnouncements = announcements.map((announcement) => {
       if (announcement.id === announcementId) {
         const currentReactions = announcement.reactions || {};
-        const currentReaction = currentReactions[reactionType] || { 
-          count: 0, 
-          deviceReactions: {} 
+        const currentReaction = currentReactions[reactionType] || {
+          count: 0,
+          deviceReactions: {},
         };
-        
-        const hasReacted = currentReaction.deviceReactions?.[deviceId]?.announcementId === announcementId;
-        
+
+        const hasReacted =
+          currentReaction.deviceReactions?.[deviceId]?.announcementId === announcementId;
+
         if (hasReacted) {
           const newReactions = { ...currentReactions };
           if (currentReaction.count <= 1) {
@@ -103,17 +116,17 @@ export default function Home() {
             delete updatedDeviceReactions[deviceId];
             newReactions[reactionType] = {
               count: currentReaction.count - 1,
-              deviceReactions: updatedDeviceReactions
+              deviceReactions: updatedDeviceReactions,
             };
           }
           return {
             ...announcement,
-            reactions: newReactions
+            reactions: newReactions,
           };
         }
 
         const cleanedReactions = { ...currentReactions };
-        Object.keys(cleanedReactions).forEach(type => {
+        Object.keys(cleanedReactions).forEach((type) => {
           if (type !== reactionType) {
             const deviceReactions = cleanedReactions[type].deviceReactions;
             if (deviceId in deviceReactions) {
@@ -121,7 +134,7 @@ export default function Home() {
               delete updatedDeviceReactions[deviceId];
               cleanedReactions[type] = {
                 count: Object.keys(updatedDeviceReactions).length,
-                deviceReactions: updatedDeviceReactions
+                deviceReactions: updatedDeviceReactions,
               };
             }
           }
@@ -133,14 +146,14 @@ export default function Home() {
             ...currentReaction.deviceReactions,
             [deviceId]: {
               type: reactionType,
-              announcementId: announcementId
-            }
-          }
+              announcementId: announcementId,
+            },
+          },
         };
 
         return {
           ...announcement,
-          reactions: cleanedReactions
+          reactions: cleanedReactions,
         };
       }
       return announcement;
@@ -155,8 +168,18 @@ export default function Home() {
 
       <div className="relative z-20 flex flex-col items-center justify-start min-h-screen px-2 sm:px-6 py-0 sm:py-12 text-center">
         <nav className="absolute top-0 left-0 right-0 z-40 flex justify-center space-x-1 sm:space-x-8 p-1 sm:p-0 rounded-full mx-1 sm:mx-0 pt-[env(safe-area-inset-top)]">
-          <a href="#infoboard" className="text-[#ff9900] hover:text-orange-300 transition-colors text-xs sm:text-base px-1.5 sm:px-3 py-1 sm:py-2 rounded-full hover:bg-[#ff9900] hover:bg-opacity-10 backdrop-blur-sm">InfoBoard</a>
-          <a href="#programm" className="text-[#ff9900] hover:text-orange-300 transition-colors text-xs sm:text-base px-1.5 sm:px-3 py-1 sm:py-2 rounded-full hover:bg-[#ff9900] hover:bg-opacity-10 backdrop-blur-sm">Programm</a>
+          <a
+            href="#infoboard"
+            className="text-[#ff9900] hover:text-orange-300 transition-colors text-xs sm:text-base px-1.5 sm:px-3 py-1 sm:py-2 rounded-full hover:bg-[#ff9900] hover:bg-opacity-10 backdrop-blur-sm"
+          >
+            InfoBoard
+          </a>
+          <a
+            href="#programm"
+            className="text-[#ff9900] hover:text-orange-300 transition-colors text-xs sm:text-base px-1.5 sm:px-3 py-1 sm:py-2 rounded-full hover:bg-[#ff9900] hover:bg-opacity-10 backdrop-blur-sm"
+          >
+            Programm
+          </a>
         </nav>
 
         <div className="absolute top-[env(safe-area-inset-top)] left-4 w-[60px] sm:w-[150px] h-[50px] sm:h-[150px] z-50">
@@ -179,16 +202,26 @@ export default function Home() {
         </div>
 
         <div className="w-full max-w-7xl mx-auto mt-20 sm:mt-32 space-y-8 sm:space-y-16">
-          <section id="programm" className="flex flex-col items-center justify-start px-2 sm:px-4">
+          <section
+            id="programm"
+            className="flex flex-col items-center justify-start px-2 sm:px-4"
+          >
             <div className="w-full">
-              <h2 className="text-xl sm:text-3xl font-bold mb-4 sm:mb-8 text-center">Programm</h2>
+              <h2 className="text-xl sm:text-3xl font-bold mb-4 sm:mb-8 text-center">
+                Programm
+              </h2>
               <Timeline />
             </div>
           </section>
 
-          <section id="infoboard" className="flex flex-col items-center justify-start px-2 sm:px-4">
+          <section
+            id="infoboard"
+            className="flex flex-col items-center justify-start px-2 sm:px-4"
+          >
             <div className="w-full">
-              <h2 className="text-xl sm:text-3xl font-bold mb-4 sm:mb-8 text-center">InfoBoard</h2>
+              <h2 className="text-xl sm:text-3xl font-bold mb-4 sm:mb-8 text-center">
+                InfoBoard
+              </h2>
               <InfoBoard isPWA={isPWA} />
             </div>
           </section>
@@ -197,4 +230,4 @@ export default function Home() {
       <InstallPrompt />
     </div>
   );
-} 
+}

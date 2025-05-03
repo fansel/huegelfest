@@ -1,35 +1,22 @@
-
-import path from 'path';
-
-const isServer = typeof window === 'undefined';
-
-// Erstelle das logs Verzeichnis, falls es nicht existiert
-const logDir = path.join(process.cwd(), 'logs');
-if (isServer && !fs.existsSync(logDir)) {
-  fs.mkdirSync(logDir, { recursive: true });
-}
-
-type LogArgs = unknown[];
-
 const logger = {
-  info: (message: string, ...args: LogArgs) => {
-    if (isServer) {
-      console.log(`[INFO] ${message}`, ...args);
+  info: (...args: unknown[]) => {
+    if (typeof window === 'undefined') {
+      console.log('[INFO]', ...args);
     }
   },
-  error: (message: string, ...args: LogArgs) => {
-    if (isServer) {
-      console.error(`[ERROR] ${message}`, ...args);
+  error: (...args: unknown[]) => {
+    if (typeof window === 'undefined') {
+      console.error('[ERROR]', ...args);
     }
   },
-  debug: (message: string, ...args: LogArgs) => {
-    if (isServer) {
-      console.debug(`[DEBUG] ${message}`, ...args);
+  warn: (...args: unknown[]) => {
+    if (typeof window === 'undefined') {
+      console.warn('[WARN]', ...args);
     }
   },
-  warn: (message: string, ...args: LogArgs) => {
-    if (isServer) {
-      console.warn(`[WARN] ${message}`, ...args);
+  debug: (...args: unknown[]) => {
+    if (typeof window === 'undefined') {
+      console.debug('[DEBUG]', ...args);
     }
   }
 };

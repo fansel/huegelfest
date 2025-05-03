@@ -1,6 +1,6 @@
 import { NextResponse } from 'next/server';
-import { createUser } from '@/lib/auth';
-import { verifyToken } from '@/lib/auth';
+import { createUser } from '@/auth/auth';
+import { verifyToken } from '@/auth/auth';
 
 export async function POST(request: Request) {
   try {

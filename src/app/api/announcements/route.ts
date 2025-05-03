@@ -5,7 +5,7 @@ import Group from '@/database/models/Group';
 import { Subscriber } from '@/database/models/Subscriber';
 import webpush from 'web-push';
 import { revalidatePath } from 'next/cache';
-import { sendUpdateToAllClients } from '@/lib/sse';
+import { sendUpdateToAllClients } from '@/server/lib/sse';
 
 // VAPID-Schlüssel
 const vapidPublicKey = process.env.NEXT_PUBLIC_VAPID_PUBLIC_KEY;

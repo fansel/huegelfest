@@ -1,7 +1,7 @@
 'use server'
 
 import { headers } from 'next/headers'
-import { webpush } from '@/lib/webpush'
+import { webpush } from '@/server/lib/webpush'
 import type { PushSubscription as WebPushSubscription } from 'web-push'
 
 export async function subscribeUser(subscription: WebPushSubscription) {

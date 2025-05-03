@@ -1,6 +1,6 @@
 import { connectDB } from '@/database/config/connector';
 import Music, { MusicDocument } from '@/database/models/Music';
-import { logger } from '@/lib/logger';
+import { logger } from '@/server/lib/logger';
 import { download } from '@/lib/soundcloud-downloader/download';
 import { getInfo } from '@/lib/soundcloud-downloader/get-info';
 import { FaMusic } from 'react-icons/fa';

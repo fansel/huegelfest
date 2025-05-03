@@ -1,7 +1,8 @@
 'use client';
 
 import { useState, useEffect, useRef } from 'react';
-import { Announcement, GroupColors, REACTION_EMOJIS, ReactionType } from '@/types/types';
+import { GroupColors, REACTION_EMOJIS, ReactionType } from '@/types/types';
+import { IAnnouncement } from '@/types/announcement';
 import { loadAnnouncements, loadGroupColors } from '@/server/actions/admin';
 import { ReactNode } from 'react';
 
@@ -28,7 +29,7 @@ interface Reactions {
 }
 
 export default function InfoBoard({ isPWA = false }: InfoBoardProps) {
-  const [announcements, setAnnouncements] = useState<Announcement[]>([]);
+  const [announcements, setAnnouncements] = useState<IAnnouncement[]>([]);
   const [groupColors, setGroupColors] = useState<GroupColors>({ default: '#460b6c' });
   const boardRef = useRef<HTMLDivElement>(null);
   const [isVisible, setIsVisible] = useState(false);
@@ -41,6 +42,24 @@ export default function InfoBoard({ isPWA = false }: InfoBoardProps) {
     const g = parseInt(color.slice(3, 5), 16);
     const b = parseInt(color.slice(5, 7), 16);
     return `rgba(${r}, ${g}, ${b}, ${opacity})`;
+  };
+
+  const formatDate = (date: Date) => {
+    const today = new Date();
+    const yesterday = new Date(today);
+    yesterday.setDate(yesterday.getDate() - 1);
+
+    if (date.toDateString() === today.toDateString()) {
+      return 'Heute';
+    } else if (date.toDateString() === yesterday.toDateString()) {
+      return 'Gestern';
+    } else {
+      return date.toLocaleDateString('de-DE', {
+        day: '2-digit',
+        month: '2-digit',
+        year: '2-digit'
+      });
+    }
   };
 
   // Lade initiale Daten
@@ -231,7 +250,7 @@ export default function InfoBoard({ isPWA = false }: InfoBoardProps) {
             <p className="text-gray-400 text-center">Keine aktuellen Informationen</p>
           ) : (
             announcements.map((announcement) => {
-              const groupColor = groupColors[announcement.group] || groupColors.default;
+              const groupColor = groupColors[announcement.groupId] || groupColors.default;
               return (
                 <div
                   key={announcement.id}
@@ -246,7 +265,7 @@ export default function InfoBoard({ isPWA = false }: InfoBoardProps) {
                   }}
                 >
                   <div className="flex-1 min-w-0">
-                    <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between space-y-2 sm:space-y-0">
+                    <div className="flex flex-col sm:flex-row sm:items-start sm:justify-between space-y-2 sm:space-y-0">
                       <div className="flex items-center space-x-2">
                         <span
                           className={`${isPWA ? 'text-[10px]' : 'text-xs'} sm:text-xs px-2 sm:px-2 py-1 sm:py-1 rounded-full`}
@@ -255,7 +274,7 @@ export default function InfoBoard({ isPWA = false }: InfoBoardProps) {
                             color: groupColor
                           }}
                         >
-                          {announcement.group}
+                          {announcement.groupId}
                         </span>
                         {announcement.important && (
                           <span className={`${isPWA ? 'text-[10px]' : 'text-xs'} sm:text-xs px-2 sm:px-2 py-1 sm:py-1 ${isPWA ? 'bg-red-300 text-red-700' : 'bg-red-200 text-red-600'} rounded-full font-medium`}>
@@ -263,8 +282,13 @@ export default function InfoBoard({ isPWA = false }: InfoBoardProps) {
                           </span>
                         )}
                       </div>
-                      <div className={`${isPWA ? 'text-[10px]' : 'text-xs'} sm:text-sm text-gray-300`}>
-                        {announcement.date} {announcement.time}
+                      <div className={`${isPWA ? 'text-[10px]' : 'text-xs'} sm:text-sm text-gray-300 flex items-center space-x-2`}>
+                        {formatDate(announcement.createdAt) === 'Heute' && (
+                          <span className="bg-green-500 bg-opacity-20 text-green-300 px-2 py-1 rounded-full">
+                            Heute
+                          </span>
+                        )}
+                        <span>{announcement.time}</span>
                       </div>
                     </div>
                     <p className={`mt-${isPWA ? '2' : '3'} ${isPWA ? 'text-sm' : 'text-base'} sm:text-base text-white whitespace-pre-wrap`}>

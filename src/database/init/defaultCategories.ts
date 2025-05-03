@@ -1,34 +1,56 @@
-import { FaMusic, FaUsers, FaUtensils, FaCampground, FaGamepad, FaQuestion } from 'react-icons/fa';
+import type { ICategory } from '../models/Category';
+import { Category } from '../models/Category';
+import { logger } from '@/server/lib/logger';
 
-export const defaultCategories = [
+export const defaultCategories: ICategory[] = [
   {
-    value: 'music',
+    name: 'Musik',
     label: 'Musik',
+    value: 'music',
     icon: 'FaMusic',
-    isDefault: false,
+    color: '#FF6B6B',
+    description: 'Musikalische Darbietungen und Konzerte'
   },
   {
-    value: 'food',
+    name: 'Essen & Trinken',
     label: 'Essen & Trinken',
+    value: 'food',
     icon: 'FaUtensils',
-    isDefault: false,
+    color: '#4ECDC4',
+    description: 'Kulinarische Angebote und Getränke'
   },
   {
-    value: 'camping',
-    label: 'Camping',
-    icon: 'FaCampground',
-    isDefault: false,
-  },
-  {
-    value: 'games',
-    label: 'Spiele',
+    name: 'Aktivitäten',
+    label: 'Aktivitäten',
+    value: 'activities',
     icon: 'FaGamepad',
-    isDefault: false,
+    color: '#45B7D1',
+    description: 'Verschiedene Aktivitäten und Spiele'
   },
   {
-    value: 'other',
+    name: 'Sonstiges',
     label: 'Sonstiges',
+    value: 'other',
     icon: 'FaQuestion',
-    isDefault: true,
-  },
-]; 
+    color: '#96CEB4',
+    description: 'Weitere Veranstaltungen und Angebote'
+  }
+];
+
+export async function initializeDefaultCategories() {
+  try {
+    // Prüfe, ob bereits Kategorien existieren
+    const existingCategories = await Category.find().exec();
+    if (existingCategories.length > 0) {
+      logger.info('Kategorien existieren bereits, überspringe Initialisierung');
+      return;
+    }
+
+    // Erstelle Standard-Kategorien
+    await Category.insertMany(defaultCategories);
+    logger.info('Standard-Kategorien erfolgreich erstellt');
+  } catch (error) {
+    logger.error('Fehler beim Erstellen der Standard-Kategorien:', error);
+    throw error;
+  }
+} 

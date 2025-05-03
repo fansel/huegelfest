@@ -3,7 +3,7 @@
 import Link from 'next/link';
 import Content from './content/page';
 import styles from "./page.module.css";
-import { usePWA } from '@/contexts/PWAContext';
+import { usePWA } from '@/client/contexts/PWAContext';
 
 export default function Anreise() {
   const { isPWA } = usePWA();

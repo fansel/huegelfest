@@ -3,7 +3,7 @@ import { GroupColors } from '@/types/types';
 import { loadGroupColors } from '@/server/actions/admin';
 
 interface GroupColorManagerProps {
-  onSaveGroupColors: (colors: GroupColors) => Promise<void>;
+  onSaveGroupColors: (colors: GroupColors) => void;
 }
 
 export default function GroupColorManager({ onSaveGroupColors }: GroupColorManagerProps) {
@@ -18,13 +18,13 @@ export default function GroupColorManager({ onSaveGroupColors }: GroupColorManag
     };
 
     loadGroups();
-  }, [onSaveGroupColors]);
+  }, []);
 
   const handleAddGroup = async () => {
     if (newGroupName && !groups[newGroupName]) {
       const updatedGroups = { ...groups, [newGroupName]: newGroupColor };
       setGroups(updatedGroups);
-      await onSaveGroupColors(updatedGroups);
+      onSaveGroupColors(updatedGroups);
       setNewGroupName('');
       setNewGroupColor('#460b6c');
     }
@@ -33,7 +33,7 @@ export default function GroupColorManager({ onSaveGroupColors }: GroupColorManag
   const handleColorChange = async (group: string, color: string) => {
     const updatedGroups = { ...groups, [group]: color };
     setGroups(updatedGroups);
-    await onSaveGroupColors(updatedGroups);
+    onSaveGroupColors(updatedGroups);
   };
 
   const handleDelete = async (group: string) => {
@@ -41,7 +41,7 @@ export default function GroupColorManager({ onSaveGroupColors }: GroupColorManag
       const updatedGroups = { ...groups };
       delete updatedGroups[group];
       setGroups(updatedGroups);
-      await onSaveGroupColors(updatedGroups);
+      onSaveGroupColors(updatedGroups);
     }
   };
 

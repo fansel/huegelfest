@@ -11,16 +11,20 @@ interface AnnouncementFormProps {
 const AnnouncementForm = memo(
   ({ onSubmit, initialData, groups }: AnnouncementFormProps) => {
     const [content, setContent] = useState(initialData?.content || '');
-    const [selectedGroup, setSelectedGroup] = useState(
-      initialData?.group || Object.keys(groups).find((g) => g !== 'default') || '',
-    );
+    const [selectedGroupId, setSelectedGroupId] = useState(() => {
+      if (initialData?.groupId) {
+        return initialData.groupId;
+      }
+      const availableGroups = Object.keys(groups).filter(g => g !== 'default');
+      return availableGroups.length > 0 ? availableGroups[0] : '';
+    });
     const [important, setImportant] = useState(initialData?.important || false);
 
     // Aktualisiere die Felder, wenn sich initialData ändert
     useEffect(() => {
       if (initialData) {
         setContent(initialData.content);
-        setSelectedGroup(initialData.group || '');
+        setSelectedGroupId(initialData.groupId);
         setImportant(initialData.important || false);
       }
     }, [initialData]);
@@ -29,7 +33,7 @@ const AnnouncementForm = memo(
       async (e: React.FormEvent) => {
         e.preventDefault();
 
-        if (!selectedGroup || selectedGroup === 'default') {
+        if (!selectedGroupId || selectedGroupId === 'default') {
           alert('Bitte wählen Sie eine gültige Gruppe aus');
           return;
         }
@@ -44,8 +48,8 @@ const AnnouncementForm = memo(
         const newAnnouncement: IAnnouncement = {
           id: initialData?.id,
           content: content.trim(),
-          group: selectedGroup,
-          groupColor: groups[selectedGroup] || '#ff9900',
+          groupId: selectedGroupId,
+          groupColor: groups[selectedGroupId] || '#ff9900',
           important: important,
           createdAt: now,
           updatedAt: now,
@@ -63,11 +67,12 @@ const AnnouncementForm = memo(
         // Nur zurücksetzen, wenn es keine initialData gibt (neue Ankündigung)
         if (!initialData) {
           setContent('');
-          setSelectedGroup(Object.keys(groups).find((g) => g !== 'default') || '');
+          const availableGroups = Object.keys(groups).filter(g => g !== 'default');
+          setSelectedGroupId(availableGroups.length > 0 ? availableGroups[0] : '');
           setImportant(false);
         }
       },
-      [content, selectedGroup, important, initialData, onSubmit, groups],
+      [content, selectedGroupId, important, initialData, onSubmit, groups],
     );
 
     const handleContentChange = useCallback(
@@ -78,7 +83,7 @@ const AnnouncementForm = memo(
     );
 
     const handleGroupChange = useCallback((e: React.ChangeEvent<HTMLSelectElement>) => {
-      setSelectedGroup(e.target.value);
+      setSelectedGroupId(e.target.value);
     }, []);
 
     const handleImportantChange = useCallback(
@@ -87,6 +92,8 @@ const AnnouncementForm = memo(
       },
       [],
     );
+
+    const availableGroups = Object.keys(groups).filter(g => g !== 'default');
 
     return (
       <form
@@ -112,7 +119,7 @@ const AnnouncementForm = memo(
           <div>
             <label className="block text-sm font-medium text-gray-700 mb-1">Gruppe</label>
             <select
-              value={selectedGroup}
+              value={selectedGroupId}
               onChange={handleGroupChange}
               className="mt-1 block w-full rounded-md bg-white border border-gray-300 text-gray-700 shadow-sm focus:border-[#ff9900] focus:ring-[#ff9900] py-2 px-3"
               required
@@ -120,14 +127,11 @@ const AnnouncementForm = memo(
               <option value="" className="bg-white">
                 Bitte wählen...
               </option>
-              {Object.keys(groups).map(
-                (groupName) =>
-                  groupName !== 'default' && (
-                    <option key={groupName} value={groupName} className="bg-white">
-                      {groupName}
-                    </option>
-                  ),
-              )}
+              {availableGroups.map((groupName) => (
+                <option key={groupName} value={groupName} className="bg-white">
+                  {groupName}
+                </option>
+              ))}
             </select>
           </div>
 

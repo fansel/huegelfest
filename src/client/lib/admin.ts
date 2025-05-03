@@ -1,31 +1,4 @@
-import { Announcement, GroupColors, TimelineData } from './types';
-
-const ADMIN_USERNAME = 'admin';
-const ADMIN_PASSWORD = 'huegelfest';
-
-// Funktion zum Generieren einer zufälligen Farbe
-const generateRandomColor = (): string => {
-  const letters = '0123456789ABCDEF';
-  let color = '#';
-  for (let i = 0; i < 6; i++) {
-    color += letters[Math.floor(Math.random() * 16)];
-  }
-  return color;
-};
-
-export const validateCredentials = (username: string, password: string): boolean => {
-  return username === ADMIN_USERNAME && password === ADMIN_PASSWORD;
-};
-
-export const getExistingGroups = (announcements: Announcement[]): string[] => {
-  const groups = new Set(announcements.map(announcement => announcement.group));
-  return Array.from(groups);
-};
-
-export const generateNewId = (announcements: Announcement[]): string => {
-  const maxId = Math.max(...announcements.map(a => parseInt(a.id, 10)), 0);
-  return String(maxId + 1);
-};
+import { Announcement, GroupColors, TimelineData } from '@/server/lib/types';
 
 export const formatDateForInput = (date: Date): string => {
   return date.toISOString().split('T')[0];
@@ -67,7 +40,6 @@ export const loadAnnouncements = async (): Promise<Announcement[]> => {
   }
 };
 
-// Funktionen für Gruppenfarben
 export async function loadGroupColors(): Promise<GroupColors> {
   try {
     const response = await fetch('/api/groups');
@@ -184,7 +156,13 @@ export const loadTimeline = async (): Promise<TimelineData> => {
     if (!response.ok) {
       throw new Error('Fehler beim Laden der Timeline');
     }
-    return await response.json();
+    const data = await response.json();
+    return {
+      _id: data._id || '',
+      days: data.days || [],
+      createdAt: data.createdAt ? new Date(data.createdAt) : new Date(),
+      updatedAt: data.updatedAt ? new Date(data.updatedAt) : new Date()
+    };
   } catch (error) {
     console.error('Fehler beim Laden der Timeline:', error);
     return { _id: '', days: [], createdAt: new Date(), updatedAt: new Date() };
@@ -220,4 +198,14 @@ export const saveTimeline = async (timeline: TimelineData): Promise<void> => {
     console.error('saveTimeline - Fehler beim Speichern der Timeline:', error);
     throw error;
   }
+};
+
+// Hilfsfunktionen
+const generateRandomColor = (): string => {
+  const letters = '0123456789ABCDEF';
+  let color = '#';
+  for (let i = 0; i < 6; i++) {
+    color += letters[Math.floor(Math.random() * 16)];
+  }
+  return color;
 }; 

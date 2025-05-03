@@ -1,35 +1,87 @@
-import mongoose from 'mongoose';
+import mongoose, { Schema, Document } from 'mongoose';
+import { logger } from '@/server/lib/logger';
 
-const categorySchema = new mongoose.Schema({
-  value: {
-    type: String,
-    required: true,
-    unique: true
+export interface ICategory extends Document {
+  name: string;
+  label: string;
+  value: string;
+  icon: string;
+  color: string;
+  description: string;
+  isDefault?: boolean;
+}
+
+const categorySchema = new Schema<ICategory>(
+  {
+    name: {
+      type: String,
+      required: true,
+      unique: true,
+    },
+    label: {
+      type: String,
+      required: true,
+    },
+    value: {
+      type: String,
+      required: true,
+      unique: true,
+    },
+    icon: {
+      type: String,
+      required: true,
+      validate: {
+        validator: function(v: string) {
+          return v.startsWith('Fa');
+        },
+        message: 'Icon muss mit "Fa" beginnen'
+      }
+    },
+    color: {
+      type: String,
+      required: true,
+    },
+    description: {
+      type: String,
+      required: true,
+    },
+    isDefault: {
+      type: Boolean,
+      default: false,
+    },
   },
-  label: {
-    type: String,
-    required: true
+  {
+    timestamps: true,
   },
-  icon: {
-    type: String,
-    required: true
-  },
-  isDefault: {
-    type: Boolean,
-    default: false,
-    validate: {
-      validator: function(this: { value: string }, v: boolean): boolean {
-        // Nur die "Sonstiges"-Kategorie darf isDefault true sein
-        return !v || this.value === 'other';
-      },
-      message: 'Nur die "Sonstiges"-Kategorie darf als Standard markiert sein'
-    }
+);
+
+// Stelle sicher, dass der Name und der Wert eindeutig sind
+categorySchema.pre('save', async function(next) {
+  const existingCategory = await mongoose
+    .model('Category')
+    .findOne({
+      $or: [
+        { name: this.name, _id: { $ne: this._id } },
+        { value: this.value, _id: { $ne: this._id } },
+      ],
+    });
+
+  if (existingCategory) {
+    throw new Error('Eine Kategorie mit diesem Namen oder Wert existiert bereits');
   }
-}, {
-  timestamps: true
+
+  next();
 });
 
-// Prüfe, ob das Model bereits existiert
-const Category = mongoose.models?.Category || mongoose.model('Category', categorySchema);
+// Stelle sicher, dass das Model nur einmal erstellt wird
+let Category: mongoose.Model<ICategory>;
 
-export default Category; 
+try {
+  // Versuche das existierende Model zu laden
+  Category = mongoose.model<ICategory>('Category');
+} catch {
+  // Wenn das Model noch nicht existiert, erstelle es
+  Category = mongoose.model<ICategory>('Category', categorySchema);
+}
+
+export { Category }; 

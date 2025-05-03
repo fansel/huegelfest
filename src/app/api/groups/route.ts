@@ -1,8 +1,8 @@
 import { NextResponse } from 'next/server';
 import { connectDB } from '@/database/config/connector';
 import Group from '@/database/models/Group';
-import { GroupColors } from '@/lib/types';
-import { sendUpdateToAllClients } from '@/lib/sse';
+import { GroupColors } from '@/types/types';
+import { sendUpdateToAllClients } from '@/server/lib/sse';
 
 export async function GET() {
   try {
