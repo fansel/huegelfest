@@ -8,6 +8,7 @@ import { ReactNode } from 'react';
 
 interface InfoBoardProps {
   isPWA?: boolean;
+  allowClipboard?: boolean;
 }
 
 interface Reaction {
@@ -28,7 +29,7 @@ interface Reactions {
   heart: Reaction;
 }
 
-export default function InfoBoard({ isPWA = false }: InfoBoardProps) {
+export default function InfoBoard({ isPWA = false, allowClipboard = false }: InfoBoardProps) {
   const [announcements, setAnnouncements] = useState<IAnnouncement[]>([]);
   const [groupColors, setGroupColors] = useState<GroupColors>({ default: '#460b6c' });
   const boardRef = useRef<HTMLDivElement>(null);

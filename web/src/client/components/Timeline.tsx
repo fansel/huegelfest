@@ -36,6 +36,7 @@ interface TimelineData {
 
 interface TimelineProps {
   showFavoritesOnly?: boolean;
+  allowClipboard?: boolean;
 }
 
 // Statisches Icon-Mapping
@@ -48,7 +49,7 @@ const iconMap: { [key: string]: React.ComponentType } = {
   FaList,
 };
 
-export default function Timeline({ showFavoritesOnly = false }: TimelineProps) {
+export default function Timeline({ showFavoritesOnly = false, allowClipboard = false }: TimelineProps) {
   const [timelineData, setTimelineData] = useState<TimelineData | null>(null);
   const [selectedDay, setSelectedDay] = useState(0);
   const [selectedCategories, setSelectedCategories] = useState<Set<string>>(new Set());

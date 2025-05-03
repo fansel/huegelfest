@@ -15,13 +15,19 @@ import Anreise from '@/app/anreise/page';
 import Admin from '@/app/admin/page';
 import Login from './Login';
 import Starfield from './Starfield';
-import PushNotificationSettings from './PushNotificationSettings';
+import PushNotificationSettings from './settings/PushNotificationSettings';
 import Settings from './settings/Settings';
 import Image from 'next/image';
 import { useAuth } from '../../contexts/AuthContext';
-import { webPushService } from '@/server/lib/webpush';
+import { webPushClient } from '@/client/lib/webpush';
 
 type View = 'home' | 'anreise' | 'infoboard' | 'settings' | 'admin' | 'favorites';
+
+// Hilfsfunktion um zu prüfen, ob es sich um ein Desktop-Gerät handelt
+const isDesktop = () => {
+  if (typeof window === 'undefined') return false;
+  return !/Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent);
+};
 
 export default function PWAContainer() {
   const [currentView, setCurrentView] = useState<View>('home');
@@ -36,6 +42,11 @@ export default function PWAContainer() {
   const [showPushDialog, setShowPushDialog] = useState(false);
   const [lastScrollY, setLastScrollY] = useState(0);
   const [isLoading, setIsLoading] = useState(true);
+  const [isDesktopDevice, setIsDesktopDevice] = useState(false);
+
+  useEffect(() => {
+    setIsDesktopDevice(isDesktop());
+  }, []);
 
   useEffect(() => {
     const mediaQuery = window.matchMedia('(display-mode: standalone)');
@@ -111,24 +122,7 @@ export default function PWAContainer() {
           if ('PushManager' in window) {
             const permission = await Notification.requestPermission();
             if (permission === 'granted') {
-              const subscription = await registration.pushManager.subscribe({
-                userVisibleOnly: true,
-                applicationServerKey: webPushService.getPublicKey()
-              });
-
-              const deviceId = localStorage.getItem('deviceId') || crypto.randomUUID();
-              localStorage.setItem('deviceId', deviceId);
-
-              await fetch('/api/push/subscribe', {
-                method: 'POST',
-                headers: {
-                  'Content-Type': 'application/json',
-                },
-                body: JSON.stringify({
-                  subscription,
-                  deviceId
-                }),
-              });
+              await webPushClient.subscribe();
             }
           }
         }
@@ -231,7 +225,7 @@ export default function PWAContainer() {
         const registration = await navigator.serviceWorker.ready;
         const subscription = await registration.pushManager.subscribe({
           userVisibleOnly: true,
-          applicationServerKey: webPushService.getPublicKey()
+          applicationServerKey: webPushClient.getPublicKey()
         });
 
         const deviceId = localStorage.getItem('deviceId') || crypto.randomUUID();
@@ -261,27 +255,27 @@ export default function PWAContainer() {
       case 'home':
         return (
           <div className="flex flex-col items-center justify-start px-2 sm:px-6 py-0 sm:py-4 text-center">
-            <Timeline />
+            <Timeline allowClipboard={isDesktopDevice} />
           </div>
         );
       case 'anreise':
         return (
           <div className={`flex flex-col items-center justify-start px-2 sm:px-6 py-0 sm:py-4 text-center ${
             !showStarfield ? 'bg-[#460b6c]' : ''}`}>
-            <Anreise />
+            <Anreise allowClipboard={isDesktopDevice} />
           </div>
         );
       case 'infoboard':
         return (
           <div className={`flex flex-col items-center justify-start px-2 sm:px-6 py-0 sm:py-4 text-center ${
             !showStarfield ? 'bg-[#460b6c]' : ''}`}>
-            <InfoBoard isPWA={isPWA} />
+            <InfoBoard isPWA={isPWA} allowClipboard={isDesktopDevice} />
           </div>
         );
       case 'favorites':
         return (
           <div className="flex flex-col items-center justify-start px-2 sm:px-6 py-0 sm:py-4 text-center">
-            <Timeline showFavoritesOnly={true} />
+            <Timeline showFavoritesOnly={true} allowClipboard={isDesktopDevice} />
           </div>
         );
       case 'settings':

@@ -2,6 +2,7 @@
 
 const nextConfig = {
   output: 'standalone',
+  productionBrowserSourceMaps: false,
   images: {
     remotePatterns: [
       {
@@ -11,8 +12,17 @@ const nextConfig = {
       {
         protocol: 'https',
         hostname: 'huegelfest.fansel.dev',
+      },
+      {
+        protocol: 'https',
+        hostname: '*.cloudflare.com',
+      },
+      {
+        protocol: 'https',
+        hostname: '*.soundcloud.com',
       }
     ],
+    unoptimized: true,
   },
   experimental: {
     serverActions: {
@@ -56,6 +66,10 @@ const nextConfig = {
             key: 'Referrer-Policy',
             value: 'strict-origin-when-cross-origin',
           },
+          {
+            key: 'Content-Security-Policy',
+            value: "default-src 'self'; script-src 'self' 'unsafe-eval' 'unsafe-inline' https://static.cloudflareinsights.com; style-src 'self' 'unsafe-inline'; img-src 'self' data: https: blob:; font-src 'self' data:; connect-src 'self' https://huegelfest.fansel.dev https://*.cloudflare.com; worker-src 'self' blob:; child-src 'self' blob:; frame-src 'self' https://*.soundcloud.com; media-src 'self' https://*.soundcloud.com;"
+          }
         ],
       },
       {
