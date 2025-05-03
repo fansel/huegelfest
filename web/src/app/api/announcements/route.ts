@@ -7,6 +7,14 @@ import { revalidatePath } from 'next/cache';
 import { sendUpdateToAllClients } from '@/server/lib/sse';
 import { webPushService } from '@/server/lib/webpush';
 
+// Initialisiere den WebPush-Service beim Import
+try {
+  webPushService.initialize();
+} catch (error) {
+  // Fehler bei der Initialisierung sollten den Build nicht blockieren
+  console.warn('Fehler bei der WebPush-Initialisierung:', error);
+}
+
 export async function GET() {
   try {
     await connectDB();
