@@ -26,7 +26,25 @@ const protectedApiRoutes: Record<string, RouteConfig> = {
   }
 };
 
-export async function middleware(request: NextRequest) {
+// Hilfsfunktion zur Token-Validierung
+async function validateToken(token: string, request: NextRequest) {
+  try {
+    const response = await fetch(new URL('/api/auth/validate', request.url), {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({ token }),
+    });
+    const data = await response.json();
+    return data.valid;
+  } catch (error) {
+    console.error('Token-Validierung fehlgeschlagen:', error);
+    return false;
+  }
+}
+
+export function middleware(request: NextRequest) {
   const authToken = request.cookies.get('auth_token');
   const isAdminRoute = request.nextUrl.pathname.startsWith('/admin');
   const isLoginRoute = request.nextUrl.pathname === '/login';
@@ -46,21 +64,13 @@ export async function middleware(request: NextRequest) {
       return NextResponse.redirect(new URL('/login', request.url));
     }
 
-    // Token-Validierung über API-Route
-    const validationResponse = await fetch(new URL('/api/auth/validate', request.url), {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-      },
-      body: JSON.stringify({ token: authToken.value }),
+    // Token-Validierung
+    return validateToken(authToken.value, request).then(valid => {
+      if (!valid) {
+        return NextResponse.redirect(new URL('/login', request.url));
+      }
+      return NextResponse.next();
     });
-
-    const { valid } = await validationResponse.json();
-    
-    if (!valid) {
-      return NextResponse.redirect(new URL('/login', request.url));
-    }
-    return NextResponse.next();
   }
 
   // API-Route Logik
@@ -86,19 +96,12 @@ export async function middleware(request: NextRequest) {
 
     // Wenn es eine geschützte Methode ist, validiere den Token
     if (isProtectedMethod && authToken) {
-      const validationResponse = await fetch(new URL('/api/auth/validate', request.url), {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({ token: authToken.value }),
+      return validateToken(authToken.value, request).then(valid => {
+        if (!valid) {
+          return new NextResponse(null, { status: 401 });
+        }
+        return NextResponse.next();
       });
-
-      const { valid } = await validationResponse.json();
-      
-      if (!valid) {
-        return new NextResponse(null, { status: 401 });
-      }
     }
 
     return NextResponse.next();
