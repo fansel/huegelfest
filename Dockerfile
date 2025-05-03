@@ -1,4 +1,4 @@
-FROM node:18 AS base
+FROM node:18-alpine AS base
 
 # Install dependencies only when needed
 FROM base AS deps
@@ -19,6 +19,7 @@ COPY web/ .
 # Uncomment the following line in case you want to disable telemetry during the build.
 ENV NEXT_TELEMETRY_DISABLED=1
 
+# Build the application
 RUN npm run build
 
 # Production image, copy all the files and run next
@@ -28,18 +29,18 @@ WORKDIR /app
 ENV NODE_ENV=production
 ENV NEXT_TELEMETRY_DISABLED=1
 
-RUN addgroup --system --gid 1001 nodejs
-RUN adduser --system --uid 1001 nextjs
+# Create a non-root user
+RUN addgroup -S -g 1001 nodejs && \
+    adduser -S -u 1001 -G nodejs nextjs
 
+# Copy only necessary files
 COPY --from=builder /app/public ./public
+COPY --from=builder /app/.next/standalone ./
+COPY --from=builder /app/.next/static ./.next/static
 
-# Set the correct permission for prerender cache
-RUN mkdir .next
-RUN chown nextjs:nodejs .next
-
-# Automatically leverage output traces to reduce image size
-COPY --from=builder --chown=nextjs:nodejs /app/.next/standalone ./
-COPY --from=builder --chown=nextjs:nodejs /app/.next/static ./.next/static
+# Set permissions
+RUN mkdir .next && \
+    chown -R nextjs:nodejs .next
 
 USER nextjs
 

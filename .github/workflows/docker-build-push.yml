@@ -13,6 +13,8 @@ jobs:
     steps:
       - name: Checkout code
         uses: actions/checkout@v3
+        with:
+          fetch-depth: 0  # Für besseres Caching
 
       - name: Set up QEMU
         uses: docker/setup-qemu-action@v2
@@ -26,6 +28,14 @@ jobs:
           username: ${{ env.DOCKERHUB_USERNAME }}
           password: ${{ env.DOCKERHUB_TOKEN }}
 
+      - name: Cache Node modules
+        uses: actions/cache@v3
+        with:
+          path: web/node_modules
+          key: ${{ runner.os }}-node-${{ hashFiles('web/package-lock.json') }}
+          restore-keys: |
+            ${{ runner.os }}-node-
+
       - name: Build and push web app
         uses: docker/build-push-action@v4
         with:
@@ -33,8 +43,12 @@ jobs:
           file: ./Dockerfile
           platforms: linux/arm64
           push: true
-          cache-from: type=registry,ref=${{ env.DOCKERHUB_USERNAME }}/huegelfest-web:buildcache
-          cache-to: type=registry,ref=${{ env.DOCKERHUB_USERNAME }}/huegelfest-web:buildcache,mode=max
+          cache-from: |
+            type=registry,ref=${{ env.DOCKERHUB_USERNAME }}/huegelfest-web:buildcache,ignore-error=true
+            type=gha,scope=build
+          cache-to: |
+            type=registry,ref=${{ env.DOCKERHUB_USERNAME }}/huegelfest-web:buildcache,mode=max
+            type=gha,scope=build,mode=max
           tags: |
             ${{ env.DOCKERHUB_USERNAME }}/huegelfest-web:latest
             ${{ env.DOCKERHUB_USERNAME }}/huegelfest-web:${{ github.sha }}
