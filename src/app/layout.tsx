@@ -5,8 +5,9 @@ import "./globals.css";
 import Footer from "@/client/components/Footer";
 import PWAContainer from "@/client/components/PWAContainer";
 import { PWAProvider } from "@/contexts/PWAContext";
-import ClientMusicNote from "@/client/components/ClientMusicNote";
 import { AuthProvider } from '@/contexts/AuthContext';
+import { NetworkStatusProvider } from '@/contexts/NetworkStatusContext';
+import { NetworkStatusBanner } from '@/client/components/NetworkStatusBanner';
 
 export const metadata: Metadata = {
   title: 'Hügelfest',
@@ -37,12 +38,14 @@ export default function RootLayout({
       <body className="antialiased min-h-screen flex flex-col">
         <AuthProvider>
           <PWAProvider>
-            <PWAContainer />
-            <div className="desktop-only">
-              <ClientMusicNote />
-              <main className="flex-grow pb-16 md:pb-0">{children}</main>
-              <Footer />
-            </div>
+            <NetworkStatusProvider>
+              <NetworkStatusBanner />
+              <PWAContainer />
+              <div className="desktop-only">
+                <main className="flex-grow pb-16 md:pb-0">{children}</main>
+                <Footer />
+              </div>
+            </NetworkStatusProvider>
           </PWAProvider>
         </AuthProvider>
       </body>

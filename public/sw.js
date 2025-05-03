@@ -3,6 +3,18 @@ console.log('Service Worker wird geladen...');
 
 const CACHE_NAME = 'huegelfest-cache-v1';
 
+// Funktion zum Benachrichtigen aller Clients über den Netzwerkstatus
+const notifyClients = (isOnline) => {
+  self.clients.matchAll().then(clients => {
+    clients.forEach(client => {
+      client.postMessage({
+        type: 'NETWORK_STATUS',
+        isOnline
+      });
+    });
+  });
+};
+
 // Installations-Event
 self.addEventListener('install', (event) => {
   console.log('Service Worker: Installation gestartet');
@@ -49,9 +61,16 @@ self.addEventListener('fetch', (event) => {
 
   event.respondWith(
     fetch(event.request)
+      .then(response => {
+        // Bei erfolgreicher Anfrage: Online-Status setzen
+        notifyClients(true);
+        return response;
+      })
       .catch(error => {
         console.error('Fetch-Fehler:', error);
-        // Bei einem Fehler zeige die Offline-Seite
+        // Bei einem Fehler: Offline-Status setzen
+        notifyClients(false);
+        // Offline-Seite anzeigen
         return new Response(
           `<!DOCTYPE html>
           <html lang="de">

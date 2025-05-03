@@ -1,9 +1,9 @@
 'use client';
 
-import { useState } from 'react';
 import PushNotificationSettings from './PushNotificationSettings';
 import StarfieldSettings from './StarfieldSettings';
 import AdminSettings from './AdminSettings';
+import MusicPlayerSettings from './MusicPlayerSettings';
 
 interface SettingsProps {
   showStarfield: boolean;
@@ -40,6 +40,7 @@ export default function Settings({
       <div className="divide-y divide-[#460b6c]/20">
         <PushNotificationSettings />
         <StarfieldSettings showStarfield={showStarfield} onToggle={onToggleStarfield} />
+        <MusicPlayerSettings />
         <AdminSettings 
           showAdmin={showAdmin} 
           onToggle={onToggleAdmin}
