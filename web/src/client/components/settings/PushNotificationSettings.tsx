@@ -1,7 +1,7 @@
 'use client';
 
 import { useState, useEffect } from 'react';
-import { webPushService } from '@/server/lib/webpush';
+import { webPushClient } from '@/client/lib/webpush';
 
 interface DebugInfo {
   supported: boolean;
@@ -17,7 +17,7 @@ export default function PushNotificationSettings() {
     supported: false,
     permission: 'unbekannt',
     subscription: 'unbekannt',
-    vapidKey: webPushService.getPublicKey() || 'Nicht gesetzt'
+    vapidKey: webPushClient.getPublicKey() || 'Nicht gesetzt'
   });
 
   useEffect(() => {
@@ -37,8 +37,7 @@ export default function PushNotificationSettings() {
       const permission = await navigator.permissions.query({ name: 'notifications' });
       setDebugInfo(prev => ({ ...prev, permission: permission.state }));
 
-      const registration = await navigator.serviceWorker.ready;
-      const subscription = await registration.pushManager.getSubscription();
+      const subscription = await webPushClient.getSubscription();
       
       setDebugInfo(prev => ({ 
         ...prev, 
@@ -56,27 +55,7 @@ export default function PushNotificationSettings() {
   const subscribe = async () => {
     try {
       setIsLoading(true);
-      
-      const registration = await navigator.serviceWorker.ready;
-      const subscription = await registration.pushManager.subscribe({
-        userVisibleOnly: true,
-        applicationServerKey: webPushService.getPublicKey()
-      });
-
-      const deviceId = localStorage.getItem('deviceId') || crypto.randomUUID();
-      localStorage.setItem('deviceId', deviceId);
-
-      await fetch('/api/push/subscribe', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({
-          subscription,
-          deviceId
-        }),
-      });
-
+      await webPushClient.subscribe();
       setIsSubscribed(true);
       setDebugInfo(prev => ({ ...prev, subscription: 'Aktiv' }));
     } catch (error) {
@@ -89,21 +68,7 @@ export default function PushNotificationSettings() {
   const unsubscribe = async () => {
     try {
       setIsLoading(true);
-      
-      const registration = await navigator.serviceWorker.ready;
-      const subscription = await registration.pushManager.getSubscription();
-      
-      if (subscription) {
-        await subscription.unsubscribe();
-        await fetch('/api/push/unsubscribe', {
-          method: 'POST',
-          headers: {
-            'Content-Type': 'application/json',
-          },
-          body: JSON.stringify({ endpoint: subscription.endpoint }),
-        });
-      }
-
+      await webPushClient.unsubscribe();
       setIsSubscribed(false);
       setDebugInfo(prev => ({ ...prev, subscription: 'Nicht aktiv' }));
     } catch (error) {

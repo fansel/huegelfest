@@ -16,7 +16,11 @@ interface Ride {
   passengers: string[];
 }
 
-export default function AnreiseContent() {
+interface ContentProps {
+  allowClipboard?: boolean;
+}
+
+export default function AnreiseContent({ allowClipboard = false }: ContentProps) {
   const [activeOption, setActiveOption] = useState<string | null>(null);
   const [showRideForm, setShowRideForm] = useState(false);
   const [showRideDetails, setShowRideDetails] = useState<string | null>(null);

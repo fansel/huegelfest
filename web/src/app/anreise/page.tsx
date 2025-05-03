@@ -5,7 +5,11 @@ import Content from './content/page';
 import styles from "./page.module.css";
 import { usePWA } from '@/contexts/PWAContext';
 
-export default function Anreise() {
+interface AnreiseProps {
+  allowClipboard?: boolean;
+}
+
+export default function Anreise({ allowClipboard = false }: AnreiseProps) {
   const { isPWA } = usePWA();
 
   return (
@@ -16,8 +20,8 @@ export default function Anreise() {
         </Link>
       )}
       <div className={styles.container}>
-      <Content />
-    </div>
+        <Content allowClipboard={allowClipboard} />
+      </div>
     </>
   );
 } 

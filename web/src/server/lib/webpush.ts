@@ -15,21 +15,21 @@ class WebPushService {
   initialize() {
     if (this.initialized) return;
 
-    // Nur zur Laufzeit prüfen, nicht beim Build
+    // Nur auf der Server-Seite initialisieren
     if (typeof window === 'undefined') {
-    const vapidPublicKey = process.env.NEXT_PUBLIC_VAPID_PUBLIC_KEY;
-    const vapidPrivateKey = process.env.VAPID_PRIVATE_KEY;
+      const vapidPublicKey = process.env.NEXT_PUBLIC_VAPID_PUBLIC_KEY;
+      const vapidPrivateKey = process.env.VAPID_PRIVATE_KEY;
 
-    if (!vapidPublicKey || !vapidPrivateKey) {
-      console.warn('VAPID-Schlüssel fehlen in den Umgebungsvariablen. Push-Benachrichtigungen sind deaktiviert.');
-      return;
-    }
+      if (!vapidPublicKey || !vapidPrivateKey) {
+        console.warn('VAPID-Schlüssel fehlen in den Umgebungsvariablen. Push-Benachrichtigungen sind deaktiviert.');
+        return;
+      }
 
-    webpush.setVapidDetails(
+      webpush.setVapidDetails(
         'mailto:vapid@hey.fansel.dev',
-      vapidPublicKey,
-      vapidPrivateKey
-    );
+        vapidPublicKey,
+        vapidPrivateKey
+      );
     }
 
     this.initialized = true;
@@ -47,16 +47,20 @@ class WebPushService {
 
     try {
       const subscribers = await Subscriber.find();
-      const notifications = subscribers.map(subscriber => 
-        webpush.sendNotification(subscriber.subscription, JSON.stringify(payload))
+      const notifications = subscribers.map(subscriber => {
+        const subscription = {
+          endpoint: subscriber.endpoint,
+          keys: subscriber.keys
+        };
+        return webpush.sendNotification(subscription, JSON.stringify(payload))
           .catch(error => {
             if (error.statusCode === 410) {
               // Subscription ist abgelaufen, entferne sie
               return Subscriber.findByIdAndDelete(subscriber._id);
             }
             throw error;
-          })
-      );
+          });
+      });
 
       await Promise.allSettled(notifications);
     } catch (error) {
@@ -70,4 +74,10 @@ class WebPushService {
   }
 }
 
+// Singleton-Instanz erstellen
 export const webPushService = new WebPushService();
+
+// Initialisiere den Service nur auf der Server-Seite
+if (typeof window === 'undefined') {
+  webPushService.initialize();
+}
