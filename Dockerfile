@@ -1,48 +1,51 @@
-# Build Stage
-FROM node:20-alpine AS builder
+FROM node:18-alpine AS base
 
-# Build Arguments
-ARG NEXT_PUBLIC_VAPID_PUBLIC_KEY
-ARG VAPID_PRIVATE_KEY
-ARG NEXT_PUBLIC_SITE_URL
-
-# Setze Build Arguments als Environment Variables
-ENV NEXT_PUBLIC_VAPID_PUBLIC_KEY=$NEXT_PUBLIC_VAPID_PUBLIC_KEY
-ENV VAPID_PRIVATE_KEY=$VAPID_PRIVATE_KEY
-ENV NEXT_PUBLIC_SITE_URL=$NEXT_PUBLIC_SITE_URL
-
+# Install dependencies only when needed
+FROM base AS deps
 WORKDIR /app
 
-# Kopiere package.json und package-lock.json
-COPY package*.json ./
-COPY next.config.js ./
-COPY tsconfig.json ./
-
-# Installiere Dependencies
+# Install dependencies based on the preferred package manager
+COPY web/package.json web/package-lock.json* ./
 RUN npm ci
 
-# Kopiere den Rest des Codes
-COPY src ./src
-COPY public ./public
+# Rebuild the source code only when needed
+FROM base AS builder
+WORKDIR /app
+COPY --from=deps /app/node_modules ./node_modules
+COPY web/ .
 
-# Baue die Anwendung
+# Next.js collects completely anonymous telemetry data about general usage.
+# Learn more here: https://nextjs.org/telemetry
+# Uncomment the following line in case you want to disable telemetry during the build.
+ENV NEXT_TELEMETRY_DISABLED 1
+
 RUN npm run build
 
-# Production Stage
-FROM node:20-alpine AS runner
-
+# Production image, copy all the files and run next
+FROM base AS runner
 WORKDIR /app
 
-# Kopiere nur die notwendigen Dateien
-COPY --from=builder /app/next.config.js ./
-COPY --from=builder /app/public ./public
-COPY --from=builder /app/.next/standalone ./
-COPY --from=builder /app/.next/static ./.next/static
+ENV NODE_ENV production
+ENV NEXT_TELEMETRY_DISABLED 1
 
-# Setze die Port
-ENV PORT=3000
+RUN addgroup --system --gid 1001 nodejs
+RUN adduser --system --uid 1001 nextjs
+
+COPY --from=builder /app/public ./public
+
+# Set the correct permission for prerender cache
+RUN mkdir .next
+RUN chown nextjs:nodejs .next
+
+# Automatically leverage output traces to reduce image size
+COPY --from=builder --chown=nextjs:nodejs /app/.next/standalone ./
+COPY --from=builder --chown=nextjs:nodejs /app/.next/static ./.next/static
+
+USER nextjs
+
 EXPOSE 3000
 
-# Starte die Anwendung
-CMD ["node", "server.js"]
+ENV PORT 3000
+ENV HOSTNAME "0.0.0.0"
 
+CMD ["node", "server.js"] 
