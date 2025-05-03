@@ -1,24 +1,26 @@
 'use server'
 
 import { headers } from 'next/headers'
-import { webpush } from '@/server/lib/webpush'
+import { webPushService } from '@/server/lib/webpush'
 import type { PushSubscription as WebPushSubscription } from 'web-push'
 
 export async function subscribeUser(subscription: WebPushSubscription) {
-  const headersList = await headers()
-  const host = headersList.get('host')
-  const protocol = process.env.NODE_ENV === 'development' ? 'http' : 'https'
-  const origin = `${protocol}://${host}`
-
-  await webpush.sendNotification(subscription, JSON.stringify({
-    title: '',
-    body: 'Willkommen beim Hügelfest!',
-    icon: `${origin}/logo.jpg`,
-    badge: `${origin}/logo.jpg`,
-    data: {
-      url: origin
-    }
-  }))
+  try {
+    // Teste die Subscription mit einer Test-Benachrichtigung
+    await webPushService.sendNotificationToAll({
+      title: 'Test-Benachrichtigung',
+      body: 'Push-Benachrichtigungen sind jetzt aktiviert!',
+      icon: '/icon-192x192.png',
+      badge: '/badge-96x96.png',
+      data: {
+        url: '/'
+      }
+    });
+    return true;
+  } catch (error) {
+    console.error('Fehler beim Testen der Subscription:', error);
+    return false;
+  }
 }
 
 export async function unsubscribeUser() {

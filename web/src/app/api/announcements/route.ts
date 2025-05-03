@@ -3,7 +3,6 @@ import { connectDB } from '@/database/config/connector';
 import Announcement from '@/database/models/Announcement';
 import Group from '@/database/models/Group';
 import { Subscriber } from '@/database/models/Subscriber';
-import webpush from 'web-push';
 import { revalidatePath } from 'next/cache';
 import { sendUpdateToAllClients } from '@/server/lib/sse';
 import { webPushService } from '@/server/lib/webpush';
@@ -95,16 +94,18 @@ export async function POST(request: Request) {
 
     console.log('POST /api/announcements - Ankündigung erstellt:', { id: announcement._id });
 
-    // Sende Push-Benachrichtigung
-    await webPushService.sendNotificationToAll({
-      title: 'Neue Ankündigung',
-      body: content,
-      icon: '/icon-192x192.png',
-      badge: '/badge-96x96.png',
-      data: {
-        url: '/'
-      }
-    });
+    // Sende Push-Benachrichtigung nur wenn der Service initialisiert ist
+    if (webPushService.isInitialized()) {
+      await webPushService.sendNotificationToAll({
+        title: 'Neue Ankündigung',
+        body: content,
+        icon: '/icon-192x192.png',
+        badge: '/badge-96x96.png',
+        data: {
+          url: '/'
+        }
+      });
+    }
 
     revalidatePath('/announcements');
     sendUpdateToAllClients();

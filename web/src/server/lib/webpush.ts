@@ -9,9 +9,9 @@ interface PushNotificationPayload {
   data?: Record<string, any>;
 }
 
-class WebPushService {
+export class WebPushService {
   private static instance: WebPushService;
-  private initialized = false;
+  private initialized: boolean = false;
 
   private constructor() {}
 
@@ -20,6 +20,10 @@ class WebPushService {
       WebPushService.instance = new WebPushService();
     }
     return WebPushService.instance;
+  }
+
+  public isInitialized(): boolean {
+    return this.initialized;
   }
 
   public initialize(): void {
