@@ -3,9 +3,7 @@ version: '3.8'
 
 services:
   huegelfest-app:
-    build:
-      context: .
-      dockerfile: Dockerfile
+    image: xilefma/huegelfest-web:latest
     env_file:
       - .env.production
     ports:
