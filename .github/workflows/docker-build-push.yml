@@ -2,15 +2,6 @@ name: Docker Build and Push
 
 on:
   workflow_dispatch:
-    inputs:
-      environment:
-        description: 'Deployment Environment'
-        required: true
-        default: 'production'
-        type: choice
-        options:
-          - production
-          - staging
 
 env:
   DOCKERHUB_USERNAME: ${{ secrets.DOCKERHUB_USERNAME }}
@@ -41,8 +32,6 @@ jobs:
           tags: |
             ${{ env.DOCKERHUB_USERNAME }}/huegelfest-web:latest
             ${{ env.DOCKERHUB_USERNAME }}/huegelfest-web:${{ github.sha }}
-          build-args: |
-            NODE_ENV=${{ inputs.environment }}
 
       - name: Build and push MongoDB init
         uses: docker/build-push-action@v4
