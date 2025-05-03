@@ -1,9 +1,5 @@
 import { NextResponse } from 'next/server';
 import type { NextRequest } from 'next/server';
-import { webPushService } from '@/server/lib/webpush';
-
-// Initialisiere den WebPush-Service
-webPushService.initialize();
 
 // Typen für die API-Routen
 type HttpMethod = 'GET' | 'POST' | 'PUT' | 'DELETE';

@@ -9,83 +9,65 @@ interface PushNotificationPayload {
   data?: Record<string, any>;
 }
 
-export class WebPushService {
-  private static instance: WebPushService;
-  private initialized: boolean = false;
+class WebPushService {
+  private initialized = false;
 
-  private constructor() {}
-
-  public static getInstance(): WebPushService {
-    if (!WebPushService.instance) {
-      WebPushService.instance = new WebPushService();
-    }
-    return WebPushService.instance;
-  }
-
-  public isInitialized(): boolean {
-    return this.initialized;
-  }
-
-  public initialize(): void {
+  initialize() {
     if (this.initialized) return;
 
-    const vapidPublicKey = process.env.NEXT_PUBLIC_VAPID_PUBLIC_KEY;
-    const vapidPrivateKey = process.env.VAPID_PRIVATE_KEY;
+    // Nur zur Laufzeit prüfen, nicht beim Build
+    if (typeof window === 'undefined') {
+      const vapidPublicKey = process.env.NEXT_PUBLIC_VAPID_PUBLIC_KEY;
+      const vapidPrivateKey = process.env.VAPID_PRIVATE_KEY;
 
-    if (!vapidPublicKey || !vapidPrivateKey) {
-      console.warn('VAPID-Keys fehlen. Push-Benachrichtigungen werden deaktiviert.');
-      this.initialized = false;
-      return;
-    }
+      if (!vapidPublicKey || !vapidPrivateKey) {
+        console.warn('VAPID-Schlüssel fehlen in den Umgebungsvariablen. Push-Benachrichtigungen sind deaktiviert.');
+        return;
+      }
 
-    try {
       webpush.setVapidDetails(
         'mailto:vapid@hey.fansel.dev',
         vapidPublicKey,
         vapidPrivateKey
       );
-      this.initialized = true;
-    } catch (error) {
-      console.warn('Fehler beim Initialisieren des WebPush-Services:', error);
-      this.initialized = false;
     }
+
+    this.initialized = true;
   }
 
-  public async sendNotificationToAll(payload: PushNotificationPayload): Promise<void> {
+  isInitialized() {
+    return this.initialized;
+  }
+
+  async sendNotificationToAll(payload: PushNotificationPayload) {
     if (!this.initialized) {
-      console.warn('WebPushService nicht initialisiert. Push-Benachrichtigung wird nicht gesendet.');
+      console.warn('WebPush-Service ist nicht initialisiert. Push-Benachrichtigung wird nicht gesendet.');
       return;
     }
 
     try {
       const subscribers = await Subscriber.find();
-      
-      for (const subscriber of subscribers) {
-        try {
-          await webpush.sendNotification(
-            {
-              endpoint: subscriber.endpoint,
-              keys: subscriber.keys
-            },
-            JSON.stringify(payload)
-          );
-        } catch (error) {
-          console.error('Fehler beim Senden der Benachrichtigung:', error);
-          // Wenn der Subscriber nicht mehr gültig ist, entferne ihn
-          if (error && typeof error === 'object' && 'statusCode' in error && error.statusCode === 410) {
-            await Subscriber.deleteOne({ _id: subscriber._id });
-          }
-        }
-      }
+      const notifications = subscribers.map(subscriber => 
+        webpush.sendNotification(subscriber.subscription, JSON.stringify(payload))
+          .catch(error => {
+            if (error.statusCode === 410) {
+              // Subscription ist abgelaufen, entferne sie
+              return Subscriber.findByIdAndDelete(subscriber._id);
+            }
+            throw error;
+          })
+      );
+
+      await Promise.allSettled(notifications);
     } catch (error) {
-      console.error('Fehler beim Abrufen der Subscriber:', error);
+      console.error('Fehler beim Senden der Push-Benachrichtigungen:', error);
+      throw error;
     }
   }
 
-  public getPublicKey(): string | undefined {
+  getPublicKey(): string | undefined {
     return process.env.NEXT_PUBLIC_VAPID_PUBLIC_KEY;
   }
 }
 
-// Erstelle eine Instanz, aber initialisiere sie nicht
-export const webPushService = WebPushService.getInstance();
+export const webPushService = new WebPushService();
