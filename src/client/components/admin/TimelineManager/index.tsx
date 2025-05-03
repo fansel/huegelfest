@@ -54,6 +54,7 @@ export default function TimelineManager() {
   const [error, setError] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState(false);
   const [showMoveDialog, setShowMoveDialog] = useState(false);
+  const [showEventForm, setShowEventForm] = useState(false);
 
   useEffect(() => {
     const loadData = async () => {
@@ -263,6 +264,7 @@ export default function TimelineManager() {
       await saveTimeline(updatedTimeline);
       setNewEvent({ time: '', title: '', description: '', categoryId: 'other' });
       setError(null);
+      setShowEventForm(false);
     } catch (error) {
       console.error('Fehler beim Speichern:', error);
       alert('Fehler beim Speichern');
@@ -285,6 +287,7 @@ export default function TimelineManager() {
     saveTimeline(updatedTimeline);
     setEditingEvent(null);
     setNewEvent({ time: '', title: '', description: '', categoryId: 'other' });
+    setShowEventForm(false);
   };
 
   const handleUpdateDay = (dayIndex: number, updates: Partial<Day>) => {
@@ -398,6 +401,17 @@ export default function TimelineManager() {
           onUpdateDay={handleUpdateDay}
         />
 
+        <div className="flex justify-between items-center">
+          <h2 className="text-xl font-semibold text-[#460b6c]">Events</h2>
+          <button
+            onClick={() => setShowEventForm(true)}
+            className="px-4 py-2 bg-[#ff9900] text-white rounded-lg hover:bg-orange-600 transition-colors flex items-center gap-2"
+          >
+            <FaPlus size={14} />
+            <span>Neues Event</span>
+          </button>
+        </div>
+
         <EventList
           events={timeline.days[currentDay]?.events || []}
           categories={categories}
@@ -405,20 +419,31 @@ export default function TimelineManager() {
             const event = timeline.days[currentDay].events[eventIndex];
             setEditingEvent({ dayIndex: currentDay, eventIndex });
             setNewEvent(event);
+            setShowEventForm(true);
           }}
           onDeleteEvent={handleDeleteEvent}
           onMoveEvent={handleMoveEvent}
         />
 
-        <EventForm
-          event={newEvent}
-          categories={categories}
-          isEditing={editingEvent !== null}
-          onSubmit={handleSubmit}
-          onChange={setNewEvent}
-          onCancel={() => setEditingEvent(null)}
-          error={error}
-        />
+        {showEventForm && (
+          <EventForm
+            onSubmit={(event) => {
+              setNewEvent(event);
+              if (editingEvent) {
+                handleSaveEdit();
+              } else {
+                handleAddEvent();
+              }
+            }}
+            onCancel={() => {
+              setShowEventForm(false);
+              setEditingEvent(null);
+              setNewEvent({ time: '', title: '', description: '', categoryId: 'other' });
+            }}
+            categories={categories}
+            initialData={editingEvent ? newEvent : undefined}
+          />
+        )}
       </div>
 
       {showCategoryModal && (

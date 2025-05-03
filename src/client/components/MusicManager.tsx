@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { FaMusic, FaPlus, FaTrash, FaExclamationTriangle, FaCheck } from 'react-icons/fa';
+import { FaMusic, FaPlus, FaTrash, FaExclamationTriangle, FaCheck, FaLink } from 'react-icons/fa';
 import Image from 'next/image';
 
 interface TrackInfo {
@@ -42,6 +42,7 @@ export default function MusicManager() {
   const [previewData, setPreviewData] = useState<PreviewData | null>(null);
   const [successMessage, setSuccessMessage] = useState<string | null>(null);
   const [deletingUrls, setDeletingUrls] = useState<Set<string>>(new Set());
+  const [isAddingTrack, setIsAddingTrack] = useState(false);
 
   useEffect(() => {
     loadMusic();
@@ -168,6 +169,7 @@ export default function MusicManager() {
 
       setNewUrl('');
       setSuccessMessage('Musik erfolgreich hinzugefügt!');
+      setIsAddingTrack(false);
       setTimeout(() => {
         setSuccessMessage(null);
       }, 2000);
@@ -208,11 +210,19 @@ export default function MusicManager() {
   };
 
   return (
-    <div className="bg-white rounded-lg shadow-lg p-6">
-      <h2 className="text-2xl font-bold mb-4 flex items-center">
-        <FaMusic className="mr-2" />
-        Musik-URLs verwalten
-      </h2>
+    <div className="bg-white p-4 rounded-lg">
+      <div className="flex justify-between items-center mb-4">
+        <h2 className="text-lg font-bold text-[#460b6c] flex items-center">
+          <FaMusic className="mr-2" />
+          Musik
+        </h2>
+        <button
+          onClick={() => setIsAddingTrack(!isAddingTrack)}
+          className="p-2 text-[#ff9900] hover:text-[#ff9900]/80 transition-colors"
+        >
+          <FaPlus size={20} />
+        </button>
+      </div>
 
       {error && (
         <div className="bg-red-100 border border-red-400 text-red-700 px-4 py-3 rounded mb-4 flex items-center">
@@ -228,41 +238,105 @@ export default function MusicManager() {
         </div>
       )}
 
-      <div className="space-y-4">
-        <div className="flex gap-2">
-          <input
-            type="text"
-            value={newUrl}
-            onChange={(e) => handleUrlChange(e.target.value)}
-            placeholder="SoundCloud-URL eingeben"
-            className="flex-1 p-1.5 border rounded text-sm"
-            disabled={loading}
-          />
-          <button
-            onClick={handleAddUrl}
-            disabled={loading || !newUrl.trim()}
-            className="bg-red-500 text-[#460b6c] w-8 h-8 rounded hover:bg-red-600 flex items-center justify-center disabled:opacity-50"
-          >
-            {loading ? (
-              <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin" />
-            ) : (
-              <FaPlus size={14} />
-            )}
-          </button>
-        </div>
+      {isAddingTrack && (
+        <div className="mb-4 bg-gray-50 p-3 rounded-lg border border-gray-200">
+          <div className="space-y-3">
+            <div className="flex items-center gap-2">
+              <FaLink className="text-gray-400" />
+              <input
+                type="text"
+                value={newUrl}
+                onChange={(e) => handleUrlChange(e.target.value)}
+                placeholder="SoundCloud-URL eingeben"
+                className="flex-1 p-2 border border-gray-300 rounded text-sm bg-white text-gray-700 placeholder-gray-400"
+                disabled={loading}
+              />
+            </div>
+            <div className="flex gap-2">
+              <button
+                onClick={handlePreview}
+                disabled={loading || !newUrl.trim()}
+                className="flex-1 py-2 px-4 rounded bg-gray-200 text-gray-700 text-sm hover:bg-gray-300 transition-colors disabled:opacity-50"
+              >
+                Vorschau
+              </button>
+              <button
+                onClick={handleAddUrl}
+                disabled={loading || !newUrl.trim()}
+                className="flex-1 py-2 px-4 rounded bg-[#ff9900] text-white text-sm hover:bg-orange-600 transition-colors disabled:opacity-50"
+              >
+                {loading ? (
+                  <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin mx-auto" />
+                ) : (
+                  'Hinzufügen'
+                )}
+              </button>
+            </div>
+          </div>
 
-        {previewData && (
-          <div
-            className={`bg-gray-50 p-4 rounded ${previewData.status === 'error' ? 'border border-red-400' : ''}`}
-          >
-            <div className="flex items-center space-x-4">
-              {previewData.status === 'loading' ? (
-                <div className="w-12 h-12 rounded bg-gray-200 animate-pulse" />
-              ) : previewData.trackInfo.thumbnail_url ? (
-                <div className="w-12 h-12 rounded overflow-hidden bg-gray-100 relative flex-shrink-0">
+          {previewData && (
+            <div
+              className={`mt-3 bg-white p-3 rounded-lg border ${
+                previewData.status === 'error' ? 'border-red-400' : 'border-gray-200'
+              }`}
+            >
+              <div className="flex items-center space-x-3">
+                {previewData.status === 'loading' ? (
+                  <div className="w-12 h-12 rounded bg-gray-200 animate-pulse" />
+                ) : previewData.trackInfo.thumbnail_url ? (
+                  <div className="w-12 h-12 rounded overflow-hidden bg-gray-100 relative flex-shrink-0">
+                    <Image
+                      src={previewData.trackInfo.thumbnail_url}
+                      alt={previewData.trackInfo.title || 'Track Cover'}
+                      width={48}
+                      height={48}
+                      className="object-cover w-full h-full"
+                      onError={(e: React.SyntheticEvent<HTMLImageElement>) => {
+                        const target = e.currentTarget;
+                        target.style.display = 'none';
+                        target.parentElement?.classList.add(
+                          'bg-gradient-to-br',
+                          'from-purple-500',
+                          'to-pink-500',
+                        );
+                      }}
+                    />
+                  </div>
+                ) : (
+                  <div className="w-12 h-12 rounded bg-gradient-to-br from-purple-500 to-pink-500 flex items-center justify-center">
+                    <FaMusic className="text-white" size={24} />
+                  </div>
+                )}
+                <div className="flex-1 min-w-0">
+                  <h3 className="font-medium text-sm truncate">
+                    {previewData.status === 'loading'
+                      ? 'Lade Vorschau...'
+                      : previewData.trackInfo.title}
+                  </h3>
+                  <p className="text-xs text-gray-600 truncate">
+                    {previewData.status === 'loading'
+                      ? 'Bitte warten...'
+                      : previewData.trackInfo.author_name}
+                  </p>
+                  {previewData.status === 'error' && (
+                    <p className="text-xs text-red-600 mt-1">{previewData.message}</p>
+                  )}
+                </div>
+              </div>
+            </div>
+          )}
+        </div>
+      )}
+
+      <div className="space-y-3">
+        {musicEntries.map((entry) => (
+          <div key={entry.url} className="bg-gray-50 p-3 rounded-lg border border-gray-200">
+            <div className="flex items-center gap-3">
+              <div className="w-12 h-12 rounded overflow-hidden bg-gray-100 relative flex-shrink-0">
+                {entry.trackInfo.thumbnail_url ? (
                   <Image
-                    src={previewData.trackInfo.thumbnail_url}
-                    alt={previewData.trackInfo.title || 'Track Cover'}
+                    src={entry.trackInfo.thumbnail_url}
+                    alt={entry.trackInfo.title || 'Track Cover'}
                     width={48}
                     height={48}
                     className="object-cover w-full h-full"
@@ -276,80 +350,30 @@ export default function MusicManager() {
                       );
                     }}
                   />
-                </div>
-              ) : (
-                <div className="w-12 h-12 rounded bg-gradient-to-br from-purple-500 to-pink-500 flex items-center justify-center">
-                  <FaMusic className="text-white" size={24} />
-                </div>
-              )}
-              <div>
-                <h3 className="font-medium">
-                  {previewData.status === 'loading'
-                    ? 'Lade Vorschau...'
-                    : previewData.trackInfo.title}
-                </h3>
-                <p className="text-sm text-gray-600">
-                  {previewData.status === 'loading'
-                    ? 'Bitte warten...'
-                    : previewData.trackInfo.author_name}
-                </p>
-                {previewData.status === 'error' && (
-                  <p className="text-sm text-red-600">{previewData.message}</p>
+                ) : (
+                  <div className="w-full h-full bg-gradient-to-br from-purple-500 to-pink-500 flex items-center justify-center">
+                    <FaMusic className="text-white" size={24} />
+                  </div>
                 )}
               </div>
+              <div className="flex-1 min-w-0">
+                <h3 className="font-medium text-sm truncate">{entry.trackInfo.title}</h3>
+                <p className="text-xs text-gray-600 truncate">{entry.trackInfo.author_name}</p>
+              </div>
+              <button
+                onClick={() => handleRemoveUrl(entry.url)}
+                disabled={deletingUrls.has(entry.url)}
+                className="p-2 text-red-600 hover:text-red-800 disabled:opacity-50 flex-shrink-0"
+              >
+                {deletingUrls.has(entry.url) ? (
+                  <div className="w-4 h-4 border-2 border-red-600 border-t-transparent rounded-full animate-spin" />
+                ) : (
+                  <FaTrash size={16} />
+                )}
+              </button>
             </div>
           </div>
-        )}
-
-        <div className="space-y-4">
-          {musicEntries.map((entry) => (
-            <div key={entry.url} className="bg-gray-50 p-4 rounded">
-              <div className="flex items-center justify-between">
-                <div className="flex items-center space-x-4">
-                  <div className="w-12 h-12 rounded overflow-hidden bg-gray-100 relative flex-shrink-0">
-                    {entry.trackInfo.thumbnail_url ? (
-                      <Image
-                        src={entry.trackInfo.thumbnail_url}
-                        alt={entry.trackInfo.title || 'Track Cover'}
-                        width={48}
-                        height={48}
-                        className="object-cover w-full h-full"
-                        onError={(e: React.SyntheticEvent<HTMLImageElement>) => {
-                          const target = e.currentTarget;
-                          target.style.display = 'none';
-                          target.parentElement?.classList.add(
-                            'bg-gradient-to-br',
-                            'from-purple-500',
-                            'to-pink-500',
-                          );
-                        }}
-                      />
-                    ) : (
-                      <div className="w-full h-full bg-gradient-to-br from-purple-500 to-pink-500 flex items-center justify-center">
-                        <FaMusic className="text-white" size={24} />
-                      </div>
-                    )}
-                  </div>
-                  <div>
-                    <h3 className="font-medium">{entry.trackInfo.title}</h3>
-                    <p className="text-sm text-gray-600">{entry.trackInfo.author_name}</p>
-                  </div>
-                </div>
-                <button
-                  onClick={() => handleRemoveUrl(entry.url)}
-                  disabled={deletingUrls.has(entry.url)}
-                  className="text-red-500 hover:text-red-700 disabled:opacity-50 w-8 h-8 flex items-center justify-center"
-                >
-                  {deletingUrls.has(entry.url) ? (
-                    <div className="w-4 h-4 border-2 border-red-500 border-t-transparent rounded-full animate-spin" />
-                  ) : (
-                    <FaTrash />
-                  )}
-                </button>
-              </div>
-            </div>
-          ))}
-        </div>
+        ))}
       </div>
     </div>
   );
