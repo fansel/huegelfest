@@ -1,6 +1,6 @@
 import { SignJWT, jwtVerify } from 'jose';
 import { SHA256 } from 'crypto-js';
-import User from '@/database/models/User';
+import { User } from '@/database/models';
 import { connectDB } from '@/database/config/connector';
 import { logger } from '@/server/lib/logger';
 
@@ -12,44 +12,30 @@ let adminInitialized = false;
 
 // Initialisiere den Admin-Benutzer, falls keiner existiert
 export async function initializeAdmin() {
-  if (adminInitialized) {
-    logger.info('[Auth] Admin-Initialisierung bereits durchgeführt');
-    return;
-  }
-
   try {
-    logger.info('[Auth] Starte Initialisierung des Admin-Benutzers');
     await connectDB();
-
-    const userCount = await User.countDocuments();
-    if (userCount === 0) {
-      logger.info('[Auth] Keine Benutzer gefunden, erstelle Admin-Benutzer');
-      
-      // Prüfe ob Umgebungsvariablen gesetzt sind
-      const adminUsername = process.env.ADMIN_USERNAME;
-      const adminPassword = process.env.ADMIN_PASSWORD;
-      
-      if (!adminUsername || !adminPassword) {
-        logger.error('[Auth] ADMIN_USERNAME oder ADMIN_PASSWORD nicht in Umgebungsvariablen definiert');
-        throw new Error('Admin-Credentials nicht konfiguriert');
-      }
-
-      const hashedPassword = SHA256(adminPassword).toString();
-      const admin = new User({
-        username: adminUsername,
-        password: hashedPassword,
-        isAdmin: true,
-      });
-      
-      await admin.save();
-      logger.info('[Auth] Admin-Benutzer erfolgreich erstellt');
-    } else {
-      logger.info('[Auth] Admin-Benutzer existiert bereits');
+    
+    // Prüfe, ob bereits ein Admin existiert
+    const adminExists = await User.findOne({ isAdmin: true });
+    if (adminExists) {
+      logger.info('Admin-Benutzer existiert bereits');
+      return;
     }
 
-    adminInitialized = true;
+    const adminUsername = process.env.ADMIN_USERNAME || 'admin';
+    const adminPassword = process.env.ADMIN_PASSWORD || 'admin';
+
+    // Erstelle Admin-Benutzer
+    const admin = await User.create({
+      username: adminUsername,
+      password: SHA256(adminPassword).toString(), // Passwort hashen
+      isAdmin: true
+    });
+
+    logger.info('Admin-Benutzer erfolgreich erstellt');
+    return admin;
   } catch (error) {
-    logger.error('[Auth] Kritischer Fehler beim Initialisieren des Admin-Benutzers:', error);
+    logger.error('Fehler beim Initialisieren des Admin-Benutzers:', error);
     throw error;
   }
 }

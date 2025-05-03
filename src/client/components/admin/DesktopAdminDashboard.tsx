@@ -1,80 +1,47 @@
-import { useState } from 'react';
-import { useRouter } from 'next/navigation';
+import { useState, useCallback } from 'react';
+import { IAnnouncement } from '@/types/announcement';
+import { GroupColors } from '@/types/types';
 import AnnouncementForm from './AnnouncementForm';
 import GroupColorManager from './GroupColorManager';
 import MusicManager from '../MusicManager';
-import TimelineManager from './TimelineManager/index';
-import { GroupColors } from '@/types/types';
-import { IAnnouncement } from '@/types/announcement';
+import TimelineManager from './TimelineManager';
 
 interface DesktopAdminDashboardProps {
   announcements: IAnnouncement[];
-  editingAnnouncement: IAnnouncement | undefined;
+  onSaveAnnouncements: (announcements: IAnnouncement[]) => void;
+  onDeleteAnnouncement: (id: string) => void;
+  groups: GroupColors;
   musicUrls: string[];
-  groupColors: GroupColors;
-  onSaveAnnouncements: (announcements: IAnnouncement[]) => Promise<void>;
-  onSaveMusicUrls: (urls: string[]) => Promise<void>;
-  onSaveGroupColors: (colors: GroupColors) => Promise<void>;
-  setEditingAnnouncement: (announcement: IAnnouncement | undefined) => void;
+  onSaveMusicUrls: (urls: string[]) => void;
+  onSaveGroupColors: (colors: GroupColors) => void;
 }
 
-export default function DesktopAdminDashboard({
+const DesktopAdminDashboard = ({
   announcements,
-  editingAnnouncement,
-  musicUrls,
-  groupColors,
   onSaveAnnouncements,
+  onDeleteAnnouncement,
+  groups,
+  musicUrls,
   onSaveMusicUrls,
   onSaveGroupColors,
-  setEditingAnnouncement,
-}: DesktopAdminDashboardProps) {
-  const [activeTab, setActiveTab] = useState<
-    'announcements' | 'groups' | 'music' | 'timeline'
-  >('announcements');
-  const router = useRouter();
+}: DesktopAdminDashboardProps) => {
+  const [editingAnnouncement, setEditingAnnouncement] = useState<IAnnouncement | undefined>();
+  const [activeTab, setActiveTab] = useState<'announcements' | 'groups' | 'music' | 'timeline'>('announcements');
 
-  const handleLogout = async () => {
-    try {
-      await fetch('/api/auth/logout', { method: 'POST' });
-      router.push('/login');
-    } catch (error) {
-      console.error('Fehler beim Logout:', error);
-    }
-  };
-
-  const handleSaveAnnouncement = async (announcement: IAnnouncement) => {
-    const updatedAnnouncements = editingAnnouncement
-      ? announcements.map((a) => (a._id === announcement._id ? announcement : a))
-      : [announcement, ...announcements];
-    await onSaveAnnouncements(updatedAnnouncements);
-    setEditingAnnouncement(undefined);
-  };
-
-  const handleDeleteAnnouncement = async (id: string) => {
-    const updatedAnnouncements = announcements.filter((a) => a._id !== id);
-    await onSaveAnnouncements(updatedAnnouncements);
-  };
+  const handleSaveAnnouncement = useCallback(
+    (announcement: IAnnouncement) => {
+      const updatedAnnouncements = editingAnnouncement
+        ? announcements.map((a) => (a.id === announcement.id ? announcement : a))
+        : [...announcements, announcement];
+      onSaveAnnouncements(updatedAnnouncements);
+    },
+    [announcements, editingAnnouncement, onSaveAnnouncements],
+  );
 
   return (
     <div className="min-h-screen text-[#ff9900] p-6">
       <div className="max-w-7xl mx-auto">
         <div className="bg-[#460b6c]/80 backdrop-blur-sm rounded-lg shadow-lg overflow-hidden">
-          {/* Header */}
-          <div className="p-6 flex justify-between items-center">
-            <div>
-              <h1 className="text-2xl font-bold">Admin Dashboard</h1>
-              <p className="text-[#ff9900]/80 mt-2">
-                Verwalten Sie Ankündigungen, Gruppen und Musik
-              </p>
-            </div>
-            <button
-              onClick={handleLogout}
-              className="px-4 py-2 bg-red-500 text-white rounded-lg hover:bg-red-600 transition-colors"
-            >
-              Abmelden
-            </button>
-          </div>
-
           {/* Tabs */}
           <div className="border-b border-[#ff9900]/20">
             <nav className="flex space-x-8 px-6">
@@ -124,75 +91,72 @@ export default function DesktopAdminDashboard({
           {/* Tab Content */}
           <div className="p-6">
             {activeTab === 'announcements' && (
-              <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-                <div className="bg-[#460b6c]/40 p-6 rounded-lg">
-                  <h2 className="text-xl font-semibold mb-4">
-                    {editingAnnouncement
-                      ? 'Ankündigung bearbeiten'
-                      : 'Neue Ankündigung erstellen'}
-                  </h2>
+              <div className="grid grid-cols-2 gap-6">
+                <div className="bg-white rounded-lg shadow p-6">
+                  <h3 className="text-lg font-semibold text-[#460b6c] mb-4">Ankündigungen</h3>
                   <AnnouncementForm
-                    initialData={editingAnnouncement}
                     onSubmit={handleSaveAnnouncement}
-                    groups={groupColors}
+                    initialData={editingAnnouncement}
+                    groups={groups}
                   />
                 </div>
 
-                <div className="space-y-4">
-                  <h2 className="text-xl font-semibold">Bestehende Ankündigungen</h2>
-                  {announcements.length === 0 ? (
-                    <p className="text-[#ff9900]/60">Keine Ankündigungen vorhanden</p>
-                  ) : (
-                    <div className="space-y-4">
-                      {announcements.map((announcement) => (
-                        <div
-                          key={announcement._id}
-                          className="bg-[#460b6c]/40 border border-[#ff9900]/20 rounded-lg p-4 hover:bg-[#460b6c]/60 transition-colors"
-                        >
-                          <div className="flex justify-between items-start gap-4">
-                            <div className="flex-1">
-                              <p className="text-base">{announcement.content}</p>
-                              <div className="mt-2 flex items-center gap-4 text-sm text-[#ff9900]/80">
-                                <span>{announcement.date}</span>
-                                <span>{announcement.time}</span>
-                                <span className="font-medium">{announcement.groupId}</span>
-                                {announcement.important && (
-                                  <span className="text-red-400 font-medium">
-                                    Wichtig
-                                  </span>
-                                )}
-                              </div>
-                            </div>
-                            <div className="flex gap-2">
-                              <button
-                                onClick={() => setEditingAnnouncement(announcement)}
-                                className="p-2 text-[#ff9900] hover:text-[#ff9900]/80"
-                              >
-                                Bearbeiten
-                              </button>
-                              <button
-                                onClick={() => handleDeleteAnnouncement(announcement._id || '')}
-                                className="p-2 text-red-400 hover:text-red-300"
-                              >
-                                Löschen
-                              </button>
-                            </div>
+                <div className="bg-white rounded-lg shadow p-6">
+                  <h3 className="text-lg font-semibold text-[#460b6c] mb-4">Aktuelle Ankündigungen</h3>
+                  <div className="space-y-4">
+                    {announcements.map((announcement) => (
+                      <div
+                        key={`announcement-${announcement.id}`}
+                        className="bg-gray-50 p-4 rounded-lg border border-gray-200"
+                      >
+                        <div className="flex justify-between items-start mb-2">
+                          <span
+                            className="inline-block px-2 py-1 text-xs font-semibold rounded"
+                            style={{ backgroundColor: announcement.groupColor }}
+                          >
+                            {announcement.groupId}
+                          </span>
+                          <div className="flex space-x-2">
+                            <button
+                              onClick={() => setEditingAnnouncement(announcement)}
+                              className="text-blue-600 hover:text-blue-800"
+                            >
+                              Bearbeiten
+                            </button>
+                            <button
+                              onClick={() => onDeleteAnnouncement(announcement.id)}
+                              className="text-red-600 hover:text-red-800"
+                            >
+                              Löschen
+                            </button>
                           </div>
                         </div>
-                      ))}
-                    </div>
-                  )}
+                        <p className="text-gray-800">{announcement.content}</p>
+                        {announcement.important && (
+                          <span className="inline-block mt-2 text-xs font-semibold text-red-600">
+                            Wichtig
+                          </span>
+                        )}
+                      </div>
+                    ))}
+                  </div>
                 </div>
               </div>
             )}
             {activeTab === 'groups' && (
               <GroupColorManager onSaveGroupColors={onSaveGroupColors} />
             )}
-            {activeTab === 'music' && <MusicManager />}
-            {activeTab === 'timeline' && <TimelineManager />}
+            {activeTab === 'music' && (
+              <MusicManager musicUrls={musicUrls} onSaveMusicUrls={onSaveMusicUrls} />
+            )}
+            {activeTab === 'timeline' && (
+              <TimelineManager />
+            )}
           </div>
         </div>
       </div>
     </div>
   );
-}
+};
+
+export default DesktopAdminDashboard;

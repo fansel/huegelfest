@@ -1,5 +1,6 @@
 import mongoose from 'mongoose';
-import Category from './Category';
+import { Category } from './Category';
+import { logger } from '@/server/lib/logger';
 
 const eventSchema = new mongoose.Schema({
   time: {
@@ -91,7 +92,7 @@ const timelineSchema = new mongoose.Schema({
 timelineSchema.pre('save', async function(next) {
   try {
     // Finde die "Sonstiges"-Kategorie
-    const otherCategory = await Category.findOne({ value: 'other' });
+    const otherCategory = await Category.findOne({ value: 'other' }).lean().exec();
     if (!otherCategory) {
       throw new Error('Kategorie "Sonstiges" nicht gefunden');
     }
@@ -99,15 +100,16 @@ timelineSchema.pre('save', async function(next) {
     // Prüfe für jeden Tag und jedes Event die Kategorie-Referenz
     for (const day of this.days) {
       for (const event of day.events) {
-        const categoryExists = await Category.exists({ _id: event.categoryId });
+        const categoryExists = await Category.exists({ _id: event.categoryId }).lean().exec();
         if (!categoryExists) {
-          console.log(`Kategorie ${event.categoryId} nicht gefunden, weise Event "${event.title}" der "Sonstiges"-Kategorie zu`);
+          logger.info(`Kategorie ${event.categoryId} nicht gefunden, weise Event "${event.title}" der "Sonstiges"-Kategorie zu`);
           event.categoryId = otherCategory._id;
         }
       }
     }
     next();
-  } catch (error: any) {
+  } catch (error) {
+    logger.error('Fehler beim Prüfen der Kategorie-Referenzen:', error);
     next(error);
   }
 });
@@ -133,4 +135,4 @@ daySchema.virtual('formattedDate').get(function() {
 
 const Timeline = mongoose.models?.Timeline || mongoose.model('Timeline', timelineSchema);
 
-export default Timeline; 
+export { Timeline };

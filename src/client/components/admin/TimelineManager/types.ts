@@ -1,8 +1,6 @@
 export interface Category {
-  value: string;
-  label: string;
+  name: string;
   icon: string;
-  isDefault: boolean;
 }
 
 export interface DeletingCategory {

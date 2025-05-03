@@ -1,6 +1,6 @@
 import mongoose from 'mongoose';
 import Category from '@/database/models/Category';
-import Timeline from '@/database/models/Timeline';
+import { Timeline } from '@/database/models/Timeline';
 import { connectDB } from '@/database/config/connector';
 
 export class CategoryService {

@@ -16,19 +16,19 @@ export default function CategoryModal({
   onLoadCategories,
 }: CategoryModalProps) {
   const [newCategory, setNewCategory] = useState<Category>({
-    _id: '',
-    value: '',
-    label: '',
+    name: '',
     icon: 'FaQuestion',
-    isDefault: false,
   });
   const [iconSearch, setIconSearch] = useState('');
   const [iconPage, setIconPage] = useState(0);
   const iconsPerPage = 48; // 8 Spalten * 6 Reihen
 
-  const allIcons = Object.entries(Icons)
+  // Filtere nur die Icons, die tatsächlich in react-icons/fa existieren
+  const availableIcons = Object.entries(Icons)
     .filter(([name]) => name.startsWith('Fa'))
-    .filter(([name]) => iconTranslations[name]) // Nur Icons mit Übersetzung
+    .filter(([name]) => typeof Icons[name as keyof typeof Icons] === 'function');
+
+  const allIcons = availableIcons
     .filter(([name]) => {
       if (!iconSearch) return true;
       const searchTerm = iconSearch.toLowerCase();
@@ -48,6 +48,11 @@ export default function CategoryModal({
     (iconPage + 1) * iconsPerPage,
   );
 
+  const handleIconSelect = (iconName: string) => {
+    console.log('Icon ausgewählt:', iconName);
+    setNewCategory(prev => ({ ...prev, icon: iconName }));
+  };
+
   const handleAddCategory = async () => {
     try {
       if (!newCategory.icon || newCategory.icon === 'FaQuestion') {
@@ -55,24 +60,12 @@ export default function CategoryModal({
         return;
       }
 
-      if (!newCategory.label.trim()) {
+      if (!newCategory.name.trim()) {
         alert('Bitte geben Sie einen Namen für die Kategorie ein.');
         return;
       }
 
-      // Generiere einen Wert aus dem Label
-      const value = newCategory.label
-        .toLowerCase()
-        .replace(/[^a-z0-9]/g, '-')
-        .replace(/-+/g, '-')
-        .replace(/^-|-$/g, '');
-
-      const categoryToAdd = {
-        ...newCategory,
-        value,
-      };
-
-      await onAddCategory(categoryToAdd);
+      await onAddCategory(newCategory);
       await onLoadCategories();
       onClose();
     } catch (error) {
@@ -117,9 +110,9 @@ export default function CategoryModal({
               </label>
               <input
                 type="text"
-                value={newCategory.label}
+                value={newCategory.name}
                 onChange={(e) =>
-                  setNewCategory({ ...newCategory, label: e.target.value })
+                  setNewCategory({ ...newCategory, name: e.target.value })
                 }
                 className="w-full rounded-lg border border-gray-200 px-4 py-2 focus:border-[#ff9900] focus:ring-2 focus:ring-[#ff9900]/20 transition-colors"
                 placeholder="z.B. Workshop"
@@ -156,13 +149,13 @@ export default function CategoryModal({
             {currentPageIcons.map(([name, Icon]) => (
               <button
                 key={name}
-                onClick={() => setNewCategory({ ...newCategory, icon: name })}
+                onClick={() => handleIconSelect(name)}
                 className={`p-3 rounded-lg flex flex-col items-center gap-1 transition-colors ${
                   newCategory.icon === name
                     ? 'bg-[#ff9900] text-white'
                     : 'bg-white hover:bg-gray-100'
                 }`}
-                title={`${iconTranslations[name]} (${name})`}
+                title={`${iconTranslations[name] || name.replace('Fa', '')} (${name})`}
               >
                 <Icon className="text-2xl" />
                 <span className="text-xs truncate w-full text-center">
@@ -209,7 +202,7 @@ export default function CategoryModal({
             disabled={
               !newCategory.icon ||
               newCategory.icon === 'FaQuestion' ||
-              !newCategory.label.trim()
+              !newCategory.name.trim()
             }
           >
             Hinzufügen

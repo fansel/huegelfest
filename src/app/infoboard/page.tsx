@@ -1,8 +1,8 @@
 'use client';
 
 import { useState, useEffect } from 'react';
-import InfoBoard from '@/components/InfoBoard';
-import { usePWA } from '@/contexts/PWAContext';
+import InfoBoard from '@/client/components/InfoBoard';
+import { usePWA } from '@/client/contexts/PWAContext';
 
 export default function InfoBoardPage() {
   const { isPWA } = usePWA();

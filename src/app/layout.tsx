@@ -2,15 +2,11 @@ import type { Metadata, Viewport } from "next";
 import { GeistSans } from 'geist/font/sans';
 import { GeistMono } from 'geist/font/mono';
 import "./globals.css";
-import Footer from "@/components/Footer";
-import PWAContainer from "@/components/PWAContainer";
+import Footer from "@/client/components/Footer";
+import PWAContainer from "@/client/components/PWAContainer";
 import { PWAProvider } from "@/contexts/PWAContext";
-import ClientMusicNote from "@/components/ClientMusicNote";
+import ClientMusicNote from "@/client/components/ClientMusicNote";
 import { AuthProvider } from '@/contexts/AuthContext';
-import { initializeAdmin } from '@/lib/auth';
-
-// Initialisiere Admin beim Start
-initializeAdmin().catch(console.error);
 
 export const metadata: Metadata = {
   title: 'Hügelfest',

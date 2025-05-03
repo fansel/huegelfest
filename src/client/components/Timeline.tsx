@@ -3,19 +3,12 @@
 import React, { useEffect, useState } from 'react';
 import {
   FaMusic,
-  FaUsers,
   FaUtensils,
-  FaCampground,
   FaGamepad,
   FaQuestion,
-  FaFilter,
   FaHeart,
-  FaRegHeart,
   FaList,
 } from 'react-icons/fa';
-import * as Icons from 'react-icons/fa';
-import { usePWA } from '@/client/contexts/PWAContext';
-import Image from 'next/image';
 
 interface Event {
   _id?: string;
@@ -26,39 +19,39 @@ interface Event {
   favorite?: boolean;
 }
 
-interface Day {
-  _id?: string;
-  title: string;
-  description: string;
-  events: Event[];
+interface Category {
+  value: string;
+  label: string;
+  icon: string;
 }
 
 interface TimelineData {
-  days: Day[];
-}
-
-interface FavoriteEventsByDay {
-  [dayTitle: string]: Event[];
+  days: {
+    _id?: string;
+    title: string;
+    events: Event[];
+  }[];
+  categories: Category[];
 }
 
 interface TimelineProps {
   showFavoritesOnly?: boolean;
 }
 
-interface Category {
-  _id: string;
-  value: string;
-  label: string;
-  icon: string;
-}
+// Statisches Icon-Mapping
+const iconMap: { [key: string]: React.ComponentType } = {
+  FaMusic,
+  FaUtensils,
+  FaGamepad,
+  FaQuestion,
+  FaHeart,
+  FaList,
+};
 
 export default function Timeline({ showFavoritesOnly = false }: TimelineProps) {
   const [timelineData, setTimelineData] = useState<TimelineData | null>(null);
+  const [selectedDay, setSelectedDay] = useState(0);
   const [selectedCategories, setSelectedCategories] = useState<Set<string>>(new Set());
-  const [selectedDay, setSelectedDay] = useState<number>(0);
-  const [isScrolling, setIsScrolling] = useState(false);
-  const [categories, setCategories] = useState<Category[]>([]);
-  const { isPWA } = usePWA();
 
   useEffect(() => {
     const loadData = async () => {
@@ -70,7 +63,25 @@ export default function Timeline({ showFavoritesOnly = false }: TimelineProps) {
         // Lade Kategorien
         const categoriesResponse = await fetch('/api/categories');
         const categoriesData = await categoriesResponse.json();
-        setCategories(categoriesData);
+
+        // Mappe die Kategorien mit den entsprechenden Icons
+        const categoriesWithIcons = categoriesData.map((category: Category) => {
+          const iconMap: { [key: string]: string } = {
+            music: 'FaMusic',
+            food: 'FaUtensils',
+            activities: 'FaGamepad',
+            other: 'FaQuestion'
+          };
+          return {
+            ...category,
+            icon: iconMap[category.value] || 'FaQuestion'
+          };
+        });
+
+        setTimelineData({
+          ...timelineData,
+          categories: categoriesWithIcons,
+        });
 
         // Lade Favoriten aus dem localStorage
         const favorites = JSON.parse(localStorage.getItem('favorites') || '{}');
@@ -78,7 +89,8 @@ export default function Timeline({ showFavoritesOnly = false }: TimelineProps) {
         // Markiere favorisierte Events
         const timelineWithFavorites = {
           ...timelineData,
-          days: timelineData.days.map((day: Day) => ({
+          categories: categoriesWithIcons,
+          days: timelineData.days.map((day: { _id?: string; title: string; events: Event[] }) => ({
             ...day,
             events: day.events.map((event: Event) => ({
               ...event,
@@ -95,10 +107,6 @@ export default function Timeline({ showFavoritesOnly = false }: TimelineProps) {
 
     loadData();
   }, []);
-
-  const handleScroll = () => {
-    setIsScrolling(true);
-  };
 
   const toggleCategory = (category: string) => {
     const newCategories = new Set(selectedCategories);
@@ -135,21 +143,6 @@ export default function Timeline({ showFavoritesOnly = false }: TimelineProps) {
     };
 
     setTimelineData(updatedTimeline);
-  };
-
-  const getFavoriteEvents = (): FavoriteEventsByDay => {
-    if (!timelineData) return {};
-
-    const favoriteEventsByDay: FavoriteEventsByDay = {};
-
-    for (const day of timelineData.days) {
-      const dayFavorites = day.events.filter((event) => event.favorite);
-      if (dayFavorites.length > 0) {
-        favoriteEventsByDay[day.title] = dayFavorites;
-      }
-    }
-
-    return favoriteEventsByDay;
   };
 
   if (!timelineData) {
@@ -229,8 +222,8 @@ export default function Timeline({ showFavoritesOnly = false }: TimelineProps) {
               >
                 <FaList className="text-lg" />
               </button>
-              {categories.map((category) => {
-                const IconComponent = Icons[category.icon as keyof typeof Icons] || FaQuestion;
+              {timelineData?.categories.map((category) => {
+                const IconComponent = iconMap[category.icon] || FaQuestion;
                 return (
                   <button
                     key={category.value}
@@ -252,17 +245,18 @@ export default function Timeline({ showFavoritesOnly = false }: TimelineProps) {
           {/* Zweite Reihe: Labels für ausgewählte Kategorien */}
           {selectedCategories.size > 0 && (
             <div className="flex justify-center mt-2">
-              <div className="flex space-x-2 overflow-x-auto pb-2 px-4">
+              <div className="flex flex-wrap gap-2 justify-center">
                 {Array.from(selectedCategories).map((categoryId) => {
-                  const category = categories.find((cat) => cat.value === categoryId);
-                  return category ? (
+                  const category = timelineData?.categories.find((c) => c.value === categoryId);
+                  if (!category) return null;
+                  return (
                     <span
                       key={categoryId}
-                      className="flex-shrink-0 inline-flex items-center px-2 py-1 rounded-full text-xs bg-[#ff9900]/20 text-[#ff9900]"
+                      className="px-2 py-1 bg-[#ff9900]/20 text-[#ff9900] rounded-full text-sm"
                     >
                       {category.label}
                     </span>
-                  ) : null;
+                  );
                 })}
               </div>
             </div>
@@ -274,39 +268,29 @@ export default function Timeline({ showFavoritesOnly = false }: TimelineProps) {
         <div className="mb-4">
           <h3 className="text-lg font-medium mb-2 text-[#ff9900]">Meine Favoriten</h3>
           <div className="space-y-4">
-            {Object.keys(getFavoriteEvents()).length > 0 ? (
-              Object.entries(getFavoriteEvents()).map(([dayTitle, events]) => (
+            {timelineData.days[selectedDay].events.filter((event) => event.favorite).length > 0 ? (
+              timelineData.days[selectedDay].events.map((event) => (
                 <div
-                  key={dayTitle}
+                  key={`${event.time}-${event.title}`}
                   className="bg-[#460b6c]/40 backdrop-blur-sm rounded-lg p-3 border border-[#ff9900]/20"
                 >
-                  <h4 className="text-[#ff9900] font-medium mb-2">{dayTitle}</h4>
-                  <div className="space-y-2">
-                    {events.map((event: Event) => (
-                      <div
-                        key={`${event.time}-${event.title}`}
-                        className="bg-[#460b6c]/60 backdrop-blur-sm rounded-lg p-2 border border-[#ff9900]/10"
-                      >
-                        <div className="flex items-center justify-between">
-                          <div>
-                            <h5 className="text-[#ff9900] font-medium">
-                              {event.time} - {event.title}
-                            </h5>
-                            {event.description && (
-                              <p className="text-[#ff9900]/60 text-xs mt-1">
-                                {event.description}
-                              </p>
-                            )}
-                          </div>
-                          <button
-                            onClick={() => toggleFavorite(dayTitle, event)}
-                            className="text-[#ff9900] p-1"
-                          >
-                            <FaHeart />
-                          </button>
-                        </div>
-                      </div>
-                    ))}
+                  <div className="flex items-center justify-between">
+                    <div>
+                      <h5 className="text-[#ff9900] font-medium">
+                        {event.time} - {event.title}
+                      </h5>
+                      {event.description && (
+                        <p className="text-[#ff9900]/60 text-xs mt-1">
+                          {event.description}
+                        </p>
+                      )}
+                    </div>
+                    <button
+                      onClick={() => toggleFavorite(timelineData.days[selectedDay].title, event)}
+                      className="text-[#ff9900] p-1"
+                    >
+                      <FaHeart />
+                    </button>
                   </div>
                 </div>
               ))
@@ -320,40 +304,27 @@ export default function Timeline({ showFavoritesOnly = false }: TimelineProps) {
       ) : (
         <>
           {!showFavoritesOnly && (
-            <div
-              className="relative px-4"
-              onScroll={handleScroll}
-              onTouchStart={() => setIsScrolling(true)}
-              onTouchEnd={() => setIsScrolling(false)}
-            >
+            <div className="relative px-4">
               <div className="absolute left-4 top-0 bottom-0 w-0.5 bg-[#ff9900]/20" />
               {filteredEvents.map((event) => {
-                const category = categories.find((cat) => cat.value === event.categoryId);
-                const IconComponent = category ? Icons[category.icon as keyof typeof Icons] || FaQuestion : FaQuestion;
+                const category = timelineData.categories.find((c) => c.value === event.categoryId);
+                const IconComponent = category ? iconMap[category.icon] || FaQuestion : FaQuestion;
                 return (
                   <div
                     key={`${event.time}-${event.title}`}
-                    className="bg-white/5 backdrop-blur-sm rounded-lg p-4 mb-4 border border-[#ff9900]/20"
+                    className="bg-[#460b6c]/50 backdrop-blur-sm border border-[#ff9900]/20 rounded-lg p-4"
                   >
-                    <div className="flex items-start gap-4">
-                      <div className="flex-shrink-0 w-12 h-12 bg-[#460b6c] rounded-full flex items-center justify-center">
-                        <IconComponent className="text-[#ff9900] text-xl" />
-                      </div>
-                      <div className="flex-grow">
-                        <div className="flex justify-between items-start">
-                          <div>
-                            <div className="text-[#ff9900] font-medium">{event.time}</div>
-                            <h3 className="text-white text-lg font-semibold">{event.title}</h3>
-                          </div>
-                          <button
-                            onClick={() => toggleFavorite(timelineData.days[selectedDay].title, event)}
-                            className="text-[#ff9900] hover:text-[#ff9900]/80 transition-colors"
-                          >
-                            {event.favorite ? <FaHeart /> : <FaRegHeart />}
-                          </button>
+                    <div className="flex items-start justify-between">
+                      <div className="flex items-center space-x-3">
+                        <div className="p-2 bg-[#ff9900]/20 rounded-full">
+                          <IconComponent className="text-[#ff9900] text-lg" />
                         </div>
-                        <p className="text-gray-300 mt-2">{event.description}</p>
+                        <div>
+                          <h3 className="text-[#ff9900] font-medium">{event.title}</h3>
+                          <p className="text-white/80 text-sm mt-1">{event.description}</p>
+                        </div>
                       </div>
+                      <div className="text-[#ff9900] text-sm">{event.time}</div>
                     </div>
                   </div>
                 );

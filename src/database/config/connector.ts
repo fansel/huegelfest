@@ -1,60 +1,60 @@
 import mongoose from 'mongoose';
+import { logger } from '@/server/lib/logger';
 
 const MONGODB_URI = process.env.MONGODB_URI;
 
 if (!MONGODB_URI) {
-  throw new Error('Bitte definieren Sie MONGODB_URI in der .env Datei');
+  logger.error('[Database] MONGODB_URI ist nicht definiert');
+  throw new Error('MONGODB_URI ist nicht definiert');
 }
 
-interface MongooseCache {
-  conn: typeof mongoose | null;
-  promise: Promise<typeof mongoose> | null;
-}
+logger.info('[Database] Versuche Verbindung zu MongoDB herzustellen...');
 
-declare global {
-  var mongoose: MongooseCache | undefined;
-}
+let cached = global.mongoose;
 
-let cached: MongooseCache = global.mongoose || { conn: null, promise: null };
-
-if (!global.mongoose) {
-  global.mongoose = cached;
+if (!cached) {
+  cached = global.mongoose = { conn: null, promise: null };
 }
 
 export async function connectDB() {
   if (cached.conn) {
+    logger.info('[Database] Verwende existierende Verbindung');
     return cached.conn;
   }
 
   if (!cached.promise) {
+    logger.info('[Database] Erstelle neue Verbindung');
     const opts = {
       bufferCommands: false,
       maxPoolSize: 10,
       minPoolSize: 5,
       socketTimeoutMS: 45000,
       connectTimeoutMS: 10000,
-      maxRetries: 5,
-      retryDelay: 1000,
+      serverSelectionTimeoutMS: 10000,
+      retryWrites: true,
+      retryReads: true
     };
 
     cached.promise = mongoose.connect(MONGODB_URI!, opts).then((mongoose) => {
-      console.log('MongoDB verbunden');
+      logger.info('[Database] MongoDB erfolgreich verbunden');
       return mongoose;
     }).catch((error) => {
-      console.error('MongoDB Verbindungsfehler:', error);
-      cached.promise = null;
+      logger.error('[Database] MongoDB Verbindungsfehler:', error);
       throw error;
     });
   }
 
   try {
+    logger.info('[Database] Warte auf Verbindungsversprechen...');
     cached.conn = await cached.promise;
-    return cached.conn;
+    logger.info('[Database] Verbindung erfolgreich hergestellt');
   } catch (e) {
+    logger.error('[Database] Fehler beim Herstellen der Verbindung:', e);
     cached.promise = null;
-    console.error('MongoDB Verbindungsfehler:', e);
     throw e;
   }
+
+  return cached.conn;
 }
 
 export async function disconnectDB() {

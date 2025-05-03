@@ -363,29 +363,39 @@ export default function PWAContainer() {
         {renderContent()}
       </main>
 
-      <nav className={`fixed bottom-0 left-0 right-0 ${showStarfield ? 'bg-[#460b6c]/90' : 'bg-[#460b6c]'} backdrop-blur-md border-t border-[#ff9900]/20 z-50 pb-[env(safe-area-inset-bottom)] transition-transform duration-300 ${isNavVisible ? 'translate-y-0' : 'translate-y-full'}`}>
-        <div className="flex justify-between items-center h-16 px-2 sm:px-4">
-          {navItems.map(({ id, icon: Icon }) => (
-            <button
-              key={id}
-              onClick={() => setCurrentView(id as View)}
-              className={`flex items-center justify-center min-w-[60px] transition-all duration-200 ${
-                currentView === id 
-                  ? 'text-[#ff9900] scale-110' 
-                  : 'text-[#ff9900]/60 hover:text-[#ff9900]'
-              }`}
-            >
-              <div className={`p-2 rounded-full transition-colors duration-200 ${
-                currentView === id 
-                  ? 'bg-[#ff9900]/20' 
-                  : 'bg-transparent'
-              }`}>
-                <Icon size={24} />
-              </div>
-            </button>
-          ))}
+      {isNavVisible && (
+        <nav className="fixed bottom-0 left-0 right-0 bg-[#460b6c]/80 backdrop-blur-sm border-t border-[#ff9900]/20">
+          <div className="flex justify-around items-center px-2 py-2">
+            {navItems.map((item) => (
+              <button
+                key={item.id}
+                onClick={() => setCurrentView(item.id as View)}
+                className={`flex flex-col items-center justify-center w-full py-2 ${
+                  currentView === item.id
+                    ? 'text-[#ff9900]'
+                    : 'text-[#ff9900]/60 hover:text-[#ff9900]'
+                }`}
+              >
+                <item.icon className="w-6 h-6" />
+                <span className="text-xs mt-1">{item.label}</span>
+              </button>
+            ))}
+          </div>
+        </nav>
+      )}
+      {isMusicVisible && currentView !== 'admin' && (
+        <div className="fixed bottom-20 right-4 z-50">
+          <MusicNote
+            onClick={toggleMusic}
+            onExpandChange={setIsMusicExpanded}
+          />
         </div>
-      </nav>
+      )}
+      {pushSupported && showPushDialog && (
+        <PushNotificationSettings
+          onClose={() => setShowPushDialog(false)}
+        />
+      )}
     </div>
   );
 }

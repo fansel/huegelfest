@@ -1,6 +1,7 @@
 import { NextResponse } from 'next/server';
 import type { NextRequest } from 'next/server';
-import { verifyToken } from '@/lib/auth';
+import { verifyToken } from '@/auth/auth';
+
 
 // Typen für die API-Routen
 type HttpMethod = 'GET' | 'POST' | 'PUT' | 'DELETE';
@@ -56,6 +57,12 @@ export async function middleware(request: NextRequest) {
   if (isAdminRoute) {
     if (!authToken) {
       console.log('Redirecting from admin to login');
+      return NextResponse.redirect(new URL('/login', request.url));
+    }
+    try {
+      await verifyToken(authToken.value);
+    } catch (error) {
+      console.log('Token is invalid, redirecting to login');
       return NextResponse.redirect(new URL('/login', request.url));
     }
     return NextResponse.next();
@@ -118,6 +125,7 @@ export async function middleware(request: NextRequest) {
   return NextResponse.next();
 }
 
+// Konfiguriere die Middleware für alle Routen
 export const config = {
-  matcher: ['/api/admin/:path*', '/admin/:path*'],
+  matcher: '/:path*',
 }; 

@@ -2,8 +2,8 @@
 
 import { revalidatePath } from 'next/cache';
 import { connectDB } from '../../database/config/connector';
-import Timeline from '../../database/models/Timeline';
-import Category from '../../database/models/Category';
+import { Timeline } from '../../database/models/Timeline';
+import { Category } from '../../database/models/Category';
 import { TimelineData } from '@/types/types';
 import { logger } from '@/server/lib/logger';
 
@@ -15,21 +15,29 @@ export async function loadTimeline(): Promise<TimelineData> {
       return {
         id: '',
         days: [],
-        createdAt: new Date(),
-        updatedAt: new Date(),
+        createdAt: new Date().toISOString(),
+        updatedAt: new Date().toISOString(),
       };
     }
+
+    // Konvertiere MongoDB-Objekte zu einfachen Strings
     return {
-      ...timeline,
       id: timeline._id.toString(),
       days: timeline.days.map(day => ({
-        ...day,
         id: day._id.toString(),
+        title: day.title,
+        description: day.description,
+        date: day.date.toISOString(),
         events: day.events.map(event => ({
-          ...event,
           id: event._id.toString(),
-        })),
+          time: event.time,
+          title: event.title,
+          description: event.description,
+          categoryId: event.categoryId.toString()
+        }))
       })),
+      createdAt: timeline.createdAt.toISOString(),
+      updatedAt: timeline.updatedAt.toISOString()
     };
   } catch (error) {
     logger.error('[Server Action] Fehler beim Laden der Timeline:', error);
@@ -51,17 +59,27 @@ export async function saveTimeline(timeline: TimelineData): Promise<void> {
     }
 
     const timelineToSave = {
-      days: timeline.days.map(day => ({
-        title: day.title,
-        description: day.description,
-        date: day.date,
-        events: day.events.map(event => ({
-          time: event.time,
-          title: event.title,
-          description: event.description,
-          categoryId: event.categoryId || 'other',
-        })),
-      })),
+      days: timeline.days.map(day => {
+        // Setze ein Standarddatum, falls keines vorhanden ist
+        const dateStr = day.date || new Date().toISOString().split('T')[0];
+        const date = new Date(dateStr);
+        
+        if (isNaN(date.getTime())) {
+          throw new Error(`Ungültiges Datum: ${dateStr}`);
+        }
+        
+        return {
+          title: day.title || 'Neuer Tag',
+          description: day.description || 'Keine Beschreibung verfügbar',
+          date: date,
+          events: day.events.map(event => ({
+            time: event.time || '00:00',
+            title: event.title || 'Neues Event',
+            description: event.description || 'Keine Beschreibung verfügbar',
+            categoryId: otherCategory._id,
+          })),
+        };
+      }),
     };
 
     await Timeline.deleteMany({});

@@ -1,6 +1,6 @@
 import { NextResponse } from 'next/server';
 import { connectDB } from '@/database/config/connector';
-import Timeline from '@/database/models/Timeline';
+import { Timeline } from '@/database/models/Timeline';
 
 // Hilfsfunktion zum Bereinigen der Daten
 function cleanTimelineData(data: any) {

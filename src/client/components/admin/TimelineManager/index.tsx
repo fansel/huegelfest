@@ -18,8 +18,8 @@ export default function TimelineManager() {
   const [timeline, setTimeline] = useState<TimelineData>({
     id: '',
     days: [],
-    createdAt: new Date(),
-    updatedAt: new Date(),
+    createdAt: new Date().toISOString(),
+    updatedAt: new Date().toISOString(),
   });
   const [currentDay, setCurrentDay] = useState<number>(0);
   const [newEvent, setNewEvent] = useState<Omit<Event, 'id'>>({
@@ -56,8 +56,26 @@ export default function TimelineManager() {
   const [showMoveDialog, setShowMoveDialog] = useState(false);
 
   useEffect(() => {
-    loadTimeline().then(setTimeline);
-    loadCategories();
+    const loadData = async () => {
+      try {
+        const timelineData = await loadTimeline();
+        // Konvertiere Date-Strings zu Date-Objekten
+        const processedTimeline = {
+          ...timelineData,
+          createdAt: new Date(timelineData.createdAt),
+          updatedAt: new Date(timelineData.updatedAt),
+          days: timelineData.days.map(day => ({
+            ...day,
+            date: new Date(day.date)
+          }))
+        };
+        setTimeline(processedTimeline);
+        await loadCategories();
+      } catch (error) {
+        console.error('Fehler beim Laden der Daten:', error);
+      }
+    };
+    loadData();
   }, []);
 
   const loadCategories = async () => {

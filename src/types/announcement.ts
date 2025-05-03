@@ -3,9 +3,8 @@ export interface IAnnouncement {
   content: string;
   date?: string;
   time?: string;
-  group: string;
+  groupId: string;
   groupColor: string;
-  groupId?: string;
   important?: boolean;
   reactions?: {
     thumbsUp: { count: number; deviceReactions: Record<string, any> };

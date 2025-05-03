@@ -1,5 +1,5 @@
 import { NextResponse } from 'next/server';
-import { addClient, removeClient } from '@/lib/sse';
+import { addClient, removeClient } from '@/server/lib/sse';
 
 // Markiere die Route als dynamisch
 export const dynamic = 'force-dynamic';
