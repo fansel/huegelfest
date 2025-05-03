@@ -1,102 +1,152 @@
-import React from 'react';
-import { Event } from '@/types/types';
-import { Category } from './types';
+import React, { useState } from 'react';
+import { FaTimes } from 'react-icons/fa';
+import { Event, Category } from './types';
 
 interface EventFormProps {
-  event: Omit<Event, 'id'>;
-  categories: Category[];
-  isEditing: boolean;
-  onSubmit: (e: React.FormEvent) => void;
-  onChange: (event: Omit<Event, 'id'>) => void;
+  onSubmit: (event: Omit<Event, 'id'>) => void;
   onCancel: () => void;
-  error: string | null;
+  categories: Category[];
+  initialData?: Partial<Event>;
 }
 
 export default function EventForm({
-  event,
-  categories,
-  isEditing,
   onSubmit,
-  onChange,
   onCancel,
-  error,
+  categories,
+  initialData,
 }: EventFormProps) {
+  const [title, setTitle] = useState(initialData?.title || '');
+  const [time, setTime] = useState(initialData?.time || '');
+  const [description, setDescription] = useState(initialData?.description || '');
+  const [categoryId, setCategoryId] = useState(initialData?.categoryId || '');
+  const [error, setError] = useState('');
+
+  const handleSubmit = (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!title.trim()) {
+      setError('Bitte gib einen Titel ein');
+      return;
+    }
+    if (!time.trim()) {
+      setError('Bitte gib eine Uhrzeit ein');
+      return;
+    }
+    onSubmit({
+      title: title.trim(),
+      time: time.trim(),
+      description: description.trim(),
+      categoryId: categoryId || undefined,
+    });
+  };
+
+  const handleCancel = () => {
+    setTitle('');
+    setTime('');
+    setDescription('');
+    setCategoryId('');
+    setError('');
+    onCancel();
+  };
+
   return (
-    <div className="bg-gray-50 p-4 rounded-lg border border-gray-200">
-      <h4 className="text-md sm:text-lg font-semibold text-[#460b6c] mb-4">
-        {isEditing ? 'Event bearbeiten' : 'Neues Event hinzufügen'}
-      </h4>
-      {error && (
-        <div className="mb-4 p-2 bg-red-100 text-red-700 rounded-md" role="alert">
-          {error}
+    <div className="fixed inset-0 bg-black/50 flex items-center justify-center p-4 z-50">
+      <form onSubmit={handleSubmit} className="bg-white rounded-lg p-4 max-w-lg w-full">
+        <div className="flex justify-between items-start mb-4">
+          <h3 className="text-lg font-medium text-[#460b6c]">
+            {initialData ? 'Event bearbeiten' : 'Neues Event'}
+          </h3>
+          <button
+            type="button"
+            onClick={handleCancel}
+            className="p-1 text-gray-500 hover:text-gray-700 rounded-full hover:bg-gray-100 transition-colors"
+          >
+            <FaTimes size={18} />
+          </button>
         </div>
-      )}
-      <form onSubmit={onSubmit} className="space-y-4" role="form">
-        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+
+        <div className="space-y-4">
           <div>
-            <label className="block text-sm font-medium text-gray-700">Zeit</label>
+            <label htmlFor="title" className="block text-sm font-medium text-gray-700 mb-1">
+              Titel
+            </label>
             <input
-              type="time"
-              value={event.time}
-              onChange={(e) => onChange({ ...event, time: e.target.value })}
-              className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-[#ff9900] focus:ring-[#ff9900] py-2"
-              required
+              type="text"
+              id="title"
+              value={title}
+              onChange={(e) => setTitle(e.target.value)}
+              className="w-full p-2 border border-gray-300 rounded focus:border-[#ff9900] focus:ring-2 focus:ring-[#ff9900]/20"
+              placeholder="Event Titel"
             />
           </div>
+
           <div>
-            <label className="block text-sm font-medium text-gray-700">Kategorie</label>
+            <label htmlFor="time" className="block text-sm font-medium text-gray-700 mb-1">
+              Uhrzeit
+            </label>
+            <input
+              type="text"
+              id="time"
+              value={time}
+              onChange={(e) => setTime(e.target.value)}
+              className="w-full p-2 border border-gray-300 rounded focus:border-[#ff9900] focus:ring-2 focus:ring-[#ff9900]/20"
+              placeholder="z.B. 14:00"
+            />
+          </div>
+
+          <div>
+            <label htmlFor="description" className="block text-sm font-medium text-gray-700 mb-1">
+              Beschreibung
+            </label>
+            <textarea
+              id="description"
+              value={description}
+              onChange={(e) => setDescription(e.target.value)}
+              className="w-full p-2 border border-gray-300 rounded focus:border-[#ff9900] focus:ring-2 focus:ring-[#ff9900]/20"
+              rows={3}
+              placeholder="Event Beschreibung"
+            />
+          </div>
+
+          <div>
+            <label htmlFor="category" className="block text-sm font-medium text-gray-700 mb-1">
+              Kategorie
+            </label>
             <select
-              value={event.categoryId}
-              onChange={(e) => onChange({ ...event, categoryId: e.target.value })}
-              className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-[#ff9900] focus:ring-[#ff9900] py-2"
-              required
+              id="category"
+              value={categoryId}
+              onChange={(e) => setCategoryId(e.target.value)}
+              className="w-full p-2 border border-gray-300 rounded focus:border-[#ff9900] focus:ring-2 focus:ring-[#ff9900]/20"
             >
-              {categories.map((cat) => (
-                <option key={cat.value} value={cat.value}>
-                  {cat.label}
+              <option value="">Keine Kategorie</option>
+              {categories.map((category) => (
+                <option key={category.value} value={category.value}>
+                  {category.label}
                 </option>
               ))}
             </select>
           </div>
-        </div>
 
-        <div>
-          <label className="block text-sm font-medium text-gray-700">Titel</label>
-          <input
-            type="text"
-            value={event.title}
-            onChange={(e) => onChange({ ...event, title: e.target.value })}
-            className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-[#ff9900] focus:ring-[#ff9900] py-2"
-            required
-          />
-        </div>
+          {error && (
+            <div className="text-red-600 text-sm bg-red-50 p-2 rounded">
+              {error}
+            </div>
+          )}
 
-        <div>
-          <label className="block text-sm font-medium text-gray-700">Beschreibung</label>
-          <textarea
-            value={event.description}
-            onChange={(e) => onChange({ ...event, description: e.target.value })}
-            className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-[#ff9900] focus:ring-[#ff9900] min-h-[100px] sm:min-h-[150px]"
-            required
-          />
-        </div>
-
-        <div className="flex gap-2">
-          <button
-            type="submit"
-            className="flex-1 bg-[#ff9900] text-white py-2 px-4 rounded-md hover:bg-orange-600 text-sm sm:text-base font-medium"
-          >
-            {isEditing ? 'Aktualisieren' : 'Hinzufügen'}
-          </button>
-          {isEditing && (
+          <div className="flex justify-end gap-2">
             <button
               type="button"
-              onClick={onCancel}
-              className="flex-1 bg-gray-200 text-gray-700 py-2 px-4 rounded-md hover:bg-gray-300 text-sm sm:text-base font-medium"
+              onClick={handleCancel}
+              className="px-4 py-2 text-gray-700 hover:text-gray-900 rounded-lg hover:bg-gray-100 transition-colors"
             >
               Abbrechen
             </button>
-          )}
+            <button
+              type="submit"
+              className="px-4 py-2 bg-[#ff9900] text-white rounded-lg hover:bg-orange-600 transition-colors"
+            >
+              {initialData ? 'Speichern' : 'Hinzufügen'}
+            </button>
+          </div>
         </div>
       </form>
     </div>
