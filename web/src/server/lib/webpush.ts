@@ -34,16 +34,21 @@ export class WebPushService {
 
     if (!vapidPublicKey || !vapidPrivateKey) {
       console.warn('VAPID-Keys fehlen. Push-Benachrichtigungen werden deaktiviert.');
+      this.initialized = false;
       return;
     }
 
-    webpush.setVapidDetails(
-      'mailto:vapid@hey.fansel.dev',
-      vapidPublicKey,
-      vapidPrivateKey
-    );
-
-    this.initialized = true;
+    try {
+      webpush.setVapidDetails(
+        'mailto:vapid@hey.fansel.dev',
+        vapidPublicKey,
+        vapidPrivateKey
+      );
+      this.initialized = true;
+    } catch (error) {
+      console.warn('Fehler beim Initialisieren des WebPush-Services:', error);
+      this.initialized = false;
+    }
   }
 
   public async sendNotificationToAll(payload: PushNotificationPayload): Promise<void> {
@@ -52,24 +57,28 @@ export class WebPushService {
       return;
     }
 
-    const subscribers = await Subscriber.find();
-    
-    for (const subscriber of subscribers) {
-      try {
-        await webpush.sendNotification(
-          {
-            endpoint: subscriber.endpoint,
-            keys: subscriber.keys
-          },
-          JSON.stringify(payload)
-        );
-      } catch (error) {
-        console.error('Fehler beim Senden der Benachrichtigung:', error);
-        // Wenn der Subscriber nicht mehr gültig ist, entferne ihn
-        if (error && typeof error === 'object' && 'statusCode' in error && error.statusCode === 410) {
-          await Subscriber.deleteOne({ _id: subscriber._id });
+    try {
+      const subscribers = await Subscriber.find();
+      
+      for (const subscriber of subscribers) {
+        try {
+          await webpush.sendNotification(
+            {
+              endpoint: subscriber.endpoint,
+              keys: subscriber.keys
+            },
+            JSON.stringify(payload)
+          );
+        } catch (error) {
+          console.error('Fehler beim Senden der Benachrichtigung:', error);
+          // Wenn der Subscriber nicht mehr gültig ist, entferne ihn
+          if (error && typeof error === 'object' && 'statusCode' in error && error.statusCode === 410) {
+            await Subscriber.deleteOne({ _id: subscriber._id });
+          }
         }
       }
+    } catch (error) {
+      console.error('Fehler beim Abrufen der Subscriber:', error);
     }
   }
 
