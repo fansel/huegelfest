@@ -17,7 +17,6 @@ import Login from './Login';
 import Starfield from './Starfield';
 import PushNotificationSettings from './PushNotificationSettings';
 import Settings from './settings/Settings';
-import MusicNote from './MusicNote';
 import Image from 'next/image';
 
 type View = 'home' | 'anreise' | 'infoboard' | 'settings' | 'admin' | 'favorites';
@@ -33,10 +32,6 @@ export default function PWAContainer() {
   const [showStarfield, setShowStarfield] = useState(true);
   const [pushSupported, setPushSupported] = useState(false);
   const [showPushDialog, setShowPushDialog] = useState(false);
-  const [isMusicActive, setIsMusicActive] = useState(false);
-  const [isMusicVisible, setIsMusicVisible] = useState(true);
-  const [isMusicPlaying, setIsMusicPlaying] = useState(false);
-  const [isMusicExpanded, setIsMusicExpanded] = useState(false);
   const [lastScrollY, setLastScrollY] = useState(0);
 
   useEffect(() => {
@@ -179,14 +174,6 @@ export default function PWAContainer() {
     }
   };
 
-  const toggleMusic = () => {
-    setIsMusicActive(!isMusicActive);
-  };
-
-  const toggleMusicVisibility = () => {
-    setIsMusicVisible(!isMusicVisible);
-  };
-
   useEffect(() => {
     const handleScroll = () => {
       const currentScrollY = window.scrollY;
@@ -282,7 +269,7 @@ export default function PWAContainer() {
     <div className="relative min-h-screen bg-[#460b6c] text-[#ff9900] flex flex-col">
       {showStarfield && <Starfield />}
       <div className="flex flex-col items-center justify-center gap-2 pt-4">
-        <div className={`flex items-center justify-center w-full transition-all duration-300 transform ${isMusicExpanded ? 'opacity-0 scale-95 -translate-y-4' : 'opacity-100 scale-100 translate-y-0'}`}>
+        <div className="flex items-center justify-center w-full">
           <Image
             src="/android-chrome-192x192.png"
             alt="Hügelfest Logo"
@@ -290,20 +277,6 @@ export default function PWAContainer() {
             height={48}
           />
         </div>
-        {currentView !== 'admin' && (
-          <div className="flex items-center gap-2">
-            <MusicNote 
-              onClick={() => setIsMusicActive(!isMusicActive)} 
-              onExpandChange={setIsMusicExpanded}
-            />
-            <button
-              onClick={toggleMusicVisibility}
-              className="p-2 text-[#460b6c] hover:text-[#ff9900] transition-colors"
-            >
-              {isMusicVisible ? 'Musik ausblenden' : 'Musik einblenden'}
-            </button>
-          </div>
-        )}
       </div>
       {showPushDialog && (
         <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
