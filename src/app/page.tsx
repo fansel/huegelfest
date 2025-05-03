@@ -187,9 +187,10 @@ export default function Home() {
             <Image
               src="/logo.jpg"
               alt="Hügelfest Logo"
-              width={200}
-              height={200}
-              className="rounded-full hover:scale-105 transition-transform cursor-pointer"
+              fill
+              sizes="(max-width: 768px) 60px, 150px"
+              priority
+              className="rounded-full hover:scale-105 transition-transform cursor-pointer object-cover"
             />
           </div>
         </div>

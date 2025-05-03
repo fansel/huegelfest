@@ -3,13 +3,21 @@
 const nextConfig = {
   output: 'standalone',
   images: {
-    domains: ['localhost'],
+    remotePatterns: [
+      {
+        protocol: 'http',
+        hostname: 'localhost',
+      },
+      {
+        protocol: 'https',
+        hostname: 'huegelfest.fansel.dev',
+      }
+    ],
   },
   experimental: {
     serverActions: {
       allowedOrigins: ['localhost:3000', 'huegelfest.fansel.dev'],
     },
-    runtime: 'nodejs'
   },
   typescript: {
     ignoreBuildErrors: true,
@@ -20,7 +28,9 @@ const nextConfig = {
   poweredByHeader: false,
   reactStrictMode: true,
   compiler: {
-    removeConsole: process.env.NODE_ENV === 'production',
+    removeConsole: process.env.NODE_ENV === 'production' ? {
+      exclude: ['error', 'warn', 'info'],
+    } : false,
   },
   devIndicators: {
     position: 'top-left',

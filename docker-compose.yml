@@ -15,19 +15,31 @@ services:
     ports:
       - "9049:3000"
     environment:
+      # App Konfiguration
       - NODE_ENV=production
-      - MONGODB_URI=mongodb://huegeluser:huegeluser123@mongodb:27017/huegelfest?authSource=huegelfest&authMechanism=SCRAM-SHA-256
-      - JWT_SECRET=m0ZAvEBqbYUajAl8432FvN7fRqqhpewh02z1K5m0BWw=
       - NEXT_PUBLIC_SITE_URL=https://huegelfest.fansel.dev
-      - NEXT_PUBLIC_VAPID_PUBLIC_KEY=BGaY-2eeg8pi2yNRIsLdm4SN4RmHTKdVwaeEdZeUpJSMv9isl12K0TadiH9GDDWo96r7OFFMPdurXoSEiu0nnH4
-      - VAPID_PRIVATE_KEY=19N-DzH4SjTHGvhapCSm3o61V0iGaqJu6zGWvJ5zrsI
-      - NEXT_PUBLIC_ADMIN_PASSWORD=$2b$10$qQTtbrROj30/QeF5qh14wesvA8JSbJgs0OcE0q8E4t7RVMgUfeLry
-      - SOUNDCLOUD_CLIENT_ID=JtwkMxXKQNqDFvsQ3pUayFVgt4j9dS87
+      
+      # MongoDB Konfiguration
+      - MONGO_HOST=mongodb
+      - MONGO_PORT=27017
+      - MONGO_DATABASE=huegelfest
+      - MONGO_USERNAME=huegeluser
+      - MONGO_PASSWORD=huegeluser123
+      - MONGO_AUTH_SOURCE=huegelfest
+      - MONGO_AUTH_MECHANISM=SCRAM-SHA-256
+      
+      # Authentifizierung
+      - JWT_SECRET=m0ZAvEBqbYUajAl8432FvN7fRqqhpewh02z1K5m0BWw=
       - ADMIN_USERNAME=felix
       - ADMIN_PASSWORD=supergeil
-    volumes:
-      - ./database:/app/database:ro
-      - node_modules:/app/node_modules
+      - NEXT_PUBLIC_ADMIN_PASSWORD=$2b$10$qQTtbrROj30/QeF5qh14wesvA8JSbJgs0OcE0q8E4t7RVMgUfeLry
+      
+      # Push Notifications
+      - NEXT_PUBLIC_VAPID_PUBLIC_KEY=BGaY-2eeg8pi2yNRIsLdm4SN4RmHTKdVwaeEdZeUpJSMv9isl12K0TadiH9GDDWo96r7OFFMPdurXoSEiu0nnH4
+      - VAPID_PRIVATE_KEY=19N-DzH4SjTHGvhapCSm3o61V0iGaqJu6zGWvJ5zrsI
+      
+      # Externe Dienste
+      - SOUNDCLOUD_CLIENT_ID=JtwkMxXKQNqDFvsQ3pUayFVgt4j9dS87
     depends_on:
       mongodb:
         condition: service_healthy
@@ -40,19 +52,32 @@ services:
       timeout: 10s
       retries: 3
       start_period: 40s
+    deploy:
+      resources:
+        limits:
+          cpus: '1'
+          memory: 1G
+        reservations:
+          cpus: '0.5'
+          memory: 512M
 
   mongodb:
     image: mongo:latest
     command: ["--auth"]
     environment:
+      # Root Admin (wird automatisch erstellt)
       - MONGO_INITDB_ROOT_USERNAME=huegeladmin
       - MONGO_INITDB_ROOT_PASSWORD=huegeladmin123
+      
+      # Datenbank und Benutzer (werden automatisch erstellt)
       - MONGO_INITDB_DATABASE=huegelfest
       - MONGO_INITDB_USERNAME=huegeluser
       - MONGO_INITDB_PASSWORD=huegeluser123
+      
+      # Initialisierungsskript als Umgebungsvariable
+      - MONGO_INITDB_SCRIPTS=db.createUser({user: process.env.MONGO_INITDB_USERNAME, pwd: process.env.MONGO_INITDB_PASSWORD, roles: [{role: "readWrite", db: process.env.MONGO_INITDB_DATABASE}]})
     volumes:
-      - mongodb_data:/data/db
-      - ./database/mongo-init.js:/docker-entrypoint-initdb.d/mongo-init.js:ro
+      - mongodb_data:/data/db  # Persistente Datenbank
     ports:
       - "27017:27017"
     restart: unless-stopped
@@ -64,11 +89,17 @@ services:
       timeout: 10s
       retries: 5
       start_period: 40s
+    deploy:
+      resources:
+        limits:
+          cpus: '1'
+          memory: 1G
+        reservations:
+          cpus: '0.5'
+          memory: 512M
 
 volumes:
-  mongodb_data:
-    driver: local
-  node_modules:
+  mongodb_data:  # Named Volume für die MongoDB-Daten
     driver: local
 
 networks:

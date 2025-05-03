@@ -10,7 +10,8 @@
     "lint": "next lint",
     "import-timeline": "ts-node scripts/import-timeline.ts",
     "update-default-categories": "ts-node scripts/update-default-categories.ts",
-    "init-db": "node database/init-db.js"
+    "init-db": "node database/init-db.js",
+    "start:standalone": "cp -r public .next/standalone/ && cp -r .next/static .next/standalone/.next/static && cp .env.local .next/standalone/.env && node .next/standalone/server.js"
   },
   "dependencies": {
     "@tailwindcss/postcss": "^4.1.4",
