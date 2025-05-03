@@ -6,7 +6,13 @@ services:
     build:
       context: .
       dockerfile: Dockerfile
+      args:
+        - NEXT_PUBLIC_VAPID_PUBLIC_KEY=${NEXT_PUBLIC_VAPID_PUBLIC_KEY}
+        - VAPID_PRIVATE_KEY=${VAPID_PRIVATE_KEY}
+        - NEXT_PUBLIC_SITE_URL=${NEXT_PUBLIC_SITE_URL}
     image: huegelfest-app:latest
+    env_file:
+      - .env.production
     logging:
       driver: "json-file"
       options:
@@ -17,7 +23,7 @@ services:
     environment:
       # App Konfiguration
       - NODE_ENV=production
-      - NEXT_PUBLIC_SITE_URL=https://huegelfest.fansel.dev
+      - NEXT_PUBLIC_SITE_URL=${NEXT_PUBLIC_SITE_URL}
       
       # MongoDB Konfiguration
       - MONGO_HOST=mongodb
@@ -32,11 +38,11 @@ services:
       - JWT_SECRET=m0ZAvEBqbYUajAl8432FvN7fRqqhpewh02z1K5m0BWw=
       - ADMIN_USERNAME=felix
       - ADMIN_PASSWORD=supergeil
-      - NEXT_PUBLIC_ADMIN_PASSWORD=$2b$10$qQTtbrROj30/QeF5qh14wesvA8JSbJgs0OcE0q8E4t7RVMgUfeLry
+      - NEXT_PUBLIC_ADMIN_PASSWORD=$$2b$$10$$qQTtbrROj30/QeF5qh14wesvA8JSbJgs0OcE0q8E4t7RVMgUfeLry
       
       # Push Notifications
-      - NEXT_PUBLIC_VAPID_PUBLIC_KEY=BGaY-2eeg8pi2yNRIsLdm4SN4RmHTKdVwaeEdZeUpJSMv9isl12K0TadiH9GDDWo96r7OFFMPdurXoSEiu0nnH4
-      - VAPID_PRIVATE_KEY=19N-DzH4SjTHGvhapCSm3o61V0iGaqJu6zGWvJ5zrsI
+      - NEXT_PUBLIC_VAPID_PUBLIC_KEY=${NEXT_PUBLIC_VAPID_PUBLIC_KEY}
+      - VAPID_PRIVATE_KEY=${VAPID_PRIVATE_KEY}
       
       # Externe Dienste
       - SOUNDCLOUD_CLIENT_ID=JtwkMxXKQNqDFvsQ3pUayFVgt4j9dS87
@@ -64,15 +70,17 @@ services:
   mongodb:
     image: mongo:latest
     command: ["--auth"]
+    env_file:
+      - .env.production
     environment:
       # Root Admin (wird automatisch erstellt)
-      - MONGO_INITDB_ROOT_USERNAME=huegeladmin
-      - MONGO_INITDB_ROOT_PASSWORD=huegeladmin123
+      - MONGO_INITDB_ROOT_USERNAME=${MONGO_USERNAME}
+      - MONGO_INITDB_ROOT_PASSWORD=${MONGO_PASSWORD}
       
       # Datenbank und Benutzer (werden automatisch erstellt)
-      - MONGO_INITDB_DATABASE=huegelfest
-      - MONGO_INITDB_USERNAME=huegeluser
-      - MONGO_INITDB_PASSWORD=huegeluser123
+      - MONGO_INITDB_DATABASE=${MONGO_DATABASE}
+      - MONGO_INITDB_USERNAME=${MONGO_USERNAME}
+      - MONGO_INITDB_PASSWORD=${MONGO_PASSWORD}
     volumes:
       - mongodb_data:/data/db  # Persistente Datenbank
       - ./mongo-init.js:/docker-entrypoint-initdb.d/mongo-init.js:ro  # Initialisierungsskript
