@@ -6,107 +6,31 @@ services:
     build:
       context: .
       dockerfile: Dockerfile
-      args:
-        - NEXT_PUBLIC_VAPID_PUBLIC_KEY=${NEXT_PUBLIC_VAPID_PUBLIC_KEY}
-        - VAPID_PRIVATE_KEY=${VAPID_PRIVATE_KEY}
-        - NEXT_PUBLIC_SITE_URL=${NEXT_PUBLIC_SITE_URL}
-    image: huegelfest-app:latest
     env_file:
       - .env.production
-    logging:
-      driver: "json-file"
-      options:
-        max-size: "10m"
-        max-file: "3"
     ports:
       - "9049:3000"
-    environment:
-      # App Konfiguration
-      - NODE_ENV=production
-      - NEXT_PUBLIC_SITE_URL=${NEXT_PUBLIC_SITE_URL}
-      
-      # MongoDB Konfiguration
-      - MONGO_HOST=mongodb
-      - MONGO_PORT=27017
-      - MONGO_DATABASE=huegelfest
-      - MONGO_USERNAME=huegeluser
-      - MONGO_PASSWORD=huegeluser123
-      - MONGO_AUTH_SOURCE=huegelfest
-      - MONGO_AUTH_MECHANISM=SCRAM-SHA-256
-      
-      # Authentifizierung
-      - JWT_SECRET=m0ZAvEBqbYUajAl8432FvN7fRqqhpewh02z1K5m0BWw=
-      - ADMIN_USERNAME=felix
-      - ADMIN_PASSWORD=supergeil
-      - NEXT_PUBLIC_ADMIN_PASSWORD=$$2b$$10$$qQTtbrROj30/QeF5qh14wesvA8JSbJgs0OcE0q8E4t7RVMgUfeLry
-      
-      # Push Notifications
-      - NEXT_PUBLIC_VAPID_PUBLIC_KEY=${NEXT_PUBLIC_VAPID_PUBLIC_KEY}
-      - VAPID_PRIVATE_KEY=${VAPID_PRIVATE_KEY}
-      
-      # Externe Dienste
-      - SOUNDCLOUD_CLIENT_ID=JtwkMxXKQNqDFvsQ3pUayFVgt4j9dS87
     depends_on:
-      mongodb:
-        condition: service_healthy
+      - mongodb
     restart: unless-stopped
     networks:
       - huegelfest-network
-    healthcheck:
-      test: ["CMD", "wget", "--no-verbose", "--tries=1", "--spider", "http://localhost:3000/api/health"]
-      interval: 30s
-      timeout: 10s
-      retries: 3
-      start_period: 40s
-    deploy:
-      resources:
-        limits:
-          cpus: '1'
-          memory: 1G
-        reservations:
-          cpus: '0.5'
-          memory: 512M
 
   mongodb:
     image: mongo:latest
     command: ["--auth"]
-    env_file:
-      - .env.production
     environment:
-      # Root Admin (wird automatisch erstellt)
-      - MONGO_INITDB_ROOT_USERNAME=${MONGO_USERNAME}
-      - MONGO_INITDB_ROOT_PASSWORD=${MONGO_PASSWORD}
-      
-      # Datenbank und Benutzer (werden automatisch erstellt)
-      - MONGO_INITDB_DATABASE=${MONGO_DATABASE}
-      - MONGO_INITDB_USERNAME=${MONGO_USERNAME}
-      - MONGO_INITDB_PASSWORD=${MONGO_PASSWORD}
+      MONGO_USERNAME: ${MONGO_USERNAME}
+      MONGO_PASSWORD: ${MONGO_PASSWORD}
     volumes:
-      - mongodb_data:/data/db  # Persistente Datenbank
-      - ./mongo-init.js:/docker-entrypoint-initdb.d/mongo-init.js:ro  # Initialisierungsskript
-    ports:
-      - "27017:27017"
+      - mongodb_data:/data/db
+      - ./mongo/init.js:/docker-entrypoint-initdb.d/init.js:ro
     restart: unless-stopped
     networks:
       - huegelfest-network
-    healthcheck:
-      test: echo 'db.runCommand("ping").ok' | mongosh localhost:27017/test --quiet
-      interval: 10s
-      timeout: 10s
-      retries: 5
-      start_period: 40s
-    deploy:
-      resources:
-        limits:
-          cpus: '1'
-          memory: 1G
-        reservations:
-          cpus: '0.5'
-          memory: 512M
 
 volumes:
-  mongodb_data:  # Named Volume für die MongoDB-Daten
-    driver: local
+  mongodb_data:
 
 networks:
   huegelfest-network:
