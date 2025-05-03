@@ -1,9 +1,77 @@
 import webpush from 'web-push';
+import { Subscriber } from '@/database/models/Subscriber';
 
-webpush.setVapidDetails(
-  'mailto:vapid@hey.fansel.dev',
-  process.env.NEXT_PUBLIC_VAPID_PUBLIC_KEY!,
-  process.env.VAPID_PRIVATE_KEY!,
-);
+interface PushNotificationPayload {
+  title: string;
+  body: string;
+  icon?: string;
+  badge?: string;
+  data?: Record<string, any>;
+}
 
-export { webpush };
+class WebPushService {
+  private static instance: WebPushService;
+  private initialized = false;
+
+  private constructor() {}
+
+  public static getInstance(): WebPushService {
+    if (!WebPushService.instance) {
+      WebPushService.instance = new WebPushService();
+    }
+    return WebPushService.instance;
+  }
+
+  public initialize(): void {
+    if (this.initialized) return;
+
+    const vapidPublicKey = process.env.NEXT_PUBLIC_VAPID_PUBLIC_KEY;
+    const vapidPrivateKey = process.env.VAPID_PRIVATE_KEY;
+
+    if (!vapidPublicKey || !vapidPrivateKey) {
+      console.warn('VAPID-Keys fehlen. Push-Benachrichtigungen werden deaktiviert.');
+      return;
+    }
+
+    webpush.setVapidDetails(
+      'mailto:vapid@hey.fansel.dev',
+      vapidPublicKey,
+      vapidPrivateKey
+    );
+
+    this.initialized = true;
+  }
+
+  public async sendNotificationToAll(payload: PushNotificationPayload): Promise<void> {
+    if (!this.initialized) {
+      console.warn('WebPushService nicht initialisiert. Push-Benachrichtigung wird nicht gesendet.');
+      return;
+    }
+
+    const subscribers = await Subscriber.find();
+    
+    for (const subscriber of subscribers) {
+      try {
+        await webpush.sendNotification(
+          {
+            endpoint: subscriber.endpoint,
+            keys: subscriber.keys
+          },
+          JSON.stringify(payload)
+        );
+      } catch (error) {
+        console.error('Fehler beim Senden der Benachrichtigung:', error);
+        // Wenn der Subscriber nicht mehr gültig ist, entferne ihn
+        if (error && typeof error === 'object' && 'statusCode' in error && error.statusCode === 410) {
+          await Subscriber.deleteOne({ _id: subscriber._id });
+        }
+      }
+    }
+  }
+
+  public getPublicKey(): string | undefined {
+    return process.env.NEXT_PUBLIC_VAPID_PUBLIC_KEY;
+  }
+}
+
+export const webPushService = WebPushService.getInstance();

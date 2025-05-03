@@ -6,20 +6,7 @@ import { Subscriber } from '@/database/models/Subscriber';
 import webpush from 'web-push';
 import { revalidatePath } from 'next/cache';
 import { sendUpdateToAllClients } from '@/server/lib/sse';
-
-// VAPID-Schlüssel
-const vapidPublicKey = process.env.NEXT_PUBLIC_VAPID_PUBLIC_KEY;
-const vapidPrivateKey = process.env.VAPID_PRIVATE_KEY;
-
-if (!vapidPublicKey || !vapidPrivateKey) {
-  throw new Error('VAPID-Schlüssel fehlen in den Umgebungsvariablen');
-}
-
-webpush.setVapidDetails(
-  'mailto:vapid@hey.fansel.dev',
-  vapidPublicKey,
-  vapidPrivateKey
-);
+import { webPushService } from '@/server/lib/webpush';
 
 export async function GET() {
   try {
@@ -108,34 +95,16 @@ export async function POST(request: Request) {
 
     console.log('POST /api/announcements - Ankündigung erstellt:', { id: announcement._id });
 
-    // Sende Push-Benachrichtigung an alle Subscriber
-    const subscribers = await Subscriber.find();
-    
-    for (const subscriber of subscribers) {
-      try {
-        await webpush.sendNotification(
-          {
-            endpoint: subscriber.endpoint,
-            keys: subscriber.keys
-          },
-          JSON.stringify({
-            title: 'Neue Ankündigung',
-            body: content,
-            icon: '/icon-192x192.png',
-            badge: '/badge-96x96.png',
-            data: {
-              url: '/'
-            }
-          })
-        );
-      } catch (error) {
-        console.error('Fehler beim Senden der Benachrichtigung:', error);
-        // Wenn der Subscriber nicht mehr gültig ist, entferne ihn
-        if (error && typeof error === 'object' && 'statusCode' in error && error.statusCode === 410) {
-          await Subscriber.deleteOne({ _id: subscriber._id });
-        }
+    // Sende Push-Benachrichtigung
+    await webPushService.sendNotificationToAll({
+      title: 'Neue Ankündigung',
+      body: content,
+      icon: '/icon-192x192.png',
+      badge: '/badge-96x96.png',
+      data: {
+        url: '/'
       }
-    }
+    });
 
     revalidatePath('/announcements');
     sendUpdateToAllClients();
