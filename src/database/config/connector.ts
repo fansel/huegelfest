@@ -1,11 +1,25 @@
 import mongoose from 'mongoose';
 import { logger } from '@/server/lib/logger';
 
-const MONGODB_URI = process.env.MONGODB_URI;
+// MongoDB Konfiguration aus Umgebungsvariablen
+const MONGO_CONFIG = {
+  host: process.env.MONGO_HOST || 'localhost',
+  port: process.env.MONGO_PORT || '27017',
+  database: process.env.MONGO_DATABASE || 'huegelfest',
+  username: process.env.MONGO_USERNAME,
+  password: process.env.MONGO_PASSWORD,
+  authSource: process.env.MONGO_AUTH_SOURCE || 'huegelfest',
+  authMechanism: process.env.MONGO_AUTH_MECHANISM || 'SCRAM-SHA-256'
+};
+
+// Baue MongoDB URI
+const MONGODB_URI = MONGO_CONFIG.username && MONGO_CONFIG.password
+  ? `mongodb://${MONGO_CONFIG.username}:${MONGO_CONFIG.password}@${MONGO_CONFIG.host}:${MONGO_CONFIG.port}/${MONGO_CONFIG.database}?authSource=${MONGO_CONFIG.authSource}&authMechanism=${MONGO_CONFIG.authMechanism}`
+  : `mongodb://${MONGO_CONFIG.host}:${MONGO_CONFIG.port}/${MONGO_CONFIG.database}`;
 
 if (!MONGODB_URI) {
-  logger.error('[Database] MONGODB_URI ist nicht definiert');
-  throw new Error('MONGODB_URI ist nicht definiert');
+  logger.error('[Database] MongoDB Konfiguration ist unvollständig');
+  throw new Error('MongoDB Konfiguration ist unvollständig');
 }
 
 logger.info('[Database] Versuche Verbindung zu MongoDB herzustellen...');
@@ -35,7 +49,7 @@ export async function connectDB() {
       retryReads: true
     };
 
-    cached.promise = mongoose.connect(MONGODB_URI!, opts).then((mongoose) => {
+    cached.promise = mongoose.connect(MONGODB_URI, opts).then((mongoose) => {
       logger.info('[Database] MongoDB erfolgreich verbunden');
       return mongoose;
     }).catch((error) => {
