@@ -73,11 +73,9 @@ services:
       - MONGO_INITDB_DATABASE=huegelfest
       - MONGO_INITDB_USERNAME=huegeluser
       - MONGO_INITDB_PASSWORD=huegeluser123
-      
-      # Initialisierungsskript als Umgebungsvariable
-      - MONGO_INITDB_SCRIPTS=db.createUser({user: process.env.MONGO_INITDB_USERNAME, pwd: process.env.MONGO_INITDB_PASSWORD, roles: [{role: "readWrite", db: process.env.MONGO_INITDB_DATABASE}]})
     volumes:
       - mongodb_data:/data/db  # Persistente Datenbank
+      - ./mongo-init.js:/docker-entrypoint-initdb.d/mongo-init.js:ro  # Initialisierungsskript
     ports:
       - "27017:27017"
     restart: unless-stopped
