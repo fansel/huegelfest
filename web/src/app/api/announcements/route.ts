@@ -7,6 +7,9 @@ import { revalidatePath } from 'next/cache';
 import { sendUpdateToAllClients } from '@/server/lib/sse';
 import { webPushService } from '@/server/lib/webpush';
 
+// Prüfe ob wir in der Edge-Runtime sind
+const isEdgeRuntime = process.env.NEXT_RUNTIME === 'edge';
+
 export async function GET() {
   try {
     await connectDB();
@@ -94,8 +97,8 @@ export async function POST(request: Request) {
 
     console.log('POST /api/announcements - Ankündigung erstellt:', { id: announcement._id });
 
-    // Sende Push-Benachrichtigung nur wenn der Service initialisiert ist
-    if (webPushService.isInitialized()) {
+    // Sende Push-Benachrichtigung nur wenn wir nicht in der Edge-Runtime sind
+    if (!isEdgeRuntime && webPushService.isInitialized()) {
       try {
         await webPushService.sendNotificationToAll({
           title: 'Neue Ankündigung',
