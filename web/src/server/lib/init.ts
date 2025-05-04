@@ -14,9 +14,6 @@ export async function initializeServer() {
   }
 }
 
-// Initialisiere den Server beim Import
-initializeServer(); 
-
 export async function initializeServices() {
   try {
     const service = await webPushService.getInstance();

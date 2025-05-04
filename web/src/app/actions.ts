@@ -51,8 +51,14 @@ export async function subscribeToPushNotifications(subscription: WebPushSubscrip
 
 export async function subscribeUser(subscription: WebPushSubscription) {
   try {
+    const service = await webPushService.getInstance()
+    if (!service.isInitialized()) {
+      console.warn('Push-Benachrichtigungen sind nicht verfügbar')
+      return false
+    }
+
     // Teste die Subscription mit einer Test-Benachrichtigung
-    await webPushService.sendNotificationToAll({
+    await service.sendNotificationToAll({
       title: 'Test-Benachrichtigung',
       body: 'Push-Benachrichtigungen sind jetzt aktiviert!',
       icon: '/icon-192x192.png',
