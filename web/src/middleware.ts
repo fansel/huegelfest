@@ -1,6 +1,7 @@
 import { NextResponse } from 'next/server';
 import type { NextRequest } from 'next/server';
-import { verifyToken } from '@/auth/auth';
+import { jwtVerify } from 'jose';
+import { getAuthConfig } from '@/server/config/auth';
 
 // Typen für die API-Routen
 type HttpMethod = 'GET' | 'POST' | 'PUT' | 'DELETE';
@@ -27,6 +28,17 @@ const protectedApiRoutes: Record<string, RouteConfig> = {
   }
 };
 
+// Hilfsfunktion zur Token-Validierung
+async function verifyToken(token: string) {
+  try {
+    const { jwtSecret } = getAuthConfig();
+    await jwtVerify(token, new TextEncoder().encode(jwtSecret));
+    return true;
+  } catch {
+    return false;
+  }
+}
+
 export async function middleware(request: NextRequest) {
   const token = request.cookies.get('auth-token')?.value;
   const isAdminRoute = request.nextUrl.pathname.startsWith('/admin');
@@ -52,12 +64,8 @@ export async function middleware(request: NextRequest) {
 
     // Für geschützte Routen Token prüfen
     if (token) {
-      try {
-        const isValid = await verifyToken(token);
-        if (!isValid) {
-          return new NextResponse(null, { status: 401 });
-        }
-      } catch {
+      const isValid = await verifyToken(token);
+      if (!isValid) {
         return new NextResponse(null, { status: 401 });
       }
     } else {
@@ -69,17 +77,14 @@ export async function middleware(request: NextRequest) {
   if (isLoginRoute) {
     // Wenn bereits eingeloggt, weiter zu Admin
     if (token) {
-      try {
-        const isValid = await verifyToken(token);
-        if (isValid) {
-          return NextResponse.redirect(new URL('/admin', request.url));
-        }
-      } catch {
-        // Token ungültig, Cookie löschen
-        const response = NextResponse.next();
-        response.cookies.delete('auth-token');
-        return response;
+      const isValid = await verifyToken(token);
+      if (isValid) {
+        return NextResponse.redirect(new URL('/admin', request.url));
       }
+      // Token ungültig, Cookie löschen
+      const response = NextResponse.next();
+      response.cookies.delete('auth-token');
+      return response;
     }
     return NextResponse.next();
   }
@@ -90,14 +95,8 @@ export async function middleware(request: NextRequest) {
       return NextResponse.redirect(new URL('/login', request.url));
     }
 
-    try {
-      const isValid = await verifyToken(token);
-      if (!isValid) {
-        const response = NextResponse.redirect(new URL('/login', request.url));
-        response.cookies.delete('auth-token');
-        return response;
-      }
-    } catch {
+    const isValid = await verifyToken(token);
+    if (!isValid) {
       const response = NextResponse.redirect(new URL('/login', request.url));
       response.cookies.delete('auth-token');
       return response;
