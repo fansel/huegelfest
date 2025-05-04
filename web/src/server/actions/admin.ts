@@ -1,13 +1,15 @@
 'use server';
 
 import { revalidatePath } from 'next/cache';
-import { connectDB } from '../../database/config/apiConnector';
-import Announcement from '../../database/models/Announcement';
-import Group from '../../database/models/Group';
-import Music from '../../database/models/Music';
-import { IAnnouncement } from '../../types/announcement';
-import { logger } from '../../server/lib/logger';
-import { sendUpdateToAllClients } from '../../server/lib/sse';
+import { connectDB } from '@/database/config/apiConnector';
+import User from '@/database/models/User';
+import Group from '@/database/models/Group';
+import Announcement from '@/database/models/Announcement';
+import Subscriber from '@/database/models/Subscriber';
+import { logger } from '@/server/lib/logger';
+import { sseService } from '@/server/lib/sse';
+import Music from '@/database/models/Music';
+import { IAnnouncement } from '@/types/announcement';
 
 export async function saveAnnouncements(announcements: IAnnouncement[]): Promise<void> {
   try {
@@ -38,7 +40,8 @@ export async function saveAnnouncements(announcements: IAnnouncement[]): Promise
       updatedAt: announcement.updatedAt
     })));
     revalidatePath('/');
-    await sendUpdateToAllClients();
+    logger.info('[Server Action] Sende SSE-Update für neue Ankündigung');
+    sseService.sendUpdateToAllClients();
     logger.info('[Server Action] Ankündigungen erfolgreich gespeichert');
   } catch (error) {
     logger.error('[Server Action] Fehler beim Speichern der Ankündigungen:', error);
@@ -157,5 +160,22 @@ export async function saveMusicUrls(urls: string[]): Promise<void> {
       throw new Error(`Fehler beim Speichern der Musik-URLs: ${error.message}`);
     }
     throw new Error('Ein unerwarteter Fehler ist beim Speichern der Musik-URLs aufgetreten');
+  }
+}
+
+export async function deleteAnnouncement(id: string): Promise<{ success: boolean }> {
+  try {
+    await connectDB();
+    await Announcement.findByIdAndDelete(id);
+    
+    sseService.sendUpdateToAllClients();
+    
+    return { success: true };
+  } catch (error) {
+    logger.error('[Server Action] Fehler beim Löschen der Ankündigung:', error);
+    if (error instanceof Error) {
+      throw new Error(`Fehler beim Löschen der Ankündigung: ${error.message}`);
+    }
+    throw new Error('Ein unerwarteter Fehler ist beim Löschen der Ankündigung aufgetreten');
   }
 } 

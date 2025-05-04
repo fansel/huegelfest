@@ -1,6 +1,7 @@
 import type { Metadata, Viewport } from "next";
 import { GeistSans } from 'geist/font/sans';
 import { GeistMono } from 'geist/font/mono';
+import { PublicEnvScript } from 'next-runtime-env';
 import "./globals.css";
 import Footer from "@/client/components/Footer";
 import PWAContainer from "@/client/components/PWAContainer";
@@ -32,6 +33,7 @@ export default function RootLayout({
   return (
     <html lang="de" className={GeistMono.className}>
       <head>
+        <PublicEnvScript />
         <link rel="icon" type="image/png" sizes="32x32" href="/favicon-32x32.png" />
         <link rel="icon" type="image/png" sizes="16x16" href="/favicon-16x16.png" />
         <link rel="apple-touch-icon" href="/apple-touch-icon.png" />

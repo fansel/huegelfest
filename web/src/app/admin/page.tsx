@@ -50,10 +50,14 @@ export default function AdminPage() {
 
   const handleSaveAnnouncements = async (announcements: IAnnouncement[]) => {
     try {
+      console.log('[Admin] Speichere neue Ankündigungen...');
       await saveAnnouncements(announcements);
       setAnnouncements(announcements);
+      console.log('[Admin] Sende SSE-Update für neue Ankündigungen...');
+      await fetch('/api/updates', { method: 'POST' });
+      console.log('[Admin] SSE-Update erfolgreich gesendet');
     } catch (error) {
-      console.error('Fehler beim Speichern der Ankündigungen:', error);
+      console.error('[Admin] Fehler beim Speichern der Ankündigungen:', error);
     }
   };
 

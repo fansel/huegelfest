@@ -1,7 +1,7 @@
 'use client';
 
 import React, { useEffect, useState } from 'react';
-import { TimelineData, Event, Day } from '@/types/types';
+import { TimelineData, Day } from './types';
 import { loadTimeline, saveTimeline } from '@/server/actions/timeline';
 import { FaPlus } from 'react-icons/fa';
 import CategoryList from './CategoryList';
@@ -11,18 +11,17 @@ import EventForm from './EventForm';
 import CategoryModal from './CategoryModal';
 import DeleteCategoryDialog from './DeleteCategoryDialog';
 import DeleteDayDialog from './DeleteDayDialog';
-import { Category, DeletingCategory } from './types';
+import type { Category, DeletingCategory, Event } from './types';
 import MoveEventDialog from './MoveEventDialog';
 
 export default function TimelineManager() {
   const [timeline, setTimeline] = useState<TimelineData>({
-    id: '',
     days: [],
-    createdAt: new Date().toISOString(),
-    updatedAt: new Date().toISOString(),
+    createdAt: new Date(),
+    updatedAt: new Date(),
   });
   const [currentDay, setCurrentDay] = useState<number>(0);
-  const [newEvent, setNewEvent] = useState<Omit<Event, 'id'>>({
+  const [newEvent, setNewEvent] = useState<Omit<Event, '_id'>>({
     time: '',
     title: '',
     description: '',
@@ -254,14 +253,40 @@ export default function TimelineManager() {
 
   const handleAddEvent = async () => {
     try {
+      // Validiere die Daten
+      if (!newEvent.time.trim() || !newEvent.title.trim() || !newEvent.description.trim()) {
+        setError('Bitte füllen Sie alle Felder aus');
+        return;
+      }
+
+      // Validiere das Zeitformat
+      const timeRegex = /^([0-1]?[0-9]|2[0-3]):[0-5][0-9]$/;
+      if (!timeRegex.test(newEvent.time.trim())) {
+        setError('Bitte geben Sie eine gültige Uhrzeit im Format HH:MM ein');
+        return;
+      }
+
       const updatedDays = [...timeline.days];
       const currentDayData = { ...updatedDays[currentDay] };
-      currentDayData.events = [...(currentDayData.events || []), newEvent];
+      
+      // Erstelle ein neues Event mit validierten Daten
+      const validatedEvent = {
+        time: newEvent.time.trim(),
+        title: newEvent.title.trim(),
+        description: newEvent.description.trim(),
+        categoryId: typeof newEvent.categoryId === 'string' ? newEvent.categoryId : 'other'
+      };
+      
+      currentDayData.events = [...(currentDayData.events || []), validatedEvent];
       updatedDays[currentDay] = currentDayData;
 
       const updatedTimeline = { ...timeline, days: updatedDays };
       setTimeline(updatedTimeline);
       await saveTimeline(updatedTimeline);
+      
+      // Trigger Timeline-Update Event
+      window.dispatchEvent(new Event('timeline-update'));
+      
       setNewEvent({ time: '', title: '', description: '', categoryId: 'other' });
       setError(null);
       setShowEventForm(false);
@@ -271,23 +296,52 @@ export default function TimelineManager() {
     }
   };
 
-  const handleSaveEdit = () => {
+  const handleSaveEdit = async () => {
     if (!editingEvent || !newEvent.time || !newEvent.title || !newEvent.description)
       return;
 
-    const updatedDays = [...timeline.days];
-    const dayData = { ...updatedDays[editingEvent.dayIndex] };
-    dayData.events = dayData.events.map((event, index) =>
-      index === editingEvent.eventIndex ? newEvent : event,
-    );
-    updatedDays[editingEvent.dayIndex] = dayData;
+    try {
+      const updatedDays = [...timeline.days];
+      const dayData = { ...updatedDays[editingEvent.dayIndex] };
+      const originalEvent = dayData.events[editingEvent.eventIndex];
+      
+      // Finde die ausgewählte Kategorie
+      const selectedCategory = categories.find(cat => 
+        cat._id === newEvent.categoryId || cat.value === newEvent.categoryId
+      );
+      
+      // Erstelle ein neues Event-Objekt mit der ursprünglichen MongoDB-ID
+      const updatedEvent = {
+        _id: originalEvent._id, // Behalte die ursprüngliche MongoDB-ID
+        time: newEvent.time.trim(),
+        title: newEvent.title.trim(),
+        description: newEvent.description.trim(),
+        categoryId: selectedCategory?._id || 'other' // Verwende die MongoDB-ID der Kategorie
+      };
+      
+      // Ersetze das Event im Array
+      dayData.events[editingEvent.eventIndex] = updatedEvent;
+      updatedDays[editingEvent.dayIndex] = dayData;
 
-    const updatedTimeline = { ...timeline, days: updatedDays };
-    setTimeline(updatedTimeline);
-    saveTimeline(updatedTimeline);
-    setEditingEvent(null);
-    setNewEvent({ time: '', title: '', description: '', categoryId: 'other' });
-    setShowEventForm(false);
+      const updatedTimeline = { ...timeline, days: updatedDays };
+      
+      // Speichere die Änderungen
+      await saveTimeline(updatedTimeline);
+      
+      // Aktualisiere den State
+      setTimeline(updatedTimeline);
+      
+      // Trigger Timeline-Update Event
+      window.dispatchEvent(new Event('timeline-update'));
+      
+      // Reset form state
+      setEditingEvent(null);
+      setNewEvent({ time: '', title: '', description: '', categoryId: 'other' });
+      setShowEventForm(false);
+    } catch (error) {
+      console.error('Fehler beim Speichern:', error);
+      alert('Fehler beim Speichern');
+    }
   };
 
   const handleUpdateDay = (dayIndex: number, updates: Partial<Day>) => {

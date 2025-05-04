@@ -3,7 +3,7 @@ import { FaTimes } from 'react-icons/fa';
 import { Event, Category } from './types';
 
 interface EventFormProps {
-  onSubmit: (event: Omit<Event, 'id'>) => void;
+  onSubmit: (event: Omit<Event, '_id'>) => void;
   onCancel: () => void;
   categories: Category[];
   initialData?: Partial<Event>;
@@ -18,7 +18,7 @@ export default function EventForm({
   const [title, setTitle] = useState(initialData?.title || '');
   const [time, setTime] = useState(initialData?.time || '');
   const [description, setDescription] = useState(initialData?.description || '');
-  const [categoryId, setCategoryId] = useState(initialData?.categoryId || '');
+  const [categoryId, setCategoryId] = useState(initialData?.categoryId || 'other');
   const [error, setError] = useState('');
 
   const handleSubmit = (e: React.FormEvent) => {
@@ -31,11 +31,15 @@ export default function EventForm({
       setError('Bitte gib eine Uhrzeit ein');
       return;
     }
+    if (!description.trim()) {
+      setError('Bitte gib eine Beschreibung ein');
+      return;
+    }
     onSubmit({
       title: title.trim(),
       time: time.trim(),
       description: description.trim(),
-      categoryId: categoryId || undefined,
+      categoryId: categoryId || 'other',
     });
   };
 
@@ -43,7 +47,7 @@ export default function EventForm({
     setTitle('');
     setTime('');
     setDescription('');
-    setCategoryId('');
+    setCategoryId('other');
     setError('');
     onCancel();
   };
@@ -113,11 +117,10 @@ export default function EventForm({
             </label>
             <select
               id="category"
-              value={categoryId}
+              value={typeof categoryId === 'string' ? categoryId : categoryId.$oid}
               onChange={(e) => setCategoryId(e.target.value)}
               className="w-full p-2 border border-gray-300 rounded focus:border-[#ff9900] focus:ring-2 focus:ring-[#ff9900]/20"
             >
-              <option value="">Keine Kategorie</option>
               {categories.map((category) => (
                 <option key={category.value} value={category.value}>
                   {category.label}

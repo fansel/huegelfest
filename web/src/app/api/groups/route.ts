@@ -2,7 +2,7 @@ import { NextResponse } from 'next/server';
 import { connectDB } from '@/database/config/apiConnector';
 import Group from '@/database/models/Group';
 import { GroupColors } from '@/types/types';
-import { sendUpdateToAllClients } from '@/server/lib/sse';
+import { sseService } from '@/server/lib/sse';
 
 export async function GET() {
   try {
@@ -35,17 +35,47 @@ export async function POST(request: Request) {
     for (const [name, color] of Object.entries(groupColors)) {
       await Group.findOneAndUpdate(
         { name },
-        { name, color },
-        { upsert: true, new: true }
+        { name, color, updatedAt: new Date() },
+        { upsert: true }
       );
     }
     
-    // Sende Update an alle Clients
-    sendUpdateToAllClients();
+    sseService.sendUpdateToAllClients();
     
     return NextResponse.json({ success: true });
   } catch (error) {
     console.error('Fehler beim Speichern der Gruppen:', error);
     return NextResponse.json({ error: 'Interner Serverfehler' }, { status: 500 });
+  }
+}
+
+export async function PUT(request: Request) {
+  try {
+    const body = await request.json();
+    const { name, color } = body;
+
+    if (!name || !color) {
+      return NextResponse.json(
+        { error: 'Name und Farbe sind erforderlich' },
+        { status: 400 }
+      );
+    }
+
+    await connectDB();
+    await Group.findOneAndUpdate(
+      { name },
+      { color, updatedAt: new Date() },
+      { upsert: true }
+    );
+
+    sseService.sendUpdateToAllClients();
+    
+    return NextResponse.json({ success: true });
+  } catch (error) {
+    console.error('Fehler beim Aktualisieren der Gruppe:', error);
+    return NextResponse.json(
+      { error: 'Interner Serverfehler' },
+      { status: 500 }
+    );
   }
 } 

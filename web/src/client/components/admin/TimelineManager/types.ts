@@ -1,8 +1,14 @@
 export interface Category {
+  _id: string;
   name: string;
-  icon: string;
-  value: string;
   label: string;
+  value: string;
+  icon: string;
+  color: string;
+  description?: string;
+  isDefault?: boolean;
+  createdAt?: string;
+  updatedAt?: string;
 }
 
 export interface DeletingCategory {
@@ -11,15 +17,16 @@ export interface DeletingCategory {
 }
 
 export interface Event {
+  _id?: { $oid: string };
   time: string;
   title: string;
   description: string;
-  categoryId: string;
+  categoryId: string | { $oid: string };
   favorite?: boolean;
 }
 
 export interface Day {
-  id: string;
+  _id?: { $oid: string };
   title: string;
   description: string;
   date: Date;
@@ -28,7 +35,7 @@ export interface Day {
 }
 
 export interface TimelineData {
-  id: string;
+  _id?: { $oid: string };
   days: Day[];
   createdAt?: Date;
   updatedAt?: Date;
