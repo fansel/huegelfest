@@ -46,8 +46,8 @@ const nextConfig = {
     position: 'top-left',
   },
   env: {
-    NEXT_PUBLIC_VAPID_PUBLIC_KEY: process.env.NEXT_PUBLIC_VAPID_PUBLIC_KEY,
-    VAPID_PRIVATE_KEY: process.env.VAPID_PRIVATE_KEY,
+    NEXT_PUBLIC_VAPID_PUBLIC_KEY: process.env.NEXT_PUBLIC_VAPID_PUBLIC_KEY || 'dummy_public_key',
+    VAPID_PRIVATE_KEY: process.env.VAPID_PRIVATE_KEY || 'dummy_private_key',
   },
   async headers() {
     return [
