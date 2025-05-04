@@ -6,6 +6,7 @@ import { revalidatePath } from 'next/cache';
 import { webPushService } from '@/server/lib/webpush';
 import { sseService } from '@/server/lib/sse';
 import { logger } from '@/server/lib/logger';
+import { isServicesInitialized } from '@/server/lib/init';
 
 export const runtime = 'nodejs';
 
@@ -47,8 +48,10 @@ export async function POST(request: NextRequest) {
   logger.info('[API/Announcements] Neue Ankündigungsanfrage');
   
   try {
-    // WebPush Service initialisieren
-    webPushService.initialize();
+    if (!isServicesInitialized()) {
+      logger.error('Services sind nicht initialisiert');
+      return NextResponse.json({ error: 'Service nicht verfügbar' }, { status: 503 });
+    }
     
     const body = await request.json();
     const { title, message } = body;

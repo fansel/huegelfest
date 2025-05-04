@@ -77,28 +77,39 @@ export class WebPushService {
     }
 
     try {
-      const subscriberCount = await Subscriber.countDocuments().exec();
       logger.info('[WebPush] Starte Senden der Benachrichtigungen', { 
         title: payload.title,
         body: payload.body,
-        subscribers: subscriberCount,
         payloadSize: JSON.stringify(payload).length
       });
 
       const subscribers = await Subscriber.find().exec();
-      logger.debug('[WebPush] Gefundene Subscriber:', {
-        count: subscribers.length,
+      const subscriberCount = subscribers.length;
+      
+      logger.info('[WebPush] Gefundene Subscriber', { 
+        count: subscriberCount,
         deviceIds: subscribers.map(s => s.deviceId)
       });
+
+      if (subscriberCount === 0) {
+        logger.warn('[WebPush] Keine Subscriber gefunden');
+        return;
+      }
 
       const notifications = subscribers.map(subscriber => {
         const subscription = {
           endpoint: subscriber.endpoint,
           keys: subscriber.keys
         };
+        
+        logger.debug('[WebPush] Sende Benachrichtigung an Subscriber', {
+          deviceId: subscriber.deviceId,
+          endpoint: subscriber.endpoint.substring(0, 50) + '...'
+        });
+
         return webpush.sendNotification(subscription, JSON.stringify(payload))
           .then(() => {
-            logger.debug('[WebPush] Benachrichtigung erfolgreich gesendet', { 
+            logger.info('[WebPush] Benachrichtigung erfolgreich gesendet', { 
               deviceId: subscriber.deviceId,
               endpoint: subscriber.endpoint.substring(0, 50) + '...',
               timestamp: new Date().toISOString()
@@ -106,7 +117,7 @@ export class WebPushService {
           })
           .catch(error => {
             if (error.statusCode === 410) {
-              logger.info('[WebPush] Subscription abgelaufen, entferne sie', { 
+              logger.warn('[WebPush] Subscription abgelaufen, entferne sie', { 
                 deviceId: subscriber.deviceId,
                 endpoint: subscriber.endpoint.substring(0, 50) + '...',
                 errorCode: error.statusCode
