@@ -7,14 +7,6 @@ import { revalidatePath } from 'next/cache';
 import { sendUpdateToAllClients } from '@/server/lib/sse';
 import { webPushService } from '@/server/lib/webpush';
 
-// Initialisiere den WebPush-Service beim Import
-try {
-  webPushService.initialize();
-} catch (error) {
-  // Fehler bei der Initialisierung sollten den Build nicht blockieren
-  console.warn('Fehler bei der WebPush-Initialisierung:', error);
-}
-
 export async function GET() {
   try {
     await connectDB();
@@ -65,6 +57,13 @@ export async function POST(request: Request) {
     }
 
     await connectDB();
+
+    // Initialisiere WebPush nur wenn wir es brauchen
+    try {
+      webPushService.initialize();
+    } catch (error) {
+      console.warn('Fehler bei der WebPush-Initialisierung:', error);
+    }
 
     // Finde die Gruppe
     const groupDoc = await Group.findOne({ name: group });
