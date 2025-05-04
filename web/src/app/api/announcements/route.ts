@@ -1,15 +1,13 @@
-export const runtime = 'nodejs';
-
-import { NextResponse } from 'next/server';
+import { NextRequest, NextResponse } from 'next/server';
 import { connectDB } from '@/database/config/apiConnector';
 import Announcement from '@/database/models/Announcement';
 import Group from '@/database/models/Group';
 import { revalidatePath } from 'next/cache';
-import { webPushService } from '@/server/lib/lazyServices';
+import { webPushService } from '@/server/lib/webpush';
 import { sseService } from '@/server/lib/sse';
 import { logger } from '@/server/lib/logger';
 
-
+export const runtime = 'nodejs';
 
 export async function GET() {
   try {
@@ -45,103 +43,52 @@ export async function GET() {
   }
 }
 
-export async function POST(request: Request) {
+export async function POST(request: NextRequest) {
+  logger.info('[API/Announcements] Neue Ankündigungsanfrage');
+  
   try {
+    // WebPush Service initialisieren
+    webPushService.initialize();
+    
     const body = await request.json();
-    logger.info('POST /api/announcements - Request Body:', { body });
-    
-    const { content, group, important } = body;
-    
-    if (!content || !group) {
-      logger.error('POST /api/announcements - Fehlende Felder:', { content, group });
+    const { title, message } = body;
+
+    if (!title || !message) {
+      logger.warn('[API/Announcements] Fehlende Pflichtfelder', { 
+        hasTitle: !!title,
+        hasMessage: !!message
+      });
       return NextResponse.json(
-        { error: 'Erforderliche Felder fehlen' },
+        { error: 'Fehlende Pflichtfelder' },
         { status: 400 }
       );
     }
 
-    await connectDB();
-
-    // Finde die Gruppe
-    const groupDoc = await Group.findOne({ name: group });
-    if (!groupDoc) {
-      logger.error('POST /api/announcements - Gruppe nicht gefunden:', { group });
-      return NextResponse.json(
-        { error: `Gruppe "${group}" nicht gefunden` },
-        { status: 404 }
-      );
-    }
-
-    logger.info('POST /api/announcements - Gruppe gefunden:', { id: groupDoc._id, name: groupDoc.name });
-
-    // Setze date und time serverseitig
-    const now = new Date();
-    const date = now.toISOString().split('T')[0];
-    const time = now.toTimeString().split(' ')[0];
-
-    // Erstelle neue Ankündigung
-    const announcement = await Announcement.create({
-      content,
-      date,
-      time,
-      groupId: groupDoc._id,
-      important: important || false,
-      reactions: {
-        thumbsUp: { count: 0, deviceReactions: {} },
-        clap: { count: 0, deviceReactions: {} },
-        laugh: { count: 0, deviceReactions: {} },
-        surprised: { count: 0, deviceReactions: {} },
-        heart: { count: 0, deviceReactions: {} }
-      },
-      createdAt: new Date()
+    await webPushService.sendNotificationToAll({
+      title,
+      body: message,
+      icon: '/icon-192x192.png',
+      badge: '/badge-96x96.png',
+      data: {
+        type: 'announcement',
+        timestamp: new Date().toISOString()
+      }
     });
 
-    logger.info('POST /api/announcements - Ankündigung erstellt:', { id: announcement._id });
-
-    // Sende Push-Benachrichtigung
-    try {
-      const service = await webPushService.getInstance();
-      if (!service.isInitialized()) {
-        logger.warn('Push-Service ist nicht initialisiert');
-      } else {
-        logger.info('Sende Push-Benachrichtigung...');
-        await service.sendNotificationToAll({
-          title: `Neue Ankündigung von ${groupDoc.name}`,
-          body: content,
-          icon: '/icon-192x192.png',
-          badge: '/badge-96x96.png',
-          data: {
-            url: '/'
-          }
-        });
-        logger.info('Push-Benachrichtigung erfolgreich gesendet');
-      }
-    } catch (error) {
-      logger.error('Fehler beim Senden der Push-Benachrichtigung:', { error });
-      // Fehler beim Senden der Push-Benachrichtigung sollte die Ankündigung nicht beeinflussen
-    }
-
-    revalidatePath('/announcements');
-    sseService.sendUpdateToAllClients();
-
-    // Hole die vollständige Ankündigung mit Gruppeninformationen
-    const populatedAnnouncement = await announcement.populate('groupId', 'name color');
-    const doc = populatedAnnouncement.toObject();
-    const transformedAnnouncement = {
-      ...doc,
-      group: doc.groupId.name,
-      groupColor: doc.groupId.color,
-      _id: doc._id.toString(),
-      id: doc._id.toString()
-    };
-    
-    return NextResponse.json(transformedAnnouncement);
+    return NextResponse.json({ 
+      status: 'success',
+      message: 'Ankündigung erfolgreich gesendet'
+    });
   } catch (error) {
-    logger.error('Fehler beim Erstellen der Ankündigung:', { error });
+    logger.error('[API/Announcements] Fehler beim Senden der Ankündigung:', {
+      error: error instanceof Error ? error.message : 'Unbekannter Fehler',
+      stack: error instanceof Error ? error.stack : undefined
+    });
     return NextResponse.json(
       { 
-        error: 'Interner Serverfehler',
-        details: error instanceof Error ? error.message : 'Unbekannter Fehler'
+        status: 'error',
+        message: 'Interner Server-Fehler',
+        error: error instanceof Error ? error.message : 'Unbekannter Fehler'
       },
       { status: 500 }
     );

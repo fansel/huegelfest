@@ -1,7 +1,14 @@
 import { logger } from './logger';
 import { webPushService } from './webpush';
 
+let isInitialized = false;
+
 export async function initializeServices() {
+  if (isInitialized) {
+    logger.debug('[Init] Services bereits initialisiert');
+    return;
+  }
+
   logger.info('[Init] Starte Initialisierung der Services...');
 
   try {
@@ -17,6 +24,7 @@ export async function initializeServices() {
     // Hier können weitere Services initialisiert werden
     // ...
 
+    isInitialized = true;
     logger.info('[Init] Alle Services erfolgreich initialisiert');
   } catch (error) {
     logger.error('[Init] Fehler bei der Service-Initialisierung:', {
@@ -25,4 +33,8 @@ export async function initializeServices() {
     });
     throw error;
   }
+}
+
+export function isServicesInitialized() {
+  return isInitialized;
 } 

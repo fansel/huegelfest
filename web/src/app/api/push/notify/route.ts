@@ -1,29 +1,40 @@
+import { NextRequest, NextResponse } from 'next/server';
+import { webPushService } from '@/server/lib/webpush';
+import { logger } from '@/server/lib/logger';
+import { isServicesInitialized } from '@/server/lib/init';
+
 export const runtime = 'nodejs';
 
-import { NextRequest, NextResponse } from 'next/server'
-import { webPushService } from '@/server/lib/lazyServices'
-
-export async function POST(request: Request) {
+export async function POST(request: NextRequest) {
+  logger.info('[API/Push/Notify] Neue Benachrichtigungsanfrage');
+  
   try {
+    if (!isServicesInitialized()) {
+      logger.error('[API/Push/Notify] Services sind nicht initialisiert');
+      return NextResponse.json(
+        { 
+          status: 'error',
+          message: 'Services sind nicht initialisiert'
+        },
+        { status: 503 }
+      );
+    }
+    
     const body = await request.json();
     const { title, body: messageBody, icon, badge, data } = body;
 
     if (!title || !messageBody) {
+      logger.warn('[API/Push/Notify] Fehlende Pflichtfelder', { 
+        hasTitle: !!title,
+        hasBody: !!messageBody
+      });
       return NextResponse.json(
-        { error: 'Titel und Nachricht sind erforderlich' },
+        { error: 'Fehlende Pflichtfelder' },
         { status: 400 }
       );
     }
 
-    const service = await webPushService.getInstance();
-    if (!service.isInitialized()) {
-      return NextResponse.json(
-        { error: 'Push-Benachrichtigungen sind nicht verfügbar' },
-        { status: 503 }
-      );
-    }
-
-    await service.sendNotificationToAll({
+    await webPushService.sendNotificationToAll({
       title,
       body: messageBody,
       icon,
@@ -31,11 +42,21 @@ export async function POST(request: Request) {
       data
     });
 
-    return NextResponse.json({ message: 'Benachrichtigung gesendet' });
+    return NextResponse.json({ 
+      status: 'success',
+      message: 'Benachrichtigungen erfolgreich gesendet'
+    });
   } catch (error) {
-    console.error('Fehler beim Senden der Push-Benachrichtigung:', error);
+    logger.error('[API/Push/Notify] Fehler beim Senden der Benachrichtigungen:', {
+      error: error instanceof Error ? error.message : 'Unbekannter Fehler',
+      stack: error instanceof Error ? error.stack : undefined
+    });
     return NextResponse.json(
-      { error: 'Interner Serverfehler' },
+      { 
+        status: 'error',
+        message: 'Interner Server-Fehler',
+        error: error instanceof Error ? error.message : 'Unbekannter Fehler'
+      },
       { status: 500 }
     );
   }
