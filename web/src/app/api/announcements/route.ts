@@ -2,9 +2,10 @@ import { NextResponse } from 'next/server';
 import { connectDB } from '@/database/config/apiConnector';
 import Announcement from '@/database/models/Announcement';
 import Group from '@/database/models/Group';
-import { Subscriber } from '@/database/models/Subscriber';
+import Subscriber from '@/database/models/Subscriber';
 import { revalidatePath } from 'next/cache';
-import { webPushService, sseService } from '@/server/lib/lazyServices';
+import { webPushService } from '@/server/lib/lazyServices';
+import { sseService } from '@/server/lib/sse';
 
 // Prüfe ob wir in der Edge-Runtime sind
 const isEdgeRuntime = process.env.NEXT_RUNTIME === 'edge';
@@ -118,8 +119,7 @@ export async function POST(request: Request) {
     }
 
     revalidatePath('/announcements');
-    const sse = await sseService.getInstance();
-    sse.sendUpdateToAllClients();
+    sseService.sendUpdateToAllClients();
 
     // Hole die vollständige Ankündigung mit Gruppeninformationen
     const populatedAnnouncement = await announcement.populate('groupId', 'name color');
@@ -167,8 +167,7 @@ export async function DELETE(request: Request) {
     }
     
     revalidatePath('/announcements');
-    const sse = await sseService.getInstance();
-    sse.sendUpdateToAllClients();
+    sseService.sendUpdateToAllClients();
     return NextResponse.json({
       success: true,
       message: `Ankündigung erfolgreich gelöscht`,
@@ -196,7 +195,7 @@ export async function PUT(request: Request) {
   try {
     const body = await request.json();
     console.log('PUT /api/announcements - Request Body:', body);
-    const { id, reactions } = body;
+    const { id, reactions, deviceId } = body;
     
     if (!id) {
       console.error('PUT /api/announcements: ID fehlt in der Anfrage');
@@ -214,6 +213,14 @@ export async function PUT(request: Request) {
       );
     }
 
+    if (!deviceId) {
+      console.error('PUT /api/announcements: deviceId fehlt in der Anfrage');
+      return NextResponse.json(
+        { error: 'deviceId ist erforderlich' },
+        { status: 400 }
+      );
+    }
+
     console.log('PUT /api/announcements: Verbinde mit Datenbank...');
     await connectDB();
     
@@ -227,10 +234,50 @@ export async function PUT(request: Request) {
       );
     }
 
-    // Aktualisiere die Reaktionen
+    // Validiere die Reaktionen
+    const validReactionTypes = ['thumbsUp', 'clap', 'laugh', 'surprised', 'heart'];
+    const validatedReactions = {};
+
+    // Behalte die bestehenden Reaktionen bei
+    const currentReactions = currentAnnouncement.reactions || {};
+
+    for (const type of validReactionTypes) {
+      // Initialisiere mit den bestehenden Reaktionen
+      validatedReactions[type] = {
+        count: currentReactions[type]?.count || 0,
+        deviceReactions: { ...currentReactions[type]?.deviceReactions || {} }
+      };
+
+      // Wenn es eine neue Reaktion für diesen Typ gibt
+      if (reactions[type]) {
+        const newReaction = reactions[type];
+        
+        // Validiere die Struktur
+        if (typeof newReaction.count === 'number' && typeof newReaction.deviceReactions === 'object') {
+          // Prüfe, ob die deviceId in den neuen Reaktionen ist
+          const hasDeviceReaction = newReaction.deviceReactions[deviceId];
+          
+          // Wenn ja, aktualisiere nur die Reaktion für diese deviceId
+          if (hasDeviceReaction) {
+            validatedReactions[type].deviceReactions[deviceId] = {
+              type: type,
+              announcementId: id
+            };
+          } else {
+            // Wenn nicht, entferne die Reaktion dieser deviceId
+            delete validatedReactions[type].deviceReactions[deviceId];
+          }
+          
+          // Aktualisiere den Count basierend auf den deviceReactions
+          validatedReactions[type].count = Object.keys(validatedReactions[type].deviceReactions).length;
+        }
+      }
+    }
+
+    // Aktualisiere nur die Reaktionen
     const updatedAnnouncement = await Announcement.findByIdAndUpdate(
       id,
-      { $set: { reactions } },
+      { $set: { reactions: validatedReactions } },
       { new: true }
     ).populate('groupId', 'name color');
 
@@ -253,8 +300,7 @@ export async function PUT(request: Request) {
     };
 
     revalidatePath('/announcements');
-    const sse = await sseService.getInstance();
-    sse.sendUpdateToAllClients();
+    sseService.sendUpdateToAllClients();
 
     return NextResponse.json(transformedAnnouncement);
   } catch (error) {

@@ -1,3 +1,5 @@
+import { env } from 'next-runtime-env';
+
 interface PushNotificationPayload {
   title: string;
   body: string;
@@ -8,7 +10,7 @@ interface PushNotificationPayload {
 
 class WebPushClient {
   getPublicKey(): string {
-    return process.env.NEXT_PUBLIC_VAPID_PUBLIC_KEY || 'dummy_public_key';
+    return env('NEXT_PUBLIC_VAPID_PUBLIC_KEY') || 'dummy_public_key';
   }
 
   async subscribe() {

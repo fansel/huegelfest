@@ -25,7 +25,7 @@ export async function POST(request: Request) {
     if (!user) {
       logger.warn(`[Login] Benutzer nicht gefunden: ${username}`);
       return NextResponse.json(
-        { success: false, error: 'Benutzer nicht gefunden' },
+        { success: false, error: 'Ungültige Anmeldedaten' },
         { status: 401 }
       );
     }
@@ -34,7 +34,7 @@ export async function POST(request: Request) {
     if (!isValid) {
       logger.warn(`[Login] Falsches Passwort für ${username}`);
       return NextResponse.json(
-        { success: false, error: 'Falsches Passwort' },
+        { success: false, error: 'Ungültige Anmeldedaten' },
         { status: 401 }
       );
     }

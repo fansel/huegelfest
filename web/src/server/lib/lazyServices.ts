@@ -1,5 +1,5 @@
-// Lazy Loading Service für Edge-Runtime-sichere Services
-import type { SSEService } from './sse';
+// Services für Edge-Runtime-sichere Implementierungen
+import { webPushService as webPushServiceInstance } from './webpush';
 import type { WebPushService } from './webpush';
 
 interface LazyService<T> {
@@ -22,7 +22,8 @@ class LazyServiceManager {
   async getService<T>(serviceName: string, importPath: string): Promise<T> {
     if (!this.services.has(serviceName)) {
       try {
-        const module = await import(importPath);
+        // Verwende einen statischen Import-Pfad
+        const module = await import(/* webpackChunkName: "[request]" */ importPath);
         if (!module[serviceName]) {
           throw new Error(`Service ${serviceName} nicht in ${importPath} gefunden`);
         }
@@ -36,18 +37,9 @@ class LazyServiceManager {
   }
 }
 
-// WebPush Service
+// WebPush Service (bleibt lazy wegen Edge-Runtime)
 export const webPushService: LazyService<WebPushService> = {
   async getInstance() {
-    return LazyServiceManager.getInstance().getService<WebPushService>('webPushService', '@/server/lib/webpush');
+    return webPushServiceInstance;
   }
 };
-
-// SSE Service - nur für Edge-Runtime verwenden
-export const sseService: LazyService<SSEService> = {
-  async getInstance() {
-    return LazyServiceManager.getInstance().getService<SSEService>('sseService', '@/server/lib/sse');
-  }
-};
-
-// Weitere Services können hier hinzugefügt werden 

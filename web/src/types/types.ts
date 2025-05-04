@@ -48,28 +48,26 @@ export type LoginCredentials = {
 };
 
 export interface Event {
-  id: string;
   time: string;
   title: string;
   description: string;
-  categoryId: string;
+  categoryId: string | { $oid: string };
   favorite?: boolean;
+  _id?: { $oid: string };
 }
 
 export interface Day {
-  id: string;
   title: string;
   description: string;
-  date: Date;
+  date: Date | string;
   events: Event[];
   formattedDate?: string;
 }
 
 export interface TimelineData {
-  id: string;
   days: Day[];
-  createdAt?: Date;
-  updatedAt?: Date;
+  createdAt?: Date | string;
+  updatedAt?: Date | string;
 }
 
 export interface PushSubscription {

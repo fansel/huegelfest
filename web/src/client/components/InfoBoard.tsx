@@ -99,28 +99,38 @@ export default function InfoBoard({ isPWA = false, allowClipboard = false }: Inf
         eventSource.close();
       }
 
+      console.log('[SSE] Starte neue Verbindung...');
       eventSource = new EventSource('/api/updates');
       eventSourceRef.current = eventSource;
 
-      eventSource.onopen = () => {};
+      eventSource.onopen = () => {
+        console.log('[SSE] Verbindung erfolgreich hergestellt');
+      };
 
       eventSource.onmessage = async (event) => {
         try {
           const data = JSON.parse(event.data);
+          console.log('[SSE] Nachricht empfangen:', data);
           if (data.type === 'update') {
+            console.log('[SSE] Update empfangen, lade neue Daten...');
             const [loadedAnnouncements, loadedGroupColors] = await Promise.all([
               loadAnnouncements(),
               loadGroupColors()
             ]);
             setAnnouncements(loadedAnnouncements);
             setGroupColors(loadedGroupColors);
+            console.log('[SSE] Daten erfolgreich aktualisiert');
           }
-        } catch (error) {}
+        } catch (error) {
+          console.error('[SSE] Fehler beim Verarbeiten der Nachricht:', error);
+        }
       };
 
-      eventSource.onerror = () => {
+      eventSource.onerror = (error) => {
+        console.error('[SSE] Verbindungsfehler:', error);
         eventSource?.close();
         eventSourceRef.current = null;
+        console.log('[SSE] Versuche in 5 Sekunden erneut zu verbinden...');
         reconnectTimeout = setTimeout(connectSSE, 5000);
       };
     };
@@ -128,6 +138,7 @@ export default function InfoBoard({ isPWA = false, allowClipboard = false }: Inf
     connectSSE();
 
     return () => {
+      console.log('[SSE] Cleanup: Schließe Verbindung...');
       if (reconnectTimeout) {
         clearTimeout(reconnectTimeout);
       }
@@ -222,7 +233,8 @@ export default function InfoBoard({ isPWA = false, allowClipboard = false }: Inf
         },
         body: JSON.stringify({
           id: announcementId,
-          reactions: updatedReactions
+          reactions: updatedReactions,
+          deviceId
         })
       });
 

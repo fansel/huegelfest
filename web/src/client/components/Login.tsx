@@ -36,7 +36,13 @@ export default function Login({ onLogin, error: propError }: LoginProps) {
       await onLogin(username, password);
       router.push('/admin');
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Ein Fehler ist aufgetreten');
+      if (err instanceof Error) {
+        setError(err.message);
+      } else if (typeof err === 'object' && err !== null && 'error' in err) {
+        setError(err.error as string);
+      } else {
+        setError('Ein Fehler ist aufgetreten');
+      }
     } finally {
       setIsLoading(false);
     }

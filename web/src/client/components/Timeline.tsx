@@ -9,6 +9,7 @@ import {
   FaHeart,
   FaList,
 } from 'react-icons/fa';
+import * as Icons from 'react-icons/fa';
 
 interface Event {
   _id?: string;
@@ -20,9 +21,13 @@ interface Event {
 }
 
 interface Category {
+  _id: string;
   value: string;
   label: string;
   icon: string;
+  color?: string;
+  description?: string;
+  isDefault?: boolean;
 }
 
 interface TimelineData {
@@ -40,20 +45,17 @@ interface TimelineProps {
   allowClipboard?: boolean;
 }
 
-// Statisches Icon-Mapping
-const iconMap: { [key: string]: React.ComponentType } = {
-  FaMusic,
-  FaUtensils,
-  FaGamepad,
-  FaQuestion,
-  FaHeart,
-  FaList,
+// Dynamisches Icon-Mapping
+const getIconComponent = (iconName: string) => {
+  const IconComponent = (Icons as any)[iconName];
+  return IconComponent || FaQuestion;
 };
 
 export default function Timeline({ showFavoritesOnly = false, allowClipboard = false }: TimelineProps) {
   const [timelineData, setTimelineData] = useState<TimelineData | null>(null);
   const [selectedDay, setSelectedDay] = useState(0);
   const [selectedCategories, setSelectedCategories] = useState<Set<string>>(new Set());
+  const [lastUpdate, setLastUpdate] = useState<number>(Date.now());
 
   useEffect(() => {
     const loadData = async () => {
@@ -62,7 +64,12 @@ export default function Timeline({ showFavoritesOnly = false, allowClipboard = f
         
         // Lade Timeline-Daten
         console.log('[Timeline] Lade Timeline-Daten');
-        const timelineResponse = await fetch('/api/timeline');
+        const timelineResponse = await fetch('/api/timeline', {
+          headers: {
+            'Cache-Control': 'no-cache',
+            'Pragma': 'no-cache'
+          }
+        });
         console.log('[Timeline] Timeline Response Status:', timelineResponse.status);
         
         if (!timelineResponse.ok) {
@@ -148,20 +155,6 @@ export default function Timeline({ showFavoritesOnly = false, allowClipboard = f
           throw new Error('Ungültiges Kategorien-Format');
         }
 
-        // Mappe die Kategorien mit den entsprechenden Icons
-        const categoriesWithIcons = categoriesData.map((category: Category) => {
-          const iconMap: { [key: string]: string } = {
-            music: 'FaMusic',
-            food: 'FaUtensils',
-            activities: 'FaGamepad',
-            other: 'FaQuestion'
-          };
-          return {
-            ...category,
-            icon: iconMap[category.value] || 'FaQuestion'
-          };
-        });
-
         // Lade Favoriten aus dem localStorage
         let favorites = {};
         try {
@@ -177,7 +170,7 @@ export default function Timeline({ showFavoritesOnly = false, allowClipboard = f
         // Markiere favorisierte Events
         const timelineWithFavorites = {
           ...timelineData,
-          categories: categoriesWithIcons,
+          categories: categoriesData,
           days: timelineData.days.map((day: { _id?: string; title: string; events: Event[] }) => ({
             ...day,
             events: day.events.map((event: Event) => ({
@@ -194,13 +187,24 @@ export default function Timeline({ showFavoritesOnly = false, allowClipboard = f
         setTimelineData({
           days: [],
           categories: [],
-          error: error instanceof Error ? error.message : 'Unbekannter Fehler'
+          error: 'Ein Fehler ist aufgetreten. Bitte versuchen Sie es später erneut.'
         });
       }
     };
 
     loadData();
-  }, []);
+
+    // Füge einen Event-Listener für Timeline-Updates hinzu
+    const handleTimelineUpdate = () => {
+      setLastUpdate(Date.now());
+    };
+
+    window.addEventListener('timeline-update', handleTimelineUpdate);
+
+    return () => {
+      window.removeEventListener('timeline-update', handleTimelineUpdate);
+    };
+  }, [lastUpdate]);
 
   const toggleCategory = (category: string) => {
     const newCategories = new Set(selectedCategories);
@@ -263,7 +267,11 @@ export default function Timeline({ showFavoritesOnly = false, allowClipboard = f
   }
 
   const filteredEvents = timelineData.days[selectedDay].events.filter(
-    (event) => selectedCategories.size === 0 || selectedCategories.has(event.categoryId),
+    (event) => {
+      if (selectedCategories.size === 0) return true;
+      const category = timelineData.categories.find(c => c._id === event.categoryId);
+      return category && selectedCategories.has(category._id);
+    }
   );
 
   return (
@@ -320,13 +328,13 @@ export default function Timeline({ showFavoritesOnly = false, allowClipboard = f
                 <FaList className="text-lg" />
               </button>
               {timelineData?.categories.map((category) => {
-                const IconComponent = iconMap[category.icon] || FaQuestion;
+                const IconComponent = getIconComponent(category.icon);
                 return (
                   <button
-                    key={category.value}
-                    onClick={() => toggleCategory(category.value)}
+                    key={category._id}
+                    onClick={() => toggleCategory(category._id)}
                     className={`flex-shrink-0 p-2.5 rounded-full transition-colors duration-200 ${
-                      selectedCategories.has(category.value)
+                      selectedCategories.has(category._id)
                         ? 'bg-[#ff9900] text-[#460b6c]'
                         : 'bg-[#460b6c] text-[#ff9900] border border-[#ff9900]/20'
                     }`}
@@ -344,7 +352,7 @@ export default function Timeline({ showFavoritesOnly = false, allowClipboard = f
             <div className="flex justify-center mt-2">
               <div className="flex flex-wrap gap-2 justify-center">
                 {Array.from(selectedCategories).map((categoryId) => {
-                  const category = timelineData?.categories.find((c) => c.value === categoryId);
+                  const category = timelineData?.categories.find((c) => c._id === categoryId);
                   if (!category) return null;
                   return (
                     <span
@@ -366,31 +374,40 @@ export default function Timeline({ showFavoritesOnly = false, allowClipboard = f
           <h3 className="text-lg font-medium mb-2 text-[#ff9900]">Meine Favoriten</h3>
           <div className="space-y-4">
             {timelineData.days[selectedDay].events.filter((event) => event.favorite).length > 0 ? (
-              timelineData.days[selectedDay].events.map((event) => (
-                <div
-                  key={`${event.time}-${event.title}`}
-                  className="bg-[#460b6c]/40 backdrop-blur-sm rounded-lg p-3 border border-[#ff9900]/20"
-                >
-                  <div className="flex items-center justify-between">
-                    <div>
-                      <h5 className="text-[#ff9900] font-medium">
-                        {event.time} - {event.title}
-                      </h5>
-                      {event.description && (
-                        <p className="text-[#ff9900]/60 text-xs mt-1">
-                          {event.description}
-                        </p>
-                      )}
+              timelineData.days[selectedDay].events.map((event) => {
+                const category = timelineData.categories.find((c) => c._id === event.categoryId);
+                const IconComponent = category ? getIconComponent(category.icon) : FaQuestion;
+                return (
+                  <div
+                    key={`${event.time}-${event.title}`}
+                    className="bg-[#460b6c]/40 backdrop-blur-sm rounded-lg p-3 border border-[#ff9900]/20"
+                  >
+                    <div className="flex items-center justify-between">
+                      <div className="flex items-center space-x-3">
+                        <div className="p-2 bg-[#ff9900]/20 rounded-full">
+                          <IconComponent className="text-[#ff9900] text-lg" />
+                        </div>
+                        <div>
+                          <h5 className="text-[#ff9900] font-medium">
+                            {event.time} - {event.title}
+                          </h5>
+                          {event.description && (
+                            <p className="text-[#ff9900]/60 text-xs mt-1">
+                              {event.description}
+                            </p>
+                          )}
+                        </div>
+                      </div>
+                      <button
+                        onClick={() => toggleFavorite(timelineData.days[selectedDay].title, event)}
+                        className="text-[#ff9900] p-1"
+                      >
+                        <FaHeart />
+                      </button>
                     </div>
-                    <button
-                      onClick={() => toggleFavorite(timelineData.days[selectedDay].title, event)}
-                      className="text-[#ff9900] p-1"
-                    >
-                      <FaHeart />
-                    </button>
                   </div>
-                </div>
-              ))
+                );
+              })
             ) : (
               <p className="text-[#ff9900]/60 text-center py-4">
                 Keine Favoriten vorhanden
@@ -404,8 +421,8 @@ export default function Timeline({ showFavoritesOnly = false, allowClipboard = f
             <div className="relative px-4">
               <div className="absolute left-4 top-0 bottom-0 w-0.5 bg-[#ff9900]/20" />
               {filteredEvents.map((event) => {
-                const category = timelineData.categories.find((c) => c.value === event.categoryId);
-                const IconComponent = category ? iconMap[category.icon] || FaQuestion : FaQuestion;
+                const category = timelineData.categories.find((c) => c._id === event.categoryId);
+                const IconComponent = category ? getIconComponent(category.icon) : FaQuestion;
                 return (
                   <div
                     key={`${event.time}-${event.title}`}
