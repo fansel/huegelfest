@@ -1,9 +1,13 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import { useAuth } from '@/contexts/AuthContext';
-import { motion } from 'framer-motion';
+import dynamic from 'next/dynamic';
+
+const MotionDiv = dynamic(() => import('framer-motion').then((mod) => mod.motion.div), {
+  ssr: false,
+});
 
 interface LoginProps {
   onLogin: (username: string, password: string) => Promise<void>;
@@ -15,7 +19,12 @@ export default function Login({ onLogin, error: propError }: LoginProps) {
   const [password, setPassword] = useState('');
   const [error, setError] = useState<string | null>(propError || null);
   const [isLoading, setIsLoading] = useState(false);
+  const [mounted, setMounted] = useState(false);
   const router = useRouter();
+
+  useEffect(() => {
+    setMounted(true);
+  }, []);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -32,8 +41,22 @@ export default function Login({ onLogin, error: propError }: LoginProps) {
     }
   };
 
+  if (!mounted) {
+    return (
+      <div className="min-h-screen flex items-center justify-center bg-gray-50 py-12 px-4 sm:px-6 lg:px-8">
+        <div className="max-w-md w-full space-y-8">
+          <div>
+            <h2 className="mt-6 text-center text-3xl font-extrabold text-gray-900">
+              Anmelden
+            </h2>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
   return (
-    <motion.div
+    <MotionDiv
       initial={{ opacity: 0, y: 20 }}
       animate={{ opacity: 1, y: 0 }}
       className="min-h-screen flex items-center justify-center bg-gray-50 py-12 px-4 sm:px-6 lg:px-8"
@@ -79,13 +102,13 @@ export default function Login({ onLogin, error: propError }: LoginProps) {
           </div>
 
           {error && (
-            <motion.div
+            <MotionDiv
               initial={{ opacity: 0 }}
               animate={{ opacity: 1 }}
               className="text-red-500 text-sm text-center"
             >
               {error}
-            </motion.div>
+            </MotionDiv>
           )}
 
           <div>
@@ -99,7 +122,7 @@ export default function Login({ onLogin, error: propError }: LoginProps) {
               }`}
             >
               {isLoading ? (
-                <motion.div
+                <MotionDiv
                   animate={{ rotate: 360 }}
                   transition={{ duration: 1, repeat: Infinity, ease: 'linear' }}
                   className="w-5 h-5 border-2 border-white border-t-transparent rounded-full"
@@ -111,6 +134,6 @@ export default function Login({ onLogin, error: propError }: LoginProps) {
           </div>
         </form>
       </div>
-    </motion.div>
+    </MotionDiv>
   );
 }
