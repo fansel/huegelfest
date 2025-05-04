@@ -3,10 +3,10 @@ import { SHA256 } from 'crypto-js';
 import { User } from '@/database/models';
 import { connectDB } from '@/database/config/connector';
 import { logger } from '@/server/lib/logger';
+import { getAuthConfig } from '@/server/config/auth';
 
-const secret = new TextEncoder().encode(
-  process.env.NEXTAUTH_SECRET || 'default-secret-key-change-in-production',
-);
+const { jwtSecret } = getAuthConfig();
+const secret = new TextEncoder().encode(jwtSecret);
 
 let adminInitialized = false;
 
@@ -14,28 +14,24 @@ let adminInitialized = false;
 export async function initializeAdmin() {
   try {
     await connectDB();
+    const { adminUsername, adminPassword } = getAuthConfig();
     
-    // Prüfe, ob bereits ein Admin existiert
-    const adminExists = await User.findOne({ isAdmin: true });
-    if (adminExists) {
-      logger.info('Admin-Benutzer existiert bereits');
+    const existingAdmin = await User.findOne({ username: adminUsername });
+    if (existingAdmin) {
+      logger.info('[Auth] Admin-Benutzer existiert bereits');
       return;
     }
 
-    const adminUsername = process.env.ADMIN_USERNAME || 'admin';
-    const adminPassword = process.env.ADMIN_PASSWORD || 'admin';
-
-    // Erstelle Admin-Benutzer
-    const admin = await User.create({
+    const hashedPassword = await hash(adminPassword, 10);
+    await User.create({
       username: adminUsername,
-      password: SHA256(adminPassword).toString(), // Passwort hashen
-      isAdmin: true
+      password: hashedPassword,
+      role: 'admin'
     });
-
-    logger.info('Admin-Benutzer erfolgreich erstellt');
-    return admin;
+    
+    logger.info('[Auth] Admin-Benutzer erfolgreich erstellt');
   } catch (error) {
-    logger.error('Fehler beim Initialisieren des Admin-Benutzers:', error);
+    logger.error('[Auth] Fehler beim Erstellen des Admin-Benutzers:', error);
     throw error;
   }
 }

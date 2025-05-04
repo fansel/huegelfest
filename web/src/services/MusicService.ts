@@ -19,14 +19,11 @@ export class MusicService {
   private static clientId: string;
   private static axiosInstance = axios.create();
 
-  private static getClientId(): string {
+  private static async getClientId(): Promise<string> {
     if (!this.clientId) {
-      this.clientId = process.env.SOUNDCLOUD_CLIENT_ID || '';
-      if (!this.clientId) {
-        logger.error('[MusicService] SOUNDCLOUD_CLIENT_ID nicht gefunden in Umgebungsvariablen');
-        throw new Error('SOUNDCLOUD_CLIENT_ID ist nicht in den Umgebungsvariablen definiert');
-      }
-      logger.info('[MusicService] Client-ID erfolgreich geladen');
+      const response = await fetch('/api/music/client-id');
+      const data = await response.json();
+      this.clientId = data.clientId;
     }
     return this.clientId;
   }
@@ -65,7 +62,7 @@ export class MusicService {
   public static async getTrackInfo(url: string): Promise<TrackInfo> {
     logger.debug('[MusicService] Hole SoundCloud Track-Info...');
     try {
-      const clientId = this.getClientId();
+      const clientId = await this.getClientId();
       
       // Auflösen der URL, falls es sich um eine kurze URL handelt
       if (url.includes('on.soundcloud.com')) {
@@ -102,7 +99,7 @@ export class MusicService {
   private static async downloadAudio(url: string): Promise<{ buffer: Buffer; mimeType: string; soundcloudResponse: any }> {
     logger.debug('[MusicService] Starte Audio-Download für URL:', url);
     try {
-      const clientId = this.getClientId();
+      const clientId = await this.getClientId();
       logger.info('[MusicService] Verwende Client-ID:', clientId);
 
       logger.debug('[MusicService] Hole SoundCloud Track-Info...');
