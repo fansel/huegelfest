@@ -9,10 +9,6 @@ interface PushNotificationPayload {
   data?: Record<string, any>;
 }
 
-// Gültiger Dummy-VAPID-Key (65 Bytes Base64-kodiert)
-const DUMMY_VAPID_PUBLIC_KEY = 'BFdMqdytHYX2ble_n3fGtKCES1y1Dw68Ryb5ygcji9JR4nWvEmutBCjIf7RZcnqrMfi470wsEtLMibtHfw2QUvo';
-const DUMMY_VAPID_PRIVATE_KEY = 'uim8H0cLm49Z1oA-h_yFRjd7scYxLBcbk2NwJf8Xnf8';
-
 // Prüfe ob wir in der Edge-Runtime sind
 const isEdgeRuntime = process.env.NEXT_RUNTIME === 'edge';
 
@@ -30,12 +26,12 @@ class WebPushService {
 
     // Nur auf der Server-Seite initialisieren
     if (typeof window === 'undefined') {
-      const vapidPublicKey = process.env.NEXT_PUBLIC_VAPID_PUBLIC_KEY || DUMMY_VAPID_PUBLIC_KEY;
-      const vapidPrivateKey = process.env.VAPID_PRIVATE_KEY || DUMMY_VAPID_PRIVATE_KEY;
+      const vapidPublicKey = process.env.NEXT_PUBLIC_VAPID_PUBLIC_KEY;
+      const vapidPrivateKey = process.env.VAPID_PRIVATE_KEY;
 
       // Validiere nur in Produktion
       if (process.env.NODE_ENV === 'production') {
-        if (!process.env.NEXT_PUBLIC_VAPID_PUBLIC_KEY || !process.env.VAPID_PRIVATE_KEY) {
+        if (!vapidPublicKey || !vapidPrivateKey) {
           console.warn('VAPID-Schlüssel fehlen in den Umgebungsvariablen. Push-Benachrichtigungen sind deaktiviert.');
           return;
         }
@@ -44,8 +40,8 @@ class WebPushService {
       try {
         webpush.setVapidDetails(
           'mailto:vapid@hey.fansel.dev',
-          vapidPublicKey,
-          vapidPrivateKey
+          vapidPublicKey || '',
+          vapidPrivateKey || ''
         );
       } catch (error) {
         console.warn('Fehler bei der VAPID-Initialisierung:', error);
@@ -97,7 +93,7 @@ class WebPushService {
   }
 
   getPublicKey(): string {
-    return process.env.NEXT_PUBLIC_VAPID_PUBLIC_KEY || DUMMY_VAPID_PUBLIC_KEY;
+    return process.env.NEXT_PUBLIC_VAPID_PUBLIC_KEY || '';
   }
 }
 
