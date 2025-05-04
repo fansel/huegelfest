@@ -17,6 +17,29 @@ body {
   .desktop-only {
     display: none !important;
   }
+  .pwa-only {
+    display: block !important;
+  }
+  
+  /* Deaktiviere Textauswahl und Clipboard nur in PWA */
+  * {
+    -webkit-touch-callout: none;
+    -webkit-user-select: none;
+    -khtml-user-select: none;
+    -moz-user-select: none;
+    -ms-user-select: none;
+    user-select: none;
+    -webkit-tap-highlight-color: transparent;
+  }
+}
+
+@media not all and (display-mode: standalone) {
+  .pwa-only {
+    display: none !important;
+  }
+  .desktop-only {
+    display: block !important;
+  }
 }
 
 /* Animationen & Custom Utilities */
@@ -59,16 +82,6 @@ body {
 
 .font-mono {
   font-family: var(--font-mono), monospace;
-}
-
-* {
-  -webkit-touch-callout: none;
-  -webkit-user-select: none;
-  -khtml-user-select: none;
-  -moz-user-select: none;
-  -ms-user-select: none;
-  user-select: none;
-  -webkit-tap-highlight-color: transparent;
 }
 
 /* Erlaube Text-Selektion nur in Input-Feldern und Textareas */

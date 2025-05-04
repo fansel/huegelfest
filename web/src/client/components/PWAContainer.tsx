@@ -160,8 +160,8 @@ export default function PWAContainer() {
     { id: 'settings', icon: SettingsIcon, label: 'Einstellungen' }
   ];
 
-  // Admin-Navigation nur hinzufügen, wenn authentifiziert
-  const navItems = isAuthenticated ? [...baseNavItems, { id: 'admin', icon: Shield, label: 'Admin' }] : baseNavItems;
+  // Admin-Navigation nur hinzufügen, wenn authentifiziert UND showAdmin true ist
+  const navItems = (isAuthenticated && showAdmin) ? [...baseNavItems, { id: 'admin', icon: Shield, label: 'Admin' }] : baseNavItems;
 
   const handleTouchStart = (e: React.TouchEvent) => {
     setTouchStart(e.touches[0].clientY);

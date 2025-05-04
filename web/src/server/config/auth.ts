@@ -1,24 +1,24 @@
-import { logger } from '../lib/logger';
+import { logger } from '@/server/lib/logger';
 
-export function getAuthConfig() {
-  const config = {
-    jwtSecret: process.env.JWT_SECRET || 'dummy_secret_for_build',
-    adminUsername: process.env.ADMIN_USERNAME || 'dummy_admin',
-    adminPassword: process.env.ADMIN_PASSWORD || 'dummy_password'
-  };
+interface AuthConfig {
+  jwtSecret: string;
+  adminUsername: string;
+  adminPassword: string;
+}
 
-  // Validiere die Konfiguration nur in Produktion
-  if (process.env.NODE_ENV === 'production') {
-    if (!process.env.JWT_SECRET) {
-      logger.error('[Auth] JWT_SECRET ist nicht konfiguriert');
-      throw new Error('JWT_SECRET ist nicht konfiguriert');
-    }
+export function getAuthConfig(): AuthConfig {
+  const jwtSecret = process.env.JWT_SECRET;
+  const adminUsername = process.env.ADMIN_USERNAME;
+  const adminPassword = process.env.ADMIN_PASSWORD;
 
-    if (!process.env.ADMIN_USERNAME || !process.env.ADMIN_PASSWORD) {
-      logger.error('[Auth] Admin-Zugangsdaten sind nicht konfiguriert');
-      throw new Error('Admin-Zugangsdaten sind nicht konfiguriert');
-    }
+  if (!jwtSecret || !adminUsername || !adminPassword) {
+    logger.error('[Auth] Fehlende Umgebungsvariablen');
+    throw new Error('Fehlende Konfiguration');
   }
 
-  return config;
+  return {
+    jwtSecret,
+    adminUsername,
+    adminPassword
+  };
 } 

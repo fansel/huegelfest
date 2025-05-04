@@ -1,55 +1,133 @@
 import mongoose from 'mongoose';
+import { User } from '@/database/models/User';
+import { getAuthConfig } from '@/server/config/auth';
 import { logger } from '@/server/lib/logger';
 
-// MongoDB Konfiguration wird zur Runtime geladen
-function getMongoConfig() {
-  return {
-    host: process.env.MONGO_HOST || 'localhost',
-    port: process.env.MONGO_PORT || '27017',
-    database: process.env.MONGO_DATABASE || 'huegelfest'
-  };
-}
+// MongoDB Verbindungsoptionen
+const MONGODB_OPTIONS = {
+  maxPoolSize: 10,
+  minPoolSize: 5,
+  socketTimeoutMS: 45000,
+  serverSelectionTimeoutMS: 5000,
+  heartbeatFrequencyMS: 10000,
+  retryWrites: true,
+  retryReads: true
+};
 
-// Baue MongoDB URI zur Runtime
-function getMongoUri() {
+// MongoDB Konfiguration
+const getMongoConfig = () => ({
+  host: process.env.MONGO_HOST || 'localhost',
+  port: process.env.MONGO_PORT || '27017',
+  database: process.env.MONGO_DATABASE || 'huegelfest'
+});
+
+// Baue MongoDB URI
+const getMongoUri = () => {
   const config = getMongoConfig();
   return `mongodb://${config.host}:${config.port}/${config.database}`;
+};
+
+// Connection State Management
+interface ConnectionState {
+  isConnected: boolean;
+  isConnecting: boolean;
+  connectionPromise: Promise<void> | null;
 }
 
-let cached = global.mongoose;
+const state: ConnectionState = {
+  isConnected: false,
+  isConnecting: false,
+  connectionPromise: null
+};
 
-if (!cached) {
-  cached = global.mongoose = { conn: null, promise: null };
-}
-
-export async function connectDB() {
+// Initialisiere die Datenbank
+async function initializeDatabase() {
   try {
-    const mongoConfig = {
-      host: process.env.MONGO_HOST || 'localhost',
-      port: process.env.MONGO_PORT || '27017',
-      database: process.env.MONGO_DATABASE || 'huegelfest'
-    };
-
-    const uri = `mongodb://${mongoConfig.host}:${mongoConfig.port}/${mongoConfig.database}`;
-    
-    if (mongoose.connection.readyState === 1) {
-      logger.debug('[MongoDB] Bereits verbunden');
-      return;
+    const userCount = await User.countDocuments();
+    if (userCount === 0) {
+      logger.info('[Auth] Datenbank ist leer, erstelle Admin-Benutzer');
+      const { adminUsername, adminPassword } = getAuthConfig();
+      await User.create({
+        username: adminUsername,
+        password: adminPassword,
+        role: 'admin'
+      });
+      logger.info('[Auth] Admin-Benutzer erfolgreich erstellt');
     }
-
-    await mongoose.connect(uri);
-    logger.info('[MongoDB] Verbindung erfolgreich hergestellt');
   } catch (error) {
-    logger.error('[MongoDB] Verbindungsfehler:', error);
+    logger.error('[Database] Fehler bei der Initialisierung:', error);
     throw error;
   }
 }
 
-export async function disconnectDB() {
-  if (cached.conn) {
+// Verbinde mit der Datenbank
+export async function connectDB(): Promise<void> {
+  // Wenn bereits verbunden, nichts tun
+  if (state.isConnected) {
+    logger.debug('[MongoDB] Bereits verbunden');
+    return;
+  }
+
+  // Wenn Verbindung bereits im Gange, warte auf diese
+  if (state.isConnecting && state.connectionPromise) {
+    logger.debug('[MongoDB] Verbindung bereits im Gange, warte...');
+    return state.connectionPromise;
+  }
+
+  // Starte neue Verbindung
+  state.isConnecting = true;
+  state.connectionPromise = (async () => {
+    try {
+      const uri = getMongoUri();
+      await mongoose.connect(uri, MONGODB_OPTIONS);
+      
+      // Event Listener für Verbindungsstatus
+      mongoose.connection.on('error', (error) => {
+        logger.error('[MongoDB] Verbindungsfehler:', error);
+        state.isConnected = false;
+      });
+
+      mongoose.connection.on('disconnected', () => {
+        logger.warn('[MongoDB] Verbindung getrennt');
+        state.isConnected = false;
+      });
+
+      mongoose.connection.on('reconnected', () => {
+        logger.info('[MongoDB] Verbindung wiederhergestellt');
+        state.isConnected = true;
+      });
+
+      state.isConnected = true;
+      logger.info('[MongoDB] Verbindung hergestellt');
+
+      // Initialisiere die Datenbank
+      await initializeDatabase();
+    } catch (error) {
+      logger.error('[MongoDB] Verbindungsfehler:', error);
+      state.isConnected = false;
+      throw error;
+    } finally {
+      state.isConnecting = false;
+      state.connectionPromise = null;
+    }
+  })();
+
+  return state.connectionPromise;
+}
+
+// Trenne die Datenbankverbindung
+export async function disconnectDB(): Promise<void> {
+  if (!state.isConnected) {
+    logger.debug('[MongoDB] Nicht verbunden');
+    return;
+  }
+
+  try {
     await mongoose.disconnect();
-    cached.conn = null;
-    cached.promise = null;
+    state.isConnected = false;
     logger.info('[Database] MongoDB Verbindung geschlossen');
+  } catch (error) {
+    logger.error('[MongoDB] Fehler beim Trennen der Verbindung:', error);
+    throw error;
   }
 } 

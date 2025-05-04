@@ -1,19 +1,21 @@
 import { NextResponse } from 'next/server';
-import { cookies } from 'next/headers';
 
 export async function POST() {
   try {
-    const response = NextResponse.json({ success: true });
+    // Erstelle die Response mit dem JSON-Body
+    const response = NextResponse.json(
+      { success: true, message: 'Erfolgreich ausgeloggt' },
+      { status: 200 }
+    );
     
-    // Cookies in der Response löschen
-    response.cookies.delete('auth_token');
-    response.cookies.delete('isAuthenticated');
+    // Lösche den Auth-Token Cookie
+    response.cookies.delete('auth-token');
     
     return response;
   } catch (error) {
-    console.error('Logout-Fehler:', error);
+    console.error('Fehler beim Ausloggen:', error);
     return NextResponse.json(
-      { error: 'Ein Fehler ist aufgetreten' },
+      { success: false, error: 'Ein Fehler ist aufgetreten' },
       { status: 500 }
     );
   }

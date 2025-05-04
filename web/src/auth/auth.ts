@@ -1,6 +1,6 @@
 import { SignJWT, jwtVerify } from 'jose';
-import { SHA256 } from 'crypto-js';
-import { User } from '@/database/models';
+import { compare, hash } from 'bcryptjs';
+import { User, IUser } from '@/database/models/User';
 import { connectDB } from '@/database/config/connector';
 import { logger } from '@/server/lib/logger';
 import { getAuthConfig } from '@/server/config/auth';
@@ -25,10 +25,9 @@ export async function initializeAdmin() {
       return;
     }
 
-    const hashedPassword = await hash(adminPassword, 10);
     await User.create({
       username: adminUsername,
-      password: hashedPassword,
+      password: adminPassword, // wird automatisch gehasht durch das Model
       role: 'admin'
     });
     
@@ -53,7 +52,7 @@ export async function verifyToken(token: string) {
     await jwtVerify(token, getSecret());
     return true;
   } catch (error) {
-    console.error('Token-Verifizierung fehlgeschlagen:', error);
+    logger.error('[Auth] Token-Verifizierung fehlgeschlagen:', error);
     return false;
   }
 }
@@ -61,56 +60,77 @@ export async function verifyToken(token: string) {
 export async function validateCredentials(
   username: string,
   password: string,
-): Promise<{ isValid: boolean; isAdmin: boolean }> {
+): Promise<{ isValid: boolean; isAdmin: boolean; error?: string }> {
   try {
-    console.log('Starte validateCredentials mit:', { username });
-
     await connectDB();
+    logger.info(`[Auth] Suche Benutzer: ${username}`);
 
-    // Benutzer in der Datenbank suchen
-    console.log('Suche Benutzer in der Datenbank...');
-    const user = await User.findOne({ username }).exec();
-    console.log('Gefundener Benutzer:', user ? 'Ja' : 'Nein');
-
+    const user = await User.findOne({ username });
     if (!user) {
-      console.log('Benutzer nicht gefunden:', username);
-      return { isValid: false, isAdmin: false };
+      logger.warn(`[Auth] Benutzer nicht gefunden: ${username}`);
+      return { isValid: false, isAdmin: false, error: 'Benutzer nicht gefunden' };
     }
 
-    // Passwort hashen und vergleichen
-    const hashedPassword = SHA256(password).toString();
+    // Prüfe, ob der Account gesperrt ist
+    /* 
+    const isLocked = user.lockedUntil && user.lockedUntil > new Date();
+    if (isLocked) {
+      const remainingTime = Math.ceil((user.lockedUntil!.getTime() - Date.now()) / 1000 / 60);
+      logger.warn(`[Auth] Account gesperrt für ${username}, noch ${remainingTime} Minuten`);
+      return {
+        isValid: false,
+        isAdmin: false,
+        error: `Account ist für ${remainingTime} Minuten gesperrt`
+      };
+    }
+    */
 
-    // Debug-Logging
-    console.log('Login-Versuch:');
-    console.log('Username Vergleich:', {
-      eingegeben: username,
-      gefunden: user.username,
-      match: username === user.username,
-    });
-    console.log('Password Hash Vergleich:', {
-      eingegeben: hashedPassword,
-      gespeichert: user.password,
-      match: hashedPassword === user.password,
-    });
-
-    // Passwort-Hash vergleichen
-    const isValid = hashedPassword === user.password;
-    console.log('Passwort-Validierung:', { isValid });
-
+    logger.info(`[Auth] Prüfe Passwort für ${username}`);
+    const isValid = await compare(password, user.password);
+    
     if (isValid) {
-      // LastLogin aktualisieren
+      // Erfolgreicher Login
+      logger.info(`[Auth] Erfolgreicher Login für ${username}`);
       user.lastLogin = new Date();
+      // user.failedLoginAttempts = 0;
+      // user.lockedUntil = undefined;
       await user.save();
-      console.log('LastLogin aktualisiert');
-    }
+      
+      return {
+        isValid: true,
+        isAdmin: user.role === 'admin'
+      };
+    } else {
+      // Fehlgeschlagener Login
+      logger.warn(`[Auth] Falsches Passwort für ${username}`);
+      /* 
+      user.failedLoginAttempts = (user.failedLoginAttempts || 0) + 1;
+      
+      const remainingAttempts = 5 - user.failedLoginAttempts;
+      let error = `Falsches Passwort. Noch ${remainingAttempts} Versuche übrig.`;
 
-    return {
-      isValid,
-      isAdmin: user.isAdmin,
-    };
+      if (user.failedLoginAttempts >= 5) {
+        logger.warn(`[Auth] Account gesperrt für ${username} nach 5 fehlgeschlagenen Versuchen`);
+        user.lockedUntil = new Date(Date.now() + 15 * 60 * 1000); // 15 Minuten Sperre
+        error = 'Account wurde für 15 Minuten gesperrt.';
+      }
+      */
+      
+      await user.save();
+      
+      return {
+        isValid: false,
+        isAdmin: false,
+        error: 'Falsches Passwort'
+      };
+    }
   } catch (error) {
-    console.error('Fehler bei der Authentifizierung:', error);
-    return { isValid: false, isAdmin: false };
+    logger.error('[Auth] Fehler bei der Authentifizierung:', error);
+    return {
+      isValid: false,
+      isAdmin: false,
+      error: 'Ein Fehler ist aufgetreten'
+    };
   }
 }
 
@@ -118,22 +138,26 @@ export async function validateCredentials(
 export async function createUser(
   username: string,
   password: string,
-  isAdmin: boolean = false,
+  role: 'admin' | 'user' = 'user',
+  email?: string
 ) {
   try {
     await connectDB();
 
-    const hashedPassword = SHA256(password).toString();
     const user = new User({
       username,
-      password: hashedPassword,
-      isAdmin,
+      password, // wird automatisch gehasht durch das Model
+      role,
+      email
     });
 
     await user.save();
     return { success: true };
   } catch (error) {
-    console.error('Fehler beim Erstellen des Benutzers:', error);
-    return { success: false, error: 'Benutzer konnte nicht erstellt werden' };
+    logger.error('Fehler beim Erstellen des Benutzers:', error);
+    return {
+      success: false,
+      error: error instanceof Error ? error.message : 'Benutzer konnte nicht erstellt werden'
+    };
   }
 }

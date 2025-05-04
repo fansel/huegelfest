@@ -1,5 +1,6 @@
 import { NextResponse } from 'next/server';
 import type { NextRequest } from 'next/server';
+import { verifyToken } from '@/auth/auth';
 
 // Typen für die API-Routen
 type HttpMethod = 'GET' | 'POST' | 'PUT' | 'DELETE';
@@ -26,104 +27,87 @@ const protectedApiRoutes: Record<string, RouteConfig> = {
   }
 };
 
-export function middleware(request: NextRequest) {
-  const authToken = request.cookies.get('auth_token');
+export async function middleware(request: NextRequest) {
+  const token = request.cookies.get('auth-token')?.value;
   const isAdminRoute = request.nextUrl.pathname.startsWith('/admin');
   const isLoginRoute = request.nextUrl.pathname === '/login';
   const isApiRoute = request.nextUrl.pathname.startsWith('/api');
 
-  // Login-Route Logik
-  if (isLoginRoute) {
-    if (authToken) {
-      return NextResponse.redirect(new URL('/admin', request.url));
-    }
-    return NextResponse.next();
-  }
-
-  // Admin-Route Logik
-  if (isAdminRoute) {
-    if (!authToken) {
-      return NextResponse.redirect(new URL('/login', request.url));
-    }
-
-    // Token-Validierung über API-Route
-    return fetch(new URL('/api/auth/validate', request.url), {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-      },
-      body: JSON.stringify({ token: authToken.value }),
-    })
-      .then(response => response.json())
-      .then(({ valid }) => {
-        if (!valid) {
-          return NextResponse.redirect(new URL('/login', request.url));
-        }
-        return NextResponse.next();
-      })
-      .catch(() => {
-        return NextResponse.redirect(new URL('/login', request.url));
-      });
-  }
-
-  // API-Route Logik
+  // API-Routen Logik
   if (isApiRoute) {
-    const path = request.nextUrl.pathname;
-    const method = request.method as HttpMethod;
-    
-    // Finde die passende Route-Konfiguration
-    const routeConfig = Object.entries(protectedApiRoutes).find(([route]) => path.startsWith(route))?.[1];
-    
-    // Wenn keine geschützte Route gefunden wurde, lass die Anfrage durch
-    if (!routeConfig) {
+    // Login-Route immer erlauben
+    if (request.nextUrl.pathname === '/api/auth/login') {
       return NextResponse.next();
     }
 
-    // Prüfe, ob die Methode geschützt ist
-    const isProtectedMethod = routeConfig.methods.includes(method);
+    // Prüfe, ob die Route geschützt werden soll
+    const route = request.nextUrl.pathname;
+    const method = request.method as HttpMethod;
+    const routeConfig = protectedApiRoutes[route];
 
-    // Wenn es eine geschützte Methode ist und der Benutzer nicht authentifiziert ist
-    if (isProtectedMethod && !authToken) {
+    // Wenn die Route nicht in der Konfiguration ist oder die Methode nicht geschützt ist, erlaube den Zugriff
+    if (!routeConfig || !routeConfig.methods.includes(method)) {
+      return NextResponse.next();
+    }
+
+    // Für geschützte Routen Token prüfen
+    if (token) {
+      try {
+        const isValid = await verifyToken(token);
+        if (!isValid) {
+          return new NextResponse(null, { status: 401 });
+        }
+      } catch {
+        return new NextResponse(null, { status: 401 });
+      }
+    } else {
       return new NextResponse(null, { status: 401 });
     }
+  }
 
-    // Wenn es eine geschützte Methode ist, validiere den Token
-    if (isProtectedMethod && authToken) {
-      return fetch(new URL('/api/auth/validate', request.url), {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({ token: authToken.value }),
-      })
-        .then(response => response.json())
-        .then(({ valid }) => {
-          if (!valid) {
-            return new NextResponse(null, { status: 401 });
-          }
-          return NextResponse.next();
-        })
-        .catch(() => {
-          return new NextResponse(null, { status: 401 });
-        });
+  // Frontend-Routen Logik
+  if (isLoginRoute) {
+    // Wenn bereits eingeloggt, weiter zu Admin
+    if (token) {
+      try {
+        const isValid = await verifyToken(token);
+        if (isValid) {
+          return NextResponse.redirect(new URL('/admin', request.url));
+        }
+      } catch {
+        // Token ungültig, Cookie löschen
+        const response = NextResponse.next();
+        response.cookies.delete('auth-token');
+        return response;
+      }
+    }
+    return NextResponse.next();
+  }
+
+  if (isAdminRoute) {
+    // Wenn nicht eingeloggt, weiter zu Login
+    if (!token) {
+      return NextResponse.redirect(new URL('/login', request.url));
     }
 
-    return NextResponse.next();
+    try {
+      const isValid = await verifyToken(token);
+      if (!isValid) {
+        const response = NextResponse.redirect(new URL('/login', request.url));
+        response.cookies.delete('auth-token');
+        return response;
+      }
+    } catch {
+      const response = NextResponse.redirect(new URL('/login', request.url));
+      response.cookies.delete('auth-token');
+      return response;
+    }
   }
 
   return NextResponse.next();
 }
 
-// Konfiguriere, auf welchen Pfaden die Middleware ausgeführt werden soll
+// Konfiguriere, für welche Pfade die Middleware ausgeführt werden soll
 export const config = {
-  matcher: [
-    /*
-     * Match all request paths except for the ones starting with:
-     * - _next/static (static files)
-     * - _next/image (image optimization files)
-     * - favicon.ico (favicon file)
-     * - public folder
-     */
-    '/((?!_next/static|_next/image|favicon.ico|public/).*)',
-  ],
+  matcher: ['/admin/:path*', '/login', '/api/:path*']
 };

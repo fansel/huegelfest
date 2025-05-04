@@ -1,23 +1,20 @@
+// Einfacher Logger für den Server
 const logger = {
   info: (...args: unknown[]) => {
-    if (typeof window === 'undefined') {
-      console.log('[INFO]', ...args);
-    }
+    process.stdout.write(`\x1b[32m[INFO]\x1b[0m ${new Date().toISOString()} `);
+    console.log(...args);
   },
   error: (...args: unknown[]) => {
-    if (typeof window === 'undefined') {
-      console.error('[ERROR]', ...args);
-    }
+    process.stderr.write(`\x1b[31m[ERROR]\x1b[0m ${new Date().toISOString()} `);
+    console.error(...args);
   },
   warn: (...args: unknown[]) => {
-    if (typeof window === 'undefined') {
-      console.warn('[WARN]', ...args);
-    }
+    process.stdout.write(`\x1b[33m[WARN]\x1b[0m ${new Date().toISOString()} `);
+    console.warn(...args);
   },
   debug: (...args: unknown[]) => {
-    if (typeof window === 'undefined') {
-      console.debug('[DEBUG]', ...args);
-    }
+    process.stdout.write(`\x1b[36m[DEBUG]\x1b[0m ${new Date().toISOString()} `);
+    console.debug(...args);
   }
 };
 

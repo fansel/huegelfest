@@ -5,7 +5,7 @@ import { verifyToken } from '@/auth/auth';
 export async function GET() {
   try {
     const cookieStore = await cookies();
-    const token = cookieStore.get('auth_token');
+    const token = cookieStore.get('auth-token');
 
     if (!token) {
       return NextResponse.json(
