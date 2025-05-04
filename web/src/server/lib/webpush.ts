@@ -10,8 +10,8 @@ interface PushNotificationPayload {
 }
 
 // Gültiger Dummy-VAPID-Key (65 Bytes Base64-kodiert)
-const DUMMY_VAPID_PUBLIC_KEY = 'BAx-KqIJ7dg8KrOnst7LZ5wpKG6fMyFwWY3ZNJqcfr3Qv3iFZnHTosXgo1cFgyHqnj5moEAi-dJS40T55XygugE';
-const DUMMY_VAPID_PRIVATE_KEY = 'jxgKSyT7Jp-nlH-qzctpUe0MO0yXljdBkAK5uLJfTmA';
+const DUMMY_VAPID_PUBLIC_KEY = 'BFdMqdytHYX2ble_n3fGtKCES1y1Dw68Ryb5ygcji9JR4nWvEmutBCjIf7RZcnqrMfi470wsEtLMibtHfw2QUvo';
+const DUMMY_VAPID_PRIVATE_KEY = 'uim8H0cLm49Z1oA-h_yFRjd7scYxLBcbk2NwJf8Xnf8';
 
 class WebPushService {
   private initialized = false;
