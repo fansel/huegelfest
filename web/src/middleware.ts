@@ -121,6 +121,6 @@ export const config = {
     '/admin/:path*', 
     '/login', 
     '/api/:path*',
-    '!/api/push/notify'  // Ausschluss der push/notify Route
+    '/((?!api/push/notify).*)'  // Negativer Matcher für push/notify Route
   ]
 };
