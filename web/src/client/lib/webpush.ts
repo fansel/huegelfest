@@ -75,7 +75,7 @@ class WebPushClient {
 export const webPushClient = new WebPushClient();
 
 // Gültiger Dummy-VAPID-Key (Base64-kodiert)
-const DUMMY_VAPID_PUBLIC_KEY = 'BJiMJqkf_7nmQ9usBHlUNEg5ZHztXGM7j-0ITP_kYY9Cs-XbVzCNFcumvi1eQeA7jmkQnNYjSC1MI-Eacn_fPgI';
+const DUMMY_VAPID_PUBLIC_KEY = 'BFdMqdytHYX2ble_n3fGtKCES1y1Dw68Ryb5ygcji9JR4nWvEmutBCjIf7RZcnqrMfi470wsEtLMibtHfw2QUvo';
 
 export function getVapidPublicKey(): string {
   return process.env.NEXT_PUBLIC_VAPID_PUBLIC_KEY || DUMMY_VAPID_PUBLIC_KEY;
