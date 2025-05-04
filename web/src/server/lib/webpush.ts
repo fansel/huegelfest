@@ -1,5 +1,6 @@
 import webpush from 'web-push';
 import { Subscriber } from '@/database/models/Subscriber';
+import { logger } from '@/server/lib/logger';
 
 interface PushNotificationPayload {
   title: string;
@@ -9,18 +10,12 @@ interface PushNotificationPayload {
   data?: Record<string, any>;
 }
 
-// Prüfe ob wir in der Edge-Runtime sind
-const isEdgeRuntime = process.env.NEXT_RUNTIME === 'edge';
-
 export class WebPushService {
   private initialized = false;
 
   initialize() {
-    if (this.initialized) return;
-
-    // Überspringe Initialisierung in der Edge-Runtime
-    if (isEdgeRuntime) {
-      console.warn('WebPush-Initialisierung in Edge-Runtime übersprungen');
+    if (this.initialized) {
+      logger.debug('[WebPush] Service bereits initialisiert');
       return;
     }
 
@@ -32,7 +27,7 @@ export class WebPushService {
       // Validiere nur in Produktion
       if (process.env.NODE_ENV === 'production') {
         if (!vapidPublicKey || !vapidPrivateKey) {
-          console.warn('VAPID-Schlüssel fehlen in den Umgebungsvariablen. Push-Benachrichtigungen sind deaktiviert.');
+          logger.error('[WebPush] VAPID-Schlüssel fehlen in den Umgebungsvariablen');
           return;
         }
       }
@@ -43,13 +38,15 @@ export class WebPushService {
           vapidPublicKey || '',
           vapidPrivateKey || ''
         );
+        logger.info('[WebPush] VAPID-Details erfolgreich gesetzt');
       } catch (error) {
-        console.warn('Fehler bei der VAPID-Initialisierung:', error);
+        logger.error('[WebPush] Fehler bei der VAPID-Initialisierung:', error);
         return;
       }
     }
 
     this.initialized = true;
+    logger.info('[WebPush] Service erfolgreich initialisiert');
   }
 
   isInitialized() {
@@ -57,37 +54,56 @@ export class WebPushService {
   }
 
   async sendNotificationToAll(payload: PushNotificationPayload) {
-    // Überspringe Senden in der Edge-Runtime
-    if (isEdgeRuntime) {
-      console.warn('Push-Benachrichtigungen in Edge-Runtime nicht unterstützt');
-      return;
-    }
-
     if (!this.initialized) {
-      console.warn('WebPush-Service ist nicht initialisiert. Push-Benachrichtigung wird nicht gesendet.');
+      logger.error('[WebPush] Service ist nicht initialisiert');
       return;
     }
 
     try {
-      const subscribers = await Subscriber.find();
+      const subscriberCount = await Subscriber.countDocuments().exec();
+      logger.info('[WebPush] Starte Senden der Benachrichtigungen', { 
+        title: payload.title,
+        subscribers: subscriberCount
+      });
+
+      const subscribers = await Subscriber.find().exec();
       const notifications = subscribers.map(subscriber => {
         const subscription = {
           endpoint: subscriber.endpoint,
           keys: subscriber.keys
         };
         return webpush.sendNotification(subscription, JSON.stringify(payload))
+          .then(() => {
+            logger.debug('[WebPush] Benachrichtigung erfolgreich gesendet', { 
+              deviceId: subscriber.deviceId,
+              endpoint: subscriber.endpoint.substring(0, 50) + '...'
+            });
+          })
           .catch(error => {
             if (error.statusCode === 410) {
-              // Subscription ist abgelaufen, entferne sie
-              return Subscriber.findByIdAndDelete(subscriber._id);
+              logger.info('[WebPush] Subscription abgelaufen, entferne sie', { 
+                deviceId: subscriber.deviceId 
+              });
+              return Subscriber.findByIdAndDelete(subscriber._id).exec();
             }
+            logger.error('[WebPush] Fehler beim Senden der Benachrichtigung', {
+              deviceId: subscriber.deviceId,
+              error: error.message
+            });
             throw error;
           });
       });
 
-      await Promise.allSettled(notifications);
+      const results = await Promise.allSettled(notifications);
+      const stats = {
+        total: results.length,
+        fulfilled: results.filter(r => r.status === 'fulfilled').length,
+        rejected: results.filter(r => r.status === 'rejected').length
+      };
+      
+      logger.info('[WebPush] Senden der Benachrichtigungen abgeschlossen', stats);
     } catch (error) {
-      console.error('Fehler beim Senden der Push-Benachrichtigungen:', error);
+      logger.error('[WebPush] Fehler beim Senden der Push-Benachrichtigungen:', error);
       throw error;
     }
   }

@@ -1,4 +1,14 @@
-import mongoose from 'mongoose';
+import mongoose, { Document, Model } from 'mongoose';
+
+interface ISubscriber extends Document {
+  endpoint: string;
+  keys: {
+    p256dh: string;
+    auth: string;
+  };
+  deviceId: string;
+  createdAt: Date;
+}
 
 const subscriberSchema = new mongoose.Schema({
   endpoint: { type: String, required: true, unique: true },
@@ -10,4 +20,4 @@ const subscriberSchema = new mongoose.Schema({
   createdAt: { type: Date, default: Date.now }
 });
 
-export const Subscriber = mongoose.models.Subscriber || mongoose.model('Subscriber', subscriberSchema); 
+export const Subscriber: Model<ISubscriber> = mongoose.models.Subscriber || mongoose.model<ISubscriber>('Subscriber', subscriberSchema); 
