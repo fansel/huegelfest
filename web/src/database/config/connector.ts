@@ -6,20 +6,14 @@ function getMongoConfig() {
   return {
     host: process.env.MONGO_HOST || 'localhost',
     port: process.env.MONGO_PORT || '27017',
-    database: process.env.MONGO_DATABASE || 'huegelfest',
-    username: process.env.MONGO_USERNAME,
-    password: process.env.MONGO_PASSWORD,
-    authSource: process.env.MONGO_AUTH_SOURCE || 'huegelfest',
-    authMechanism: process.env.MONGO_AUTH_MECHANISM || 'SCRAM-SHA-256'
+    database: process.env.MONGO_DATABASE || 'huegelfest'
   };
 }
 
 // Baue MongoDB URI zur Runtime
 function getMongoUri() {
   const config = getMongoConfig();
-  return config.username && config.password
-    ? `mongodb://${config.username}:${config.password}@${config.host}:${config.port}/${config.database}?authSource=${config.authSource}&authMechanism=${config.authMechanism}`
-    : `mongodb://${config.host}:${config.port}/${config.database}`;
+  return `mongodb://${config.host}:${config.port}/${config.database}`;
 }
 
 let cached = global.mongoose;
@@ -81,6 +75,6 @@ export async function disconnectDB() {
     await mongoose.disconnect();
     cached.conn = null;
     cached.promise = null;
-    console.log('MongoDB Verbindung geschlossen');
+    logger.info('[Database] MongoDB Verbindung geschlossen');
   }
 } 
