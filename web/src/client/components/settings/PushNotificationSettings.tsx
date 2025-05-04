@@ -53,17 +53,38 @@ export default function PushNotificationSettings() {
           const pushSubscription = await registration.pushManager.getSubscription();
           
           if (pushSubscription) {
-            const subscriptionData: PushSubscriptionData = {
-              endpoint: pushSubscription.endpoint,
-              keys: {
-                p256dh: btoa(String.fromCharCode.apply(null, 
-                  new Uint8Array(pushSubscription.getKey('p256dh') || new ArrayBuffer(0)))),
-                auth: btoa(String.fromCharCode.apply(null, 
-                  new Uint8Array(pushSubscription.getKey('auth') || new ArrayBuffer(0))))
+            const deviceId = localStorage.getItem('deviceId');
+            if (deviceId) {
+              // Prüfe ob die Subscription in der Datenbank existiert
+              const response = await fetch('/api/push/check-subscription', {
+                method: 'POST',
+                headers: {
+                  'Content-Type': 'application/json',
+                },
+                body: JSON.stringify({ deviceId }),
+              });
+              
+              const { exists } = await response.json();
+              
+              if (exists) {
+                const subscriptionData: PushSubscriptionData = {
+                  endpoint: pushSubscription.endpoint,
+                  keys: {
+                    p256dh: btoa(String.fromCharCode.apply(null, 
+                      new Uint8Array(pushSubscription.getKey('p256dh') || new ArrayBuffer(0)))),
+                    auth: btoa(String.fromCharCode.apply(null, 
+                      new Uint8Array(pushSubscription.getKey('auth') || new ArrayBuffer(0))))
+                  }
+                };
+                setSubscription(subscriptionData);
+                setIsEnabled(true);
+              } else {
+                // Subscription existiert nicht in der Datenbank, also abbestellen
+                await pushSubscription.unsubscribe();
+                setSubscription(null);
+                setIsEnabled(false);
               }
-            };
-            setSubscription(subscriptionData);
-            setIsEnabled(true);
+            }
           }
         } catch (error) {
           console.error('Fehler beim Prüfen des Subscription-Status:', error);

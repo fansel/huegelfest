@@ -20,9 +20,6 @@ const protectedApiRoutes: Record<string, RouteConfig> = {
   '/api/announcements': {
     methods: ['POST', 'DELETE']
   },
-  '/api/push/notify': {
-    methods: ['POST']
-  },
   '/api/music': {
     methods: [ 'PUT', 'DELETE']
   }
@@ -39,8 +36,20 @@ async function verifyToken(token: string) {
   }
 }
 
+// Hilfsfunktion zum Extrahieren des Tokens
+function getTokenFromRequest(request: NextRequest): string | undefined {
+  // Prüfe zuerst den Authorization Header
+  const authHeader = request.headers.get('authorization');
+  if (authHeader?.startsWith('Bearer ')) {
+    return authHeader.substring(7);
+  }
+  
+  // Fallback auf Cookie
+  return request.cookies.get('auth-token')?.value;
+}
+
 export async function middleware(request: NextRequest) {
-  const token = request.cookies.get('auth-token')?.value;
+  const token = getTokenFromRequest(request);
   const isAdminRoute = request.nextUrl.pathname.startsWith('/admin');
   const isLoginRoute = request.nextUrl.pathname === '/login';
   const isApiRoute = request.nextUrl.pathname.startsWith('/api');
@@ -108,5 +117,10 @@ export async function middleware(request: NextRequest) {
 
 // Konfiguriere, für welche Pfade die Middleware ausgeführt werden soll
 export const config = {
-  matcher: ['/admin/:path*', '/login', '/api/:path*']
+  matcher: [
+    '/admin/:path*', 
+    '/login', 
+    '/api/:path*',
+    '!/api/push/notify'  // Ausschluss der push/notify Route
+  ]
 };
