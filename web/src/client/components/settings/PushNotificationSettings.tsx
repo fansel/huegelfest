@@ -6,22 +6,32 @@ import { env } from 'next-runtime-env';
 // VAPID-Schlüssel als Konstanten
 const VAPID_PUBLIC_KEY = env('NEXT_PUBLIC_VAPID_PUBLIC_KEY');
 
+interface PushSubscriptionData {
+  endpoint: string;
+  keys: {
+    p256dh: string;
+    auth: string;
+  };
+}
+
+interface DebugInfo {
+  notificationsSupported: boolean;
+  serviceWorkerSupported: boolean;
+  pushManagerSupported: boolean;
+  vapidKey: string;
+  serviceWorkerState?: string;
+  subscription?: PushSubscriptionData | null;
+}
+
 export default function PushNotificationSettings() {
   const [isSupported, setIsSupported] = useState(false);
   const [permission, setPermission] = useState<NotificationPermission>('default');
-  const [subscription, setSubscription] = useState<PushSubscription | null>(null);
+  const [subscription, setSubscription] = useState<PushSubscriptionData | null>(null);
   const [isEnabled, setIsEnabled] = useState(false);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [showDebug, setShowDebug] = useState(false);
-  const [debugInfo, setDebugInfo] = useState<{
-    notificationsSupported: boolean;
-    serviceWorkerSupported: boolean;
-    pushManagerSupported: boolean;
-    vapidKey: string;
-    serviceWorkerState?: string;
-    subscription?: PushSubscription | null;
-  }>({
+  const [debugInfo, setDebugInfo] = useState<DebugInfo>({
     notificationsSupported: false,
     serviceWorkerSupported: false,
     pushManagerSupported: false,
@@ -29,48 +39,45 @@ export default function PushNotificationSettings() {
   });
 
   useEffect(() => {
-    if (!VAPID_PUBLIC_KEY) {
-      console.warn('VAPID Public Key fehlt in den Umgebungsvariablen');
-      setIsLoading(false);
-      return;
-    }
-
     const checkSupport = async () => {
       const notificationsSupported = 'Notification' in window;
       const serviceWorkerSupported = 'serviceWorker' in navigator;
       const pushManagerSupported = 'PushManager' in window;
 
+      setIsSupported(notificationsSupported && serviceWorkerSupported && pushManagerSupported);
+      setPermission(Notification.permission);
+
+      if (serviceWorkerSupported) {
+        try {
+          const registration = await navigator.serviceWorker.ready;
+          const pushSubscription = await registration.pushManager.getSubscription();
+          
+          if (pushSubscription) {
+            const subscriptionData: PushSubscriptionData = {
+              endpoint: pushSubscription.endpoint,
+              keys: {
+                p256dh: btoa(String.fromCharCode.apply(null, 
+                  new Uint8Array(pushSubscription.getKey('p256dh') || new ArrayBuffer(0)))),
+                auth: btoa(String.fromCharCode.apply(null, 
+                  new Uint8Array(pushSubscription.getKey('auth') || new ArrayBuffer(0))))
+              }
+            };
+            setSubscription(subscriptionData);
+            setIsEnabled(true);
+          }
+        } catch (error) {
+          console.error('Fehler beim Prüfen des Subscription-Status:', error);
+        }
+      }
+
       setDebugInfo(prev => ({
         ...prev,
         notificationsSupported,
         serviceWorkerSupported,
-        pushManagerSupported
+        pushManagerSupported,
+        serviceWorkerState: serviceWorkerSupported ? 'Registriert' : 'Nicht unterstützt'
       }));
-
-      if (notificationsSupported && serviceWorkerSupported && pushManagerSupported) {
-        setIsSupported(true);
-        setPermission(Notification.permission);
-
-        try {
-          const registration = await navigator.serviceWorker.register('/sw.js');
-          setDebugInfo(prev => ({
-            ...prev,
-            serviceWorkerState: registration.active ? 'Aktiv' : 'Inaktiv'
-          }));
-
-          await navigator.serviceWorker.ready;
-
-          const existingSubscription = await registration.pushManager.getSubscription();
-          setDebugInfo(prev => ({
-            ...prev,
-            subscription: existingSubscription
-          }));
-          setSubscription(existingSubscription);
-          setIsEnabled(!!existingSubscription);
-        } catch (error) {
-          console.error('Service Worker Fehler:', error);
-        }
-      }
+      setIsLoading(false);
     };
 
     checkSupport();
@@ -84,24 +91,40 @@ export default function PushNotificationSettings() {
 
     try {
       const registration = await navigator.serviceWorker.ready;
-      const subscription = await registration.pushManager.subscribe({
+      const pushSubscription = await registration.pushManager.subscribe({
         userVisibleOnly: true,
         applicationServerKey: VAPID_PUBLIC_KEY
       });
+
+      const deviceId = localStorage.getItem('deviceId') || crypto.randomUUID();
+      localStorage.setItem('deviceId', deviceId);
+
+      const subscriptionData: PushSubscriptionData = {
+        endpoint: pushSubscription.endpoint,
+        keys: {
+          p256dh: btoa(String.fromCharCode.apply(null, 
+            new Uint8Array(pushSubscription.getKey('p256dh') || new ArrayBuffer(0)))),
+          auth: btoa(String.fromCharCode.apply(null, 
+            new Uint8Array(pushSubscription.getKey('auth') || new ArrayBuffer(0))))
+        }
+      };
 
       await fetch('/api/push/subscribe', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
         },
-        body: JSON.stringify(subscription),
+        body: JSON.stringify({
+          ...subscriptionData,
+          deviceId
+        }),
       });
 
-      setSubscription(subscription);
+      setSubscription(subscriptionData);
       setIsEnabled(true);
       setDebugInfo(prev => ({
         ...prev,
-        subscription
+        subscription: subscriptionData
       }));
     } catch (error) {
       console.error('Fehler beim Abonnieren:', error);
@@ -118,24 +141,28 @@ export default function PushNotificationSettings() {
     setError(null);
 
     try {
-      if (subscription) {
-        await subscription.unsubscribe();
-
+      const registration = await navigator.serviceWorker.ready;
+      const pushSubscription = await registration.pushManager.getSubscription();
+      
+      if (pushSubscription) {
+        await pushSubscription.unsubscribe();
         await fetch('/api/push/unsubscribe', {
           method: 'POST',
           headers: {
             'Content-Type': 'application/json',
           },
-          body: JSON.stringify(subscription),
+          body: JSON.stringify({
+            endpoint: pushSubscription.endpoint
+          }),
         });
-
-        setSubscription(null);
-        setIsEnabled(false);
-        setDebugInfo(prev => ({
-          ...prev,
-          subscription: null
-        }));
       }
+
+      setSubscription(null);
+      setIsEnabled(false);
+      setDebugInfo(prev => ({
+        ...prev,
+        subscription: null
+      }));
     } catch (error) {
       console.error('Fehler beim Abbestellen:', error);
       setError('Fehler beim Abbestellen der Push-Benachrichtigungen');
@@ -144,14 +171,24 @@ export default function PushNotificationSettings() {
     }
   };
 
-  if (!VAPID_PUBLIC_KEY) {
-    return (
-      <div className="p-4 bg-yellow-50 border border-yellow-200 rounded-lg">
-        <p className="text-yellow-700">
-          Push-Benachrichtigungen sind derzeit nicht verfügbar. Bitte kontaktieren Sie den Administrator.
-        </p>
-      </div>
-    );
+  const handleTestNotification = async () => {
+    if (!isEnabled) return;
+
+    try {
+      const registration = await navigator.serviceWorker.ready;
+      await registration.showNotification('Test-Benachrichtigung', {
+        body: 'Dies ist eine Test-Benachrichtigung',
+        icon: '/icon-192x192.png',
+        badge: '/badge-96x96.png'
+      });
+    } catch (error) {
+      console.error('Fehler beim Senden der Test-Benachrichtigung:', error);
+      setError('Fehler beim Senden der Test-Benachrichtigung');
+    }
+  };
+
+  if (isLoading) {
+    return <div>Lade...</div>;
   }
 
   return (
@@ -178,24 +215,7 @@ export default function PushNotificationSettings() {
               </label>
               {isEnabled && (
                 <button
-                  onClick={async () => {
-                    try {
-                      const registration = await navigator.serviceWorker.ready;
-                      await registration.showNotification('Demo-Benachrichtigung', {
-                        body: 'Dies ist eine Test-Benachrichtigung',
-                        icon: '/icon-192x192.png',
-                        badge: '/icon-192x192.png',
-                        data: {
-                          url: '/'
-                        },
-                        tag: 'demo-notification',
-                        requireInteraction: true
-                      });
-                    } catch (error) {
-                      console.error('Fehler beim Senden der Benachrichtigung:', error);
-                      setError('Fehler beim Senden der Test-Benachrichtigung');
-                    }
-                  }}
+                  onClick={handleTestNotification}
                   className="text-[#ff9900]/60 hover:text-[#ff9900] transition-colors p-2 hover:bg-[#460b6c]/20 rounded-full"
                   title="Demo-Benachrichtigung senden"
                 >
