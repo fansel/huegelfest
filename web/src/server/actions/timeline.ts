@@ -7,7 +7,7 @@ import { Category } from '../../database/models/Category';
 import { TimelineData } from '@/types/types';
 import { logger } from '@/server/lib/logger';
 import mongoose from 'mongoose';
-import { webPushService } from '@/server/lib/lazyServices';
+import { webPushService } from '@/server/lib/webpush';
 
 export async function loadTimeline(): Promise<TimelineData> {
   try {
@@ -142,9 +142,9 @@ export async function saveTimeline(timeline: TimelineData): Promise<void> {
     
     // Sende Push-Benachrichtigung
     try {
-      const service = await webPushService.getInstance();
-      if (service.isInitialized()) {
-        await service.sendNotificationToAll({
+      webPushService.initialize();
+      if (webPushService.isInitialized()) {
+        await webPushService.sendNotificationToAll({
           title: 'Timeline aktualisiert',
           body: 'Das Programm wurde aktualisiert',
           icon: '/icon-192x192.png',
@@ -166,5 +166,30 @@ export async function saveTimeline(timeline: TimelineData): Promise<void> {
       throw new Error(`Fehler beim Speichern der Timeline: ${error.message}`);
     }
     throw new Error('Ein unerwarteter Fehler ist beim Speichern der Timeline aufgetreten');
+  }
+}
+
+export async function sendTimelineNotification(title: string, body: string) {
+  try {
+    // WebPush Service initialisieren
+    webPushService.initialize();
+    
+    await webPushService.sendNotificationToAll({
+      title,
+      body,
+      icon: '/icon-192x192.png',
+      badge: '/badge-96x96.png',
+      data: {
+        type: 'timeline',
+        timestamp: new Date().toISOString()
+      }
+    });
+    
+    logger.info('[Timeline] Benachrichtigung erfolgreich gesendet', { title });
+  } catch (error) {
+    logger.error('[Timeline] Fehler beim Senden der Benachrichtigung:', {
+      error: error instanceof Error ? error.message : 'Unbekannter Fehler',
+      stack: error instanceof Error ? error.stack : undefined
+    });
   }
 } 

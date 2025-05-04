@@ -1,26 +1,31 @@
 'use server'
 
 import { revalidatePath } from 'next/cache'
-import { webPushService } from '@/server/lib/lazyServices'
+import { webPushService } from '@/server/lib/webpush'
+import { logger } from '@/server/lib/logger'
 import type { PushSubscription as WebPushSubscription } from 'web-push'
 
-export async function sendPushNotification(title: string, body: string, icon?: string, badge?: string, data?: Record<string, any>) {
+export async function sendNotification(title: string, body: string) {
   try {
-    const service = await webPushService.getInstance()
-    if (!service.isInitialized()) {
-      console.warn('Push-Benachrichtigungen sind nicht verfügbar')
-      return
-    }
-
-    await service.sendNotificationToAll({
+    // WebPush Service initialisieren
+    webPushService.initialize()
+    
+    await webPushService.sendNotificationToAll({
       title,
       body,
-      icon,
-      badge,
-      data
+      icon: '/icon-192x192.png',
+      badge: '/badge-96x96.png',
+      data: {
+        timestamp: new Date().toISOString()
+      }
     })
+    
+    logger.info('[Actions] Benachrichtigung erfolgreich gesendet', { title })
   } catch (error) {
-    console.error('Fehler beim Senden der Push-Benachrichtigung:', error)
+    logger.error('[Actions] Fehler beim Senden der Benachrichtigung:', {
+      error: error instanceof Error ? error.message : 'Unbekannter Fehler',
+      stack: error instanceof Error ? error.stack : undefined
+    })
   }
 }
 
@@ -44,21 +49,24 @@ export async function subscribeToPushNotifications(subscription: WebPushSubscrip
 
     return await response.json()
   } catch (error) {
-    console.error('Fehler beim Abonnieren der Push-Benachrichtigungen:', error)
+    logger.error('[Actions] Fehler beim Abonnieren der Push-Benachrichtigungen:', {
+      error: error instanceof Error ? error.message : 'Unbekannter Fehler',
+      stack: error instanceof Error ? error.stack : undefined
+    })
     throw error
   }
 }
 
 export async function subscribeUser(subscription: WebPushSubscription) {
   try {
-    const service = await webPushService.getInstance()
-    if (!service.isInitialized()) {
-      console.warn('Push-Benachrichtigungen sind nicht verfügbar')
+    webPushService.initialize()
+    if (!webPushService.isInitialized()) {
+      logger.warn('[Actions] Push-Benachrichtigungen sind nicht verfügbar')
       return false
     }
 
     // Teste die Subscription mit einer Test-Benachrichtigung
-    await service.sendNotificationToAll({
+    await webPushService.sendNotificationToAll({
       title: 'Test-Benachrichtigung',
       body: 'Push-Benachrichtigungen sind jetzt aktiviert!',
       icon: '/icon-192x192.png',
@@ -69,7 +77,10 @@ export async function subscribeUser(subscription: WebPushSubscription) {
     });
     return true;
   } catch (error) {
-    console.error('Fehler beim Testen der Subscription:', error);
+    logger.error('[Actions] Fehler beim Testen der Subscription:', {
+      error: error instanceof Error ? error.message : 'Unbekannter Fehler',
+      stack: error instanceof Error ? error.stack : undefined
+    });
     return false;
   }
 }
