@@ -5,7 +5,7 @@ interface Client {
   lastActivity: number;
 }
 
-class SSEService {
+export class SSEService {
   private clients: Set<Client> = new Set();
   private cleanupInterval: NodeJS.Timeout | null = null;
   private readonly CLIENT_TIMEOUT = 5 * 60 * 1000; // 5 Minuten
@@ -22,12 +22,12 @@ class SSEService {
   private startCleanup() {
     this.cleanupInterval = setInterval(() => {
       const now = Date.now();
-      for (const client of this.clients) {
+      Array.from(this.clients).forEach(client => {
         if (now - client.lastActivity > this.CLIENT_TIMEOUT) {
           logger.info('[SSE] Entferne inaktiven Client');
           this.removeClient(client.controller);
         }
-      }
+      });
     }, this.CLEANUP_INTERVAL);
   }
 
@@ -54,19 +54,18 @@ class SSEService {
   }
 
   removeClient(controller: ReadableStreamDefaultController) {
-    for (const client of this.clients) {
+    Array.from(this.clients).forEach(client => {
       if (client.controller === controller) {
         this.clients.delete(client);
         logger.info(`[SSE] Client entfernt. Verbleibende Clients: ${this.clients.size}`);
-        break;
       }
-    }
+    });
   }
 
   sendUpdateToAllClients() {
     const message = `data: ${JSON.stringify({ type: 'update', timestamp: Date.now() })}\n\n`;
     
-    for (const client of this.clients) {
+    Array.from(this.clients).forEach(client => {
       try {
         client.controller.enqueue(new TextEncoder().encode(message));
         client.lastActivity = Date.now();
@@ -74,7 +73,7 @@ class SSEService {
         logger.error('[SSE] Fehler beim Senden an Client:', error);
         this.removeClient(client.controller);
       }
-    }
+    });
   }
 
   async handleConnection(controller: ReadableStreamDefaultController) {
@@ -96,10 +95,12 @@ class SSEService {
     }, this.HEARTBEAT_INTERVAL);
     
     // Cleanup bei Verbindungsabbruch
-    controller.signal.addEventListener('abort', () => {
-      clearInterval(heartbeatInterval);
-      this.removeClient(controller);
-    });
+    if ('signal' in controller) {
+      (controller as any).signal.addEventListener('abort', () => {
+        clearInterval(heartbeatInterval);
+        this.removeClient(controller);
+      });
+    }
   }
 
   createStream() {
@@ -121,3 +122,8 @@ class SSEService {
 
 // Singleton-Instanz erstellen
 export const sseService = new SSEService();
+
+// Exportiere die benötigten Funktionen
+export const addClient = (controller: ReadableStreamDefaultController) => sseService.addClient(controller);
+export const removeClient = (controller: ReadableStreamDefaultController) => sseService.removeClient(controller);
+export const sendUpdateToAllClients = () => sseService.sendUpdateToAllClients();
