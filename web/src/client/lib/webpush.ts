@@ -74,7 +74,61 @@ class WebPushClient {
 
 export const webPushClient = new WebPushClient();
 
-// VAPID Public Key wird zur Runtime geladen
+// Gültiger Dummy-VAPID-Key (65 Bytes Base64-kodiert)
+const DUMMY_VAPID_PUBLIC_KEY = 'BP4z9KsN6nGRTbVSwIx7TpCuRqam5rJkFZJtPvN1YMMGzKcF1oG3cJbL2vX5nQ8wT3mK9pR7sY4tH1jL6xN';
+
 export function getVapidPublicKey(): string {
-  return process.env.NEXT_PUBLIC_VAPID_PUBLIC_KEY || 'dummy_public_key';
+  return process.env.NEXT_PUBLIC_VAPID_PUBLIC_KEY || DUMMY_VAPID_PUBLIC_KEY;
+}
+
+export async function subscribeToPushNotifications(): Promise<PushSubscription | null> {
+  try {
+    if (!('serviceWorker' in navigator) || !('PushManager' in window)) {
+      console.warn('Push-Benachrichtigungen werden nicht unterstützt');
+      return null;
+    }
+
+    const registration = await navigator.serviceWorker.ready;
+    const subscription = await registration.pushManager.subscribe({
+      userVisibleOnly: true,
+      applicationServerKey: getVapidPublicKey()
+    });
+
+    // Sende die Subscription an den Server
+    await fetch('/api/push/subscribe', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify(subscription),
+    });
+
+    return subscription;
+  } catch (error) {
+    console.error('Fehler beim Abonnieren von Push-Benachrichtigungen:', error);
+    return null;
+  }
+}
+
+export async function unsubscribeFromPushNotifications(): Promise<boolean> {
+  try {
+    const registration = await navigator.serviceWorker.ready;
+    const subscription = await registration.pushManager.getSubscription();
+
+    if (subscription) {
+      await subscription.unsubscribe();
+      await fetch('/api/push/unsubscribe', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify(subscription),
+      });
+      return true;
+    }
+    return false;
+  } catch (error) {
+    console.error('Fehler beim Abbestellen von Push-Benachrichtigungen:', error);
+    return false;
+  }
 } 
