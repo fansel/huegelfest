@@ -5,8 +5,11 @@ import { connectDB } from '@/database/config/connector';
 import { logger } from '@/server/lib/logger';
 import { getAuthConfig } from '@/server/config/auth';
 
-const { jwtSecret } = getAuthConfig();
-const secret = new TextEncoder().encode(jwtSecret);
+// Secret wird nur bei Bedarf geladen
+function getSecret() {
+  const { jwtSecret } = getAuthConfig();
+  return new TextEncoder().encode(jwtSecret);
+}
 
 let adminInitialized = false;
 
@@ -41,13 +44,13 @@ export async function generateToken(payload: any) {
     .setProtectedHeader({ alg: 'HS256' })
     .setIssuedAt()
     .setExpirationTime('24h')
-    .sign(secret);
+    .sign(getSecret());
   return token;
 }
 
 export async function verifyToken(token: string) {
   try {
-    await jwtVerify(token, secret);
+    await jwtVerify(token, getSecret());
     return true;
   } catch (error) {
     console.error('Token-Verifizierung fehlgeschlagen:', error);
