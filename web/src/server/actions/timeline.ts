@@ -2,11 +2,12 @@
 
 import { revalidatePath } from 'next/cache';
 import { connectDB } from '../../database/config/apiConnector';
-import { Timeline } from '../../database/models/Timeline';
+import { Timeline } from '@/database/models/Timeline';
 import { Category } from '../../database/models/Category';
 import { TimelineData } from '@/types/types';
 import { logger } from '@/server/lib/logger';
 import mongoose from 'mongoose';
+import { webPushService } from '@/server/lib/lazyServices';
 
 export async function loadTimeline(): Promise<TimelineData> {
   try {
@@ -138,6 +139,25 @@ export async function saveTimeline(timeline: TimelineData): Promise<void> {
     revalidatePath('/');
     revalidatePath('/timeline');
     revalidatePath('/admin');
+    
+    // Sende Push-Benachrichtigung
+    try {
+      const service = await webPushService.getInstance();
+      if (service.isInitialized()) {
+        await service.sendNotificationToAll({
+          title: 'Timeline aktualisiert',
+          body: 'Das Programm wurde aktualisiert',
+          icon: '/icon-192x192.png',
+          badge: '/badge-96x96.png',
+          data: {
+            url: '/'
+          }
+        });
+      }
+    } catch (error) {
+      logger.error('[Server Action] Fehler beim Senden der Push-Benachrichtigung:', error);
+      // Fehler beim Senden der Push-Benachrichtigung sollte das Speichern nicht beeinflussen
+    }
     
     logger.info('[Server Action] Timeline erfolgreich gespeichert');
   } catch (error) {
