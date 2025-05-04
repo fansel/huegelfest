@@ -32,6 +32,7 @@ interface TimelineData {
     events: Event[];
   }[];
   categories: Category[];
+  error?: string;
 }
 
 interface TimelineProps {
@@ -57,13 +58,95 @@ export default function Timeline({ showFavoritesOnly = false, allowClipboard = f
   useEffect(() => {
     const loadData = async () => {
       try {
+        console.log('[Timeline] Starte Datenladung');
+        
         // Lade Timeline-Daten
+        console.log('[Timeline] Lade Timeline-Daten');
         const timelineResponse = await fetch('/api/timeline');
-        const timelineData = await timelineResponse.json();
+        console.log('[Timeline] Timeline Response Status:', timelineResponse.status);
+        
+        if (!timelineResponse.ok) {
+          const errorText = await timelineResponse.text();
+          console.warn('[Timeline] Timeline API Warnung:', {
+            status: timelineResponse.status,
+            statusText: timelineResponse.statusText,
+            errorText
+          });
+          // Wenn keine Timeline existiert oder Server nicht erreichbar, setze einen leeren Zustand
+          if (timelineResponse.status === 404 || timelineResponse.status === 0) {
+            setTimelineData({
+              days: [],
+              categories: [],
+              error: 'Der Server ist momentan nicht erreichbar. Bitte versuchen Sie es später erneut.'
+            });
+            return;
+          }
+          throw new Error(`Timeline API Fehler: ${timelineResponse.status} - ${errorText}`);
+        }
+
+        let timelineData;
+        try {
+          const timelineText = await timelineResponse.text();
+          console.log('[Timeline] Timeline Response Text:', timelineText);
+          
+          // Prüfe ob der Text leer ist
+          if (!timelineText || timelineText.trim() === '') {
+            console.error('[Timeline] Leere API-Antwort');
+            throw new Error('Leere API-Antwort');
+          }
+          
+          timelineData = JSON.parse(timelineText);
+        } catch (parseError) {
+          console.error('[Timeline] JSON Parse Fehler:', parseError);
+          setTimelineData({
+            days: [],
+            categories: [],
+            error: 'Die Daten konnten nicht geladen werden. Bitte versuchen Sie es später erneut.'
+          });
+          return;
+        }
 
         // Lade Kategorien
+        console.log('[Timeline] Lade Kategorien');
         const categoriesResponse = await fetch('/api/categories');
-        const categoriesData = await categoriesResponse.json();
+        console.log('[Timeline] Kategorien Response Status:', categoriesResponse.status);
+        
+        if (!categoriesResponse.ok) {
+          const errorText = await categoriesResponse.text();
+          console.error('[Timeline] Kategorien API Fehler:', {
+            status: categoriesResponse.status,
+            statusText: categoriesResponse.statusText,
+            errorText
+          });
+          throw new Error(`Kategorien API Fehler: ${categoriesResponse.status} - ${errorText}`);
+        }
+
+        let categoriesData;
+        try {
+          const categoriesText = await categoriesResponse.text();
+          console.log('[Timeline] Kategorien Response Text:', categoriesText);
+          categoriesData = JSON.parse(categoriesText);
+        } catch (parseError) {
+          console.error('[Timeline] JSON Parse Fehler für Kategorien:', parseError);
+          throw new Error('Fehler beim Parsen der Kategorien-Daten');
+        }
+
+        // Validiere Timeline-Daten
+        if (!timelineData || !Array.isArray(timelineData.days) || timelineData.days.length === 0) {
+          console.log('[Timeline] Keine Timeline-Daten vorhanden');
+          setTimelineData({
+            days: [],
+            categories: [],
+            error: 'Das Programm ist noch nicht bekanntgegeben'
+          });
+          return;
+        }
+
+        // Validiere Kategorien-Daten
+        if (!Array.isArray(categoriesData)) {
+          console.error('[Timeline] Ungültiges Kategorien-Format:', categoriesData);
+          throw new Error('Ungültiges Kategorien-Format');
+        }
 
         // Mappe die Kategorien mit den entsprechenden Icons
         const categoriesWithIcons = categoriesData.map((category: Category) => {
@@ -79,13 +162,17 @@ export default function Timeline({ showFavoritesOnly = false, allowClipboard = f
           };
         });
 
-        setTimelineData({
-          ...timelineData,
-          categories: categoriesWithIcons,
-        });
-
         // Lade Favoriten aus dem localStorage
-        const favorites = JSON.parse(localStorage.getItem('favorites') || '{}');
+        let favorites = {};
+        try {
+          const favoritesStr = localStorage.getItem('favorites');
+          if (favoritesStr) {
+            favorites = JSON.parse(favoritesStr);
+          }
+        } catch (error) {
+          console.error('[Timeline] Fehler beim Laden der Favoriten:', error);
+          favorites = {};
+        }
 
         // Markiere favorisierte Events
         const timelineWithFavorites = {
@@ -100,9 +187,15 @@ export default function Timeline({ showFavoritesOnly = false, allowClipboard = f
           })),
         };
 
+        console.log('[Timeline] Setze Timeline-Daten mit Favoriten');
         setTimelineData(timelineWithFavorites);
       } catch (error) {
-        console.error('Fehler beim Laden der Daten:', error);
+        console.error('[Timeline] Fehler beim Laden der Daten:', error);
+        setTimelineData({
+          days: [],
+          categories: [],
+          error: error instanceof Error ? error.message : 'Unbekannter Fehler'
+        });
       }
     };
 
@@ -154,16 +247,19 @@ export default function Timeline({ showFavoritesOnly = false, allowClipboard = f
     );
   }
 
-  // Überprüfe, ob der ausgewählte Tag existiert
-  if (!timelineData.days[selectedDay]) {
+  // Zeige Fehlermeldung an, wenn ein Fehler aufgetreten ist oder keine Daten vorhanden sind
+  if (timelineData.error) {
     return (
       <div className="flex flex-col items-center justify-center h-64 text-[#ff9900]">
-        <p className="text-xl font-medium mb-2">
-          Das Programm ist noch nicht bekanntgegeben
-        </p>
-        <p className="text-sm text-[#ff9900]/80">Schau später nochmal vorbei</p>
+        <p className="text-sm text-[#ff9900]/80">Hier gibt es noch nichts zu sehen ;)</p>
       </div>
     );
+  }
+
+  // Überprüfe, ob der ausgewählte Tag existiert
+  if (!timelineData.days[selectedDay]) {
+    setSelectedDay(0);
+    return null;
   }
 
   const filteredEvents = timelineData.days[selectedDay].events.filter(

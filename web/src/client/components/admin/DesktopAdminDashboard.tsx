@@ -5,6 +5,8 @@ import AnnouncementForm from './AnnouncementForm';
 import GroupColorManager from './GroupColorManager';
 import MusicManager from '../MusicManager';
 import TimelineManager from './TimelineManager';
+import { useAuth } from '@/contexts/AuthContext';
+import { useRouter } from 'next/navigation';
 
 interface DesktopAdminDashboardProps {
   announcements: IAnnouncement[];
@@ -27,6 +29,17 @@ const DesktopAdminDashboard = ({
 }: DesktopAdminDashboardProps) => {
   const [editingAnnouncement, setEditingAnnouncement] = useState<IAnnouncement | undefined>();
   const [activeTab, setActiveTab] = useState<'announcements' | 'groups' | 'music' | 'timeline'>('announcements');
+  const { logout } = useAuth();
+  const router = useRouter();
+
+  const handleLogout = async () => {
+    try {
+      await logout();
+      router.push('/');
+    } catch (error) {
+      console.error('Fehler beim Ausloggen:', error);
+    }
+  };
 
   const handleSaveAnnouncement = useCallback(
     (announcement: IAnnouncement) => {
@@ -42,6 +55,17 @@ const DesktopAdminDashboard = ({
     <div className="min-h-screen text-[#ff9900] p-6">
       <div className="max-w-7xl mx-auto">
         <div className="bg-[#460b6c]/80 backdrop-blur-sm rounded-lg shadow-lg overflow-hidden">
+          {/* Header mit Logout-Button */}
+          <div className="flex justify-between items-center px-6 py-4 border-b border-[#ff9900]/20">
+            <h1 className="text-xl font-semibold">Admin Dashboard</h1>
+            <button
+              onClick={handleLogout}
+              className="px-4 py-2 bg-red-600 hover:bg-red-700 text-white rounded-md transition-colors"
+            >
+              Ausloggen
+            </button>
+          </div>
+
           {/* Tabs */}
           <div className="border-b border-[#ff9900]/20">
             <nav className="flex space-x-8 px-6">

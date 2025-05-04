@@ -1,8 +1,15 @@
 'use client';
 
 import Link from 'next/link';
+import { useAuth } from '@/contexts/AuthContext';
 
 export default function AdminLink() {
+  const { isAuthenticated } = useAuth();
+
+  if (!isAuthenticated) {
+    return null;
+  }
+
   return (
     <Link
       href="/admin"

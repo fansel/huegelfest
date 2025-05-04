@@ -8,6 +8,7 @@ import { PWAProvider } from "@/contexts/PWAContext";
 import { AuthProvider } from '@/contexts/AuthContext';
 import { NetworkStatusProvider } from '@/contexts/NetworkStatusContext';
 import { NetworkStatusBanner } from '@/client/components/NetworkStatusBanner';
+import Init from './init';
 
 export const metadata: Metadata = {
   title: 'Hügelfest',
@@ -36,11 +37,14 @@ export default function RootLayout({
         <link rel="apple-touch-icon" href="/apple-touch-icon.png" />
       </head>
       <body className="antialiased min-h-screen flex flex-col">
+        <Init />
         <AuthProvider>
           <PWAProvider>
             <NetworkStatusProvider>
               <NetworkStatusBanner />
-              <PWAContainer />
+              <div className="pwa-only">
+                <PWAContainer />
+              </div>
               <div className="desktop-only">
                 <main className="flex-grow pb-16 md:pb-0">{children}</main>
                 <Footer />

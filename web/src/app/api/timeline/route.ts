@@ -1,49 +1,66 @@
 import { NextResponse } from 'next/server';
 import { connectDB } from '@/database/config/connector';
 import { Timeline } from '@/database/models/Timeline';
+import { logger } from '@/server/lib/logger';
 
-// Hilfsfunktion zum Bereinigen der Daten
-function cleanTimelineData(data: any) {
-  const cleanedData = {
-    _id: data._id || '',
-    days: data.days.map((day: any) => ({
-      _id: day._id || '',
+// Hilfsfunktion zum Bereinigen der Timeline-Daten
+const cleanTimelineData = (timeline: any) => {
+  if (!timeline) return null;
+  
+  return {
+    days: timeline.days.map((day: any) => ({
+      _id: day._id,
       title: day.title,
       description: day.description,
       date: day.date,
       events: day.events.map((event: any) => ({
-        _id: event._id || '',
+        _id: event._id,
         time: event.time,
         title: event.title,
         description: event.description,
-        categoryId: event.categoryId || 'other'
+        categoryId: event.categoryId
       }))
-    })),
-    createdAt: data.createdAt || new Date(),
-    updatedAt: data.updatedAt || new Date()
+    }))
   };
-  return cleanedData;
-}
+};
 
 export async function GET() {
   try {
+    logger.info('[Timeline API] Starte GET-Anfrage');
+    
+    // Verbindung zur Datenbank herstellen
     await connectDB();
-    const timeline = await Timeline.findOne().sort({ createdAt: -1 });
+    logger.info('[Timeline API] Datenbankverbindung hergestellt');
+
+    // Hole die neueste Timeline
+    const timeline = await Timeline.findOne()
+      .sort({ createdAt: -1 })
+      .lean();
     
-    if (!timeline) {
-      return NextResponse.json({
-        _id: '',
-        days: [],
-        createdAt: new Date(),
-        updatedAt: new Date()
-      });
+    logger.info('[Timeline API] Timeline abgefragt:', { 
+      found: !!timeline,
+      hasDays: timeline?.days?.length > 0
+    });
+
+    // Wenn keine Timeline existiert, gib 404 zurück
+    if (!timeline || !timeline.days || timeline.days.length === 0) {
+      logger.info('[Timeline API] Keine Timeline gefunden');
+      return NextResponse.json(
+        { error: 'Keine Timeline gefunden' },
+        { status: 404 }
+      );
     }
-    
-    return NextResponse.json(timeline);
+
+    // Bereinige die Daten
+    const cleanedTimeline = cleanTimelineData(timeline);
+    logger.info('[Timeline API] Timeline-Daten bereinigt');
+
+    // Sende die bereinigten Daten
+    return NextResponse.json(cleanedTimeline);
   } catch (error) {
-    console.error('Fehler beim Abrufen der Timeline:', error);
+    logger.error('[Timeline API] Fehler:', error);
     return NextResponse.json(
-      { error: 'Interner Serverfehler' },
+      { error: 'Interner Server-Fehler' },
       { status: 500 }
     );
   }
