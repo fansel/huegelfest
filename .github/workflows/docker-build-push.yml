@@ -15,7 +15,7 @@ env:
 
 jobs:
   build-and-push:
-    if: ${{ !inputs.deploy_only }}
+    if: ${{ github.event.inputs.deploy_only != 'true' }}
     runs-on: self-hosted
     steps:
       - name: Checkout code
