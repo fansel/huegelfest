@@ -109,5 +109,6 @@ export async function middleware(request: NextRequest) {
 
 // Konfiguriere, für welche Pfade die Middleware ausgeführt werden soll
 export const config = {
-  matcher: ['/admin/:path*', '/login', '/api/:path*']
+  matcher: ['/admin/:path*', '/login', '/api/:path*'],
+  runtime: 'nodejs'
 };
