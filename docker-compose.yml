@@ -2,7 +2,8 @@
 
 services:
   huegelfest-app:
-    image: xilefma/huegelfest-web:latest
+    build:
+      context: .
     env_file:
       - .env.production
     environment:
