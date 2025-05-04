@@ -48,12 +48,12 @@ export async function GET() {
 export async function POST(request: Request) {
   try {
     const body = await request.json();
-    console.log('POST /api/announcements - Request Body:', body);
+    logger.info('POST /api/announcements - Request Body:', { body });
     
     const { content, group, important } = body;
     
     if (!content || !group) {
-      console.error('POST /api/announcements - Fehlende Felder:', { content, group });
+      logger.error('POST /api/announcements - Fehlende Felder:', { content, group });
       return NextResponse.json(
         { error: 'Erforderliche Felder fehlen' },
         { status: 400 }
@@ -65,14 +65,14 @@ export async function POST(request: Request) {
     // Finde die Gruppe
     const groupDoc = await Group.findOne({ name: group });
     if (!groupDoc) {
-      console.error('POST /api/announcements - Gruppe nicht gefunden:', group);
+      logger.error('POST /api/announcements - Gruppe nicht gefunden:', { group });
       return NextResponse.json(
         { error: `Gruppe "${group}" nicht gefunden` },
         { status: 404 }
       );
     }
 
-    console.log('POST /api/announcements - Gruppe gefunden:', { id: groupDoc._id, name: groupDoc.name });
+    logger.info('POST /api/announcements - Gruppe gefunden:', { id: groupDoc._id, name: groupDoc.name });
 
     // Setze date und time serverseitig
     const now = new Date();
@@ -96,14 +96,17 @@ export async function POST(request: Request) {
       createdAt: new Date()
     });
 
-    console.log('POST /api/announcements - Ankündigung erstellt:', { id: announcement._id });
+    logger.info('POST /api/announcements - Ankündigung erstellt:', { id: announcement._id });
 
     // Sende Push-Benachrichtigung
     try {
       const service = await webPushService.getInstance();
-      if (service.isInitialized()) {
+      if (!service.isInitialized()) {
+        logger.warn('Push-Service ist nicht initialisiert');
+      } else {
+        logger.info('Sende Push-Benachrichtigung...');
         await service.sendNotificationToAll({
-          title: `Neue Ankündigung ${groupDoc._id}`,
+          title: `Neue Ankündigung von ${groupDoc.name}`,
           body: content,
           icon: '/icon-192x192.png',
           badge: '/badge-96x96.png',
@@ -111,9 +114,10 @@ export async function POST(request: Request) {
             url: '/'
           }
         });
+        logger.info('Push-Benachrichtigung erfolgreich gesendet');
       }
     } catch (error) {
-      console.error('Fehler beim Senden der Push-Benachrichtigung:', error);
+      logger.error('Fehler beim Senden der Push-Benachrichtigung:', { error });
       // Fehler beim Senden der Push-Benachrichtigung sollte die Ankündigung nicht beeinflussen
     }
 
@@ -133,7 +137,7 @@ export async function POST(request: Request) {
     
     return NextResponse.json(transformedAnnouncement);
   } catch (error) {
-    console.error('Fehler beim Erstellen der Ankündigung:', error);
+    logger.error('Fehler beim Erstellen der Ankündigung:', { error });
     return NextResponse.json(
       { 
         error: 'Interner Serverfehler',

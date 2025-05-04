@@ -69,9 +69,9 @@ export default function PushNotificationSettings() {
           console.error('Fehler beim Prüfen des Subscription-Status:', error);
         }
       }
-
-      setDebugInfo(prev => ({
-        ...prev,
+      
+      setDebugInfo(prev => ({ 
+        ...prev, 
         notificationsSupported,
         serviceWorkerSupported,
         pushManagerSupported,
@@ -228,7 +228,7 @@ export default function PushNotificationSettings() {
             </>
           )}
 
-          <button
+        <button
             onClick={() => setShowDebug(!showDebug)}
             className="text-[#ff9900]/60 hover:text-[#ff9900] transition-colors p-2 hover:bg-[#460b6c]/20 rounded-full"
             title="Debug anzeigen/ausblenden"
@@ -241,7 +241,7 @@ export default function PushNotificationSettings() {
               <path d="M11 17v.01" />
               <path d="M7 14v.01" />
             </svg>
-          </button>
+        </button>
         </div>
       </div>
 
@@ -278,7 +278,7 @@ export default function PushNotificationSettings() {
                   <th className="text-left py-2 px-2 sm:px-4 text-[#ff9900]/60">Status</th>
                 </tr>
               </thead>
-              <tbody>
+          <tbody>
                 <tr className="border-b border-[#460b6c]/10">
                   <td className="py-2 px-2 sm:px-4 text-[#ff9900]/60">Notifications API</td>
                   <td className="py-2 px-2 sm:px-4">
@@ -290,30 +290,30 @@ export default function PushNotificationSettings() {
                   <td className="py-2 px-2 sm:px-4">
                     <div className={`w-3 h-3 rounded-full ${debugInfo.serviceWorkerSupported ? 'bg-green-500' : 'bg-red-500'}`} />
                   </td>
-                </tr>
+            </tr>
                 <tr className="border-b border-[#460b6c]/10">
                   <td className="py-2 px-2 sm:px-4 text-[#ff9900]/60">Push Manager</td>
                   <td className="py-2 px-2 sm:px-4">
                     <div className={`w-3 h-3 rounded-full ${debugInfo.pushManagerSupported ? 'bg-green-500' : 'bg-red-500'}`} />
                   </td>
-                </tr>
+            </tr>
                 <tr className="border-b border-[#460b6c]/10">
                   <td className="py-2 px-2 sm:px-4 text-[#ff9900]/60">Service Worker Status</td>
                   <td className="py-2 px-2 sm:px-4">{debugInfo.serviceWorkerState || 'Nicht verfügbar'}</td>
-                </tr>
+            </tr>
                 <tr className="border-b border-[#460b6c]/10">
-                  <td className="py-2 px-2 sm:px-4 text-[#ff9900]/60">VAPID Key</td>
-                  <td className="py-2 px-2 sm:px-4 truncate max-w-[200px] sm:max-w-xs">{debugInfo.vapidKey}</td>
-                </tr>
+              <td className="py-2 px-2 sm:px-4 text-[#ff9900]/60">VAPID Key</td>
+              <td className="py-2 px-2 sm:px-4 truncate max-w-[200px] sm:max-w-xs">{debugInfo.vapidKey}</td>
+            </tr>
                 <tr>
                   <td className="py-2 px-2 sm:px-4 text-[#ff9900]/60">Subscription</td>
                   <td className="py-2 px-2 sm:px-4">
                     <div className={`w-3 h-3 rounded-full ${debugInfo.subscription ? 'bg-green-500' : 'bg-yellow-500'}`} />
                   </td>
                 </tr>
-              </tbody>
-            </table>
-          </div>
+          </tbody>
+        </table>
+      </div>
         </div>
       )}
     </div>

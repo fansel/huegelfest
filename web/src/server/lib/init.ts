@@ -1,24 +1,28 @@
-import { webPushService } from './lazyServices';
-
-// Diese Funktion wird nur auf der Server-Seite ausgeführt
-export async function initializeServer() {
-  if (typeof window === 'undefined') {
-    try {
-      // Initialisiere WebPush-Service nur auf der Server-Seite
-      const service = await webPushService.getInstance();
-      service.initialize();
-    } catch (error) {
-      // Fehler bei der Initialisierung sollten den Build nicht blockieren
-      console.warn('Fehler bei der Server-Initialisierung:', error);
-    }
-  }
-}
+import { logger } from './logger';
+import { webPushService } from './webpush';
 
 export async function initializeServices() {
+  logger.info('[Init] Starte Initialisierung der Services...');
+
   try {
-    const service = await webPushService.getInstance();
-    service.initialize();
+    // WebPush Service initialisieren
+    logger.info('[Init] Initialisiere WebPush Service...');
+    webPushService.initialize();
+    if (webPushService.isInitialized()) {
+      logger.info('[Init] WebPush Service erfolgreich initialisiert');
+    } else {
+      logger.warn('[Init] WebPush Service konnte nicht initialisiert werden');
+    }
+
+    // Hier können weitere Services initialisiert werden
+    // ...
+
+    logger.info('[Init] Alle Services erfolgreich initialisiert');
   } catch (error) {
-    console.error('Fehler bei der Initialisierung der Services:', error);
+    logger.error('[Init] Fehler bei der Service-Initialisierung:', {
+      error: error instanceof Error ? error.message : 'Unbekannter Fehler',
+      stack: error instanceof Error ? error.stack : undefined
+    });
+    throw error;
   }
 } 
