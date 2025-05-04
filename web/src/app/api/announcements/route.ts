@@ -1,14 +1,15 @@
+export const runtime = 'nodejs';
+
 import { NextResponse } from 'next/server';
 import { connectDB } from '@/database/config/apiConnector';
 import Announcement from '@/database/models/Announcement';
 import Group from '@/database/models/Group';
-import Subscriber from '@/database/models/Subscriber';
 import { revalidatePath } from 'next/cache';
 import { webPushService } from '@/server/lib/lazyServices';
 import { sseService } from '@/server/lib/sse';
+import { logger } from '@/server/lib/logger';
 
-// Prüfe ob wir in der Edge-Runtime sind
-const isEdgeRuntime = process.env.NEXT_RUNTIME === 'edge';
+
 
 export async function GET() {
   try {
@@ -36,7 +37,7 @@ export async function GET() {
     
     return NextResponse.json(transformedAnnouncements);
   } catch (error) {
-    console.error('Fehler beim Laden der Ankündigungen:', error);
+    logger.error('Fehler beim Laden der Ankündigungen:', { error });
     return NextResponse.json(
       { error: 'Interner Serverfehler beim Laden der Ankündigungen' },
       { status: 500 }
@@ -97,25 +98,23 @@ export async function POST(request: Request) {
 
     console.log('POST /api/announcements - Ankündigung erstellt:', { id: announcement._id });
 
-    // Sende Push-Benachrichtigung nur wenn wir nicht in der Edge-Runtime sind
-    if (!isEdgeRuntime) {
-      try {
-        const service = await webPushService.getInstance();
-        if (service.isInitialized()) {
-          await service.sendNotificationToAll({
-            title: 'Neue Ankündigung',
-            body: content,
-            icon: '/icon-192x192.png',
-            badge: '/badge-96x96.png',
-            data: {
-              url: '/'
-            }
-          });
-        }
-      } catch (error) {
-        console.error('Fehler beim Senden der Push-Benachrichtigung:', error);
-        // Fehler beim Senden der Push-Benachrichtigung sollte die Ankündigung nicht beeinflussen
+    // Sende Push-Benachrichtigung
+    try {
+      const service = await webPushService.getInstance();
+      if (service.isInitialized()) {
+        await service.sendNotificationToAll({
+          title: `Neue Ankündigung ${groupDoc._id}`,
+          body: content,
+          icon: '/icon-192x192.png',
+          badge: '/badge-96x96.png',
+          data: {
+            url: '/'
+          }
+        });
       }
+    } catch (error) {
+      console.error('Fehler beim Senden der Push-Benachrichtigung:', error);
+      // Fehler beim Senden der Push-Benachrichtigung sollte die Ankündigung nicht beeinflussen
     }
 
     revalidatePath('/announcements');
@@ -157,6 +156,20 @@ export async function DELETE(request: Request) {
     }
 
     await connectDB();
+
+    if (id === 'all') {
+      // Lösche alle Ankündigungen
+      await Announcement.deleteMany({});
+      logger.info('Alle Ankündigungen wurden gelöscht');
+      revalidatePath('/');
+      sseService.sendUpdateToAllClients();
+      return NextResponse.json({
+        success: true,
+        message: 'Alle Ankündigungen wurden erfolgreich gelöscht'
+      });
+    }
+
+    // Lösche einzelne Ankündigung
     const deletedAnnouncement = await Announcement.findByIdAndDelete(id);
     
     if (!deletedAnnouncement) {
@@ -179,7 +192,7 @@ export async function DELETE(request: Request) {
       }
     });
   } catch (error) {
-    console.error('Fehler beim Löschen der Ankündigung:', error);
+    logger.error('Fehler beim Löschen der Ankündigung:', { error });
     return NextResponse.json(
       { 
         success: false,

@@ -10,62 +10,34 @@ import Music from '@/database/models/Music';
 import { IAnnouncement } from '@/types/announcement';
 import { webPushService } from '@/server/lib/webpush';
 
+
+
 export async function saveAnnouncements(announcements: IAnnouncement[]): Promise<void> {
   try {
-    await connectDB();
+    logger.info('[Server Action] Speichere Ankündigungen:', { count: announcements.length });
     
-    // Hole alle Gruppen für die Zuordnung
-    const groups = await Group.find().lean();
-    const groupMap = new Map(groups.map(g => [g.name, g._id]));
-    
-    // Logge die erste Ankündigung (normalerweise die neue)
-    if (announcements.length > 0) {
-      logger.info('[Server Action] Neue Ankündigung:', {
-        content: announcements[0].content,
-        groupId: announcements[0].groupId,
-        groupColor: announcements[0].groupColor
+    // Speichere jede neue Ankündigung über die API
+    for (const announcement of announcements) {
+      const response = await fetch('/api/announcements', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          content: announcement.content,
+          group: announcement.groupId,
+          important: announcement.important
+        })
       });
-    }
-    
-    await Announcement.deleteMany({});
-    await Announcement.insertMany(announcements.map(announcement => ({
-      content: announcement.content,
-      date: announcement.date,
-      time: announcement.time,
-      groupId: groupMap.get(announcement.groupId) || groups[0]._id, // Fallback auf erste Gruppe
-      important: announcement.important,
-      reactions: announcement.reactions,
-      createdAt: announcement.createdAt,
-      updatedAt: announcement.updatedAt
-    })));
-    revalidatePath('/');
-    logger.info('[Server Action] Sende SSE-Update für neue Ankündigung');
-    sseService.sendUpdateToAllClients();
 
-    // Sende Push-Benachrichtigung für die erste Ankündigung
-    if (announcements.length > 0) {
-      try {
-        if (webPushService.isInitialized()) {
-          await webPushService.sendNotificationToAll({
-            title: announcements[0].groupId + ' schrieb:',
-            body: announcements[0].content,
-            icon: '/icon-192x192.png',
-            badge: '/badge-96x96.png',
-            data: {
-              url: '/'
-            }
-          });
-          logger.info('[Server Action] Push-Benachrichtigung gesendet');
-        }
-      } catch (error) {
-        logger.error('[Server Action] Fehler beim Senden der Push-Benachrichtigung:', error);
-        // Fehler beim Senden der Push-Benachrichtigung sollte das Speichern nicht beeinflussen
+      if (!response.ok) {
+        throw new Error(`Fehler beim Speichern der Ankündigung: ${announcement.content}`);
       }
     }
 
     logger.info('[Server Action] Ankündigungen erfolgreich gespeichert');
   } catch (error) {
-    logger.error('[Server Action] Fehler beim Speichern der Ankündigungen:', error);
+    logger.error('[Server Action] Fehler beim Speichern der Ankündigungen:', { error });
     if (error instanceof Error) {
       throw new Error(`Fehler beim Speichern der Ankündigungen: ${error.message}`);
     }
