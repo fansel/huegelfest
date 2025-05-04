@@ -11,63 +11,65 @@ interface PushNotificationPayload {
   data?: Record<string, any>;
 }
 
-export class WebPushService {
+class WebPushService {
+  private static instance: WebPushService;
   private initialized = false;
 
-  initialize() {
-    if (this.initialized) {
-      logger.debug('[WebPush] Service bereits initialisiert');
+  private constructor() {
+    // Private constructor for singleton
+  }
+
+  public static getInstance(): WebPushService {
+    if (!WebPushService.instance) {
+      WebPushService.instance = new WebPushService();
+    }
+    return WebPushService.instance;
+  }
+
+  public async initialize(): Promise<void> {
+    if (this.initialized) return;
+
+    const vapidPublicKey = env('NEXT_PUBLIC_VAPID_PUBLIC_KEY');
+    const vapidPrivateKey = env('VAPID_PRIVATE_KEY');
+
+    if (!vapidPublicKey || !vapidPrivateKey) {
+      console.warn('VAPID-Schlüssel nicht gefunden. WebPush wird nicht initialisiert.');
       return;
     }
 
-    logger.info('[WebPush] Starte Initialisierung...');
-
     try {
-      const vapidPublicKey = env('NEXT_PUBLIC_VAPID_PUBLIC_KEY');
-      const vapidPrivateKey = process.env.VAPID_PRIVATE_KEY;
-
-      logger.info('[WebPush] Umgebungsvariablen Status:', {
-        hasPublicKey: !!vapidPublicKey,
-        hasPrivateKey: !!vapidPrivateKey,
-        environment: process.env.NODE_ENV,
-        publicKeyLength: vapidPublicKey?.length || 0,
-        privateKeyLength: vapidPrivateKey?.length || 0
-      });
-
-      // Validiere nur in Produktion
-      if (process.env.NODE_ENV === 'production') {
-        if (!vapidPublicKey || !vapidPrivateKey) {
-          logger.error('[WebPush] VAPID-Schlüssel fehlen in den Umgebungsvariablen', {
-            missingPublicKey: !vapidPublicKey,
-            missingPrivateKey: !vapidPrivateKey
-          });
-          return;
-        }
-      }
-
       webpush.setVapidDetails(
-        'mailto:vapid@hey.fansel.dev',
-        vapidPublicKey || '',
-        vapidPrivateKey || ''
+        'mailto:info@huegelfest.fansel.dev',
+        vapidPublicKey,
+        vapidPrivateKey
       );
-      logger.info('[WebPush] VAPID-Details erfolgreich gesetzt', {
-        contact: 'mailto:vapid@hey.fansel.dev',
-        publicKeySet: !!vapidPublicKey,
-        privateKeySet: !!vapidPrivateKey
-      });
       this.initialized = true;
-      logger.info('[WebPush] Service erfolgreich initialisiert');
+      console.log('WebPush-Service erfolgreich initialisiert');
     } catch (error) {
-      logger.error('[WebPush] Fehler bei der VAPID-Initialisierung:', {
-        error: error instanceof Error ? error.message : 'Unbekannter Fehler',
-        stack: error instanceof Error ? error.stack : undefined
-      });
+      console.error('Fehler bei der WebPush-Initialisierung:', error);
+      throw error;
     }
   }
 
-  isInitialized() {
-    logger.debug('[WebPush] Initialisierungsstatus prüfen:', { initialized: this.initialized });
+  public isInitialized(): boolean {
     return this.initialized;
+  }
+
+  public async sendNotification(subscription: webpush.PushSubscription, payload: any): Promise<void> {
+    if (!this.initialized) {
+      await this.initialize();
+    }
+
+    if (!this.initialized) {
+      throw new Error('WebPush-Service konnte nicht initialisiert werden');
+    }
+
+    try {
+      await webpush.sendNotification(subscription, JSON.stringify(payload));
+    } catch (error) {
+      console.error('Fehler beim Senden der Benachrichtigung:', error);
+      throw error;
+    }
   }
 
   async sendNotificationToAll(payload: PushNotificationPayload) {
@@ -107,7 +109,7 @@ export class WebPushService {
           endpoint: subscriber.endpoint.substring(0, 50) + '...'
         });
 
-        return webpush.sendNotification(subscription, JSON.stringify(payload))
+        return this.sendNotification(subscription, payload)
           .then(() => {
             logger.info('[WebPush] Benachrichtigung erfolgreich gesendet', { 
               deviceId: subscriber.deviceId,
@@ -163,5 +165,4 @@ export class WebPushService {
   }
 }
 
-// Singleton-Instanz erstellen
-export const webPushService = new WebPushService();
+export const webPushService = WebPushService.getInstance();
