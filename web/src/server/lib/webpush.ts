@@ -10,8 +10,8 @@ interface PushNotificationPayload {
 }
 
 // Gültiger Dummy-VAPID-Key (65 Bytes Base64-kodiert)
-const DUMMY_VAPID_PUBLIC_KEY = 'BP4z9KsN6nGRTbVSwIx7TpCuRqam5rJkFZJtPvN1YMMGzKcF1oG3cJbL2vX5nQ8wT3mK9pR7sY4tH1jL6xN';
-const DUMMY_VAPID_PRIVATE_KEY = 'dummy_private_key';
+const DUMMY_VAPID_PUBLIC_KEY = 'BAx-KqIJ7dg8KrOnst7LZ5wpKG6fMyFwWY3ZNJqcfr3Qv3iFZnHTosXgo1cFgyHqnj5moEAi-dJS40T55XygugE';
+const DUMMY_VAPID_PRIVATE_KEY = 'jxgKSyT7Jp-nlH-qzctpUe0MO0yXljdBkAK5uLJfTmA';
 
 class WebPushService {
   private initialized = false;
@@ -32,11 +32,16 @@ class WebPushService {
         }
       }
 
-      webpush.setVapidDetails(
-        'mailto:vapid@hey.fansel.dev',
-        vapidPublicKey,
-        vapidPrivateKey
-      );
+      try {
+        webpush.setVapidDetails(
+          'mailto:vapid@hey.fansel.dev',
+          vapidPublicKey,
+          vapidPrivateKey
+        );
+      } catch (error) {
+        console.warn('Fehler bei der VAPID-Initialisierung:', error);
+        return;
+      }
     }
 
     this.initialized = true;
