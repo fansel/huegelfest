@@ -48,7 +48,8 @@ jobs:
             ${{ env.DOCKERHUB_USERNAME }}/huegelfest-web:${{ github.sha }}
 
   deploy:
-    needs: ${{ !inputs.deploy_only && 'build-and-push' || '' }}
+    needs: build-and-push
+    if: ${{ always() && (needs.build-and-push.result == 'success' || needs.build-and-push.result == 'skipped') }}
     runs-on: ubuntu-latest
     steps:
       - name: Setup SSH
