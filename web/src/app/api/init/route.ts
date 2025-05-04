@@ -1,24 +1,33 @@
 import { NextResponse } from 'next/server';
-import { initializeDatabase } from '@/database/init';
+import { initializeServices } from '@/server/lib/init';
 import { logger } from '@/server/lib/logger';
 
+export const runtime = 'nodejs';
+
 export async function GET() {
+  logger.info('[API/Init] Initialisierungsanfrage erhalten');
+
   try {
-    logger.info('[API/Init] Starte Initialisierung...');
-    
-    await initializeDatabase();
-    
-    logger.info('[API/Init] Initialisierung erfolgreich abgeschlossen');
+    await initializeServices();
     return NextResponse.json({ 
-      success: true,
-      message: 'Datenbank erfolgreich initialisiert'
+      status: 'success',
+      message: 'Services erfolgreich initialisiert',
+      timestamp: new Date().toISOString()
     });
   } catch (error) {
-    logger.error('[API/Init] Fehler bei der Initialisierung:', error);
-    return NextResponse.json({ 
-      success: false,
-      error: 'Initialisierung fehlgeschlagen',
-      details: error instanceof Error ? error.message : 'Unbekannter Fehler'
-    }, { status: 500 });
+    logger.error('[API/Init] Fehler bei der Initialisierung:', {
+      error: error instanceof Error ? error.message : 'Unbekannter Fehler',
+      stack: error instanceof Error ? error.stack : undefined
+    });
+    
+    return NextResponse.json(
+      { 
+        status: 'error',
+        message: 'Fehler bei der Service-Initialisierung',
+        error: error instanceof Error ? error.message : 'Unbekannter Fehler',
+        timestamp: new Date().toISOString()
+      },
+      { status: 500 }
+    );
   }
 } 
