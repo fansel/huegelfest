@@ -1,41 +1,12 @@
 import { SignJWT, jwtVerify } from 'jose';
 import { compare, hash } from 'bcryptjs';
-import { User, IUser } from '@/database/models/User';
-import { connectDB } from '@/database/config/connector';
-import { logger } from '@/server/lib/logger';
 import { getAuthConfig } from '@/server/config/auth';
+import { logger } from '@/server/lib/logger';
 
 // Secret wird nur bei Bedarf geladen
 function getSecret() {
   const { jwtSecret } = getAuthConfig();
   return new TextEncoder().encode(jwtSecret);
-}
-
-let adminInitialized = false;
-
-// Initialisiere den Admin-Benutzer, falls keiner existiert
-export async function initializeAdmin() {
-  try {
-    await connectDB();
-    const { adminUsername, adminPassword } = getAuthConfig();
-    
-    const existingAdmin = await User.findOne({ username: adminUsername });
-    if (existingAdmin) {
-      logger.info('[Auth] Admin-Benutzer existiert bereits');
-      return;
-    }
-
-    await User.create({
-      username: adminUsername,
-      password: adminPassword, // wird automatisch gehasht durch das Model
-      role: 'admin'
-    });
-    
-    logger.info('[Auth] Admin-Benutzer erfolgreich erstellt');
-  } catch (error) {
-    logger.error('[Auth] Fehler beim Erstellen des Admin-Benutzers:', error);
-    throw error;
-  }
 }
 
 export async function generateToken(payload: any) {
@@ -57,11 +28,15 @@ export async function verifyToken(token: string) {
   }
 }
 
+// Diese Funktionen sollten nur in API-Routen verwendet werden
 export async function validateCredentials(
   username: string,
   password: string,
 ): Promise<{ isValid: boolean; isAdmin: boolean; error?: string }> {
   try {
+    const { User } = await import('@/database/models/User');
+    const { connectDB } = await import('@/database/config/connector');
+    
     await connectDB();
     logger.info(`[Auth] Suche Benutzer: ${username}`);
 
@@ -71,20 +46,6 @@ export async function validateCredentials(
       return { isValid: false, isAdmin: false, error: 'Benutzer nicht gefunden' };
     }
 
-    // Prüfe, ob der Account gesperrt ist
-    /* 
-    const isLocked = user.lockedUntil && user.lockedUntil > new Date();
-    if (isLocked) {
-      const remainingTime = Math.ceil((user.lockedUntil!.getTime() - Date.now()) / 1000 / 60);
-      logger.warn(`[Auth] Account gesperrt für ${username}, noch ${remainingTime} Minuten`);
-      return {
-        isValid: false,
-        isAdmin: false,
-        error: `Account ist für ${remainingTime} Minuten gesperrt`
-      };
-    }
-    */
-
     logger.info(`[Auth] Prüfe Passwort für ${username}`);
     const isValid = await compare(password, user.password);
     
@@ -92,8 +53,6 @@ export async function validateCredentials(
       // Erfolgreicher Login
       logger.info(`[Auth] Erfolgreicher Login für ${username}`);
       user.lastLogin = new Date();
-      // user.failedLoginAttempts = 0;
-      // user.lockedUntil = undefined;
       await user.save();
       
       return {
@@ -103,19 +62,6 @@ export async function validateCredentials(
     } else {
       // Fehlgeschlagener Login
       logger.warn(`[Auth] Falsches Passwort für ${username}`);
-      /* 
-      user.failedLoginAttempts = (user.failedLoginAttempts || 0) + 1;
-      
-      const remainingAttempts = 5 - user.failedLoginAttempts;
-      let error = `Falsches Passwort. Noch ${remainingAttempts} Versuche übrig.`;
-
-      if (user.failedLoginAttempts >= 5) {
-        logger.warn(`[Auth] Account gesperrt für ${username} nach 5 fehlgeschlagenen Versuchen`);
-        user.lockedUntil = new Date(Date.now() + 15 * 60 * 1000); // 15 Minuten Sperre
-        error = 'Account wurde für 15 Minuten gesperrt.';
-      }
-      */
-      
       await user.save();
       
       return {
@@ -142,6 +88,9 @@ export async function createUser(
   email?: string
 ) {
   try {
+    const { User } = await import('@/database/models/User');
+    const { connectDB } = await import('@/database/config/connector');
+    
     await connectDB();
 
     const user = new User({
@@ -159,5 +108,33 @@ export async function createUser(
       success: false,
       error: error instanceof Error ? error.message : 'Benutzer konnte nicht erstellt werden'
     };
+  }
+}
+
+// Initialisiere den Admin-Benutzer, falls keiner existiert
+export async function initializeAdmin() {
+  try {
+    const { User } = await import('@/database/models/User');
+    const { connectDB } = await import('@/database/config/connector');
+    const { adminUsername, adminPassword } = getAuthConfig();
+    
+    await connectDB();
+    
+    const existingAdmin = await User.findOne({ username: adminUsername });
+    if (existingAdmin) {
+      logger.info('[Auth] Admin-Benutzer existiert bereits');
+      return;
+    }
+
+    await User.create({
+      username: adminUsername,
+      password: adminPassword, // wird automatisch gehasht durch das Model
+      role: 'admin'
+    });
+    
+    logger.info('[Auth] Admin-Benutzer erfolgreich erstellt');
+  } catch (error) {
+    logger.error('[Auth] Fehler beim Erstellen des Admin-Benutzers:', error);
+    throw error;
   }
 }

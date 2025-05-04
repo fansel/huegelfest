@@ -1,10 +1,12 @@
-import mongoose from 'mongoose';
-import { Category } from '@/database/models/Category';
-import { Timeline } from '@/database/models/Timeline';
 import { connectDB } from '@/database/config/connector';
 
 export class CategoryService {
   static async deleteCategory(categoryId: string) {
+    const { Category } = await import('@/database/models/Category');
+    const { Timeline } = await import('@/database/models/Timeline');
+    
+    await connectDB();
+    
     // Finde die zu löschende Kategorie
     const category = await Category.findById(categoryId);
     if (!category) {

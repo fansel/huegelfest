@@ -1,10 +1,9 @@
 import { NextResponse } from 'next/server';
 import { connectDB } from '@/database/config/connector';
-import { Ride } from '@/database/models/Ride';
-import mongoose from 'mongoose';
 
 export async function GET() {
   try {
+    const { Ride } = await import('@/database/models/Ride');
     await connectDB();
     const rides = await Ride.find().sort({ createdAt: -1 });
     
@@ -36,6 +35,7 @@ export async function POST(request: Request) {
       }, { status: 400 });
     }
     
+    const { Ride } = await import('@/database/models/Ride');
     await connectDB();
     const ride = new Ride(data);
     await ride.save();
@@ -45,8 +45,8 @@ export async function POST(request: Request) {
     console.error('Fehler beim Speichern der Fahrt:', error);
     
     // Prüfe ob es ein Validierungsfehler ist
-    if (error instanceof mongoose.Error.ValidationError) {
-      const validationError = error as mongoose.Error.ValidationError;
+    if (error instanceof Error && 'errors' in error) {
+      const validationError = error as { errors: Record<string, { message: string }> };
       return NextResponse.json({ 
         error: 'Validierungsfehler',
         details: Object.keys(validationError.errors).map(key => ({
@@ -71,6 +71,7 @@ export async function PUT(request: Request) {
       }, { status: 400 });
     }
     
+    const { Ride } = await import('@/database/models/Ride');
     await connectDB();
     const ride = await Ride.findByIdAndUpdate(_id, data, { new: true });
     
@@ -98,6 +99,7 @@ export async function DELETE(request: Request) {
       }, { status: 400 });
     }
     
+    const { Ride } = await import('@/database/models/Ride');
     await connectDB();
     const ride = await Ride.findByIdAndDelete(id);
     
