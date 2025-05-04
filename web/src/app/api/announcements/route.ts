@@ -4,20 +4,10 @@ import Announcement from '@/database/models/Announcement';
 import Group from '@/database/models/Group';
 import { Subscriber } from '@/database/models/Subscriber';
 import { revalidatePath } from 'next/cache';
-import { sendUpdateToAllClients } from '@/server/lib/sse';
+import { webPushService, sseService } from '@/server/lib/lazyServices';
 
 // Prüfe ob wir in der Edge-Runtime sind
 const isEdgeRuntime = process.env.NEXT_RUNTIME === 'edge';
-
-// Lazy import von webPushService
-let webPushService: any = null;
-async function getWebPushService() {
-  if (!webPushService) {
-    const { webPushService: service } = await import('@/server/lib/webpush');
-    webPushService = service;
-  }
-  return webPushService;
-}
 
 export async function GET() {
   try {
@@ -109,7 +99,7 @@ export async function POST(request: Request) {
     // Sende Push-Benachrichtigung nur wenn wir nicht in der Edge-Runtime sind
     if (!isEdgeRuntime) {
       try {
-        const service = await getWebPushService();
+        const service = await webPushService.getInstance();
         if (service.isInitialized()) {
           await service.sendNotificationToAll({
             title: 'Neue Ankündigung',
@@ -128,7 +118,8 @@ export async function POST(request: Request) {
     }
 
     revalidatePath('/announcements');
-    sendUpdateToAllClients();
+    const sse = await sseService.getInstance();
+    sse.sendUpdateToAllClients();
 
     // Hole die vollständige Ankündigung mit Gruppeninformationen
     const populatedAnnouncement = await announcement.populate('groupId', 'name color');
@@ -176,7 +167,8 @@ export async function DELETE(request: Request) {
     }
     
     revalidatePath('/announcements');
-    sendUpdateToAllClients();
+    const sse = await sseService.getInstance();
+    sse.sendUpdateToAllClients();
     return NextResponse.json({
       success: true,
       message: `Ankündigung erfolgreich gelöscht`,
@@ -261,7 +253,8 @@ export async function PUT(request: Request) {
     };
 
     revalidatePath('/announcements');
-    sendUpdateToAllClients();
+    const sse = await sseService.getInstance();
+    sse.sendUpdateToAllClients();
 
     return NextResponse.json(transformedAnnouncement);
   } catch (error) {

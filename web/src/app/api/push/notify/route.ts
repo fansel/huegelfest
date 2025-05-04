@@ -1,10 +1,10 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { webPushService } from '@/server/lib/webpush'
+import { webPushService } from '@/server/lib/lazyServices'
 
 export async function POST(request: Request) {
   try {
-    const requestBody = await request.json();
-    const { title, body: messageBody, icon, badge, data } = requestBody;
+    const body = await request.json();
+    const { title, body: messageBody, icon, badge, data } = body;
 
     if (!title || !messageBody) {
       return NextResponse.json(
@@ -13,7 +13,15 @@ export async function POST(request: Request) {
       );
     }
 
-    await webPushService.sendNotificationToAll({
+    const service = await webPushService.getInstance();
+    if (!service.isInitialized()) {
+      return NextResponse.json(
+        { error: 'Push-Benachrichtigungen sind nicht verfügbar' },
+        { status: 503 }
+      );
+    }
+
+    await service.sendNotificationToAll({
       title,
       body: messageBody,
       icon,
@@ -23,7 +31,7 @@ export async function POST(request: Request) {
 
     return NextResponse.json({ message: 'Benachrichtigung gesendet' });
   } catch (error) {
-    console.error('Fehler beim Senden der Benachrichtigung:', error);
+    console.error('Fehler beim Senden der Push-Benachrichtigung:', error);
     return NextResponse.json(
       { error: 'Interner Serverfehler' },
       { status: 500 }
