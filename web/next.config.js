@@ -28,6 +28,7 @@ const nextConfig = {
     serverActions: {
       allowedOrigins: ['localhost:3000', 'huegelfest.fansel.dev'],
     },
+    nodeMiddleware: true,
   },
   typescript: {
     ignoreBuildErrors: true,

@@ -5,13 +5,17 @@ import { useRouter } from 'next/navigation';
 import { motion } from 'framer-motion';
 import { useAuth } from '@/contexts/AuthContext';
 
-export default function Login() {
+interface LoginProps {
+  onLogin: (username: string, password: string) => Promise<void>;
+  error?: string | null;
+}
+
+export default function Login({ onLogin, error: propError }: LoginProps) {
   const [username, setUsername] = useState('');
   const [password, setPassword] = useState('');
-  const [error, setError] = useState<string | null>(null);
+  const [error, setError] = useState<string | null>(propError || null);
   const [isLoading, setIsLoading] = useState(false);
   const router = useRouter();
-  const { login } = useAuth();
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -19,7 +23,7 @@ export default function Login() {
     setIsLoading(true);
 
     try {
-      await login(username, password);
+      await onLogin(username, password);
       router.push('/admin');
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Ein Fehler ist aufgetreten');

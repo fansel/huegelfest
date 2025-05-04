@@ -1,3 +1,4 @@
+// Diese Datei sollte nur im Node.js-Runtime verwendet werden
 import mongoose from 'mongoose';
 import { hash } from 'bcryptjs';
 
