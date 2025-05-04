@@ -3,6 +3,7 @@
 import { useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { useAuth } from '@/contexts/AuthContext';
+import { motion } from 'framer-motion';
 
 interface LoginProps {
   onLogin: (username: string, password: string) => Promise<void>;
