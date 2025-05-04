@@ -28,16 +28,20 @@ jobs:
             image=moby/buildkit:master
             network=host
 
-      - name: Set empty Docker context
+      - name: Use temporary Docker config
         run: |
-          mkdir -p ~/.docker
-          echo '{}' > ~/.docker/config.json
+          mkdir -p /tmp/docker-config
+          echo '{}' > /tmp/docker-config/config.json
+        env:
+          DOCKER_CONFIG: /tmp/docker-config
 
       - name: Login to DockerHub
         uses: docker/login-action@v3
         with:
           username: ${{ env.DOCKERHUB_USERNAME }}
           password: ${{ env.DOCKERHUB_TOKEN }}
+        env:
+          DOCKER_CONFIG: /tmp/docker-config
 
       - name: Build and push web app
         uses: docker/build-push-action@v5
