@@ -1,5 +1,5 @@
 import mongoose from 'mongoose';
-import { connectDB } from '../config/connector';
+import { connectDB } from '../config/apiConnector';
 import { logger } from '@/server/lib/logger';
 import { Category } from './Category';
 import { User } from './User';

@@ -3,6 +3,14 @@ import { User } from '@/database/models/User';
 import { getAuthConfig } from '@/server/config/auth';
 import { logger } from '@/server/lib/logger';
 
+// Prüfe, ob wir in der Edge Runtime sind (nur zur Laufzeit)
+const isEdgeRuntime = () => {
+  if (typeof window === 'undefined' && process.env.NODE_ENV === 'production') {
+    return process.env.NEXT_RUNTIME === 'edge';
+  }
+  return false;
+};
+
 // MongoDB Verbindungsoptionen
 const MONGODB_OPTIONS = {
   maxPoolSize: 10,
@@ -62,6 +70,12 @@ async function initializeDatabase() {
 
 // Verbinde mit der Datenbank
 export async function connectDB(): Promise<void> {
+  // Prüfe, ob wir in der Edge Runtime sind
+  if (isEdgeRuntime()) {
+    logger.warn('[Database] connectDB wurde im Edge Runtime aufgerufen. Datenbankoperationen sind in der Edge Runtime nicht möglich.');
+    return Promise.resolve();
+  }
+
   // Wenn bereits verbunden, nichts tun
   if (state.isConnected) {
     logger.debug('[MongoDB] Bereits verbunden');
@@ -117,6 +131,12 @@ export async function connectDB(): Promise<void> {
 
 // Trenne die Datenbankverbindung
 export async function disconnectDB(): Promise<void> {
+  // Prüfe, ob wir in der Edge Runtime sind
+  if (isEdgeRuntime()) {
+    logger.warn('[Database] disconnectDB wurde im Edge Runtime aufgerufen. Datenbankoperationen sind in der Edge Runtime nicht möglich.');
+    return Promise.resolve();
+  }
+
   if (!state.isConnected) {
     logger.debug('[MongoDB] Nicht verbunden');
     return;
