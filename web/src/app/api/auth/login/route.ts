@@ -1,7 +1,7 @@
 import { NextResponse } from 'next/server';
 import { cookies } from 'next/headers';
 import { getCookieConfig } from '@/server/config/cookies';
-import { sign } from 'jsonwebtoken';
+import { SignJWT } from 'jose';
 import { getAuthConfig } from '@/server/config/auth';
 import { User } from '@/database/models/User';
 import { compare } from 'bcrypt';
@@ -37,11 +37,11 @@ export async function POST(request: Request) {
     }
 
     const { jwtSecret } = getAuthConfig();
-    const token = sign(
-      { userId: user._id, username: user.username },
-      jwtSecret,
-      { expiresIn: '30d' }
-    );
+    const token = await new SignJWT({ userId: user._id, username: user.username })
+      .setProtectedHeader({ alg: 'HS256' })
+      .setIssuedAt()
+      .setExpirationTime('30d')
+      .sign(new TextEncoder().encode(jwtSecret));
 
     const cookieConfig = getCookieConfig();
     cookies().set(cookieConfig.name, token, cookieConfig.options);
