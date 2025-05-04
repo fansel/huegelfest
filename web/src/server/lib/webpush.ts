@@ -12,7 +12,7 @@ interface PushNotificationPayload {
 // Prüfe ob wir in der Edge-Runtime sind
 const isEdgeRuntime = process.env.NEXT_RUNTIME === 'edge';
 
-class WebPushService {
+export class WebPushService {
   private initialized = false;
 
   initialize() {
