@@ -23,51 +23,26 @@ if (!cached) {
 }
 
 export async function connectDB() {
-  if (cached.conn) {
-    logger.info('[Database] Verwende existierende Verbindung');
-    return cached.conn;
-  }
-
-  if (!cached.promise) {
-    logger.info('[Database] Erstelle neue Verbindung');
-    const MONGODB_URI = getMongoUri();
-    
-    if (!MONGODB_URI) {
-      logger.error('[Database] MongoDB Konfiguration ist unvollständig');
-      throw new Error('MongoDB Konfiguration ist unvollständig');
-    }
-
-    const opts = {
-      bufferCommands: false,
-      maxPoolSize: 10,
-      minPoolSize: 5,
-      socketTimeoutMS: 45000,
-      connectTimeoutMS: 10000,
-      serverSelectionTimeoutMS: 10000,
-      retryWrites: true,
-      retryReads: true
+  try {
+    const mongoConfig = {
+      host: process.env.MONGO_HOST || 'localhost',
+      port: process.env.MONGO_PORT || '27017',
+      database: process.env.MONGO_DATABASE || 'huegelfest'
     };
 
-    cached.promise = mongoose.connect(MONGODB_URI, opts).then((mongoose) => {
-      logger.info('[Database] MongoDB erfolgreich verbunden');
-      return mongoose;
-    }).catch((error) => {
-      logger.error('[Database] MongoDB Verbindungsfehler:', error);
-      throw error;
-    });
-  }
+    const uri = `mongodb://${mongoConfig.host}:${mongoConfig.port}/${mongoConfig.database}`;
+    
+    if (mongoose.connection.readyState === 1) {
+      logger.debug('[MongoDB] Bereits verbunden');
+      return;
+    }
 
-  try {
-    logger.info('[Database] Warte auf Verbindungsversprechen...');
-    cached.conn = await cached.promise;
-    logger.info('[Database] Verbindung erfolgreich hergestellt');
-  } catch (e) {
-    logger.error('[Database] Fehler beim Herstellen der Verbindung:', e);
-    cached.promise = null;
-    throw e;
+    await mongoose.connect(uri);
+    logger.info('[MongoDB] Verbindung erfolgreich hergestellt');
+  } catch (error) {
+    logger.error('[MongoDB] Verbindungsfehler:', error);
+    throw error;
   }
-
-  return cached.conn;
 }
 
 export async function disconnectDB() {

@@ -17,12 +17,15 @@ class WebPushService {
 
     // Nur auf der Server-Seite initialisieren
     if (typeof window === 'undefined') {
-      const vapidPublicKey = process.env.NEXT_PUBLIC_VAPID_PUBLIC_KEY;
-      const vapidPrivateKey = process.env.VAPID_PRIVATE_KEY;
+      const vapidPublicKey = process.env.NEXT_PUBLIC_VAPID_PUBLIC_KEY || 'dummy_public_key';
+      const vapidPrivateKey = process.env.VAPID_PRIVATE_KEY || 'dummy_private_key';
 
-      if (!vapidPublicKey || !vapidPrivateKey) {
-        console.warn('VAPID-Schlüssel fehlen in den Umgebungsvariablen. Push-Benachrichtigungen sind deaktiviert.');
-        return;
+      // Validiere nur in Produktion
+      if (process.env.NODE_ENV === 'production') {
+        if (!process.env.NEXT_PUBLIC_VAPID_PUBLIC_KEY || !process.env.VAPID_PRIVATE_KEY) {
+          console.warn('VAPID-Schlüssel fehlen in den Umgebungsvariablen. Push-Benachrichtigungen sind deaktiviert.');
+          return;
+        }
       }
 
       webpush.setVapidDetails(
@@ -69,8 +72,8 @@ class WebPushService {
     }
   }
 
-  getPublicKey(): string | undefined {
-    return process.env.NEXT_PUBLIC_VAPID_PUBLIC_KEY;
+  getPublicKey(): string {
+    return process.env.NEXT_PUBLIC_VAPID_PUBLIC_KEY || 'dummy_public_key';
   }
 }
 

@@ -15,7 +15,7 @@ interface TrackInfo {
 
 export class MusicService {
   private static scdl = create({
-    clientID: process.env.SOUNDCLOUD_CLIENT_ID,
+    clientID: process.env.SOUNDCLOUD_CLIENT_ID || 'dummy_client_id',
     saveClientID: true,
   });
 
@@ -51,6 +51,11 @@ export class MusicService {
   }
 
   public static async getTrackInfo(url: string): Promise<TrackInfo> {
+    // Validiere Client ID nur in Produktion
+    if (process.env.NODE_ENV === 'production' && !process.env.SOUNDCLOUD_CLIENT_ID) {
+      throw new Error('SOUNDCLOUD_CLIENT_ID ist nicht konfiguriert');
+    }
+
     logger.debug('[MusicService] Hole SoundCloud Track-Info...');
     try {
       // Auflösen der URL, falls es sich um eine kurze URL handelt

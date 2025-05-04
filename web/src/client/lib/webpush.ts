@@ -7,8 +7,8 @@ interface PushNotificationPayload {
 }
 
 class WebPushClient {
-  getPublicKey(): string | undefined {
-    return process.env.NEXT_PUBLIC_VAPID_PUBLIC_KEY;
+  getPublicKey(): string {
+    return process.env.NEXT_PUBLIC_VAPID_PUBLIC_KEY || 'dummy_public_key';
   }
 
   async subscribe() {
@@ -75,9 +75,6 @@ class WebPushClient {
 export const webPushClient = new WebPushClient();
 
 // VAPID Public Key wird zur Runtime geladen
-export async function getVapidPublicKey(): Promise<string> {
-  // Hole den Key von einer API-Route
-  const response = await fetch('/api/push/vapid-key');
-  const data = await response.json();
-  return data.publicKey;
+export function getVapidPublicKey(): string {
+  return process.env.NEXT_PUBLIC_VAPID_PUBLIC_KEY || 'dummy_public_key';
 } 
