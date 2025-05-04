@@ -58,13 +58,6 @@ export async function POST(request: Request) {
 
     await connectDB();
 
-    // Initialisiere WebPush nur wenn wir es brauchen
-    try {
-      webPushService.initialize();
-    } catch (error) {
-      console.warn('Fehler bei der WebPush-Initialisierung:', error);
-    }
-
     // Finde die Gruppe
     const groupDoc = await Group.findOne({ name: group });
     if (!groupDoc) {

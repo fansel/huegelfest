@@ -13,11 +13,20 @@ interface PushNotificationPayload {
 const DUMMY_VAPID_PUBLIC_KEY = 'BFdMqdytHYX2ble_n3fGtKCES1y1Dw68Ryb5ygcji9JR4nWvEmutBCjIf7RZcnqrMfi470wsEtLMibtHfw2QUvo';
 const DUMMY_VAPID_PRIVATE_KEY = 'uim8H0cLm49Z1oA-h_yFRjd7scYxLBcbk2NwJf8Xnf8';
 
+// Prüfe ob wir in der Edge-Runtime sind
+const isEdgeRuntime = process.env.NEXT_RUNTIME === 'edge';
+
 class WebPushService {
   private initialized = false;
 
   initialize() {
     if (this.initialized) return;
+
+    // Überspringe Initialisierung in der Edge-Runtime
+    if (isEdgeRuntime) {
+      console.warn('WebPush-Initialisierung in Edge-Runtime übersprungen');
+      return;
+    }
 
     // Nur auf der Server-Seite initialisieren
     if (typeof window === 'undefined') {
@@ -52,6 +61,12 @@ class WebPushService {
   }
 
   async sendNotificationToAll(payload: PushNotificationPayload) {
+    // Überspringe Senden in der Edge-Runtime
+    if (isEdgeRuntime) {
+      console.warn('Push-Benachrichtigungen in Edge-Runtime nicht unterstützt');
+      return;
+    }
+
     if (!this.initialized) {
       console.warn('WebPush-Service ist nicht initialisiert. Push-Benachrichtigung wird nicht gesendet.');
       return;
@@ -88,8 +103,3 @@ class WebPushService {
 
 // Singleton-Instanz erstellen
 export const webPushService = new WebPushService();
-
-// Initialisiere den Service nur auf der Server-Seite
-if (typeof window === 'undefined') {
-  webPushService.initialize();
-}
