@@ -35,7 +35,7 @@ export async function validateCredentials(
 ): Promise<{ isValid: boolean; isAdmin: boolean; error?: string }> {
   try {
     const { User } = await import('@/database/models/User');
-    const { connectDB } = await import('@/database/config/connector');
+    const { connectDB } = await import('@/database/config/apiConnector');
     
     await connectDB();
     logger.info(`[Auth] Suche Benutzer: ${username}`);
@@ -89,7 +89,7 @@ export async function createUser(
 ) {
   try {
     const { User } = await import('@/database/models/User');
-    const { connectDB } = await import('@/database/config/connector');
+    const { connectDB } = await import('@/database/config/apiConnector');
     
     await connectDB();
 
@@ -115,7 +115,7 @@ export async function createUser(
 export async function initializeAdmin() {
   try {
     const { User } = await import('@/database/models/User');
-    const { connectDB } = await import('@/database/config/connector');
+    const { connectDB } = await import('@/database/config/apiConnector');
     const { adminUsername, adminPassword } = getAuthConfig();
     
     await connectDB();

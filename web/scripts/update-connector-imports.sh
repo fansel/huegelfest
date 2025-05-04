@@ -1,10 +1,18 @@
 #!/bin/bash
 
-# Finde alle TypeScript-Dateien in den API-Routen
-find src/app/api -type f -name "*.ts" -exec sed -i '' 's|@/database/config/connector|@/database/config/apiConnector|g' {} +
+echo "Suche nach verbleibenden connector-Imports..."
 
-# Aktualisiere die Server-Services
-find src/server -type f -name "*.ts" -exec sed -i '' 's|@/database/config/connector|@/database/config/apiConnector|g' {} +
+# Finde alle TypeScript-Dateien, die noch den alten connector importieren
+find src -type f -name "*.ts" -exec grep -l "from.*connector" {} \; | while read -r file; do
+  echo "Bearbeite $file"
+  
+  # Ersetze die Imports
+  sed -i '' 's|from.*database/config/connector|from "@/database/config/apiConnector"|g' "$file"
+  sed -i '' 's|from.*database/config/connector|from "../../database/config/apiConnector"|g' "$file"
+  sed -i '' 's|from.*database/config/connector|from "../config/apiConnector"|g' "$file"
+done
 
-# Aktualisiere die Server-Actions
-find src/server/actions -type f -name "*.ts" -exec sed -i '' 's|../../database/config/connector|../../database/config/apiConnector|g' {} + 
+echo "Überprüfe auf verbleibende connector-Referenzen..."
+grep -r "connector" --include="*.ts" src/
+
+echo "Fertig!" 

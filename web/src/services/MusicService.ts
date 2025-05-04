@@ -1,4 +1,4 @@
-import { connectDB } from '@/database/config/connector';
+import { connectDB } from '@/database/config/apiConnector';
 import Music, { MusicDocument } from '@/database/models/Music';
 import { logger } from '@/server/lib/logger';
 import { download } from '@/lib/soundcloud-downloader/download';
