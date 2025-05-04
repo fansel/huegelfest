@@ -5,104 +5,119 @@ interface Client {
   lastActivity: number;
 }
 
-const clients = new Set<Client>();
-const CLIENT_TIMEOUT = 5 * 60 * 1000; // 5 Minuten
-const CLEANUP_INTERVAL = 60 * 1000; // 1 Minute
+class SSEService {
+  private clients: Set<Client> = new Set();
+  private cleanupInterval: NodeJS.Timeout | null = null;
+  private readonly CLIENT_TIMEOUT = 5 * 60 * 1000; // 5 Minuten
+  private readonly CLEANUP_INTERVAL = 60 * 1000; // 1 Minute
+  private readonly HEARTBEAT_INTERVAL = 30000; // 30 Sekunden
 
-// Cleanup-Intervall für inaktive Clients
-setInterval(() => {
-  const now = Date.now();
-  for (const client of clients) {
-    if (now - client.lastActivity > CLIENT_TIMEOUT) {
-      logger.info('[SSE] Entferne inaktiven Client');
-      removeClient(client.controller);
+  constructor() {
+    // Starte Cleanup nur wenn wir nicht in der Edge-Runtime sind
+    if (typeof process !== 'undefined' && process.env.NEXT_RUNTIME !== 'edge') {
+      this.startCleanup();
     }
   }
-}, CLEANUP_INTERVAL);
 
-// Funktion zum Senden von Updates an alle verbundenen Clients
-export function sendUpdateToAllClients() {
-  const message = `data: ${JSON.stringify({ type: 'update', timestamp: Date.now() })}\n\n`;
-  
-  for (const client of clients) {
-    try {
-      client.controller.enqueue(new TextEncoder().encode(message));
-      client.lastActivity = Date.now();
-    } catch (error) {
-      logger.error('[SSE] Fehler beim Senden an Client:', error);
-      removeClient(client.controller);
-    }
-  }
-}
-
-// Funktion zum Hinzufügen eines neuen Clients
-export function addClient(controller: ReadableStreamDefaultController) {
-  const client: Client = {
-    controller,
-    lastActivity: Date.now(),
-  };
-  
-  clients.add(client);
-  logger.info(`[SSE] Neuer Client verbunden. Aktive Clients: ${clients.size}`);
-  
-  // Sende initiale Verbindungsbestätigung
-  try {
-    controller.enqueue(
-      new TextEncoder().encode(
-        `data: ${JSON.stringify({ type: 'connected', timestamp: Date.now() })}\n\n`,
-      ),
-    );
-  } catch (error) {
-    logger.error('[SSE] Fehler beim Senden der Verbindungsbestätigung:', error);
-    removeClient(controller);
-  }
-}
-
-// Funktion zum Entfernen eines Clients
-export function removeClient(controller: ReadableStreamDefaultController) {
-  for (const client of clients) {
-    if (client.controller === controller) {
-      clients.delete(client);
-      logger.info(`[SSE] Client entfernt. Verbleibende Clients: ${clients.size}`);
-      break;
-    }
-  }
-}
-
-export async function GET() {
-  const encoder = new TextEncoder();
-  const stream = new ReadableStream({
-    start(controller) {
-      addClient(controller);
-      
-      // Sende regelmäßige Heartbeats
-      const heartbeatInterval = setInterval(() => {
-        try {
-          controller.enqueue(
-            encoder.encode(
-              `data: ${JSON.stringify({ type: 'heartbeat', timestamp: Date.now() })}\n\n`,
-            ),
-          );
-        } catch (error) {
-          logger.error('[SSE] Fehler beim Senden des Heartbeats:', error);
-          clearInterval(heartbeatInterval);
-          removeClient(controller);
+  private startCleanup() {
+    this.cleanupInterval = setInterval(() => {
+      const now = Date.now();
+      for (const client of this.clients) {
+        if (now - client.lastActivity > this.CLIENT_TIMEOUT) {
+          logger.info('[SSE] Entferne inaktiven Client');
+          this.removeClient(client.controller);
         }
-      }, 30000); // Alle 30 Sekunden
-      
-      // Cleanup bei Verbindungsabbruch
-      controller.signal.addEventListener('abort', () => {
-        clearInterval(heartbeatInterval);
-        removeClient(controller);
-      });
-    },
-  });
+      }
+    }, this.CLEANUP_INTERVAL);
+  }
 
-  return new Response(stream, {
-    headers: {
-      'Content-Type': 'text/event-stream',
-      'Cache-Control': 'no-cache',
-      'Connection': 'keep-alive',
-    },
-  });
+  addClient(controller: ReadableStreamDefaultController) {
+    const client: Client = {
+      controller,
+      lastActivity: Date.now(),
+    };
+    
+    this.clients.add(client);
+    logger.info(`[SSE] Neuer Client verbunden. Aktive Clients: ${this.clients.size}`);
+    
+    // Sende initiale Verbindungsbestätigung
+    try {
+      controller.enqueue(
+        new TextEncoder().encode(
+          `data: ${JSON.stringify({ type: 'connected', timestamp: Date.now() })}\n\n`,
+        ),
+      );
+    } catch (error) {
+      logger.error('[SSE] Fehler beim Senden der Verbindungsbestätigung:', error);
+      this.removeClient(controller);
+    }
+  }
+
+  removeClient(controller: ReadableStreamDefaultController) {
+    for (const client of this.clients) {
+      if (client.controller === controller) {
+        this.clients.delete(client);
+        logger.info(`[SSE] Client entfernt. Verbleibende Clients: ${this.clients.size}`);
+        break;
+      }
+    }
+  }
+
+  sendUpdateToAllClients() {
+    const message = `data: ${JSON.stringify({ type: 'update', timestamp: Date.now() })}\n\n`;
+    
+    for (const client of this.clients) {
+      try {
+        client.controller.enqueue(new TextEncoder().encode(message));
+        client.lastActivity = Date.now();
+      } catch (error) {
+        logger.error('[SSE] Fehler beim Senden an Client:', error);
+        this.removeClient(client.controller);
+      }
+    }
+  }
+
+  async handleConnection(controller: ReadableStreamDefaultController) {
+    this.addClient(controller);
+    
+    // Sende regelmäßige Heartbeats
+    const heartbeatInterval = setInterval(() => {
+      try {
+        controller.enqueue(
+          new TextEncoder().encode(
+            `data: ${JSON.stringify({ type: 'heartbeat', timestamp: Date.now() })}\n\n`,
+          ),
+        );
+      } catch (error) {
+        logger.error('[SSE] Fehler beim Senden des Heartbeats:', error);
+        clearInterval(heartbeatInterval);
+        this.removeClient(controller);
+      }
+    }, this.HEARTBEAT_INTERVAL);
+    
+    // Cleanup bei Verbindungsabbruch
+    controller.signal.addEventListener('abort', () => {
+      clearInterval(heartbeatInterval);
+      this.removeClient(controller);
+    });
+  }
+
+  createStream() {
+    return new ReadableStream({
+      start: (controller) => this.handleConnection(controller),
+    });
+  }
+
+  createResponse() {
+    return new Response(this.createStream(), {
+      headers: {
+        'Content-Type': 'text/event-stream',
+        'Cache-Control': 'no-cache',
+        'Connection': 'keep-alive',
+      },
+    });
+  }
 }
+
+// Singleton-Instanz erstellen
+export const sseService = new SSEService();

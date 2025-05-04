@@ -1,11 +1,12 @@
-import { webPushService } from './webpush';
+import { webPushService } from './lazyServices';
 
 // Diese Funktion wird nur auf der Server-Seite ausgeführt
-export function initializeServer() {
+export async function initializeServer() {
   if (typeof window === 'undefined') {
     try {
       // Initialisiere WebPush-Service nur auf der Server-Seite
-      webPushService.initialize();
+      const service = await webPushService.getInstance();
+      service.initialize();
     } catch (error) {
       // Fehler bei der Initialisierung sollten den Build nicht blockieren
       console.warn('Fehler bei der Server-Initialisierung:', error);
@@ -15,3 +16,12 @@ export function initializeServer() {
 
 // Initialisiere den Server beim Import
 initializeServer(); 
+
+export async function initializeServices() {
+  try {
+    const service = await webPushService.getInstance();
+    service.initialize();
+  } catch (error) {
+    console.error('Fehler bei der Initialisierung der Services:', error);
+  }
+} 
