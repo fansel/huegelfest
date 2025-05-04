@@ -1,65 +1,56 @@
 import { NextResponse } from 'next/server';
-import { generateToken, validateCredentials } from '@/auth/auth';
+import { cookies } from 'next/headers';
+import { getCookieConfig } from '@/server/config/cookies';
+import { sign } from 'jsonwebtoken';
+import { getAuthConfig } from '@/server/config/auth';
+import { User } from '@/database/models/User';
+import { compare } from 'bcrypt';
+import { logger } from '@/server/lib/logger';
 
 export async function POST(request: Request) {
   try {
-    console.log('Login-Anfrage empfangen');
     const { username, password } = await request.json();
-    console.log('Login-Daten:', { username, passwordLength: password?.length });
 
     if (!username || !password) {
-      console.log('Fehlende Anmeldedaten');
       return NextResponse.json(
         { error: 'Benutzername und Passwort sind erforderlich' },
         { status: 400 }
       );
     }
 
-    console.log('Validiere Anmeldedaten...');
-    const { isValid, isAdmin } = await validateCredentials(username, password);
-    console.log('Validierungsergebnis:', { isValid, isAdmin });
+    const user = await User.findOne({ username });
 
-    if (!isValid) {
-      console.log('Ungültige Anmeldedaten für Benutzer:', username);
+    if (!user) {
       return NextResponse.json(
         { error: 'Ungültige Anmeldedaten' },
         { status: 401 }
       );
     }
 
-    console.log('Generiere Token...');
-    const token = await generateToken({ username, isAdmin });
-    console.log('Token generiert');
+    const isValid = await compare(password, user.password);
 
-    const response = NextResponse.json(
-      { success: true, isAdmin },
-      { status: 200 }
+    if (!isValid) {
+      return NextResponse.json(
+        { error: 'Ungültige Anmeldedaten' },
+        { status: 401 }
+      );
+    }
+
+    const { jwtSecret } = getAuthConfig();
+    const token = sign(
+      { userId: user._id, username: user.username },
+      jwtSecret,
+      { expiresIn: '30d' }
     );
 
-    // Auth Token setzen
-    response.cookies.set('auth_token', token, {
-      httpOnly: true,
-      secure: process.env.NODE_ENV === 'production',
-      sameSite: 'strict',
-      maxAge: 60 * 60 * 24 // 24 Stunden
-    });
-    console.log('Auth Token gesetzt');
+    const cookieConfig = getCookieConfig();
+    cookies().set(cookieConfig.name, token, cookieConfig.options);
 
-    // isAuthenticated Cookie für Client-Side Checks
-    response.cookies.set('isAuthenticated', 'true', {
-      httpOnly: false,
-      secure: process.env.NODE_ENV === 'production',
-      sameSite: 'strict',
-      maxAge: 60 * 60 * 24 // 24 Stunden
-    });
-    console.log('isAuthenticated Cookie gesetzt');
-
-    console.log('Login erfolgreich für Benutzer:', username);
-    return response;
+    return NextResponse.json({ success: true });
   } catch (error) {
-    console.error('Login-Fehler:', error);
+    logger.error('[Auth] Login-Fehler:', error);
     return NextResponse.json(
-      { error: 'Ein Fehler ist aufgetreten' },
+      { error: 'Interner Serverfehler' },
       { status: 500 }
     );
   }
