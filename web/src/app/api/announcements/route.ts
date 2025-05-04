@@ -5,10 +5,19 @@ import Group from '@/database/models/Group';
 import { Subscriber } from '@/database/models/Subscriber';
 import { revalidatePath } from 'next/cache';
 import { sendUpdateToAllClients } from '@/server/lib/sse';
-import { webPushService } from '@/server/lib/webpush';
 
 // Prüfe ob wir in der Edge-Runtime sind
 const isEdgeRuntime = process.env.NEXT_RUNTIME === 'edge';
+
+// Lazy import von webPushService
+let webPushService: any = null;
+async function getWebPushService() {
+  if (!webPushService) {
+    const { webPushService: service } = await import('@/server/lib/webpush');
+    webPushService = service;
+  }
+  return webPushService;
+}
 
 export async function GET() {
   try {
@@ -98,17 +107,20 @@ export async function POST(request: Request) {
     console.log('POST /api/announcements - Ankündigung erstellt:', { id: announcement._id });
 
     // Sende Push-Benachrichtigung nur wenn wir nicht in der Edge-Runtime sind
-    if (!isEdgeRuntime && webPushService.isInitialized()) {
+    if (!isEdgeRuntime) {
       try {
-        await webPushService.sendNotificationToAll({
-          title: 'Neue Ankündigung',
-          body: content,
-          icon: '/icon-192x192.png',
-          badge: '/badge-96x96.png',
-          data: {
-            url: '/'
-          }
-        });
+        const service = await getWebPushService();
+        if (service.isInitialized()) {
+          await service.sendNotificationToAll({
+            title: 'Neue Ankündigung',
+            body: content,
+            icon: '/icon-192x192.png',
+            badge: '/badge-96x96.png',
+            data: {
+              url: '/'
+            }
+          });
+        }
       } catch (error) {
         console.error('Fehler beim Senden der Push-Benachrichtigung:', error);
         // Fehler beim Senden der Push-Benachrichtigung sollte die Ankündigung nicht beeinflussen
