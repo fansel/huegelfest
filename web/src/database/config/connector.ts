@@ -60,74 +60,13 @@ async function initializeDatabase() {
   }
 }
 
-// Verbinde mit der Datenbank
+// Diese Funktionen sind nur für API-Routen gedacht
 export async function connectDB(): Promise<void> {
-  // Wenn bereits verbunden, nichts tun
-  if (state.isConnected) {
-    logger.debug('[MongoDB] Bereits verbunden');
-    return;
-  }
-
-  // Wenn Verbindung bereits im Gange, warte auf diese
-  if (state.isConnecting && state.connectionPromise) {
-    logger.debug('[MongoDB] Verbindung bereits im Gange, warte...');
-    return state.connectionPromise;
-  }
-
-  // Starte neue Verbindung
-  state.isConnecting = true;
-  state.connectionPromise = (async () => {
-    try {
-      const uri = getMongoUri();
-      await mongoose.connect(uri, MONGODB_OPTIONS);
-      
-      // Event Listener für Verbindungsstatus
-      mongoose.connection.on('error', (error) => {
-        logger.error('[MongoDB] Verbindungsfehler:', error);
-        state.isConnected = false;
-      });
-
-      mongoose.connection.on('disconnected', () => {
-        logger.warn('[MongoDB] Verbindung getrennt');
-        state.isConnected = false;
-      });
-
-      mongoose.connection.on('reconnected', () => {
-        logger.info('[MongoDB] Verbindung wiederhergestellt');
-        state.isConnected = true;
-      });
-
-      state.isConnected = true;
-      logger.info('[MongoDB] Verbindung hergestellt');
-
-      // Initialisiere die Datenbank
-      await initializeDatabase();
-    } catch (error) {
-      logger.error('[MongoDB] Verbindungsfehler:', error);
-      state.isConnected = false;
-      throw error;
-    } finally {
-      state.isConnecting = false;
-      state.connectionPromise = null;
-    }
-  })();
-
-  return state.connectionPromise;
+  logger.warn('[Database] connectDB wurde im Edge Runtime aufgerufen. Verwende stattdessen Server Actions.');
+  return Promise.resolve();
 }
 
-// Trenne die Datenbankverbindung
 export async function disconnectDB(): Promise<void> {
-  if (!state.isConnected) {
-    logger.debug('[MongoDB] Nicht verbunden');
-    return;
-  }
-
-  try {
-    await mongoose.disconnect();
-    state.isConnected = false;
-    logger.info('[Database] MongoDB Verbindung geschlossen');
-  } catch (error) {
-    logger.error('[MongoDB] Fehler beim Trennen der Verbindung:', error);
-    throw error;
-  }
+  logger.warn('[Database] disconnectDB wurde im Edge Runtime aufgerufen. Verwende stattdessen Server Actions.');
+  return Promise.resolve();
 } 

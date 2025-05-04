@@ -1,5 +1,5 @@
 import { NextResponse } from 'next/server';
-import { connectDB } from '@/database/config/connector';
+import { connectDB } from '@/database/config/apiConnector';
 import Group from '@/database/models/Group';
 import { GroupColors } from '@/types/types';
 import { sendUpdateToAllClients } from '@/server/lib/sse';

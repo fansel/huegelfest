@@ -1,4 +1,4 @@
-import { connectDB } from '@/database/config/connector';
+import { connectDB } from '@/database/config/apiConnector';
 
 export class CategoryService {
   static async deleteCategory(categoryId: string) {

@@ -4,7 +4,7 @@ import { compare } from 'bcryptjs';
 import { SignJWT } from 'jose';
 import { getAuthConfig } from '@/server/config/auth';
 import { logger } from '@/server/lib/logger';
-import { connectDB } from '@/database/config/connector';
+import { connectDB } from '@/database/config/apiConnector';
 
 export async function POST(request: Request) {
   try {
