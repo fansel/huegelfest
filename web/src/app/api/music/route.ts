@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { MusicService } from '@/server/services/MusicService';
 import { logger } from '@/server/lib/logger';
-import { connectDB } from '@/database/config/connector';
+import { connectDB } from '@/database/config/apiConnector';
 import Music from '@/database/models/Music';
 
 export async function GET() {

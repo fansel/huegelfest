@@ -1,7 +1,7 @@
 'use server';
 
 import { revalidatePath } from 'next/cache';
-import { connectDB } from '../../database/config/connector';
+import { connectDB } from '../../database/config/apiConnector';
 import Announcement from '../../database/models/Announcement';
 import Group from '../../database/models/Group';
 import Music from '../../database/models/Music';

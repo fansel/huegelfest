@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { connectDB } from '@/database/config/connector'
+import { connectDB } from '@/database/config/apiConnector'
 import { Subscriber } from '@/database/models/Subscriber'
 import { webPushService } from '@/server/lib/webpush'
 

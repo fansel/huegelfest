@@ -1,7 +1,7 @@
 'use server';
 
 import { revalidatePath } from 'next/cache';
-import { connectDB } from '../../database/config/connector';
+import { connectDB } from '../../database/config/apiConnector';
 import { Timeline } from '../../database/models/Timeline';
 import { Category } from '../../database/models/Category';
 import { TimelineData } from '@/types/types';

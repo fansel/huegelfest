@@ -1,5 +1,5 @@
 import { NextResponse } from 'next/server';
-import { connectDB } from '@/database/config/connector';
+import { connectDB } from '@/database/config/apiConnector';
 import Announcement from '@/database/models/Announcement';
 import Group from '@/database/models/Group';
 import { Subscriber } from '@/database/models/Subscriber';
