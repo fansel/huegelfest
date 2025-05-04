@@ -9,6 +9,9 @@ services:
       MONGO_HOST: mongodb
       MONGO_PORT: 27017
       MONGO_DATABASE: huegelfest
+      JWT_SECRET: ${JWT_SECRET}
+      NEXT_PUBLIC_VAPID_PUBLIC_KEY: ${NEXT_PUBLIC_VAPID_PUBLIC_KEY}
+      VAPID_PRIVATE_KEY: ${VAPID_PRIVATE_KEY}
     ports:
       - "9049:3000"
     depends_on:
