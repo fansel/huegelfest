@@ -1,7 +1,6 @@
 import webpush from 'web-push';
 import { Subscriber } from '@/database/models/Subscriber';
 import { logger } from '@/server/lib/logger';
-import { env } from 'next-runtime-env';
 
 interface PushNotificationPayload {
   title: string;
@@ -29,11 +28,15 @@ class WebPushService {
   public async initialize(): Promise<void> {
     if (this.initialized) return;
 
-    const vapidPublicKey = env('NEXT_PUBLIC_VAPID_PUBLIC_KEY');
-    const vapidPrivateKey = env('VAPID_PRIVATE_KEY');
+    const vapidPublicKey = process.env.NEXT_PUBLIC_VAPID_PUBLIC_KEY;
+    const vapidPrivateKey = process.env.VAPID_PRIVATE_KEY;
+    logger.info(vapidPublicKey);
+    logger.info(vapidPrivateKey);
 
     if (!vapidPublicKey || !vapidPrivateKey) {
-      console.warn('VAPID-Schlüssel nicht gefunden. WebPush wird nicht initialisiert.');
+      logger.error('VAPID-Schlüssel nicht gefunden. WebPush wird nicht initialisiert.');
+      logger.error(vapidPublicKey);
+      logger.error(vapidPrivateKey);
       return;
     }
 

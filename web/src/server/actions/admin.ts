@@ -18,7 +18,7 @@ export async function saveAnnouncements(announcements: IAnnouncement[]): Promise
     
     // Speichere jede neue Ankündigung über die API
     for (const announcement of announcements) {
-      const response = await fetch('/api/announcements', {
+      const response = await fetch(`${process.env.NEXT_PUBLIC_BASE_URL}/api/announcements`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
