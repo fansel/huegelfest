@@ -30,8 +30,6 @@ class WebPushService {
 
     const vapidPublicKey = process.env.NEXT_PUBLIC_VAPID_PUBLIC_KEY;
     const vapidPrivateKey = process.env.VAPID_PRIVATE_KEY;
-    logger.info(vapidPublicKey);
-    logger.info(vapidPrivateKey);
 
     if (!vapidPublicKey || !vapidPrivateKey) {
       logger.error('VAPID-Schlüssel nicht gefunden. WebPush wird nicht initialisiert.');

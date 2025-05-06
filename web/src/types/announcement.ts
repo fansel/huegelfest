@@ -1,18 +1,42 @@
-export interface IAnnouncement {
-  id: string;
+import { ReactionType } from '@/database/models/Reaction';
+
+// Basis-Interface für Datenbank-Operationen
+export interface IAnnouncementBase {
   content: string;
   date?: string;
   time?: string;
   groupId: string;
-  groupColor: string;
   important?: boolean;
-  reactions?: {
-    thumbsUp: { count: number; deviceReactions: Record<string, any> };
-    clap: { count: number; deviceReactions: Record<string, any> };
-    laugh: { count: number; deviceReactions: Record<string, any> };
-    surprised: { count: number; deviceReactions: Record<string, any> };
-    heart: { count: number; deviceReactions: Record<string, any> };
+}
+
+// Interface für Frontend-Anzeige
+export interface IAnnouncement extends IAnnouncementBase {
+  id: string;
+  groupName: string;
+  groupColor: string;
+  reactions: {
+    [key in ReactionType]: {
+      count: number;
+      deviceReactions: Record<string, boolean>;
+    };
   };
+  createdAt: Date;
+  updatedAt: Date;
+}
+
+// Interface für Datenbank-Operationen
+export interface IAnnouncementCreate extends IAnnouncementBase {
+  id?: string;  // Optional ID für Updates
+  createdAt: Date;
+  updatedAt: Date;
+}
+
+// Interface für Reaction-Operationen
+export interface IReaction {
+  id: string;
+  announcementId: string;
+  deviceId: string;
+  type: ReactionType;
   createdAt: Date;
   updatedAt: Date;
 } 
