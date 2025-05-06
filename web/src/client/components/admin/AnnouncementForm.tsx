@@ -1,9 +1,9 @@
 import { useState, useEffect, useCallback, memo } from 'react';
 import { GroupColors } from '@/types/types';
-import { IAnnouncement } from '@/types/announcement';
+import { IAnnouncement, IAnnouncementCreate } from '@/types/announcement';
 
 interface AnnouncementFormProps {
-  onSubmit: (announcement: IAnnouncement) => void;
+  onSubmit: (announcement: IAnnouncementCreate) => void;
   initialData?: IAnnouncement;
   groups: GroupColors;
 }
@@ -12,64 +12,79 @@ const AnnouncementForm = memo(
   ({ onSubmit, initialData, groups }: AnnouncementFormProps) => {
     const [content, setContent] = useState(initialData?.content || '');
     const [selectedGroupId, setSelectedGroupId] = useState(() => {
-      if (initialData?.groupId) {
-        return initialData.groupId;
+      if (initialData?.groupName) {
+        return initialData.groupName;
       }
       const availableGroups = Object.keys(groups).filter(g => g !== 'default');
       return availableGroups.length > 0 ? availableGroups[0] : '';
     });
     const [important, setImportant] = useState(initialData?.important || false);
+    const [isSubmitting, setIsSubmitting] = useState(false);
+    const [error, setError] = useState<string | null>(null);
+    const [success, setSuccess] = useState(false);
 
-    // Aktualisiere die Felder, wenn sich initialData ändert
     useEffect(() => {
       if (initialData) {
         setContent(initialData.content);
-        setSelectedGroupId(initialData.groupId);
+        setSelectedGroupId(initialData.groupName);
         setImportant(initialData.important || false);
+      } else {
+        // Reset form when initialData is undefined
+        setContent('');
+        const availableGroups = Object.keys(groups).filter(g => g !== 'default');
+        setSelectedGroupId(availableGroups.length > 0 ? availableGroups[0] : '');
+        setImportant(false);
       }
-    }, [initialData]);
+    }, [initialData, groups]);
 
     const handleSubmit = useCallback(
       async (e: React.FormEvent) => {
         e.preventDefault();
+        setIsSubmitting(true);
+        setError(null);
+        setSuccess(false);
 
         if (!selectedGroupId || selectedGroupId === 'default') {
-          alert('Bitte wählen Sie eine gültige Gruppe aus');
+          setError('Bitte wählen Sie eine gültige Gruppe aus');
+          setIsSubmitting(false);
           return;
         }
 
-        // Überprüfe auf doppelte Ankündigungen
         if (!initialData && content.trim() === '') {
-          alert('Bitte geben Sie einen Inhalt ein');
+          setError('Bitte geben Sie einen Inhalt ein');
+          setIsSubmitting(false);
           return;
         }
 
         const now = new Date();
-        const newAnnouncement: IAnnouncement = {
-          id: initialData?.id,
+        const newAnnouncement: IAnnouncementCreate = {
           content: content.trim(),
           groupId: selectedGroupId,
-          groupColor: groups[selectedGroupId] || '#ff9900',
           important: important,
-          createdAt: now,
+          createdAt: initialData?.createdAt || now,
           updatedAt: now,
-          reactions: {
-            thumbsUp: { count: 0, deviceReactions: {} },
-            clap: { count: 0, deviceReactions: {} },
-            laugh: { count: 0, deviceReactions: {} },
-            surprised: { count: 0, deviceReactions: {} },
-            heart: { count: 0, deviceReactions: {} },
-          },
+          id: initialData?.id
         };
 
-        onSubmit(newAnnouncement);
+        try {
+          await onSubmit(newAnnouncement);
+          setSuccess(true);
 
-        // Nur zurücksetzen, wenn es keine initialData gibt (neue Ankündigung)
-        if (!initialData) {
-          setContent('');
-          const availableGroups = Object.keys(groups).filter(g => g !== 'default');
-          setSelectedGroupId(availableGroups.length > 0 ? availableGroups[0] : '');
-          setImportant(false);
+          if (!initialData) {
+            setContent('');
+            const availableGroups = Object.keys(groups).filter(g => g !== 'default');
+            setSelectedGroupId(availableGroups.length > 0 ? availableGroups[0] : '');
+            setImportant(false);
+          }
+
+          setTimeout(() => {
+            setSuccess(false);
+          }, 3000);
+        } catch (error) {
+          console.error('Fehler beim Speichern:', error);
+          setError('Fehler beim Speichern der Ankündigung');
+        } finally {
+          setIsSubmitting(false);
         }
       },
       [content, selectedGroupId, important, initialData, onSubmit, groups],
@@ -83,7 +98,9 @@ const AnnouncementForm = memo(
     );
 
     const handleGroupChange = useCallback((e: React.ChangeEvent<HTMLSelectElement>) => {
-      setSelectedGroupId(e.target.value);
+      const newGroupId = e.target.value;
+      console.log('Selected new group ID:', newGroupId);
+      setSelectedGroupId(newGroupId);
     }, []);
 
     const handleImportantChange = useCallback(
@@ -103,6 +120,18 @@ const AnnouncementForm = memo(
         <h4 className="text-md sm:text-lg font-semibold text-[#460b6c] mb-3">
           {initialData ? 'Ankündigung bearbeiten' : 'Neue Ankündigung'}
         </h4>
+
+        {error && (
+          <div className="mb-4 p-3 bg-red-100 border border-red-400 text-red-700 rounded">
+            {error}
+          </div>
+        )}
+
+        {success && (
+          <div className="mb-4 p-3 bg-green-100 border border-green-400 text-green-700 rounded">
+            Ankündigung erfolgreich {initialData ? 'aktualisiert' : 'erstellt'}!
+          </div>
+        )}
 
         <div className="space-y-4">
           <div>
@@ -150,9 +179,12 @@ const AnnouncementForm = memo(
 
           <button
             type="submit"
-            className="w-full bg-[#ff9900] text-white py-3 px-4 rounded-md hover:bg-orange-600 text-sm font-medium transition-colors"
+            disabled={isSubmitting}
+            className={`w-full bg-[#ff9900] text-white py-3 px-4 rounded-md hover:bg-orange-600 text-sm font-medium transition-colors ${
+              isSubmitting ? 'opacity-50 cursor-not-allowed' : ''
+            }`}
           >
-            {initialData ? 'Aktualisieren' : 'Erstellen'}
+            {isSubmitting ? 'Wird gespeichert...' : initialData ? 'Aktualisieren' : 'Erstellen'}
           </button>
         </div>
       </form>
