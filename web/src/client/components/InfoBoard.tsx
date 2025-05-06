@@ -3,7 +3,6 @@
 import { useState, useEffect, useRef } from 'react';
 import { GroupColors, REACTION_EMOJIS, ReactionType } from '@/types/types';
 import { IAnnouncement } from '@/types/announcement';
-import { loadAnnouncements, loadGroupColors } from '@/server/actions/admin';
 import { ReactNode } from 'react';
 
 interface InfoBoardProps {
@@ -31,7 +30,6 @@ interface Reactions {
 
 export default function InfoBoard({ isPWA = false, allowClipboard = false }: InfoBoardProps) {
   const [announcements, setAnnouncements] = useState<IAnnouncement[]>([]);
-  const [groupColors, setGroupColors] = useState<GroupColors>({ default: '#460b6c' });
   const boardRef = useRef<HTMLDivElement>(null);
   const [isVisible, setIsVisible] = useState(false);
   const eventSourceRef = useRef<EventSource | null>(null);
@@ -45,17 +43,18 @@ export default function InfoBoard({ isPWA = false, allowClipboard = false }: Inf
     return `rgba(${r}, ${g}, ${b}, ${opacity})`;
   };
 
-  const formatDate = (date: Date) => {
+  const formatDate = (date: string | Date) => {
+    const dateObj = typeof date === 'string' ? new Date(date) : date;
     const today = new Date();
     const yesterday = new Date(today);
     yesterday.setDate(yesterday.getDate() - 1);
 
-    if (date.toDateString() === today.toDateString()) {
+    if (dateObj.toDateString() === today.toDateString()) {
       return 'Heute';
-    } else if (date.toDateString() === yesterday.toDateString()) {
+    } else if (dateObj.toDateString() === yesterday.toDateString()) {
       return 'Gestern';
     } else {
-      return date.toLocaleDateString('de-DE', {
+      return dateObj.toLocaleDateString('de-DE', {
         day: '2-digit',
         month: '2-digit',
         year: '2-digit'
@@ -66,12 +65,18 @@ export default function InfoBoard({ isPWA = false, allowClipboard = false }: Inf
   // Lade initiale Daten
   useEffect(() => {
     const loadData = async () => {
-      const [loadedAnnouncements, loadedGroupColors] = await Promise.all([
-        loadAnnouncements(),
-        loadGroupColors()
-      ]);
+      try {
+        const announcementsResponse = await fetch('/api/announcements');
+
+        if (!announcementsResponse.ok) {
+          throw new Error('Fehler beim Laden der Daten');
+        }
+
+        const loadedAnnouncements = await announcementsResponse.json();
       setAnnouncements(loadedAnnouncements);
-      setGroupColors(loadedGroupColors);
+      } catch (error) {
+        console.error('Fehler beim Laden der Daten:', error);
+      }
     };
 
     loadData();
@@ -113,12 +118,13 @@ export default function InfoBoard({ isPWA = false, allowClipboard = false }: Inf
           console.log('[SSE] Nachricht empfangen:', data);
           if (data.type === 'update') {
             console.log('[SSE] Update empfangen, lade neue Daten...');
-            const [loadedAnnouncements, loadedGroupColors] = await Promise.all([
-              loadAnnouncements(),
-              loadGroupColors()
-            ]);
+            const response = await fetch('/api/announcements');
+            if (!response.ok) {
+              throw new Error('Fehler beim Laden der Daten');
+            }
+            const loadedAnnouncements = await response.json();
+            console.log('[SSE] Neue Daten geladen:', loadedAnnouncements);
             setAnnouncements(loadedAnnouncements);
-            setGroupColors(loadedGroupColors);
             console.log('[SSE] Daten erfolgreich aktualisiert');
           }
         } catch (error) {
@@ -174,81 +180,69 @@ export default function InfoBoard({ isPWA = false, allowClipboard = false }: Inf
     const announcement = announcements.find(a => a.id === announcementId);
     if (!announcement) return;
 
-    // Initialisiere die Reaktionen mit der korrekten Struktur
-    const currentReactions = (announcement.reactions || {
-      thumbsUp: { count: 0, deviceReactions: {} },
-      clap: { count: 0, deviceReactions: {} },
-      laugh: { count: 0, deviceReactions: {} },
-      surprised: { count: 0, deviceReactions: {} },
-      heart: { count: 0, deviceReactions: {} }
-    }) as unknown as Reactions;
-
-    // Stelle sicher, dass alle Reaktionstypen existieren
-    const updatedReactions: Reactions = {
-      thumbsUp: { count: 0, deviceReactions: {} },
-      clap: { count: 0, deviceReactions: {} },
-      laugh: { count: 0, deviceReactions: {} },
-      surprised: { count: 0, deviceReactions: {} },
-      heart: { count: 0, deviceReactions: {} }
-    };
-
-    // Kopiere die bestehenden Reaktionen
-    Object.keys(currentReactions).forEach(type => {
-      if (currentReactions[type as keyof Reactions]) {
-        updatedReactions[type as keyof Reactions] = {
-          count: currentReactions[type as keyof Reactions].count || 0,
-          deviceReactions: { ...currentReactions[type as keyof Reactions].deviceReactions }
-        };
-      }
-    });
-
-    const hasReacted = updatedReactions[reactionType]?.deviceReactions?.[deviceId];
-
-    if (hasReacted) {
-      // Entferne die Reaktion des Geräts
-      delete updatedReactions[reactionType].deviceReactions[deviceId];
-      updatedReactions[reactionType].count = Object.keys(updatedReactions[reactionType].deviceReactions).length;
-    } else {
-      // Entferne zuerst alle bestehenden Reaktionen des Geräts
-      Object.keys(updatedReactions).forEach(type => {
-        if (updatedReactions[type as keyof Reactions].deviceReactions[deviceId]) {
-          delete updatedReactions[type as keyof Reactions].deviceReactions[deviceId];
-          updatedReactions[type as keyof Reactions].count = Object.keys(updatedReactions[type as keyof Reactions].deviceReactions).length;
-        }
-      });
-
-      // Füge die neue Reaktion hinzu
-      updatedReactions[reactionType].deviceReactions[deviceId] = {
-        type: reactionType,
-        announcementId
-      };
-      updatedReactions[reactionType].count = Object.keys(updatedReactions[reactionType].deviceReactions).length;
-    }
+    // Finde die aktuelle Reaktion des Geräts
+    const currentReaction = Object.entries(announcement.reactions || {}).find(
+      ([_, reaction]) => reaction.deviceReactions[deviceId]
+    );
 
     try {
-      const response = await fetch(`/api/announcements`, {
-        method: 'PUT',
-        headers: {
-          'Content-Type': 'application/json'
-        },
-        body: JSON.stringify({
-          id: announcementId,
-          reactions: updatedReactions,
-          deviceId
-        })
-      });
-
-      if (!response.ok) {
-        throw new Error('Fehler beim Aktualisieren der Reaktion');
+      // Wenn bereits eine Reaktion existiert, entferne diese zuerst
+      if (currentReaction) {
+        const [currentType] = currentReaction;
+        // Nur löschen wenn es eine andere Reaktion ist
+        if (currentType !== reactionType) {
+          await fetch(`/api/announcements/${announcementId}/reactions`, {
+            method: 'DELETE',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+              type: currentType as ReactionType,
+              deviceId
+            })
+          });
+        }
       }
 
-      const data = await response.json();
+      // Wenn die neue Reaktion nicht die gleiche ist wie die aktuelle, füge sie hinzu
+      if (!currentReaction || currentReaction[0] !== reactionType) {
+        const response = await fetch(`/api/announcements/${announcementId}/reactions`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            type: reactionType,
+            deviceId
+          })
+        });
 
-      // Aktualisiere den Zustand mit den Daten vom Server
+        if (!response.ok) {
+          throw new Error('Fehler beim Aktualisieren der Reaktion');
+        }
+      }
+
+      // Aktualisiere den lokalen Zustand
       setAnnouncements(prevAnnouncements => 
-        prevAnnouncements.map(a => 
-          a.id === announcementId ? { ...a, reactions: data.reactions } : a
-        )
+        prevAnnouncements.map(a => {
+          if (a.id === announcementId) {
+            const updatedReactions = { ...a.reactions };
+            
+            // Entferne alle bestehenden Reaktionen des Geräts
+            Object.keys(updatedReactions).forEach(type => {
+              if (updatedReactions[type].deviceReactions[deviceId]) {
+                delete updatedReactions[type].deviceReactions[deviceId];
+                updatedReactions[type].count = Object.keys(updatedReactions[type].deviceReactions).length;
+              }
+            });
+
+            // Füge die neue Reaktion hinzu
+            if (!updatedReactions[reactionType]) {
+              updatedReactions[reactionType] = { count: 0, deviceReactions: {} };
+            }
+            updatedReactions[reactionType].deviceReactions[deviceId] = true;
+            updatedReactions[reactionType].count = Object.keys(updatedReactions[reactionType].deviceReactions).length;
+
+            return { ...a, reactions: updatedReactions };
+          }
+          return a;
+        })
       );
     } catch (error) {
       console.error('Fehler beim Aktualisieren der Reaktion:', error);
@@ -263,7 +257,6 @@ export default function InfoBoard({ isPWA = false, allowClipboard = false }: Inf
             <p className="text-gray-400 text-center">Keine aktuellen Informationen</p>
           ) : (
             announcements.map((announcement) => {
-              const groupColor = groupColors[announcement.groupId] || groupColors.default;
               return (
                 <div
                   key={announcement.id}
@@ -273,8 +266,8 @@ export default function InfoBoard({ isPWA = false, allowClipboard = false }: Inf
                       : 'border-opacity-30'
                   }`}
                   style={{
-                    backgroundColor: getBackgroundColor(groupColor, announcement.important ? (isPWA ? 0.4 : 0.25) : (isPWA ? 0.3 : 0.2)),
-                    borderColor: groupColor
+                    backgroundColor: getBackgroundColor(announcement.groupColor, announcement.important ? (isPWA ? 0.4 : 0.25) : (isPWA ? 0.3 : 0.2)),
+                    borderColor: announcement.groupColor
                   }}
                 >
                   <div className="flex-1 min-w-0">
@@ -283,11 +276,11 @@ export default function InfoBoard({ isPWA = false, allowClipboard = false }: Inf
                         <span
                           className={`${isPWA ? 'text-[10px]' : 'text-xs'} sm:text-xs px-2 sm:px-2 py-1 sm:py-1 rounded-full`}
                           style={{
-                            backgroundColor: getBackgroundColor(groupColor, isPWA ? 0.4 : 0.3),
-                            color: groupColor
+                            backgroundColor: getBackgroundColor(announcement.groupColor, isPWA ? 0.4 : 0.3),
+                            color: announcement.groupColor
                           }}
                         >
-                          {announcement.groupId}
+                          {announcement.groupName}
                         </span>
                         {announcement.important && (
                           <span className={`${isPWA ? 'text-[10px]' : 'text-xs'} sm:text-xs px-2 sm:px-2 py-1 sm:py-1 ${isPWA ? 'bg-red-300 text-red-700' : 'bg-red-200 text-red-600'} rounded-full font-medium`}>
@@ -322,7 +315,7 @@ export default function InfoBoard({ isPWA = false, allowClipboard = false }: Inf
                                 ? 'bg-white bg-opacity-20'
                                 : 'hover:bg-white hover:bg-opacity-20'
                             }`}
-                            style={{ color: groupColor }}
+                            style={{ color: announcement.groupColor }}
                           >
                             <span className="text-lg">{emoji}</span>
                             {count > 0 && (
