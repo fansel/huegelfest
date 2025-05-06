@@ -23,8 +23,14 @@ export interface Announcement {
   updatedAt: Date;
 }
 
+export interface GroupInfo {
+  id: string;
+  name: string;
+  color: string;
+}
+
 export interface GroupColors {
-  [key: string]: string;
+  [key: string]: string;  // key ist der Gruppenname, value ist die Farbe
 }
 
 export interface GroupColorSetting {

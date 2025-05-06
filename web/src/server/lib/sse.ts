@@ -15,14 +15,26 @@ export class SSEService {
 
   constructor() {
     this.startHeartbeat();
-    // Starte Cleanup nur wenn wir nicht in der Edge-Runtime sind
     if (typeof process !== 'undefined' && process.env.NEXT_RUNTIME !== 'edge') {
       this.startCleanup();
     }
   }
 
   private isControllerActive(client: Client): boolean {
-    return !client.isClosed && client.controller.desiredSize !== null;
+    try {
+      if (client.isClosed) {
+        return false;
+      }
+      // Prüfe, ob der Controller noch aktiv ist
+      const controller = client.controller;
+      if (!controller || controller.desiredSize === null) {
+        return false;
+      }
+      return true;
+    } catch (error) {
+      logger.debug('[SSE] Controller nicht mehr aktiv:', error);
+      return false;
+    }
   }
 
   private startHeartbeat() {
@@ -31,23 +43,33 @@ export class SSEService {
     }
     
     this.heartbeatInterval = setInterval(() => {
+      const clientsToRemove: Client[] = [];
+      
       this.clients.forEach(client => {
         try {
           if (this.isControllerActive(client)) {
-            client.controller.enqueue(
-              new TextEncoder().encode(
+            try {
+              const message = new TextEncoder().encode(
                 `data: ${JSON.stringify({ type: 'heartbeat', timestamp: Date.now() })}\n\n`
-              )
-            );
-            client.lastActivity = Date.now();
+              );
+              client.controller.enqueue(message);
+              client.lastActivity = Date.now();
+            } catch (error) {
+              logger.debug('[SSE] Fehler beim Senden des Heartbeats, markiere Client zum Entfernen:', error);
+              clientsToRemove.push(client);
+            }
           } else {
-            logger.debug('[SSE] Entferne inaktiven Client beim Heartbeat');
-            this.removeClient(client.controller);
+            clientsToRemove.push(client);
           }
         } catch (error) {
-          logger.error('[SSE] Fehler beim Senden des Heartbeats:', error);
-          this.removeClient(client.controller);
+          logger.error('[SSE] Fehler beim Verarbeiten des Heartbeats:', error);
+          clientsToRemove.push(client);
         }
+      });
+
+      // Entferne inaktive Clients außerhalb der forEach-Schleife
+      clientsToRemove.forEach(client => {
+        this.removeClient(client.controller);
       });
     }, this.HEARTBEAT_INTERVAL);
   }
@@ -79,6 +101,11 @@ export class SSEService {
       const clientToRemove = Array.from(this.clients).find(client => client.controller === controller);
       if (clientToRemove) {
         clientToRemove.isClosed = true;
+        try {
+          controller.close();
+        } catch (error) {
+          logger.debug('[SSE] Controller bereits geschlossen');
+        }
         this.clients.delete(clientToRemove);
         logger.info(`[SSE] Client entfernt. Verbleibende Clients: ${this.clients.size}`);
       }
@@ -101,7 +128,6 @@ export class SSEService {
           );
           client.lastActivity = Date.now();
         } else {
-          logger.debug('[SSE] Entferne inaktiven Client beim Update-Versuch');
           this.removeClient(client.controller);
         }
       } catch (error) {
@@ -116,7 +142,6 @@ export class SSEService {
       start: (controller) => {
         this.addClient(controller);
         
-        // Sende initiales Update
         try {
           const initData = { type: 'connected', timestamp: Date.now() };
           logger.debug('[SSE] Sende initiales Update:', initData);
