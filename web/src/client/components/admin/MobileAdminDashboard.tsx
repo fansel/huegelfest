@@ -32,10 +32,21 @@ const MobileAdminDashboard = ({
 
   const handleSaveAnnouncement = useCallback(
     (announcement: IAnnouncement) => {
-      const updatedAnnouncements = editingAnnouncement
-        ? announcements.map((a) => (a.id === announcement.id ? announcement : a))
-        : [...announcements, announcement];
-      onSaveAnnouncements(updatedAnnouncements);
+      if (editingAnnouncement) {
+        const updatedAnnouncement = {
+          ...editingAnnouncement,
+          ...announcement,
+          id: editingAnnouncement.id
+        };
+        const updatedAnnouncements = announcements.map((a) => 
+          a.id === editingAnnouncement.id ? updatedAnnouncement : a
+        );
+        onSaveAnnouncements(updatedAnnouncements);
+      } else {
+        onSaveAnnouncements([...announcements, announcement]);
+      }
+      // Reset everything
+      setEditingAnnouncement(undefined);
       setShowAnnouncementModal(false);
     },
     [announcements, editingAnnouncement, onSaveAnnouncements],
@@ -115,7 +126,7 @@ const MobileAdminDashboard = ({
                       className="inline-block px-2 py-1 text-xs font-semibold rounded-full"
                       style={{ backgroundColor: announcement.groupColor }}
                     >
-                      {announcement.groupId}
+                      {announcement.groupName}
                     </span>
                     {announcement.important && (
                       <span className="text-xs font-semibold text-red-600 bg-red-50 px-2 py-1 rounded-full">
@@ -181,6 +192,7 @@ const MobileAdminDashboard = ({
               </div>
               <div className="p-4">
                 <AnnouncementForm
+                  key={editingAnnouncement?.id || 'new'}
                   onSubmit={handleSaveAnnouncement}
                   initialData={editingAnnouncement}
                   groups={groups}

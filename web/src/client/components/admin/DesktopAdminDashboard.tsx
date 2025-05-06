@@ -43,10 +43,21 @@ const DesktopAdminDashboard = ({
 
   const handleSaveAnnouncement = useCallback(
     (announcement: IAnnouncement) => {
-      const updatedAnnouncements = editingAnnouncement
-        ? announcements.map((a) => (a.id === announcement.id ? announcement : a))
-        : [...announcements, announcement];
-      onSaveAnnouncements(updatedAnnouncements);
+      if (editingAnnouncement) {
+        const updatedAnnouncement = {
+          ...editingAnnouncement,
+          ...announcement,
+          id: editingAnnouncement.id
+        };
+        const updatedAnnouncements = announcements.map((a) => 
+          a.id === editingAnnouncement.id ? updatedAnnouncement : a
+        );
+        onSaveAnnouncements(updatedAnnouncements);
+      } else {
+        onSaveAnnouncements([...announcements, announcement]);
+      }
+      // Reset everything
+      setEditingAnnouncement(undefined);
     },
     [announcements, editingAnnouncement, onSaveAnnouncements],
   );
@@ -119,6 +130,7 @@ const DesktopAdminDashboard = ({
                 <div className="bg-white rounded-lg shadow p-6">
                   <h3 className="text-lg font-semibold text-[#460b6c] mb-4">Ankündigungen</h3>
                   <AnnouncementForm
+                    key={`form-${editingAnnouncement?.id || 'new'}`}
                     onSubmit={handleSaveAnnouncement}
                     initialData={editingAnnouncement}
                     groups={groups}
@@ -138,7 +150,7 @@ const DesktopAdminDashboard = ({
                             className="inline-block px-2 py-1 text-xs font-semibold rounded"
                             style={{ backgroundColor: announcement.groupColor }}
                           >
-                            {announcement.groupId}
+                            {announcement.groupName}
                           </span>
                           <div className="flex space-x-2">
                             <button
