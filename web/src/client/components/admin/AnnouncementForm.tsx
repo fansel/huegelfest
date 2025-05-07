@@ -1,197 +1,113 @@
-import { useState, useEffect, useCallback, memo } from 'react';
+import { useState, useEffect } from 'react';
+import { IAnnouncementCreate, IAnnouncement } from '@/types/announcement';
 import { GroupColors } from '@/types/types';
-import { IAnnouncement, IAnnouncementCreate } from '@/types/announcement';
+import { FaPlus, FaTrash } from 'react-icons/fa';
+import { toast } from 'react-hot-toast';
 
 interface AnnouncementFormProps {
-  onSubmit: (announcement: IAnnouncementCreate) => void;
-  initialData?: IAnnouncement;
+  announcement?: IAnnouncement;
   groups: GroupColors;
+  onSave: (announcement: IAnnouncementCreate) => Promise<void>;
+  onCancel: () => void;
 }
 
-const AnnouncementForm = memo(
-  ({ onSubmit, initialData, groups }: AnnouncementFormProps) => {
-    const [content, setContent] = useState(initialData?.content || '');
-    const [selectedGroupId, setSelectedGroupId] = useState(() => {
-      if (initialData?.groupName) {
-        return initialData.groupName;
-      }
-      const availableGroups = Object.keys(groups).filter(g => g !== 'default');
-      return availableGroups.length > 0 ? availableGroups[0] : '';
-    });
-    const [important, setImportant] = useState(initialData?.important || false);
-    const [isSubmitting, setIsSubmitting] = useState(false);
-    const [error, setError] = useState<string | null>(null);
-    const [success, setSuccess] = useState(false);
+const AnnouncementForm = ({ announcement, groups, onSave, onCancel }: AnnouncementFormProps) => {
+  const [content, setContent] = useState(announcement?.content || '');
+  const [groupId, setGroupId] = useState(announcement?.groupId || '');
+  const [isSubmitting, setIsSubmitting] = useState(false);
 
-    useEffect(() => {
-      if (initialData) {
-        setContent(initialData.content);
-        setSelectedGroupId(initialData.groupName);
-        setImportant(initialData.important || false);
-      } else {
-        // Reset form when initialData is undefined
+  useEffect(() => {
+    if (announcement) {
+      setContent(announcement.content);
+      setGroupId(announcement.groupId);
+    }
+  }, [announcement]);
+
+  const handleSubmit = async () => {
+    if (!content.trim()) {
+      toast.error('Bitte gib einen Inhalt ein.');
+      return;
+    }
+    if (!groupId) {
+      toast.error('Bitte wähle eine Gruppe aus.');
+      return;
+    }
+
+    setIsSubmitting(true);
+    try {
+      const announcementData: IAnnouncementCreate = {
+        id: announcement?.id,
+        content: content.trim(),
+        groupId,
+        createdAt: announcement?.createdAt || new Date(),
+        updatedAt: new Date(),
+      };
+
+      await onSave(announcementData);
+      if (!announcement) {
         setContent('');
-        const availableGroups = Object.keys(groups).filter(g => g !== 'default');
-        setSelectedGroupId(availableGroups.length > 0 ? availableGroups[0] : '');
-        setImportant(false);
+        setGroupId('');
       }
-    }, [initialData, groups]);
+    } catch (error) {
+      console.error('Fehler beim Speichern:', error);
+      toast.error('Die Ankündigung konnte nicht gespeichert werden.');
+    } finally {
+      setIsSubmitting(false);
+    }
+  };
 
-    const handleSubmit = useCallback(
-      async (e: React.FormEvent) => {
-        e.preventDefault();
-        setIsSubmitting(true);
-        setError(null);
-        setSuccess(false);
+  return (
+    <div className="bg-white p-4 rounded-lg">
+      <div className="flex justify-between items-center mb-4">
+        <h3 className="text-lg font-bold text-[#460b6c]">
+          {announcement ? 'Ankündigung bearbeiten' : 'Neue Ankündigung'}
+        </h3>
+      </div>
 
-        if (!selectedGroupId || selectedGroupId === 'default') {
-          setError('Bitte wählen Sie eine gültige Gruppe aus');
-          setIsSubmitting(false);
-          return;
-        }
+      <div className="space-y-3">
+        <div>
+          <textarea
+            value={content}
+            onChange={(e) => setContent(e.target.value)}
+            placeholder="Gebe hier deine Ankündigung ein..."
+            className="w-full p-2 border border-gray-300 rounded text-sm bg-white text-gray-700 placeholder-gray-400"
+            rows={3}
+          />
+        </div>
 
-        if (!initialData && content.trim() === '') {
-          setError('Bitte geben Sie einen Inhalt ein');
-          setIsSubmitting(false);
-          return;
-        }
-
-        const now = new Date();
-        const newAnnouncement: IAnnouncementCreate = {
-          content: content.trim(),
-          groupId: selectedGroupId,
-          important: important,
-          createdAt: initialData?.createdAt || now,
-          updatedAt: now,
-          id: initialData?.id
-        };
-
-        try {
-          await onSubmit(newAnnouncement);
-          setSuccess(true);
-
-          if (!initialData) {
-            setContent('');
-            const availableGroups = Object.keys(groups).filter(g => g !== 'default');
-            setSelectedGroupId(availableGroups.length > 0 ? availableGroups[0] : '');
-            setImportant(false);
-          }
-
-          setTimeout(() => {
-            setSuccess(false);
-          }, 3000);
-        } catch (error) {
-          console.error('Fehler beim Speichern:', error);
-          setError('Fehler beim Speichern der Ankündigung');
-        } finally {
-          setIsSubmitting(false);
-        }
-      },
-      [content, selectedGroupId, important, initialData, onSubmit, groups],
-    );
-
-    const handleContentChange = useCallback(
-      (e: React.ChangeEvent<HTMLTextAreaElement>) => {
-        setContent(e.target.value);
-      },
-      [],
-    );
-
-    const handleGroupChange = useCallback((e: React.ChangeEvent<HTMLSelectElement>) => {
-      const newGroupId = e.target.value;
-      console.log('Selected new group ID:', newGroupId);
-      setSelectedGroupId(newGroupId);
-    }, []);
-
-    const handleImportantChange = useCallback(
-      (e: React.ChangeEvent<HTMLInputElement>) => {
-        setImportant(e.target.checked);
-      },
-      [],
-    );
-
-    const availableGroups = Object.keys(groups).filter(g => g !== 'default');
-
-    return (
-      <form
-        onSubmit={handleSubmit}
-        className="bg-gray-50 p-4 rounded-lg border border-gray-200"
-      >
-        <h4 className="text-md sm:text-lg font-semibold text-[#460b6c] mb-3">
-          {initialData ? 'Ankündigung bearbeiten' : 'Neue Ankündigung'}
-        </h4>
-
-        {error && (
-          <div className="mb-4 p-3 bg-red-100 border border-red-400 text-red-700 rounded">
-            {error}
-          </div>
-        )}
-
-        {success && (
-          <div className="mb-4 p-3 bg-green-100 border border-green-400 text-green-700 rounded">
-            Ankündigung erfolgreich {initialData ? 'aktualisiert' : 'erstellt'}!
-          </div>
-        )}
-
-        <div className="space-y-4">
-          <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">Inhalt</label>
-            <textarea
-              value={content}
-              onChange={handleContentChange}
-              className="mt-1 block w-full rounded-md bg-white border border-gray-300 text-gray-700 placeholder-gray-400 shadow-sm focus:border-[#ff9900] focus:ring-[#ff9900] min-h-[100px] p-3"
-              rows={3}
-              required
-            />
-          </div>
-
-          <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">Gruppe</label>
-            <select
-              value={selectedGroupId}
-              onChange={handleGroupChange}
-              className="mt-1 block w-full rounded-md bg-white border border-gray-300 text-gray-700 shadow-sm focus:border-[#ff9900] focus:ring-[#ff9900] py-2 px-3"
-              required
-            >
-              <option value="" className="bg-white">
-                Bitte wählen...
-              </option>
-              {availableGroups.map((groupName) => (
-                <option key={groupName} value={groupName} className="bg-white">
-                  {groupName}
-                </option>
-              ))}
-            </select>
-          </div>
-
-          <div className="flex items-center">
-            <input
-              type="checkbox"
-              id="important"
-              checked={important}
-              onChange={handleImportantChange}
-              className="h-4 w-4 text-[#ff9900] focus:ring-[#ff9900] border-gray-300 rounded bg-white"
-            />
-            <label htmlFor="important" className="ml-2 block text-sm text-gray-700">
-              Wichtig
-            </label>
-          </div>
-
-          <button
-            type="submit"
-            disabled={isSubmitting}
-            className={`w-full bg-[#ff9900] text-white py-3 px-4 rounded-md hover:bg-orange-600 text-sm font-medium transition-colors ${
-              isSubmitting ? 'opacity-50 cursor-not-allowed' : ''
-            }`}
+        <div>
+          <select
+            value={groupId}
+            onChange={(e) => setGroupId(e.target.value)}
+            className="w-full p-2 border border-gray-300 rounded text-sm bg-white text-gray-700"
           >
-            {isSubmitting ? 'Wird gespeichert...' : initialData ? 'Aktualisieren' : 'Erstellen'}
+            <option value="">Wähle eine Gruppe</option>
+            {Object.entries(groups).map(([id, color]) => (
+              <option key={id} value={id}>
+                {id}
+              </option>
+            ))}
+          </select>
+        </div>
+
+        <div className="flex justify-end space-x-2">
+          <button
+            onClick={onCancel}
+            className="px-4 py-2 text-sm font-medium text-gray-700 bg-white border border-gray-300 rounded hover:bg-gray-50"
+          >
+            Abbrechen
+          </button>
+          <button
+            onClick={handleSubmit}
+            disabled={isSubmitting}
+            className="px-4 py-2 text-sm font-medium text-white bg-[#ff9900] rounded hover:bg-orange-600 disabled:opacity-50"
+          >
+            {isSubmitting ? 'Wird gespeichert...' : announcement ? 'Aktualisieren' : 'Speichern'}
           </button>
         </div>
-      </form>
-    );
-  },
-);
-
-AnnouncementForm.displayName = 'AnnouncementForm';
+      </div>
+    </div>
+  );
+};
 
 export default AnnouncementForm;

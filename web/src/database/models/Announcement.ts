@@ -1,15 +1,41 @@
 import mongoose, { Document, Model } from 'mongoose';
 import Group from './Group';
+import { ReactionType } from '@/types/types';
+
+interface IDeviceReaction {
+  type: ReactionType;
+  announcementId: string;
+}
 
 interface IAnnouncementDocument extends Document {
   content: string;
   date?: string;
   time?: string;
   groupId: mongoose.Types.ObjectId;
+  authorId: mongoose.Types.ObjectId;
   important: boolean;
   createdAt: Date;
   updatedAt: Date;
+  reactions: Record<ReactionType, {
+    count: number;
+    deviceReactions: Record<string, IDeviceReaction>;
+  }>;
 }
+
+const createDefaultReactions = () => {
+  const reactions: Record<ReactionType, {
+    count: number;
+    deviceReactions: Record<string, IDeviceReaction>;
+  }> = {} as any;
+  
+  ['thumbsUp', 'clap', 'laugh', 'surprised', 'heart'].forEach(type => {
+    reactions[type as ReactionType] = {
+      count: 0,
+      deviceReactions: {}
+    };
+  });
+  return reactions;
+};
 
 const announcementSchema = new mongoose.Schema({
   content: { type: String, required: true },
@@ -21,7 +47,27 @@ const announcementSchema = new mongoose.Schema({
     required: true,
     index: true
   },
-  important: { type: Boolean, default: false }
+  authorId: {
+    type: mongoose.Schema.Types.ObjectId,
+    ref: 'User',
+    required: false,
+    index: true
+  },
+  important: { type: Boolean, default: false },
+  reactions: {
+    type: Object,
+    of: {
+      count: { type: Number, default: 0 },
+      deviceReactions: {
+        type: Object,
+        of: {
+          type: { type: String, enum: ['thumbsUp', 'clap', 'laugh', 'surprised', 'heart'] },
+          announcementId: String
+        }
+      }
+    },
+    default: createDefaultReactions
+  }
 }, { 
   timestamps: true,
   toJSON: { 
@@ -43,11 +89,12 @@ announcementSchema.virtual('group', {
   justOne: true
 });
 
-// Virtuelle Felder für Reactions
-announcementSchema.virtual('reactions', {
-  ref: 'Reaction',
-  localField: '_id',
-  foreignField: 'announcementId'
+// Virtuelle Felder für den Autor
+announcementSchema.virtual('author', {
+  ref: 'User',
+  localField: 'authorId',
+  foreignField: '_id',
+  justOne: true
 });
 
 // Middleware für Validierung

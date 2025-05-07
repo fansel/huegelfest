@@ -20,11 +20,11 @@ export async function generateToken(payload: any) {
 
 export async function verifyToken(token: string) {
   try {
-    await jwtVerify(token, getSecret());
-    return true;
+    const { payload } = await jwtVerify(token, getSecret());
+    return payload;
   } catch (error) {
     logger.error('[Auth] Token-Verifizierung fehlgeschlagen:', error);
-    return false;
+    return null;
   }
 }
 

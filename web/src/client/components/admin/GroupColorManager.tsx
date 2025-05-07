@@ -7,10 +7,19 @@ interface GroupColorManagerProps {
   onSaveGroupColors: (colors: GroupColors) => void;
 }
 
+const generateRandomColor = () => {
+  const letters = '0123456789ABCDEF';
+  let color = '#';
+  for (let i = 0; i < 6; i++) {
+    color += letters[Math.floor(Math.random() * 16)];
+  }
+  return color;
+};
+
 export default function GroupColorManager({ onSaveGroupColors }: GroupColorManagerProps) {
   const [groups, setGroups] = useState<GroupColors>({ default: '#460b6c' });
   const [newGroupName, setNewGroupName] = useState('');
-  const [newGroupColor, setNewGroupColor] = useState('#460b6c');
+  const [newGroupColor, setNewGroupColor] = useState(generateRandomColor());
   const [isAddingGroup, setIsAddingGroup] = useState(false);
 
   useEffect(() => {
@@ -28,7 +37,7 @@ export default function GroupColorManager({ onSaveGroupColors }: GroupColorManag
       setGroups(updatedGroups);
       onSaveGroupColors(updatedGroups);
       setNewGroupName('');
-      setNewGroupColor('#460b6c');
+      setNewGroupColor(generateRandomColor());
       setIsAddingGroup(false);
     }
   };
@@ -55,7 +64,12 @@ export default function GroupColorManager({ onSaveGroupColors }: GroupColorManag
           Gruppenfarben
         </h3>
         <button
-          onClick={() => setIsAddingGroup(!isAddingGroup)}
+          onClick={() => {
+            setIsAddingGroup(!isAddingGroup);
+            if (!isAddingGroup) {
+              setNewGroupColor(generateRandomColor());
+            }
+          }}
           className="p-2 text-[#ff9900] hover:text-[#ff9900]/80 transition-colors"
         >
           <FaPlus size={20} />
@@ -63,6 +77,32 @@ export default function GroupColorManager({ onSaveGroupColors }: GroupColorManag
       </div>
 
       <div className="space-y-3">
+        {isAddingGroup && (
+          <div className="bg-gray-50 p-3 rounded-lg border border-gray-200">
+            <div className="flex items-center gap-3">
+              <input
+                type="color"
+                value={newGroupColor}
+                onChange={(e) => setNewGroupColor(e.target.value)}
+                className="w-10 h-10 rounded cursor-pointer flex-shrink-0"
+              />
+              <input
+                type="text"
+                value={newGroupName}
+                onChange={(e) => setNewGroupName(e.target.value)}
+                placeholder="Neue Gruppe"
+                className="flex-1 p-2 border border-gray-300 rounded text-sm bg-white text-gray-700 placeholder-gray-400"
+              />
+              <button
+                onClick={handleAddGroup}
+                className="p-2 text-[#ff9900] hover:text-[#ff9900]/80 transition-colors"
+              >
+                <FaPlus size={20} />
+              </button>
+            </div>
+          </div>
+        )}
+
         {Object.entries(groups).map(
           ([group, color]) =>
             group !== 'default' && (
@@ -86,41 +126,13 @@ export default function GroupColorManager({ onSaveGroupColors }: GroupColorManag
                     onClick={() => handleDelete(group)}
                     className="p-2 text-red-600 hover:text-red-800 flex-shrink-0"
                   >
-                    <FaTrash size={18} />
+                    <FaTrash size={20} />
                   </button>
                 </div>
               </div>
-            ),
+            )
         )}
       </div>
-
-      {isAddingGroup && (
-        <div className="mt-4 bg-gray-50 p-3 rounded-lg border border-gray-200">
-          <div className="space-y-3">
-            <input
-              type="text"
-              value={newGroupName}
-              onChange={(e) => setNewGroupName(e.target.value)}
-              placeholder="Gruppenname"
-              className="w-full p-2 border border-gray-300 rounded text-sm bg-white text-gray-700 placeholder-gray-400"
-            />
-            <div className="flex items-center gap-3">
-              <input
-                type="color"
-                value={newGroupColor}
-                onChange={(e) => setNewGroupColor(e.target.value)}
-                className="w-10 h-10 rounded cursor-pointer"
-              />
-              <button
-                onClick={handleAddGroup}
-                className="flex-1 py-2 px-4 rounded bg-[#ff9900] text-white text-sm hover:bg-orange-600 transition-colors"
-              >
-                Hinzufügen
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
     </div>
   );
 }

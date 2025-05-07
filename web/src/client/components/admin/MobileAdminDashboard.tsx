@@ -1,15 +1,16 @@
 import { useState, useCallback } from 'react';
-import { IAnnouncement } from '@/types/announcement';
+import { IAnnouncement, IAnnouncementCreate } from '@/types/announcement';
 import { GroupColors } from '@/types/types';
 import AnnouncementForm from './AnnouncementForm';
 import GroupColorManager from './GroupColorManager';
 import MusicManager from '../MusicManager';
 import TimelineManager from './TimelineManager';
-import { FaTimes } from 'react-icons/fa';
+import { useAuth } from '@/contexts/AuthContext';
+import { useRouter } from 'next/navigation';
 
 interface MobileAdminDashboardProps {
   announcements: IAnnouncement[];
-  onSaveAnnouncements: (announcements: IAnnouncement[]) => void;
+  onSaveAnnouncements: (announcement: IAnnouncement) => Promise<void>;
   onDeleteAnnouncement: (id: string) => void;
   groups: GroupColors;
   musicUrls: string[];
@@ -28,180 +29,175 @@ const MobileAdminDashboard = ({
 }: MobileAdminDashboardProps) => {
   const [editingAnnouncement, setEditingAnnouncement] = useState<IAnnouncement | undefined>();
   const [activeTab, setActiveTab] = useState<'announcements' | 'groups' | 'music' | 'timeline'>('announcements');
-  const [showAnnouncementModal, setShowAnnouncementModal] = useState(false);
+  const { logout, user } = useAuth();
+  const router = useRouter();
+
+  const handleLogout = async () => {
+    try {
+      await logout();
+      router.push('/');
+    } catch (error) {
+      console.error('Fehler beim Ausloggen:', error);
+    }
+  };
 
   const handleSaveAnnouncement = useCallback(
-    (announcement: IAnnouncement) => {
-      if (editingAnnouncement) {
-        const updatedAnnouncement = {
-          ...editingAnnouncement,
+    async (announcement: IAnnouncementCreate) => {
+      try {
+        const fullAnnouncement: IAnnouncement = {
           ...announcement,
-          id: editingAnnouncement.id
+          id: announcement.id || '',
+          groupName: groups[announcement.groupId] || announcement.groupId,
+          groupColor: groups[announcement.groupId] || '#ff9900',
+          reactions: {
+            thumbsUp: { count: 0, deviceReactions: {} },
+            clap: { count: 0, deviceReactions: {} },
+            laugh: { count: 0, deviceReactions: {} },
+            surprised: { count: 0, deviceReactions: {} },
+            heart: { count: 0, deviceReactions: {} }
+          }
         };
-        const updatedAnnouncements = announcements.map((a) => 
-          a.id === editingAnnouncement.id ? updatedAnnouncement : a
-        );
-        onSaveAnnouncements(updatedAnnouncements);
-      } else {
-        onSaveAnnouncements([...announcements, announcement]);
+
+        await onSaveAnnouncements(fullAnnouncement);
+        setEditingAnnouncement(undefined);
+      } catch (error) {
+        console.error('Fehler beim Speichern der Ankündigung:', error);
+        throw error;
       }
-      // Reset everything
-      setEditingAnnouncement(undefined);
-      setShowAnnouncementModal(false);
     },
-    [announcements, editingAnnouncement, onSaveAnnouncements],
+    [groups, onSaveAnnouncements],
   );
 
   return (
-    <div className="fixed inset-0 bg-[#460b6c]">
-      {/* Tabs */}
-      <div className="fixed top-0 left-0 right-0 bg-[#460b6c] z-10">
-        <nav className="flex justify-around px-2 py-3">
-          <button
-            onClick={() => setActiveTab('announcements')}
-            className={`flex-1 py-2 text-center font-medium text-sm ${
-              activeTab === 'announcements'
-                ? 'text-[#ff9900] border-b-2 border-[#ff9900]'
-                : 'text-[#ff9900]/60'
-            }`}
-          >
-            Ankündigungen
-          </button>
-          <button
-            onClick={() => setActiveTab('groups')}
-            className={`flex-1 py-2 text-center font-medium text-sm ${
-              activeTab === 'groups'
-                ? 'text-[#ff9900] border-b-2 border-[#ff9900]'
-                : 'text-[#ff9900]/60'
-            }`}
-          >
-            Gruppen
-          </button>
-          <button
-            onClick={() => setActiveTab('music')}
-            className={`flex-1 py-2 text-center font-medium text-sm ${
-              activeTab === 'music'
-                ? 'text-[#ff9900] border-b-2 border-[#ff9900]'
-                : 'text-[#ff9900]/60'
-            }`}
-          >
-            Musik
-          </button>
-          <button
-            onClick={() => setActiveTab('timeline')}
-            className={`flex-1 py-2 text-center font-medium text-sm ${
-              activeTab === 'timeline'
-                ? 'text-[#ff9900] border-b-2 border-[#ff9900]'
-                : 'text-[#ff9900]/60'
-            }`}
-          >
-            Timeline
-          </button>
-        </nav>
-      </div>
+    <div className="min-h-screen text-[#ff9900] p-4">
+      <div className="max-w-7xl mx-auto">
+        <div className="bg-[#460b6c]/80 backdrop-blur-sm rounded-lg shadow-lg overflow-hidden">
+          {/* Header mit Logout-Button */}
+          <div className="flex justify-between items-center px-4 py-3 border-b border-[#ff9900]/20">
+            <h1 className="text-lg font-semibold">Admin Dashboard</h1>
+            <button
+              onClick={handleLogout}
+              className="px-3 py-1.5 bg-red-600 hover:bg-red-700 text-white rounded-md transition-colors text-sm"
+            >
+              Ausloggen
+            </button>
+          </div>
 
-      {/* Content */}
-      <div className="pt-16 h-full">
-        {activeTab === 'announcements' && (
-          <div className="h-full bg-white">
-            <div className="p-4">
+          {/* Tabs */}
+          <div className="border-b border-[#ff9900]/20">
+            <nav className="flex space-x-4 px-4 overflow-x-auto">
               <button
-                onClick={() => {
-                  setEditingAnnouncement(undefined);
-                  setShowAnnouncementModal(true);
-                }}
-                className="w-full bg-[#ff9900] text-white py-3 px-4 rounded-lg font-medium"
+                onClick={() => setActiveTab('announcements')}
+                className={`py-3 px-2 border-b-2 font-medium text-sm whitespace-nowrap ${
+                  activeTab === 'announcements'
+                    ? 'border-[#ff9900] text-[#ff9900]'
+                    : 'border-transparent text-[#ff9900]/60 hover:text-[#ff9900] hover:border-[#ff9900]/40'
+                }`}
               >
-                Neue Ankündigung
+                Ankündigungen
               </button>
-            </div>
-            <div className="px-4 space-y-3">
-              {announcements.map((announcement) => (
-                <div
-                  key={`announcement-${announcement.id}`}
-                  className="bg-gray-50 p-3 rounded-lg border border-gray-200"
-                >
-                  <div className="flex justify-between items-center mb-2">
-                    <span
-                      className="inline-block px-2 py-1 text-xs font-semibold rounded-full"
-                      style={{ backgroundColor: announcement.groupColor }}
-                    >
-                      {announcement.groupName}
-                    </span>
-                    {announcement.important && (
-                      <span className="text-xs font-semibold text-red-600 bg-red-50 px-2 py-1 rounded-full">
-                        Wichtig
-                      </span>
-                    )}
-                  </div>
-                  <p className="text-gray-800 text-sm mb-2">{announcement.content}</p>
-                  <div className="flex justify-end space-x-2">
-                    <button
-                      onClick={() => {
-                        setEditingAnnouncement(announcement);
-                        setShowAnnouncementModal(true);
-                      }}
-                      className="text-sm text-blue-600 px-3 py-1 rounded-full bg-blue-50"
-                    >
-                      Bearbeiten
-                    </button>
-                    <button
-                      onClick={() => onDeleteAnnouncement(announcement.id)}
-                      className="text-sm text-red-600 px-3 py-1 rounded-full bg-red-50"
-                    >
-                      Löschen
-                    </button>
+              <button
+                onClick={() => setActiveTab('groups')}
+                className={`py-3 px-2 border-b-2 font-medium text-sm whitespace-nowrap ${
+                  activeTab === 'groups'
+                    ? 'border-[#ff9900] text-[#ff9900]'
+                    : 'border-transparent text-[#ff9900]/60 hover:text-[#ff9900] hover:border-[#ff9900]/40'
+                }`}
+              >
+                Gruppen
+              </button>
+              <button
+                onClick={() => setActiveTab('music')}
+                className={`py-3 px-2 border-b-2 font-medium text-sm whitespace-nowrap ${
+                  activeTab === 'music'
+                    ? 'border-[#ff9900] text-[#ff9900]'
+                    : 'border-transparent text-[#ff9900]/60 hover:text-[#ff9900] hover:border-[#ff9900]/40'
+                }`}
+              >
+                Musik
+              </button>
+              <button
+                onClick={() => setActiveTab('timeline')}
+                className={`py-3 px-2 border-b-2 font-medium text-sm whitespace-nowrap ${
+                  activeTab === 'timeline'
+                    ? 'border-[#ff9900] text-[#ff9900]'
+                    : 'border-transparent text-[#ff9900]/60 hover:text-[#ff9900] hover:border-[#ff9900]/40'
+                }`}
+              >
+                Timeline
+              </button>
+            </nav>
+          </div>
+
+          {/* Tab Content */}
+          <div className="p-4">
+            {activeTab === 'announcements' && (
+              <div className="space-y-6">
+                <div className="bg-white rounded-lg shadow p-4">
+                  <h3 className="text-lg font-semibold text-[#460b6c] mb-4">Ankündigungen</h3>
+                  <AnnouncementForm
+                    key={`form-${editingAnnouncement?.id || 'new'}`}
+                    announcement={editingAnnouncement}
+                    groups={groups}
+                    onSave={handleSaveAnnouncement}
+                    onCancel={() => setEditingAnnouncement(undefined)}
+                  />
+                </div>
+
+                <div className="bg-white rounded-lg shadow p-4">
+                  <h3 className="text-lg font-semibold text-[#460b6c] mb-4">Aktuelle Ankündigungen</h3>
+                  <div className="space-y-4">
+                    {announcements.map((announcement) => (
+                      <div
+                        key={`announcement-${announcement.id}`}
+                        className="bg-gray-50 p-4 rounded-lg border border-gray-200"
+                      >
+                        <div className="flex justify-between items-start mb-2">
+                          <span
+                            className="inline-block px-2 py-1 text-xs font-semibold rounded"
+                            style={{ backgroundColor: announcement.groupColor }}
+                          >
+                            {announcement.groupName}
+                          </span>
+                          <div className="flex space-x-2">
+                            <button
+                              onClick={() => setEditingAnnouncement(announcement)}
+                              className="text-blue-600 hover:text-blue-800"
+                            >
+                              Bearbeiten
+                            </button>
+                            <button
+                              onClick={() => onDeleteAnnouncement(announcement.id)}
+                              className="text-red-600 hover:text-red-800"
+                            >
+                              Löschen
+                            </button>
+                          </div>
+                        </div>
+                        <p className="text-gray-800">{announcement.content}</p>
+                        {announcement.important && (
+                          <span className="inline-block mt-2 text-xs font-semibold text-red-600">
+                            Wichtig
+                          </span>
+                        )}
+                      </div>
+                    ))}
                   </div>
                 </div>
-              ))}
-            </div>
-          </div>
-        )}
-        {activeTab === 'groups' && (
-          <div className="h-full bg-white">
-            <GroupColorManager onSaveGroupColors={onSaveGroupColors} />
-          </div>
-        )}
-        {activeTab === 'music' && (
-          <div className="h-full bg-white">
-            <MusicManager musicUrls={musicUrls} onSaveMusicUrls={onSaveMusicUrls} />
-          </div>
-        )}
-        {activeTab === 'timeline' && (
-          <div className="h-full bg-white">
-            <TimelineManager />
-          </div>
-        )}
-      </div>
-
-      {/* Announcement Modal */}
-      {showAnnouncementModal && (
-        <div className="fixed inset-0 bg-black/50 backdrop-blur-sm z-50">
-          <div className="fixed inset-0 flex items-center justify-center p-4">
-            <div className="bg-white rounded-lg w-full max-h-[90vh] overflow-y-auto">
-              <div className="sticky top-0 bg-white border-b border-gray-200 p-4 flex justify-between items-center">
-                <h3 className="text-lg font-semibold text-[#460b6c]">
-                  {editingAnnouncement ? 'Ankündigung bearbeiten' : 'Neue Ankündigung'}
-                </h3>
-                <button
-                  onClick={() => setShowAnnouncementModal(false)}
-                  className="text-gray-400 hover:text-gray-600"
-                >
-                  <FaTimes />
-                </button>
               </div>
-              <div className="p-4">
-                <AnnouncementForm
-                  key={editingAnnouncement?.id || 'new'}
-                  onSubmit={handleSaveAnnouncement}
-                  initialData={editingAnnouncement}
-                  groups={groups}
-                />
-              </div>
-            </div>
+            )}
+            {activeTab === 'groups' && (
+              <GroupColorManager onSaveGroupColors={onSaveGroupColors} />
+            )}
+            {activeTab === 'music' && (
+              <MusicManager musicUrls={musicUrls} onSaveMusicUrls={onSaveMusicUrls} />
+            )}
+            {activeTab === 'timeline' && (
+              <TimelineManager />
+            )}
           </div>
         </div>
-      )}
+      </div>
     </div>
   );
 };

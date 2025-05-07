@@ -10,6 +10,7 @@ import { AuthProvider } from '@/contexts/AuthContext';
 import { NetworkStatusProvider } from '@/contexts/NetworkStatusContext';
 import { NetworkStatusBanner } from '@/client/components/NetworkStatusBanner';
 import Init from './init';
+import { Toaster } from 'react-hot-toast';
 
 export const metadata: Metadata = {
   title: 'Hügelfest',
@@ -51,6 +52,7 @@ export default function RootLayout({
                 <main className="flex-grow pb-16 md:pb-0">{children}</main>
                 <Footer />
               </div>
+              <Toaster position="top-right" />
             </NetworkStatusProvider>
           </PWAProvider>
         </AuthProvider>

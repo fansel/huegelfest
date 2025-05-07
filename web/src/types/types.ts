@@ -8,11 +8,11 @@ export interface Announcement {
   groupColor: string;
   important: boolean;
   reactions: {
-    [key: string]: {
+    [key in ReactionType]: {
       count: number;
       deviceReactions: {
         [deviceId: string]: {
-          type: string;
+          type: ReactionType;
           announcementId: string;
         };
       };

@@ -51,7 +51,11 @@ export async function POST(request: Request) {
 
     const response = NextResponse.json({
       success: true,
-      user: { username, isAdmin: user.role === 'admin' }
+      user: {
+        id: user._id.toString(),
+        name: user.username,
+        isAdmin: user.role === 'admin'
+      }
     });
 
     // Setze den Auth-Cookie

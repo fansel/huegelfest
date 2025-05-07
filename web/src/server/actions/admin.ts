@@ -9,6 +9,8 @@ import { sseService } from '@/server/lib/sse';
 import Music from '@/database/models/Music';
 import { IAnnouncement } from '@/types/announcement';
 import { webPushService } from '@/server/lib/webpush';
+import { GroupService } from '@/server/services/GroupService';
+import mongoose from 'mongoose';
 
 
 
@@ -16,23 +18,77 @@ export async function saveAnnouncements(announcements: IAnnouncement[]): Promise
   try {
     logger.info('[Server Action] Speichere Ankündigungen:', { count: announcements.length });
     
-    // Speichere jede neue Ankündigung über die API
-    for (const announcement of announcements) {
-      const response = await fetch(`${process.env.NEXT_PUBLIC_BASE_URL}/api/announcements`, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({
-          content: announcement.content,
-          group: announcement.groupId,
-          important: announcement.important
-        })
-      });
-
-      if (!response.ok) {
-        throw new Error(`Fehler beim Speichern der Ankündigung: ${announcement.content}`);
+    await connectDB();
+    
+    // Erstelle neue Ankündigungen
+    const announcementDocuments = await Promise.all(announcements.map(async announcement => {
+      // Wenn die Ankündigung bereits eine ID hat, aktualisiere sie
+      if (announcement.id) {
+        const existingAnnouncement = await Announcement.findById(announcement.id);
+        if (existingAnnouncement) {
+          const group = await Group.findOne({ name: announcement.groupId });
+          if (!group) {
+            throw new Error(`Gruppe "${announcement.groupId}" nicht gefunden`);
+          }
+          
+          existingAnnouncement.content = announcement.content;
+          existingAnnouncement.groupId = group._id;
+          existingAnnouncement.important = announcement.important || false;
+          existingAnnouncement.date = announcement.date;
+          existingAnnouncement.time = announcement.time;
+          existingAnnouncement.updatedAt = new Date();
+          
+          await existingAnnouncement.save();
+          return existingAnnouncement;
+        }
       }
+      
+      // Für neue Ankündigungen
+      const group = await Group.findOne({ name: announcement.groupId });
+      if (!group) {
+        throw new Error(`Gruppe "${announcement.groupId}" nicht gefunden`);
+      }
+
+      const newAnnouncement = new Announcement({
+        content: announcement.content,
+        groupId: group._id,
+        important: announcement.important || false,
+        date: announcement.date,
+        time: announcement.time,
+        reactions: announcement.reactions || {
+          thumbsUp: { count: 0, deviceReactions: {} },
+          clap: { count: 0, deviceReactions: {} },
+          laugh: { count: 0, deviceReactions: {} },
+          surprised: { count: 0, deviceReactions: {} },
+          heart: { count: 0, deviceReactions: {} }
+        },
+        createdAt: new Date(),
+        updatedAt: new Date()
+      });
+      
+      await newAnnouncement.save();
+      return newAnnouncement;
+    }));
+    
+    // Sende SSE-Update
+    sseService.sendUpdateToAllClients();
+    
+    // Sende Push-Benachrichtigung
+    try {
+      webPushService.initialize();
+      if (webPushService.isInitialized()) {
+        await webPushService.sendNotificationToAll({
+          title: 'Neue Ankündigungen',
+          body: 'Die Ankündigungen wurden aktualisiert',
+          icon: '/icon-192x192.png',
+          badge: '/badge-96x96.png',
+          data: {
+            url: '/'
+          }
+        });
+      }
+    } catch (error) {
+      logger.error('[Server Action] Fehler beim Senden der Push-Benachrichtigung:', error);
     }
 
     logger.info('[Server Action] Ankündigungen erfolgreich gespeichert');
@@ -53,24 +109,28 @@ export async function loadAnnouncements(): Promise<IAnnouncement[]> {
       .sort({ createdAt: -1 })
       .lean();
       
-    return announcements.map(announcement => ({
-      id: announcement._id.toString(),
-      content: announcement.content,
-      date: announcement.date || '',
-      time: announcement.time || '',
-      groupId: announcement.groupId?.name || 'default',
-      groupColor: announcement.groupId?.color || '#ff9900',
-      important: announcement.important || false,
-      reactions: announcement.reactions || {
-        thumbsUp: { count: 0, deviceReactions: {} },
-        clap: { count: 0, deviceReactions: {} },
-        laugh: { count: 0, deviceReactions: {} },
-        surprised: { count: 0, deviceReactions: {} },
-        heart: { count: 0, deviceReactions: {} }
-      },
-      createdAt: new Date(announcement.createdAt),
-      updatedAt: new Date(announcement.updatedAt)
-    }));
+    return announcements.map(announcement => {
+      const group = announcement.groupId as any; // Type assertion für das populierte groupId
+      return {
+        id: announcement._id.toString(),
+        content: announcement.content,
+        date: announcement.date || '',
+        time: announcement.time || '',
+        groupId: group.name || 'default',
+        groupName: group.name || 'default',
+        groupColor: group.color || '#ff9900',
+        important: announcement.important || false,
+        reactions: announcement.reactions || {
+          thumbsUp: { count: 0, deviceReactions: {} },
+          clap: { count: 0, deviceReactions: {} },
+          laugh: { count: 0, deviceReactions: {} },
+          surprised: { count: 0, deviceReactions: {} },
+          heart: { count: 0, deviceReactions: {} }
+        },
+        createdAt: new Date(announcement.createdAt),
+        updatedAt: new Date(announcement.updatedAt)
+      };
+    });
   } catch (error) {
     logger.error('[Server Action] Fehler beim Laden der Ankündigungen:', error);
     if (error instanceof Error) {
@@ -170,5 +230,22 @@ export async function deleteAnnouncement(id: string): Promise<{ success: boolean
       throw new Error(`Fehler beim Löschen der Ankündigung: ${error.message}`);
     }
     throw new Error('Ein unerwarteter Fehler ist beim Löschen der Ankündigung aufgetreten');
+  }
+}
+
+export async function addNewGroup(groupName: string, color?: string): Promise<Record<string, string>> {
+  try {
+    await connectDB();
+    const groupService = GroupService.getInstance();
+    await groupService.createGroup(groupName, color);
+    
+    // Lade die aktualisierten Gruppenfarben
+    return await loadGroupColors();
+  } catch (error) {
+    logger.error('[Server Action] Fehler beim Hinzufügen der Gruppe:', error);
+    if (error instanceof Error) {
+      throw new Error(`Fehler beim Hinzufügen der Gruppe: ${error.message}`);
+    }
+    throw new Error('Ein unerwarteter Fehler ist beim Hinzufügen der Gruppe aufgetreten');
   }
 } 

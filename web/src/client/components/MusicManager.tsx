@@ -1,380 +1,114 @@
-import { useState, useEffect } from 'react';
-import { FaMusic, FaPlus, FaTrash, FaExclamationTriangle, FaCheck, FaLink } from 'react-icons/fa';
-import Image from 'next/image';
+import { useState } from 'react';
+import { FaPlus, FaTrash } from 'react-icons/fa';
 
-interface TrackInfo {
-  title: string;
-  author_name: string;
-  thumbnail_url: string;
-  author_url: string;
-  description: string;
-  html: string;
+interface MusicManagerProps {
+  musicUrls: string[];
+  onSaveMusicUrls: (urls: string[]) => void;
 }
 
-interface MusicEntry {
-  url: string;
-  trackInfo: TrackInfo;
-}
-
-interface PreviewData {
-  url: string;
-  trackInfo: TrackInfo;
-  status: 'loading' | 'success' | 'error';
-  message?: string;
-}
-
-function isValidSoundCloudUrl(url: string): boolean {
-  try {
-    const urlObj = new URL(url);
-    return (
-      urlObj.hostname === 'soundcloud.com' || urlObj.hostname.endsWith('.soundcloud.com')
-    );
-  } catch {
-    return false;
-  }
-}
-
-export default function MusicManager() {
-  const [musicEntries, setMusicEntries] = useState<MusicEntry[]>([]);
+const MusicManager = ({ musicUrls, onSaveMusicUrls }: MusicManagerProps) => {
   const [newUrl, setNewUrl] = useState('');
-  const [loading, setLoading] = useState(false);
-  const [error, setError] = useState<string | null>(null);
-  const [previewData, setPreviewData] = useState<PreviewData | null>(null);
-  const [successMessage, setSuccessMessage] = useState<string | null>(null);
-  const [deletingUrls, setDeletingUrls] = useState<Set<string>>(new Set());
-  const [isAddingTrack, setIsAddingTrack] = useState(false);
+  const [isAddingUrl, setIsAddingUrl] = useState(false);
+  const [isSubmitting, setIsSubmitting] = useState(false);
 
-  useEffect(() => {
-    loadMusic();
-  }, []);
-
-  const loadMusic = async () => {
-    try {
-      const response = await fetch('/api/music');
-      if (!response.ok) {
-        throw new Error('Fehler beim Laden der Musik');
-      }
-      const data = await response.json();
-      setMusicEntries(data.data || []);
-    } catch (error) {
-      console.error('Fehler beim Laden der Musik:', error);
-      setError('Fehler beim Laden der Musik');
-    }
-  };
-
-  const fetchTrackInfo = async (url: string) => {
-    try {
-      const response = await fetch('/api/music/preview', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({ url }),
-      });
-
-      if (!response.ok) {
-        throw new Error('Fehler beim Abrufen der Track-Informationen');
-      }
-
-      const data = await response.json();
-      return data;
-    } catch (error) {
-      console.error('Fehler beim Abrufen der Track-Informationen:', error);
-      throw error;
-    }
-  };
-
-  const handleUrlChange = (url: string) => {
-    setNewUrl(url);
-    setPreviewData(null);
-  };
-
-  const handlePreview = async () => {
-    if (!newUrl.trim()) return;
-
-    if (!isValidSoundCloudUrl(newUrl)) {
-      setPreviewData({
-        url: newUrl,
-        trackInfo: {} as TrackInfo,
-        status: 'error',
-        message: 'Bitte geben Sie eine gültige SoundCloud-URL ein',
-      });
+  const handleAddUrl = async () => {
+    if (!newUrl.trim()) {
+      alert('Bitte gib eine URL ein.');
       return;
     }
 
-    setPreviewData({ url: newUrl, trackInfo: {} as TrackInfo, status: 'loading' });
+    setIsSubmitting(true);
     try {
-      const trackInfo = await fetchTrackInfo(newUrl);
-      if (!trackInfo.title || !trackInfo.author_name) {
-        throw new Error('Ungültige Track-Informationen');
-      }
-      setPreviewData({ url: newUrl, trackInfo, status: 'success' });
-    } catch (error) {
-      console.error('Fehler beim Laden der Vorschau:', error);
-      let errorMessage = 'Fehler beim Laden der Vorschau';
-
-      if (error instanceof Error) {
-        if (error.message.includes('404')) {
-          errorMessage = 'Track nicht gefunden';
-        } else if (error.message.includes('403')) {
-          errorMessage = 'Zugriff verweigert';
-        } else if (error.message.includes('Ungültige Track-Informationen')) {
-          errorMessage = 'Track-Informationen konnten nicht abgerufen werden';
-        } else {
-          errorMessage = error.message;
-        }
-      }
-
-      setPreviewData({
-        url: newUrl,
-        trackInfo: {} as TrackInfo,
-        status: 'error',
-        message: errorMessage,
-      });
-    }
-  };
-
-  const handleAddUrl = async () => {
-    if (!newUrl.trim()) return;
-
-    setLoading(true);
-    setError(null);
-    setSuccessMessage(null);
-
-    try {
-      const response = await fetch('/api/music', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({ url: newUrl.trim() }),
-      });
-
-      if (!response.ok) {
-        const errorData = await response.json();
-        throw new Error(errorData.error || 'Fehler beim Hinzufügen der Musik');
-      }
-
-      const result = await response.json();
-
-      if (result.data) {
-        setMusicEntries((prevEntries) => {
-          const exists = prevEntries.some((entry) => entry.url === result.data.url);
-          if (exists) {
-            return prevEntries;
-          }
-          return [result.data, ...prevEntries];
-        });
-      }
-
+      const updatedUrls = [...musicUrls, newUrl.trim()];
+      await onSaveMusicUrls(updatedUrls);
       setNewUrl('');
-      setSuccessMessage('Musik erfolgreich hinzugefügt!');
-      setIsAddingTrack(false);
-      setTimeout(() => {
-        setSuccessMessage(null);
-      }, 2000);
+      setIsAddingUrl(false);
     } catch (error) {
-      console.error('Fehler beim Hinzufügen der Musik:', error);
-      setError(error instanceof Error ? error.message : 'Unbekannter Fehler');
+      console.error('Fehler beim Hinzufügen der URL:', error);
+      alert('Die URL konnte nicht hinzugefügt werden.');
     } finally {
-      setLoading(false);
+      setIsSubmitting(false);
     }
   };
 
-  const handleRemoveUrl = async (url: string) => {
-    setDeletingUrls((prev) => new Set(prev).add(url));
+  const handleDeleteUrl = async (index: number) => {
+    setIsSubmitting(true);
     try {
-      const response = await fetch('/api/music', {
-        method: 'DELETE',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({ url }),
-      });
-
-      if (!response.ok) {
-        throw new Error('Fehler beim Entfernen der Musik');
-      }
-
-      setMusicEntries((prevEntries) => prevEntries.filter((entry) => entry.url !== url));
+      const updatedUrls = musicUrls.filter((_, i) => i !== index);
+      await onSaveMusicUrls(updatedUrls);
     } catch (error) {
-      console.error('Fehler beim Entfernen der Musik:', error);
-      setError(error instanceof Error ? error.message : 'Unbekannter Fehler');
+      console.error('Fehler beim Löschen der URL:', error);
+      alert('Die URL konnte nicht gelöscht werden.');
     } finally {
-      setDeletingUrls((prev) => {
-        const next = new Set(prev);
-        next.delete(url);
-        return next;
-      });
+      setIsSubmitting(false);
     }
   };
 
   return (
     <div className="bg-white p-4 rounded-lg">
       <div className="flex justify-between items-center mb-4">
-        <h2 className="text-lg font-bold text-[#460b6c] flex items-center">
-          <FaMusic className="mr-2" />
-          Musik
-        </h2>
+        <h3 className="text-lg font-bold text-[#460b6c]">
+          Musik-URLs
+        </h3>
         <button
-          onClick={() => setIsAddingTrack(!isAddingTrack)}
+          onClick={() => setIsAddingUrl(!isAddingUrl)}
           className="p-2 text-[#ff9900] hover:text-[#ff9900]/80 transition-colors"
         >
           <FaPlus size={20} />
         </button>
       </div>
 
-      {error && (
-        <div className="bg-red-100 border border-red-400 text-red-700 px-4 py-3 rounded mb-4 flex items-center">
-          <FaExclamationTriangle className="mr-2" />
-          {error}
-        </div>
-      )}
-
-      {successMessage && (
-        <div className="bg-green-100 border border-green-400 text-green-700 px-4 py-3 rounded mb-4 flex items-center">
-          <FaCheck className="mr-2" />
-          {successMessage}
-        </div>
-      )}
-
-      {isAddingTrack && (
-        <div className="mb-4 bg-gray-50 p-3 rounded-lg border border-gray-200">
-          <div className="space-y-3">
-            <div className="flex items-center gap-2">
-              <FaLink className="text-gray-400" />
-              <input
-                type="text"
-                value={newUrl}
-                onChange={(e) => handleUrlChange(e.target.value)}
-                placeholder="SoundCloud-URL eingeben"
-                className="flex-1 p-2 border border-gray-300 rounded text-sm bg-white text-gray-700 placeholder-gray-400"
-                disabled={loading}
-              />
-            </div>
-            <div className="flex gap-2">
-              <button
-                onClick={handlePreview}
-                disabled={loading || !newUrl.trim()}
-                className="flex-1 py-2 px-4 rounded bg-gray-200 text-gray-700 text-sm hover:bg-gray-300 transition-colors disabled:opacity-50"
-              >
-                Vorschau
-              </button>
-              <button
-                onClick={handleAddUrl}
-                disabled={loading || !newUrl.trim()}
-                className="flex-1 py-2 px-4 rounded bg-[#ff9900] text-white text-sm hover:bg-orange-600 transition-colors disabled:opacity-50"
-              >
-                {loading ? (
-                  <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin mx-auto" />
-                ) : (
-                  'Hinzufügen'
-                )}
-              </button>
-            </div>
-          </div>
-
-          {previewData && (
-            <div
-              className={`mt-3 bg-white p-3 rounded-lg border ${
-                previewData.status === 'error' ? 'border-red-400' : 'border-gray-200'
-              }`}
-            >
-              <div className="flex items-center space-x-3">
-                {previewData.status === 'loading' ? (
-                  <div className="w-12 h-12 rounded bg-gray-200 animate-pulse" />
-                ) : previewData.trackInfo.thumbnail_url ? (
-                  <div className="w-12 h-12 rounded overflow-hidden bg-gray-100 relative flex-shrink-0">
-                    <Image
-                      src={previewData.trackInfo.thumbnail_url}
-                      alt={previewData.trackInfo.title || 'Track Cover'}
-                      width={48}
-                      height={48}
-                      className="object-cover w-full h-full"
-                      onError={(e: React.SyntheticEvent<HTMLImageElement>) => {
-                        const target = e.currentTarget;
-                        target.style.display = 'none';
-                        target.parentElement?.classList.add(
-                          'bg-gradient-to-br',
-                          'from-purple-500',
-                          'to-pink-500',
-                        );
-                      }}
-                    />
-                  </div>
-                ) : (
-                  <div className="w-12 h-12 rounded bg-gradient-to-br from-purple-500 to-pink-500 flex items-center justify-center">
-                    <FaMusic className="text-white" size={24} />
-                  </div>
-                )}
-                <div className="flex-1 min-w-0">
-                  <h3 className="font-medium text-sm truncate">
-                    {previewData.status === 'loading'
-                      ? 'Lade Vorschau...'
-                      : previewData.trackInfo.title}
-                  </h3>
-                  <p className="text-xs text-gray-600 truncate">
-                    {previewData.status === 'loading'
-                      ? 'Bitte warten...'
-                      : previewData.trackInfo.author_name}
-                  </p>
-                  {previewData.status === 'error' && (
-                    <p className="text-xs text-red-600 mt-1">{previewData.message}</p>
-                  )}
-                </div>
-              </div>
-            </div>
-          )}
-        </div>
-      )}
-
       <div className="space-y-3">
-        {musicEntries.map((entry) => (
-          <div key={entry.url} className="bg-gray-50 p-3 rounded-lg border border-gray-200">
+        {musicUrls.map((url, index) => (
+          <div
+            key={`url-${index}`}
+            className="bg-gray-50 p-3 rounded-lg border border-gray-200"
+          >
             <div className="flex items-center gap-3">
-              <div className="w-12 h-12 rounded overflow-hidden bg-gray-100 relative flex-shrink-0">
-                {entry.trackInfo.thumbnail_url ? (
-                  <Image
-                    src={entry.trackInfo.thumbnail_url}
-                    alt={entry.trackInfo.title || 'Track Cover'}
-                    width={48}
-                    height={48}
-                    className="object-cover w-full h-full"
-                    onError={(e: React.SyntheticEvent<HTMLImageElement>) => {
-                      const target = e.currentTarget;
-                      target.style.display = 'none';
-                      target.parentElement?.classList.add(
-                        'bg-gradient-to-br',
-                        'from-purple-500',
-                        'to-pink-500',
-                      );
-                    }}
-                  />
-                ) : (
-                  <div className="w-full h-full bg-gradient-to-br from-purple-500 to-pink-500 flex items-center justify-center">
-                    <FaMusic className="text-white" size={24} />
-                  </div>
-                )}
-              </div>
               <div className="flex-1 min-w-0">
-                <h3 className="font-medium text-sm truncate">{entry.trackInfo.title}</h3>
-                <p className="text-xs text-gray-600 truncate">{entry.trackInfo.author_name}</p>
+                <a
+                  href={url}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="text-blue-600 hover:text-blue-800 truncate block"
+                >
+                  {url}
+                </a>
               </div>
               <button
-                onClick={() => handleRemoveUrl(entry.url)}
-                disabled={deletingUrls.has(entry.url)}
-                className="p-2 text-red-600 hover:text-red-800 disabled:opacity-50 flex-shrink-0"
+                onClick={() => handleDeleteUrl(index)}
+                disabled={isSubmitting}
+                className="p-2 text-red-600 hover:text-red-800 flex-shrink-0 disabled:opacity-50"
               >
-                {deletingUrls.has(entry.url) ? (
-                  <div className="w-4 h-4 border-2 border-red-600 border-t-transparent rounded-full animate-spin" />
-                ) : (
-                  <FaTrash size={16} />
-                )}
+                <FaTrash size={18} />
               </button>
             </div>
           </div>
         ))}
       </div>
+
+      {isAddingUrl && (
+        <div className="mt-4 bg-gray-50 p-3 rounded-lg border border-gray-200">
+          <div className="space-y-3">
+            <input
+              type="url"
+              value={newUrl}
+              onChange={(e) => setNewUrl(e.target.value)}
+              placeholder="https://..."
+              className="w-full p-2 border border-gray-300 rounded text-sm bg-white text-gray-700 placeholder-gray-400"
+            />
+            <button
+              onClick={handleAddUrl}
+              disabled={isSubmitting}
+              className="w-full py-2 px-4 rounded bg-[#ff9900] text-white text-sm hover:bg-orange-600 transition-colors disabled:opacity-50"
+            >
+              {isSubmitting ? 'Wird gespeichert...' : 'URL hinzufügen'}
+            </button>
+          </div>
+        </div>
+      )}
     </div>
   );
-}
+};
+
+export default MusicManager;
