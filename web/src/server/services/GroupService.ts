@@ -14,13 +14,25 @@ export class GroupService {
     return GroupService.instance;
   }
 
-  public async createGroup(name: string, color: string): Promise<void> {
+  private generateRandomColor(): string {
+    const letters = '0123456789ABCDEF';
+    let color = '#';
+    for (let i = 0; i < 6; i++) {
+      color += letters[Math.floor(Math.random() * 16)];
+    }
+    return color;
+  }
+
+  public async createGroup(name: string, color?: string): Promise<void> {
     if (!Group) {
       await connectDB();
     }
 
     try {
-      await Group.create({ name, color });
+      await Group.create({ 
+        name, 
+        color: color || this.generateRandomColor() 
+      });
     } catch (error) {
       if (error.code === 11000) {
         throw new Error(`Eine Gruppe mit dem Namen "${name}" existiert bereits`);

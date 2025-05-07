@@ -1,16 +1,25 @@
 import { useState, useCallback } from 'react';
-import { IAnnouncement } from '@/types/announcement';
+import { IAnnouncement, IAnnouncementCreate } from '@/types/announcement';
 import { GroupColors } from '@/types/types';
 import AnnouncementForm from './AnnouncementForm';
 import GroupColorManager from './GroupColorManager';
-import MusicManager from '../MusicManager';
-import TimelineManager from './TimelineManager';
+import MusicManager from './MusicManager';
+import TimelineManager from './TimelineManager/index';
 import { useAuth } from '@/contexts/AuthContext';
 import { useRouter } from 'next/navigation';
+import { toast } from 'react-hot-toast';
+
+interface TimelineEvent {
+  id: string;
+  title: string;
+  description: string;
+  startTime: string;
+  endTime: string;
+}
 
 interface DesktopAdminDashboardProps {
   announcements: IAnnouncement[];
-  onSaveAnnouncements: (announcements: IAnnouncement[]) => void;
+  onSaveAnnouncements: (announcement: IAnnouncement) => Promise<void>;
   onDeleteAnnouncement: (id: string) => void;
   groups: GroupColors;
   musicUrls: string[];
@@ -29,38 +38,61 @@ const DesktopAdminDashboard = ({
 }: DesktopAdminDashboardProps) => {
   const [editingAnnouncement, setEditingAnnouncement] = useState<IAnnouncement | undefined>();
   const [activeTab, setActiveTab] = useState<'announcements' | 'groups' | 'music' | 'timeline'>('announcements');
-  const { logout } = useAuth();
+  const [isLoggingOut, setIsLoggingOut] = useState(false);
+  const [timelineEvents, setTimelineEvents] = useState<TimelineEvent[]>([]);
+  const { logout, user } = useAuth();
   const router = useRouter();
 
   const handleLogout = async () => {
+    setIsLoggingOut(true);
     try {
       await logout();
       router.push('/');
     } catch (error) {
       console.error('Fehler beim Ausloggen:', error);
+      setIsLoggingOut(false);
+      toast.error('Beim Ausloggen ist ein Fehler aufgetreten. Bitte versuche es erneut.');
     }
   };
 
   const handleSaveAnnouncement = useCallback(
-    (announcement: IAnnouncement) => {
-      if (editingAnnouncement) {
-        const updatedAnnouncement = {
-          ...editingAnnouncement,
+    async (announcement: IAnnouncementCreate) => {
+      try {
+        const fullAnnouncement: IAnnouncement = {
           ...announcement,
-          id: editingAnnouncement.id
+          id: announcement.id || '',
+          groupName: groups[announcement.groupId] || announcement.groupId,
+          groupColor: groups[announcement.groupId] || '#ff9900',
+          reactions: {
+            thumbsUp: { count: 0, deviceReactions: {} },
+            clap: { count: 0, deviceReactions: {} },
+            laugh: { count: 0, deviceReactions: {} },
+            surprised: { count: 0, deviceReactions: {} },
+            heart: { count: 0, deviceReactions: {} }
+          }
         };
-        const updatedAnnouncements = announcements.map((a) => 
-          a.id === editingAnnouncement.id ? updatedAnnouncement : a
-        );
-        onSaveAnnouncements(updatedAnnouncements);
-      } else {
-        onSaveAnnouncements([...announcements, announcement]);
+
+        await onSaveAnnouncements(fullAnnouncement);
+        setEditingAnnouncement(undefined);
+        toast.success(announcement.id ? 'Ankündigung wurde aktualisiert' : 'Ankündigung wurde erstellt');
+      } catch (error) {
+        console.error('Fehler beim Speichern der Ankündigung:', error);
+        toast.error('Die Ankündigung konnte nicht gespeichert werden.');
+        throw error;
       }
-      // Reset everything
-      setEditingAnnouncement(undefined);
     },
-    [announcements, editingAnnouncement, onSaveAnnouncements],
+    [groups, onSaveAnnouncements],
   );
+
+  const handleSaveTimelineEvents = useCallback(async (events: TimelineEvent[]) => {
+    try {
+      setTimelineEvents(events);
+      toast.success('Timeline wurde aktualisiert');
+    } catch (error) {
+      console.error('Fehler beim Speichern der Timeline:', error);
+      toast.error('Die Timeline konnte nicht gespeichert werden.');
+    }
+  }, []);
 
   return (
     <div className="min-h-screen text-[#ff9900] p-6">
@@ -71,9 +103,20 @@ const DesktopAdminDashboard = ({
             <h1 className="text-xl font-semibold">Admin Dashboard</h1>
             <button
               onClick={handleLogout}
-              className="px-4 py-2 bg-red-600 hover:bg-red-700 text-white rounded-md transition-colors"
+              disabled={isLoggingOut}
+              className="px-4 py-2 bg-red-600 hover:bg-red-700 text-white rounded-md transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2"
             >
-              Ausloggen
+              {isLoggingOut ? (
+                <>
+                  <svg className="animate-spin h-5 w-5 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                    <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
+                    <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                  </svg>
+                  <span>Wird ausgeloggt...</span>
+                </>
+              ) : (
+                'Ausloggen'
+              )}
             </button>
           </div>
 
@@ -131,9 +174,10 @@ const DesktopAdminDashboard = ({
                   <h3 className="text-lg font-semibold text-[#460b6c] mb-4">Ankündigungen</h3>
                   <AnnouncementForm
                     key={`form-${editingAnnouncement?.id || 'new'}`}
-                    onSubmit={handleSaveAnnouncement}
-                    initialData={editingAnnouncement}
+                    announcement={editingAnnouncement}
                     groups={groups}
+                    onSave={handleSaveAnnouncement}
+                    onCancel={() => setEditingAnnouncement(undefined)}
                   />
                 </div>
 
@@ -183,10 +227,18 @@ const DesktopAdminDashboard = ({
               <GroupColorManager onSaveGroupColors={onSaveGroupColors} />
             )}
             {activeTab === 'music' && (
-              <MusicManager musicUrls={musicUrls} onSaveMusicUrls={onSaveMusicUrls} />
+              <MusicManager 
+                urls={musicUrls} 
+                onSave={async (urls) => {
+                  await onSaveMusicUrls(urls);
+                }} 
+              />
             )}
             {activeTab === 'timeline' && (
-              <TimelineManager />
+              <div className="bg-white rounded-lg shadow p-6">
+                <h2 className="text-xl font-semibold mb-4">Timeline</h2>
+                <TimelineManager />
+              </div>
             )}
           </div>
         </div>

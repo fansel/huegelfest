@@ -2,6 +2,7 @@ import { IReaction } from '@/types/announcement';
 import mongoose from 'mongoose';
 import { connectDB } from '@/database/config/apiConnector';
 import { ReactionType } from '@/types/types';
+import Reaction from '@/database/models/Reaction';
 
 interface Reactions {
   [key: string]: {
@@ -14,10 +15,10 @@ interface Reactions {
 
 export class ReactionService {
   private static instance: ReactionService;
-  private Reaction: mongoose.Model<IReaction>;
+  private Reaction: typeof Reaction;
 
   private constructor() {
-    this.Reaction = mongoose.model<IReaction>('Reaction');
+    this.Reaction = Reaction;
   }
 
   public static getInstance(): ReactionService {
@@ -59,15 +60,40 @@ export class ReactionService {
       await connectDB();
     }
 
-    // Entferne zuerst alle bestehenden Reaktionen des Geräts für diese Ankündigung
-    await this.Reaction.deleteMany({ announcementId, deviceId });
+    try {
+      // Prüfe, ob bereits eine Reaktion dieses Typs existiert
+      const existingReaction = await this.Reaction.findOne({ 
+        announcementId, 
+        deviceId, 
+        type 
+      });
 
-    // Füge die neue Reaktion hinzu
-    await this.Reaction.create({
-      announcementId,
-      type,
-      deviceId
-    });
+      if (existingReaction) {
+        // Wenn die gleiche Reaktion existiert, lösche sie (Toggle-Verhalten)
+        await this.Reaction.deleteOne({ 
+          announcementId, 
+          deviceId, 
+          type 
+        });
+        return;
+      }
+
+      // Wenn eine andere Reaktion existiert, lösche sie zuerst
+      await this.Reaction.deleteMany({ 
+        announcementId, 
+        deviceId 
+      });
+
+      // Erstelle die neue Reaktion
+      await this.Reaction.create({
+        announcementId,
+        type,
+        deviceId
+      });
+    } catch (error) {
+      console.error('Fehler beim Verarbeiten der Reaktion:', error);
+      throw error;
+    }
   }
 
   public async removeReaction(announcementId: string, type: ReactionType, deviceId: string): Promise<void> {

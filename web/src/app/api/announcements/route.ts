@@ -19,21 +19,30 @@ export async function GET() {
     }
     
     const announcements = await Announcement.find()
-      .populate('groupId', 'name color')
-      .sort({ createdAt: -1 });
+      .populate('groupId')
+      .sort({ createdAt: -1 })
+      .lean();
     
-    // Transformiere die Ankündigungen, um die Gruppeninformationen korrekt zu setzen
-    const transformedAnnouncements = announcements.map(announcement => {
-      const doc = announcement.toObject();
-      return {
-        ...doc,
-        group: doc.groupId.name,
-        groupColor: doc.groupId.color,
-        _id: doc._id.toString(),
-        id: doc._id.toString()
-      };
-    });
-    
+    const transformedAnnouncements = announcements.map(announcement => ({
+      id: announcement._id.toString(),
+      content: announcement.content,
+      date: announcement.date || '',
+      time: announcement.time || '',
+      groupId: announcement.groupId?._id?.toString() || 'default',
+      groupName: announcement.groupId?.name || 'default',
+      groupColor: announcement.groupId?.color || '#ff9900',
+      important: announcement.important || false,
+      reactions: announcement.reactions || {
+        thumbsUp: { count: 0, deviceReactions: {} },
+        clap: { count: 0, deviceReactions: {} },
+        laugh: { count: 0, deviceReactions: {} },
+        surprised: { count: 0, deviceReactions: {} },
+        heart: { count: 0, deviceReactions: {} }
+      },
+      createdAt: announcement.createdAt,
+      updatedAt: announcement.updatedAt
+    }));
+
     return NextResponse.json(transformedAnnouncements);
   } catch (error) {
     logger.error('Fehler beim Laden der Ankündigungen:', { error });
@@ -141,7 +150,6 @@ export async function DELETE(request: Request) {
       deletedAnnouncement: {
         id: deletedAnnouncement._id,
         content: deletedAnnouncement.content,
-        author: deletedAnnouncement.author,
         date: deletedAnnouncement.date
       }
     });

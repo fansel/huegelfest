@@ -9,6 +9,11 @@ export interface IAnnouncementBase {
   important?: boolean;
 }
 
+interface IDeviceReaction {
+  type: ReactionType;
+  announcementId: string;
+}
+
 // Interface für Frontend-Anzeige
 export interface IAnnouncement extends IAnnouncementBase {
   id: string;
@@ -17,7 +22,7 @@ export interface IAnnouncement extends IAnnouncementBase {
   reactions: {
     [key in ReactionType]: {
       count: number;
-      deviceReactions: Record<string, boolean>;
+      deviceReactions: Record<string, IDeviceReaction>;
     };
   };
   createdAt: Date;
