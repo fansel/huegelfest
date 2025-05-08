@@ -2,18 +2,13 @@
 
 import React, { createContext, useContext, useEffect, useState } from 'react';
 
-interface PWAContextType {
+export interface PWAContextType {
   isPWA: boolean;
   isStandalone: boolean;
   isMobile: boolean;
 }
 
-// Initialisiere den Context mit Standardwerten
-const PWAContext = createContext<PWAContextType>({
-  isPWA: false,
-  isStandalone: false,
-  isMobile: false
-});
+const PWAContext = createContext<PWAContextType | undefined>(undefined);
 
 export function PWAProvider({ children }: { children: React.ReactNode }) {
   const [isPWA, setIsPWA] = useState(false);
@@ -22,24 +17,20 @@ export function PWAProvider({ children }: { children: React.ReactNode }) {
 
   useEffect(() => {
     // PWA Erkennung
-    const isStandaloneMode = window.matchMedia('(display-mode: standalone)').matches || 
-                           (window.navigator as Navigator & { standalone?: boolean }).standalone || 
-                           document.referrer.includes('android-app://');
-    
+    const isStandaloneMode = window.matchMedia('(display-mode: standalone)').matches ||
+      (window.navigator as Navigator & { standalone?: boolean }).standalone ||
+      document.referrer.includes('android-app://');
     // Mobile Erkennung
     const isMobileDevice = window.matchMedia('(max-width: 768px)').matches;
-    
     setIsPWA(isStandaloneMode);
     setIsStandalone(isStandaloneMode);
     setIsMobile(isMobileDevice);
-
     // Event Listener für Display Mode Änderungen
     const mediaQuery = window.matchMedia('(display-mode: standalone)');
     const handleChange = (e: MediaQueryListEvent) => {
       setIsPWA(e.matches);
       setIsStandalone(e.matches);
     };
-
     mediaQuery.addEventListener('change', handleChange);
     return () => mediaQuery.removeEventListener('change', handleChange);
   }, []);

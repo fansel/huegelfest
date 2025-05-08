@@ -1,126 +1,25 @@
 import { NextResponse } from 'next/server';
 import type { NextRequest } from 'next/server';
-import { jwtVerify } from 'jose';
-import { getAuthConfig } from '@/server/config/auth';
-
-// Typen für die API-Routen
-type HttpMethod = 'GET' | 'POST' | 'PUT' | 'DELETE';
-type RouteConfig = {
-  methods: HttpMethod[];
-};
-
-// Konfiguration der geschützten API-Routen (nur POST/PUT/DELETE)
-const protectedApiRoutes: Record<string, RouteConfig> = {
-  '/api/categories': {
-    methods: ['POST', 'PUT', 'DELETE']
-  },
-  '/api/timeline': {
-    methods: ['POST', 'PUT', 'DELETE']
-  },
-  '/api/announcements': {
-    methods: ['POST', 'DELETE']
-  },
-  '/api/music': {
-    methods: [ 'PUT', 'DELETE']
-  }
-};
-
-// Hilfsfunktion zur Token-Validierung
-async function verifyToken(token: string) {
-  try {
-    const { jwtSecret } = getAuthConfig();
-    await jwtVerify(token, new TextEncoder().encode(jwtSecret));
-    return true;
-  } catch {
-    return false;
-  }
-}
-
-// Hilfsfunktion zum Extrahieren des Tokens
-function getTokenFromRequest(request: NextRequest): string | undefined {
-  // Prüfe zuerst den Authorization Header
-  const authHeader = request.headers.get('authorization');
-  if (authHeader?.startsWith('Bearer ')) {
-    return authHeader.substring(7);
-  }
-  
-  // Fallback auf Cookie
-  return request.cookies.get('auth-token')?.value;
-}
+import { verifyToken } from './features/auth/services/authService';
 
 export async function middleware(request: NextRequest) {
-  const token = getTokenFromRequest(request);
-  const isAdminRoute = request.nextUrl.pathname.startsWith('/admin');
-  const isLoginRoute = request.nextUrl.pathname === '/login';
-  const isApiRoute = request.nextUrl.pathname.startsWith('/api');
-
-  // API-Routen Logik
-  if (isApiRoute) {
-    // Login-Route immer erlauben
-    if (request.nextUrl.pathname === '/api/auth/login') {
-      return NextResponse.next();
-    }
-
-    // Prüfe, ob die Route geschützt werden soll
-    const route = request.nextUrl.pathname;
-    const method = request.method as HttpMethod;
-    const routeConfig = protectedApiRoutes[route];
-
-    // Wenn die Route nicht in der Konfiguration ist oder die Methode nicht geschützt ist, erlaube den Zugriff
-    if (!routeConfig || !routeConfig.methods.includes(method)) {
-      return NextResponse.next();
-    }
-
-    // Für geschützte Routen Token prüfen
-    if (token) {
-      const isValid = await verifyToken(token);
-      if (!isValid) {
-        return new NextResponse(null, { status: 401 });
-      }
-    } else {
-      return new NextResponse(null, { status: 401 });
-    }
+  console.log('MIDDLEWARE WIRD AUSGEFÜHRT', request.nextUrl.pathname);
+  const token = request.cookies.get('authToken')?.value;
+  if (!token) {
+    return NextResponse.redirect(new URL('/login', request.url));
   }
-
-  // Frontend-Routen Logik
-  if (isLoginRoute) {
-    // Wenn bereits eingeloggt, weiter zu Admin
-    if (token) {
-      const isValid = await verifyToken(token);
-      if (isValid) {
-        return NextResponse.redirect(new URL('/admin', request.url));
-      }
-      // Token ungültig, Cookie löschen
-      const response = NextResponse.next();
-      response.cookies.delete('auth-token');
-      return response;
-    }
-    return NextResponse.next();
+  const payload = await verifyToken(token);
+  if (!payload) {
+    // Token ungültig oder abgelaufen
+    return NextResponse.redirect(new URL('/login', request.url));
   }
-
-  if (isAdminRoute) {
-    // Wenn nicht eingeloggt, weiter zu Login
-    if (!token) {
-      return NextResponse.redirect(new URL('/login', request.url));
-    }
-
-    const isValid = await verifyToken(token);
-    if (!isValid) {
-      const response = NextResponse.redirect(new URL('/login', request.url));
-      response.cookies.delete('auth-token');
-      return response;
-    }
-  }
-
+  // Optional: Admin-Check
+  // if (!payload.isAdmin) {
+  //   return NextResponse.redirect(new URL('/login', request.url));
+  // }
   return NextResponse.next();
 }
 
-// Konfiguriere, für welche Pfade die Middleware ausgeführt werden soll
 export const config = {
-  matcher: [
-    '/admin/:path*', 
-    '/login', 
-    '/api/:path*',
-    '/((?!api/push/notify).*)'  // Negativer Matcher für push/notify Route
-  ]
-};
+  matcher: ['/admin/:path*'], // Schützt alle /admin-Routen
+}; 
