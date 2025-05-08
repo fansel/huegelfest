@@ -1,0 +1,57 @@
+import { connectDB } from '@/database/config/apiConnector';
+import Category from '@/lib/db/models/Category';
+import { logger } from '@/lib/logger';
+
+export async function getCategories() {
+  await connectDB();
+  return await Category.find().sort({ name: 1 });
+}
+
+export async function createCategory(data: any) {
+  if (!data.name || !data.icon) {
+    throw new Error('Name und Icon sind erforderlich');
+  }
+  if (!data.icon.startsWith('Fa')) {
+    throw new Error('Icon muss mit "Fa" beginnen');
+  }
+  const categoryData = {
+    name: data.name,
+    label: data.name,
+    value: data.name.toLowerCase().replace(/[^a-z0-9]/g, '-'),
+    icon: data.icon,
+    color: '#FF9900',
+    description: data.name,
+    isDefault: false
+  };
+  const category = new Category(categoryData);
+  await category.save();
+  return category;
+}
+
+export async function updateCategory(id: string, updateData: any) {
+  if (!id) {
+    throw new Error('ID ist erforderlich');
+  }
+  if (updateData.value) {
+    const valueRegex = /^[a-z0-9-]+$/;
+    if (!valueRegex.test(updateData.value)) {
+      throw new Error('Der Wert darf nur Kleinbuchstaben, Zahlen und Bindestriche enthalten');
+    }
+  }
+  const category = await Category.findByIdAndUpdate(id, updateData, { new: true });
+  if (!category) {
+    throw new Error('Kategorie nicht gefunden');
+  }
+  return category;
+}
+
+export async function deleteCategory(id: string) {
+  if (!id) {
+    throw new Error('ID ist erforderlich');
+  }
+  const category = await Category.findByIdAndDelete(id);
+  if (!category) {
+    throw new Error('Kategorie nicht gefunden');
+  }
+  return { message: 'Kategorie erfolgreich gelöscht' };
+} 

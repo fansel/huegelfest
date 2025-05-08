@@ -2,17 +2,18 @@
 import React, { useEffect, useState } from 'react';
 import Image from 'next/image';
 import {
-  Announcement as AnnouncementType,
+  IAnnouncement as AnnouncementType,
   GroupColors,
   REACTION_EMOJIS,
   ReactionType,
-} from '@/types/types';
-import { loadAnnouncements, loadGroupColors } from '@/server/actions/admin';
-import Countdown from '@/client/components/Countdown';
-import Timeline from '@/client/components/Timeline';
-import Starfield from '@/client/components/Starfield';
-import InfoBoard from '@/client/components/InfoBoard';
-import { usePWA } from '@/contexts/PWAContext';
+} from '../shared/types/types';
+import { getAllAnnouncementsAction } from '../features/announcements/actions/getAllAnnouncements';
+import { getGroupColorsAction } from '../features/groups/actions/getGroupColors';
+import { Countdown } from '../shared/components/Countdown';
+import Timeline from '../features/timeline/components/Timeline';
+import { Starfield } from '../shared/components/Starfield';
+import InfoBoard from '../features/infoboard/components/InfoBoard';
+import { usePWA } from '../contexts/PWAContext';
 
 function InstallPrompt() {
   const [isIOS, setIsIOS] = useState(false);
@@ -63,8 +64,8 @@ export default function Home() {
   useEffect(() => {
     const loadData = async () => {
       const [loadedAnnouncements, loadedGroupColors] = await Promise.all([
-        loadAnnouncements(),
-        loadGroupColors(),
+        getAllAnnouncementsAction(),
+        getGroupColorsAction(),
       ]);
       setAnnouncements(loadedAnnouncements);
       setGroupColors(loadedGroupColors);
@@ -228,7 +229,6 @@ export default function Home() {
           </section>
         </div>
       </div>
-      <InstallPrompt />
     </div>
   );
 }

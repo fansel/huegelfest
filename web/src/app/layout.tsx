@@ -1,16 +1,12 @@
 import type { Metadata, Viewport } from "next";
-import { GeistSans } from 'geist/font/sans';
 import { GeistMono } from 'geist/font/mono';
 import { PublicEnvScript } from 'next-runtime-env';
-import "./globals.css";
-import Footer from "@/client/components/Footer";
-import PWAContainer from "@/client/components/PWAContainer";
+import "@/app/global.css";
 import { PWAProvider } from "@/contexts/PWAContext";
-import { AuthProvider } from '@/contexts/AuthContext';
-import { NetworkStatusProvider } from '@/contexts/NetworkStatusContext';
-import { NetworkStatusBanner } from '@/client/components/NetworkStatusBanner';
-import Init from './init';
 import { Toaster } from 'react-hot-toast';
+import { PWARegister } from "@/shared/components/PWARegister";
+import AppLayout from "@/shared/components/AppLayout";
+import { AuthProvider } from '@/features/auth/AuthContext';
 
 export const metadata: Metadata = {
   title: 'Hügelfest',
@@ -26,11 +22,7 @@ export const viewport: Viewport = {
   themeColor: '#460b6c',
 };
 
-export default function RootLayout({
-  children,
-}: {
-  children: React.ReactNode;
-}) {
+export default function RootLayout({ children }: { children: React.ReactNode }) {
   return (
     <html lang="de" className={GeistMono.className}>
       <head>
@@ -38,25 +30,17 @@ export default function RootLayout({
         <link rel="icon" type="image/png" sizes="32x32" href="/favicon-32x32.png" />
         <link rel="icon" type="image/png" sizes="16x16" href="/favicon-16x16.png" />
         <link rel="apple-touch-icon" href="/apple-touch-icon.png" />
+        <link rel="manifest" href="/manifest.json" />
       </head>
       <body className="antialiased min-h-screen flex flex-col">
-        <Init />
-        <AuthProvider>
-          <PWAProvider>
-            <NetworkStatusProvider>
-              <NetworkStatusBanner />
-              <div className="pwa-only">
-                <PWAContainer />
-              </div>
-              <div className="desktop-only">
-                <main className="flex-grow pb-16 md:pb-0">{children}</main>
-                <Footer />
-              </div>
-              <Toaster position="top-right" />
-            </NetworkStatusProvider>
-          </PWAProvider>
-        </AuthProvider>
+        <PWARegister />
+        <PWAProvider>
+          <AuthProvider>
+            <AppLayout>{children}</AppLayout>
+            <Toaster position="top-right" />
+          </AuthProvider>
+        </PWAProvider>
       </body>
     </html>
   );
-}
+} 

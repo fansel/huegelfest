@@ -1,1 +1,0 @@
-// Diese Datei wird nicht mehr benötigt, da die Konfiguration direkt in connector.ts ist 
