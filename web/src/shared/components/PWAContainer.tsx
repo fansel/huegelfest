@@ -1,7 +1,7 @@
 'use client';
 
 import { useState, useEffect } from 'react';
-import { Calendar, MapPin, Megaphone, Settings as SettingsIcon, Heart, Shield } from 'lucide-react';
+import { Calendar, MapPin, Megaphone, Settings as SettingsIcon, Heart, Shield, BookOpen } from 'lucide-react';
 import Timeline from '@/features/timeline/components/Timeline';
 import InfoBoard from '@/features/infoboard/components/InfoBoard';
 import Anreise from '@/features/anreise/components/page';
@@ -12,8 +12,9 @@ import PushNotificationSettings from '@/features/settings/components/PushNotific
 import Settings from '@/features/settings/components/Settings';
 import Image from 'next/image';
 import { useAuth } from '@/features/auth/AuthContext';
+import StampCardPage from '@/features/stampcard/page';
 
-type View = 'home' | 'anreise' | 'infoboard' | 'settings' | 'admin' | 'favorites';
+type View = 'home' | 'anreise' | 'infoboard' | 'settings' | 'admin' | 'favorites' | 'stampcard';
 
 const isDesktop = () => {
   if (typeof window === 'undefined') return false;
@@ -34,6 +35,7 @@ export default function PWAContainer({ children }: React.PropsWithChildren) {
   const [isLoading, setIsLoading] = useState(false);
   const [isDesktopDevice, setIsDesktopDevice] = useState(false);
   const { isAdmin } = useAuth();
+  const [betaStampcard, setBetaStampcard] = useState(() => typeof window !== 'undefined' && localStorage.getItem('beta_stampcard') === 'true');
 
   useEffect(() => {
     setIsDesktopDevice(isDesktop());
@@ -49,12 +51,19 @@ export default function PWAContainer({ children }: React.PropsWithChildren) {
     };
   }, []);
 
+  useEffect(() => {
+    const handler = () => setBetaStampcard(localStorage.getItem('beta_stampcard') === 'true');
+    window.addEventListener('storage', handler);
+    return () => window.removeEventListener('storage', handler);
+  }, []);
+
   // Navigation
   const baseNavItems = [
     { id: 'home', icon: Calendar, label: 'Timeline' },
     { id: 'anreise', icon: MapPin, label: 'Anreise' },
     { id: 'infoboard', icon: Megaphone, label: 'News' },
     { id: 'favorites', icon: Heart, label: 'Favoriten' },
+    ...(betaStampcard ? [{ id: 'stampcard', icon: BookOpen, label: 'Stempel' }] : []),
     { id: 'settings', icon: SettingsIcon, label: 'Einstellungen' }
   ];
   const navItems = isAdmin
@@ -92,6 +101,8 @@ export default function PWAContainer({ children }: React.PropsWithChildren) {
         return <Settings showStarfield={showStarfield} onToggleStarfield={() => setShowStarfield(!showStarfield)} />;
       case 'admin':
         return isAdmin ? <Admin /> : null;
+      case 'stampcard':
+        return betaStampcard ? <StampCardPage /> : null;
       default:
         return null;
     }

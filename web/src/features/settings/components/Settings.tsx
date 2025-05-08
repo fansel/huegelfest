@@ -4,6 +4,7 @@ import PushNotificationSettings from './PushNotificationSettings';
 import StarfieldSettings from './StarfieldSettings';
 import AdminSettings from './AdminSettings';
 import LegalNotice from './LegalNotice';
+import BetaSettings from './BetaSettings';
 
 
 interface SettingsProps {
@@ -27,6 +28,7 @@ export default function Settings({
       <div className="divide-y divide-[#460b6c]/20">
         <PushNotificationSettings />
         <StarfieldSettings showStarfield={showStarfield} onToggle={onToggleStarfield} />
+        <BetaSettings />
         <AdminSettings />
         <LegalNotice />
       </div>
