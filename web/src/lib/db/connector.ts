@@ -1,5 +1,5 @@
 import mongoose from 'mongoose';
-import { User } from './models/User';
+import { User } from './models/User.ts';
 // Passe ggf. logger-Import an, z.B. aus web/src/lib/logger
 
 const isEdgeRuntime = () => {

@@ -4,12 +4,12 @@ import Group from '@/lib/db/models/Group';
 import { revalidatePath } from 'next/cache';
 import { webPushService } from '@/lib/webpush/webPushService';
 import { logger } from '@/lib/logger';
-import { isServicesInitialized } from '@/lib/init';
 import { IAnnouncement } from '@/shared/types/types';
 import mongoose from 'mongoose';
+import { initServices } from '@/lib/initServices';
 
 export async function getAllAnnouncements() {
-  await connectDB();
+  await initServices();
   const announcements = await Announcement.find()
     .populate('groupId')
     .sort({ createdAt: -1 })
@@ -20,8 +20,6 @@ export async function getAllAnnouncements() {
     date: announcement.date || '',
     time: announcement.time || '',
     groupId: announcement.groupId?._id?.toString() || 'default',
-    groupName: announcement.groupId?.name || 'default',
-    groupColor: announcement.groupId?.color || '#ff9900',
     important: announcement.important || false,
     reactions: announcement.reactions || {
       thumbsUp: { count: 0, deviceReactions: {} },
@@ -31,33 +29,41 @@ export async function getAllAnnouncements() {
       heart: { count: 0, deviceReactions: {} }
     },
     createdAt: announcement.createdAt,
-    updatedAt: announcement.updatedAt
+    updatedAt: announcement.updatedAt,
+    groupInfo: {
+      id: announcement.groupId?._id?.toString() || 'default',
+      name: announcement.groupId?.name || 'default',
+      color: announcement.groupId?.color || '#ff9900'
+    }
   }));
 }
 
 export async function sendAnnouncementNotification(title: string, message: string) {
-  if (!isServicesInitialized()) {
-    throw new Error('Service nicht verfügbar');
+  await initServices();
+  if (webPushService.isInitialized()) {
+    await webPushService.sendNotificationToAll({
+      title,
+      body: message,
+      icon: '/icon-192x192.png',
+      badge: '/badge-96x96.png',
+      data: {
+        type: 'announcement',
+        timestamp: new Date().toISOString()
+      }
+    });
   }
-  await webPushService.sendNotificationToAll({
-    title,
-    body: message,
-    icon: '/icon-192x192.png',
-    badge: '/badge-96x96.png',
-    data: {
-      type: 'announcement',
-      timestamp: new Date().toISOString()
-    }
-  });
   return { status: 'success', message: 'Ankündigung erfolgreich gesendet' };
 }
 
 export async function deleteAnnouncement(id: string) {
-  await connectDB();
+  await initServices();
   if (id === 'all') {
     await Announcement.deleteMany({});
     revalidatePath('/');
     return { success: true, message: 'Alle Ankündigungen wurden erfolgreich gelöscht' };
+  }
+  if (!mongoose.Types.ObjectId.isValid(id)) {
+    return { success: false, message: 'Ungültige Ankündigungs-ID' };
   }
   const deletedAnnouncement = await Announcement.findByIdAndDelete(id);
   if (!deletedAnnouncement) {
@@ -76,7 +82,7 @@ export async function deleteAnnouncement(id: string) {
 }
 
 export async function updateAnnouncementReactions(id: string, reactions: any, deviceId: string) {
-  await connectDB();
+  await initServices();
   const announcement = await Announcement.findById(id);
   if (!announcement) {
     throw new Error('Ankündigung nicht gefunden');
@@ -87,26 +93,26 @@ export async function updateAnnouncementReactions(id: string, reactions: any, de
 }
 
 export async function saveAnnouncements(announcements: IAnnouncement[]): Promise<void> {
-  await connectDB();
+  await initServices();
   try {
-    // Default-Gruppe holen
-    const defaultGroup = await Group.findOne({ name: 'default' });
-    if (!defaultGroup) throw new Error('Default-Gruppe nicht gefunden');
     for (const announcement of announcements) {
-      // Finde die Gruppe anhand der ID
       let group = null;
-      if (announcement.groupId) {
+      if (
+        announcement.groupId &&
+        mongoose.Types.ObjectId.isValid(announcement.groupId)
+      ) {
         group = await Group.findById(announcement.groupId);
       }
       if (!group) {
+        const defaultGroup = await Group.findOne({ name: 'default' });
+        if (!defaultGroup) throw new Error('Default-Gruppe nicht gefunden');
         group = defaultGroup;
       }
-      // Wenn eine ID vorhanden ist, prüfe ob die Ankündigung existiert
       if (announcement.id) {
         const existingAnnouncement = await Announcement.findById(announcement.id);
         if (existingAnnouncement) {
           existingAnnouncement.content = announcement.content;
-          existingAnnouncement.groupId = group._id as mongoose.Types.ObjectId;
+          existingAnnouncement.groupId = group._id;
           existingAnnouncement.important = announcement.important || false;
           existingAnnouncement.date = announcement.date;
           existingAnnouncement.time = announcement.time;
@@ -115,10 +121,9 @@ export async function saveAnnouncements(announcements: IAnnouncement[]): Promise
           continue;
         }
       }
-      // Erstelle neue Ankündigung
       const newAnnouncement = new Announcement({
         content: announcement.content,
-        groupId: group._id.toString(),
+        groupId: group._id,
         important: announcement.important || false,
         date: announcement.date,
         time: announcement.time,
@@ -134,7 +139,6 @@ export async function saveAnnouncements(announcements: IAnnouncement[]): Promise
       });
       await newAnnouncement.save();
     }
-    // Sende Push-Benachrichtigung (optional)
     try {
       if (webPushService.isInitialized()) {
         await webPushService.sendNotificationToAll({
@@ -148,7 +152,6 @@ export async function saveAnnouncements(announcements: IAnnouncement[]): Promise
     } catch (error) {
       logger.error('[saveAnnouncements] Fehler beim Senden der Push-Benachrichtigung:', error);
     }
-    // Sende SSE-Update (optional, falls vorhanden)
     if (typeof global !== 'undefined' && (global as any).sseService) {
       try {
         (global as any).sseService.sendUpdateToAllClients();

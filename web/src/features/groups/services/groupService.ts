@@ -36,4 +36,14 @@ export async function updateGroupColor(name: string, color: string): Promise<{ s
     { upsert: true }
   );
   return { success: true };
+}
+
+export async function getGroupsArray(): Promise<{ id: string; name: string; color: string }[]> {
+  await connectDB();
+  const groups = await Group.find();
+  return groups.map((group: any) => ({
+    id: group._id.toString(),
+    name: group.name,
+    color: group.color,
+  }));
 } 

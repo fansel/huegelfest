@@ -1,6 +1,7 @@
+import { initServices } from '@/lib/initServices';
 import { webPushService } from '@/lib/webpush/webPushService';
 import { logger } from '@/lib/logger';
-import { isServicesInitialized } from '@/lib/init';
+import { isServicesInitialized } from '../../../../scripts/init';
 import { Subscriber } from '@/lib/db/models/Subscriber';
 
 export interface PushNotificationPayload {
@@ -18,20 +19,15 @@ export interface PushSubscriptionPayload {
 }
 
 export async function sendPushNotification(payload: PushNotificationPayload) {
-  if (!isServicesInitialized()) {
-    throw new Error('Services sind nicht initialisiert');
+  await initServices();
+  if (webPushService.isInitialized()) {
+    await webPushService.sendNotificationToAll(payload);
   }
-  if (!payload.title || !payload.body) {
-    throw new Error('Fehlende Pflichtfelder');
-  }
-  await webPushService.sendNotificationToAll(payload);
   return { status: 'success', message: 'Benachrichtigungen erfolgreich gesendet' };
 }
 
 export async function subscribePush(payload: PushSubscriptionPayload) {
-  if (!isServicesInitialized()) {
-    throw new Error('Services sind nicht initialisiert');
-  }
+  await initServices();
   const { endpoint, keys, deviceId } = payload;
   if (!endpoint || !keys || !deviceId) {
     throw new Error('Fehlende Pflichtfelder');

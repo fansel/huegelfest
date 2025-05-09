@@ -1,6 +1,6 @@
-import { connectDB } from '@/lib/db/connector';
 import { Timeline } from '@/lib/db/models/Timeline';
 import type { TimelineData } from '../types/types';
+import { initServices } from '@/lib/initServices';
 
 export interface TimelineDay {
   _id?: string;
@@ -38,14 +38,14 @@ function cleanTimelineData(timeline: any): TimelineData | null {
 }
 
 export async function getTimeline(): Promise<TimelineData | null> {
-  await connectDB();
-  const timeline = await Timeline.findOne().sort({ createdAt: -1 }).lean();
+  await initServices();
+  const timeline = await Timeline.findOne({}).sort({ createdAt: -1 }).lean();
   return cleanTimelineData(timeline);
 }
 
 export async function updateTimeline(data: TimelineData): Promise<TimelineData | null> {
-  await connectDB();
-  let timeline = await Timeline.findOne().sort({ createdAt: -1 });
+  await initServices();
+  let timeline = await Timeline.findOne({}).sort({ createdAt: -1 });
   if (timeline) {
     timeline.days = data.days;
     await timeline.save();
@@ -56,7 +56,7 @@ export async function updateTimeline(data: TimelineData): Promise<TimelineData |
 }
 
 export async function deleteTimeline(id: string): Promise<{ success: boolean; error?: string }> {
-  await connectDB();
+  await initServices();
   const timeline = await Timeline.findByIdAndDelete(id);
   if (!timeline) {
     return { success: false, error: 'Timeline nicht gefunden' };

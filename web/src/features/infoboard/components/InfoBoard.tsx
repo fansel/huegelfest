@@ -34,8 +34,14 @@ export default function InfoBoard({ isPWA = false, allowClipboard = false }: Inf
   const [isVisible, setIsVisible] = useState(false);
   const [deviceId, setDeviceId] = useState<string>('');
 
-  // Hilfsfunktion: Hex zu RGBA
-  const getBackgroundColor = (color: string, opacity: number) => {
+  // Hilfsfunktion: Hex zu RGBA mit Validierung und Fallback
+  const getBackgroundColor = (color: string, opacity: number): string => {
+    // Hex-Format prüfen: #RRGGBB
+    const isValidHex = typeof color === 'string' && /^#[0-9A-Fa-f]{6}$/.test(color);
+    if (!isValidHex) {
+      console.error(`[InfoBoard] Ungültiger Farbwert für getBackgroundColor: '${color}'. Fallback auf #cccccc.`);
+      color = '#cccccc';
+    }
     const r = parseInt(color.slice(1, 3), 16);
     const g = parseInt(color.slice(3, 5), 16);
     const b = parseInt(color.slice(5, 7), 16);
@@ -61,7 +67,13 @@ export default function InfoBoard({ isPWA = false, allowClipboard = false }: Inf
     const loadData = async () => {
       try {
         const loadedAnnouncements = await getAllAnnouncementsAction();
-        setAnnouncements(loadedAnnouncements);
+        setAnnouncements(
+          loadedAnnouncements.map((a: any) => ({
+            ...a,
+            groupName: a.groupName ?? a.groupInfo?.name ?? '',
+            groupColor: a.groupColor ?? a.groupInfo?.color ?? '#cccccc',
+          }))
+        );
       } catch (error) {
         console.error('[InfoBoard] Fehler beim Laden der Daten:', error);
         setAnnouncements([]);
@@ -145,11 +157,23 @@ export default function InfoBoard({ isPWA = false, allowClipboard = false }: Inf
       }
       // Nach Server-Update neu laden
       const updatedAnnouncements = await getAllAnnouncementsAction();
-      setAnnouncements(updatedAnnouncements);
+      setAnnouncements(
+        updatedAnnouncements.map((a: any) => ({
+          ...a,
+          groupName: a.groupName ?? a.groupInfo?.name ?? '',
+          groupColor: a.groupColor ?? a.groupInfo?.color ?? '#cccccc',
+        }))
+      );
     } catch (error) {
       console.error('[InfoBoard] Fehler beim Verarbeiten der Reaktion:', error);
       const updatedAnnouncements = await getAllAnnouncementsAction();
-      setAnnouncements(updatedAnnouncements);
+      setAnnouncements(
+        updatedAnnouncements.map((a: any) => ({
+          ...a,
+          groupName: a.groupName ?? a.groupInfo?.name ?? '',
+          groupColor: a.groupColor ?? a.groupInfo?.color ?? '#cccccc',
+        }))
+      );
     }
   };
 
