@@ -7,22 +7,15 @@ import { getAllAnnouncementsAction } from '@/features/announcements/actions/getA
 import { deleteAnnouncementAction } from '@/features/announcements/actions/deleteAnnouncement';
 import { saveAnnouncementsAction } from '@/features/announcements/actions/saveAnnouncementAction';
 import { IAnnouncement } from '@/shared/types/types';
-import AnnouncementFormDesktop from './desktop/AnnouncementForm';
-import AnnouncementListDesktop from './desktop/AnnouncementList';
-import AnnouncementListMobile from './desktop/AnnouncementList';
-import AnnouncementFormMobile from './mobile/AnnouncementFullscreenModal';
+import AnnouncementForm from './AnnouncementForm';
 
-interface AnnouncementManagerProps {
-  isMobile: boolean;
-}
-
-export default function AnnouncementManager({ isMobile }: AnnouncementManagerProps) {
+export default function AnnouncementManager() {
   const [announcements, setAnnouncements] = useState<IAnnouncement[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<Error | null>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [showForm, setShowForm] = useState(false);
-  const [editingAnnouncement, setEditingAnnouncement] = useState<IAnnouncement | undefined>();
+
 
   useEffect(() => {
     const fetchAnnouncements = async () => {
@@ -63,7 +56,6 @@ export default function AnnouncementManager({ isMobile }: AnnouncementManagerPro
         }))
       );
       setShowForm(false);
-      setEditingAnnouncement(undefined);
       toast.success('Ankündigung erfolgreich erstellt');
     } catch (err) {
       toast.error('Fehler beim Erstellen der Ankündigung');
@@ -114,35 +106,6 @@ export default function AnnouncementManager({ isMobile }: AnnouncementManagerPro
     return null;
   }
 
-  if (isMobile) {
-    return (
-      <div className="space-y-6">
-        <AnnouncementListMobile
-          announcements={announcements}
-          onEdit={setEditingAnnouncement}
-          onDelete={handleDelete}
-        />
-        <AnnouncementFormMobile
-          open={!!editingAnnouncement || showForm}
-          onClose={() => { setEditingAnnouncement(undefined); setShowForm(false); }}
-          onSave={handleSave}
-          isSubmitting={isSubmitting}
-          announcement={editingAnnouncement}
-          groups={[]}
-        />
-        <button
-          className="fixed bottom-20 right-6 z-50 bg-gradient-to-br from-[#ff9900] to-[#ffb84d] text-white rounded-full shadow-3xl w-20 h-20 flex items-center justify-center text-4xl focus:outline-none focus:ring-4 focus:ring-[#ff9900]/30 active:scale-95 transition-transform duration-150 animate-fab-glow border-4 border-white"
-          aria-label="Neue Ankündigung erstellen"
-          style={{ boxShadow: '0 12px 36px 0 rgba(255,153,0,0.35), 0 4px 12px 0 rgba(70,11,108,0.10)' }}
-          onClick={() => setShowForm(true)}
-        >
-          <FaPlus />
-        </button>
-      </div>
-    );
-  }
-
-  // Desktop-UI
   return (
     <div className="space-y-6">
       <div className="bg-white p-4 rounded-lg shadow-lg">
@@ -156,7 +119,7 @@ export default function AnnouncementManager({ isMobile }: AnnouncementManagerPro
           </button>
         </div>
         {showForm && (
-          <AnnouncementFormDesktop
+          <AnnouncementForm
             onSave={handleSave}
             isSubmitting={isSubmitting}
           />
@@ -164,11 +127,53 @@ export default function AnnouncementManager({ isMobile }: AnnouncementManagerPro
       </div>
       <div className="bg-white p-4 rounded-lg shadow-lg">
         <h3 className="text-lg font-bold text-[#460b6c] mb-4">Aktueller Ankündigungen</h3>
-        <AnnouncementListDesktop
-          announcements={announcements}
-          onEdit={setEditingAnnouncement}
-          onDelete={handleDelete}
-        />
+        <div className="space-y-4">
+          {announcements.length === 0 ? (
+            <p className="text-gray-500 text-center py-4">Keine Ankündigungen vorhanden</p>
+          ) : (
+            [...announcements]
+              .sort((a, b) => new Date(b.createdAt ?? '').getTime() - new Date(a.createdAt ?? '').getTime())
+              .map((announcement) => (
+                <div
+                  key={announcement.id}
+                  className="bg-gray-50 p-4 rounded-lg border border-gray-200 relative"
+                  style={{
+                    borderLeft: `4px solid ${announcement.groupColor ?? '#ff9900'}`
+                  }}
+                >
+                  <div className="flex justify-between items-start mb-1">
+                    <span />
+                    <span className="text-xs text-black whitespace-nowrap">
+                      {announcement.createdAt}
+                    </span>
+                  </div>
+                  <div className="flex justify-between items-start mb-2">
+                    <div className="flex items-center space-x-2">
+                      <span
+                        className="inline-block px-2 py-1 text-xs font-semibold rounded"
+                        style={{ backgroundColor: announcement.groupColor ?? '#ff9900' }}
+                      >
+                        {announcement.groupName ?? 'Gruppe'}
+                      </span>
+                      {announcement.important && (
+                        <span className="inline-block px-2 py-1 text-xs font-semibold bg-red-100 text-red-800 rounded">
+                          Wichtig
+                        </span>
+                      )}
+                    </div>
+                    <button
+                      onClick={() => handleDelete(announcement.id)}
+                      className="text-red-600 hover:text-red-800 focus:outline-none"
+                      aria-label="Ankündigung löschen"
+                    >
+                      <FaTrash className="h-4 w-4" />
+                    </button>
+                  </div>
+                  <p className="text-gray-800 whitespace-pre-wrap">{announcement.content}</p>
+                </div>
+              ))
+          )}
+        </div>
       </div>
     </div>
   );

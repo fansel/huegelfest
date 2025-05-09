@@ -1,6 +1,6 @@
 import webpush from 'web-push';
-import { Subscriber } from '@/lib/db/models/Subscriber';
-import { logger } from '@/lib/logger';
+import { Subscriber } from '../db/models/Subscriber.ts';
+import { logger } from '../logger.ts';
 
 interface PushNotificationPayload {
   title: string;
@@ -58,13 +58,8 @@ class WebPushService {
 
   public async sendNotification(subscription: webpush.PushSubscription, payload: any): Promise<void> {
     if (!this.initialized) {
-      await this.initialize();
+      throw new Error('WebPush-Service ist nicht initialisiert');
     }
-
-    if (!this.initialized) {
-      throw new Error('WebPush-Service konnte nicht initialisiert werden');
-    }
-
     try {
       await webpush.sendNotification(subscription, JSON.stringify(payload));
     } catch (error) {
@@ -76,7 +71,7 @@ class WebPushService {
   async sendNotificationToAll(payload: PushNotificationPayload) {
     if (!this.initialized) {
       logger.error('[WebPush] Service ist nicht initialisiert');
-      return;
+      throw new Error('WebPush-Service ist nicht initialisiert');
     }
 
     try {
@@ -157,7 +152,7 @@ class WebPushService {
   }
 
   getPublicKey(): string {
-    const key = env('NEXT_PUBLIC_VAPID_PUBLIC_KEY') || '';
+    const key = process.env.NEXT_PUBLIC_VAPID_PUBLIC_KEY || '';
     logger.debug('[WebPush] Öffentlicher Schlüssel abgerufen', {
       hasKey: !!key,
       keyLength: key.length
