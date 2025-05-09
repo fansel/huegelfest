@@ -5,7 +5,6 @@ import { Calendar, MapPin, Megaphone, Settings as SettingsIcon, Heart, Shield } 
 import Timeline from '@/features/timeline/components/Timeline';
 import InfoBoard from '@/features/infoboard/components/InfoBoard';
 import Anreise from '@/features/anreise/components/page';
-import Admin from '@/features/admin/admin/page';
 import { Starfield } from './Starfield';
 import { Footer } from './Footer';
 import PushNotificationSettings from '@/features/settings/components/PushNotificationSettings';
@@ -14,6 +13,7 @@ import Image from 'next/image';
 import { useAuth } from '@/features/auth/AuthContext';
 import BottomBar from '@/features/pwa/BottomBar';
 import MobileAdminDashboard from '@/features/admin/components/MobileAdminDashboard';
+import AdminDashboardWrapper from '@/features/admin/dashboard/AdminDashboardWrapper';
 
 
 type View =
@@ -79,7 +79,7 @@ export default function PWAContainer({ children }: React.PropsWithChildren) {
   // Content je nach Modus und Tab
   const renderContent = () => {
     if (mode === 'admin') {
-      return <MobileAdminDashboard />;
+      return <AdminDashboardWrapper activeAdminTab={adminActiveTab} />;
     } else {
       switch (activeTab) {
         case 'home':

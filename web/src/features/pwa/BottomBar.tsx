@@ -1,3 +1,4 @@
+'use client';
 import React from 'react';
 import { Calendar, MapPin, Megaphone, Settings as SettingsIcon, Heart, Shield, Users, Clock, SlidersHorizontal } from 'lucide-react';
 
