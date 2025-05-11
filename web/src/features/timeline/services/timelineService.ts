@@ -19,7 +19,15 @@ function cleanTimelineData(timeline: any): TimelineData | null {
       _id: day._id?.toString?.() ?? day._id,
       title: day.title,
       description: day.description,
-      date: typeof day.date === 'string' ? day.date : (day.date instanceof Date ? day.date.toISOString().split('T')[0] : ''),
+      date:
+        typeof day.date === 'string'
+          ? day.date
+          : (day.date instanceof Date
+              ? day.date.toISOString().split('T')[0]
+              : (day.date && typeof day.date === 'object' && '$date' in day.date
+                  ? new Date(day.date.$date).toISOString().split('T')[0]
+                  : '')
+            ),
       events: (day.events || []).map((event: any) => ({
         _id: event._id?.toString?.() ?? event._id,
         time: event.time,

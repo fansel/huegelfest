@@ -3,6 +3,7 @@ import { useAnnouncementsManager } from '../../hooks/useAnnouncementsManager';
 import { IAnnouncement } from '@/shared/types/types';
 import { FaPlus, FaTrash, FaEdit } from 'react-icons/fa';
 import { toast } from 'react-hot-toast';
+import { AnnouncementCard } from '@/features/announcements/components/AnnouncementCard';
 
 const AnnouncementsDesktop: React.FC = () => {
   const manager = useAnnouncementsManager();
@@ -134,52 +135,17 @@ const AnnouncementsDesktop: React.FC = () => {
             [...manager.announcements]
               .sort((a, b) => new Date(b.createdAt ?? '').getTime() - new Date(a.createdAt ?? '').getTime())
               .map((announcement) => (
-                <div
+                <AnnouncementCard
                   key={announcement.id}
-                  className="bg-gray-50 p-4 rounded-lg border border-gray-200 flex flex-col gap-2 relative transition-shadow hover:shadow-2xl"
-                  style={{ borderLeft: `8px solid ${announcement.groupColor ?? '#ff9900'}` }}
-                >
-                  <div className="flex justify-between items-center mb-2">
-                    <span className="text-xs text-gray-500 font-medium">
-                      {announcement.createdAt && !isNaN(new Date(announcement.createdAt).getTime())
-                        ? dateFormatter.format(new Date(announcement.createdAt))
-                        : ''}
-                    </span>
-                    <div className="flex space-x-3">
-                      <button
-                        onClick={() => setEditing(announcement)}
-                        className="rounded-full bg-blue-50 hover:bg-blue-200 active:scale-95 transition-all shadow w-9 h-9 flex items-center justify-center text-blue-600 hover:text-blue-800 focus:outline-none border border-blue-100"
-                        aria-label="Bearbeiten"
-                      >
-                        <FaEdit className="h-4 w-4" />
-                      </button>
-                      <button
-                        onClick={() => handleDelete(announcement.id)}
-                        className="rounded-full bg-red-50 hover:bg-red-200 active:scale-95 transition-all shadow w-9 h-9 flex items-center justify-center text-red-600 hover:text-red-800 focus:outline-none border border-red-100"
-                        aria-label="Löschen"
-                        disabled={deletingId === announcement.id}
-                      >
-                        <FaTrash className="h-4 w-4" />
-                      </button>
-                    </div>
-                  </div>
-                  <div className="flex items-center gap-2 mb-1">
-                    <span
-                      className="inline-block px-4 py-1 text-xs font-semibold rounded-full shadow-sm"
-                      style={{ backgroundColor: announcement.groupColor ?? '#ff9900', color: '#fff' }}
-                    >
-                      {announcement.groupName ?? 'Gruppe'}
-                    </span>
-                    {announcement.important && (
-                      <span className="inline-block px-4 py-1 text-xs font-semibold bg-red-100 text-red-700 rounded-full shadow-sm">
-                        Wichtig
-                      </span>
-                    )}
-                  </div>
-                  <p className="text-gray-900 text-base font-normal whitespace-pre-wrap leading-relaxed">
-                    {announcement.content}
-                  </p>
-                </div>
+                  content={announcement.content}
+                  groupName={announcement.groupName ?? 'Gruppe'}
+                  groupColor={announcement.groupColor}
+                  important={announcement.important}
+                  createdAt={announcement.createdAt}
+                  onEdit={() => setEditing(announcement)}
+                  onDelete={() => handleDelete(announcement.id)}
+                  isLoadingDelete={deletingId === announcement.id}
+                />
               ))
           )}
         </div>

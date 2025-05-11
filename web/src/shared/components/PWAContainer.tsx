@@ -12,8 +12,8 @@ import Settings from '@/features/settings/components/Settings';
 import Image from 'next/image';
 import { useAuth } from '@/features/auth/AuthContext';
 import BottomBar from '@/features/pwa/BottomBar';
-import MobileAdminDashboard from '@/features/admin/components/MobileAdminDashboard';
 import AdminDashboardWrapper from '@/features/admin/dashboard/AdminDashboardWrapper';
+import { FavoritesList } from '@/features/favorites/components/FavoritesList';
 
 
 type View =
@@ -89,7 +89,7 @@ export default function PWAContainer({ children }: React.PropsWithChildren) {
         case 'infoboard':
           return <InfoBoard isPWA={isPWA} allowClipboard={isDesktopDevice} />;
         case 'favorites':
-          return <Timeline showFavoritesOnly={true} allowClipboard={isDesktopDevice} />;
+          return <FavoritesList />;
         case 'settings':
           return <Settings showStarfield={showStarfield} onToggleStarfield={() => setShowStarfield(!showStarfield)} />;
         default:

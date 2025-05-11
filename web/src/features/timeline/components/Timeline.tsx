@@ -12,6 +12,9 @@ import {
 import * as Icons from 'react-icons/fa';
 import { fetchTimeline } from '../../timeline/actions/fetchTimeline';
 import { getCategoriesAction } from '../../categories/actions/getCategories';
+import { useFavorites } from '../../../features/favorites/hooks/useFavorites';
+import { FavoriteButton } from '../../../features/favorites/components/FavoriteButton';
+import { TimelineEventCard } from './TimelineEventCard';
 
 // Typen ggf. aus features/timeline/types/types importieren
 // import { Event, Category, TimelineData, TimelineProps } from '../types/types';
@@ -35,12 +38,15 @@ interface Category {
   isDefault?: boolean;
 }
 
+interface TimelineDay {
+  _id?: string;
+  title: string;
+  date?: string; // Optionales Datum
+  events: Event[];
+}
+
 interface TimelineData {
-  days: {
-    _id?: string;
-    title: string;
-    events: Event[];
-  }[];
+  days: TimelineDay[];
   categories: Category[];
   error?: string;
 }
@@ -56,52 +62,46 @@ const getIconComponent = (iconName: string) => {
   return IconComponent || FaQuestion;
 };
 
+// Hilfsfunktion zur Datumsformatierung (dd.mm.yyyy)
+const formatDate = (dateInput?: string | { $date: string }): string | null => {
+  if (!dateInput) return null;
+  let dateString: string | undefined;
+  if (typeof dateInput === 'string') {
+    dateString = dateInput;
+  } else if (typeof dateInput === 'object' && '$date' in dateInput) {
+    dateString = dateInput.$date;
+  }
+  if (!dateString) return null;
+  const date = new Date(dateString);
+  if (isNaN(date.getTime())) return null;
+  const day = String(date.getDate()).padStart(2, '0');
+  const month = String(date.getMonth() + 1).padStart(2, '0');
+  const year = date.getFullYear();
+  return `${day}.${month}.${year}`;
+};
+
 export default function Timeline({ showFavoritesOnly = false, allowClipboard = false }: TimelineProps) {
   const [timelineData, setTimelineData] = useState<TimelineData | null>(null);
   const [selectedDay, setSelectedDay] = useState(0);
   const [selectedCategories, setSelectedCategories] = useState<Set<string>>(new Set());
   const [lastUpdate, setLastUpdate] = useState<number>(Date.now());
+  const { favorites, addFavorite, removeFavorite, isFavorite } = useFavorites();
 
   useEffect(() => {
     const loadData = async () => {
       try {
         console.log('[Timeline] Starte Datenladung (Actions)');
-        // Timeline-Daten per Action laden
         const timelineResult = await fetchTimeline();
-        // Kategorien per Action laden
         const categoriesResult = await getCategoriesAction();
-
-        // Fehlerbehandlung
         if (!timelineResult || (Array.isArray((timelineResult as any).days) && (timelineResult as any).days.length === 0)) {
-          setTimelineData({
-            days: [],
-            categories: [],
-            error: 'Das Programm ist noch nicht bekanntgegeben',
-          });
+          setTimelineData({ days: [], categories: [], error: 'Das Programm ist noch nicht bekanntgegeben' });
           return;
         }
         if (!categoriesResult || !Array.isArray(categoriesResult)) {
-          setTimelineData({
-            days: [],
-            categories: [],
-            error: 'Kategorien konnten nicht geladen werden',
-          });
+          setTimelineData({ days: [], categories: [], error: 'Kategorien konnten nicht geladen werden' });
           return;
         }
-
-        // Favoriten aus localStorage
-        let favorites: Record<string, boolean> = {};
-        try {
-          const favoritesStr = localStorage.getItem('favorites');
-          if (favoritesStr) {
-            favorites = JSON.parse(favoritesStr);
-          }
-        } catch (error) {
-          console.error('[Timeline] Fehler beim Laden der Favoriten:', error);
-          favorites = {};
-        }
-
-        // Markiere favorisierte Events
+        // Markiere favorisierte Events über useFavorites
         const timelineWithFavorites = {
           ...timelineResult,
           categories: categoriesResult,
@@ -109,31 +109,21 @@ export default function Timeline({ showFavoritesOnly = false, allowClipboard = f
             ...day,
             events: day.events.map((event: Event) => ({
               ...event,
-              favorite: favorites[`${day.title}-${event.time}-${event.title}`] || false,
+              favorite: isFavorite(`${day.title}-${event.time}-${event.title}`),
             })),
           })),
         };
-
         setTimelineData(timelineWithFavorites);
       } catch (error) {
         console.error('[Timeline] Fehler beim Laden der Daten (Actions):', error);
-        setTimelineData({
-          days: [],
-          categories: [],
-          error: 'Ein Fehler ist aufgetreten. Bitte versuchen Sie es später erneut.'
-        });
+        setTimelineData({ days: [], categories: [], error: 'Ein Fehler ist aufgetreten. Bitte versuchen Sie es später erneut.' });
       }
     };
     loadData();
-    // Event-Listener für Timeline-Updates bleibt wie gehabt
-    const handleTimelineUpdate = () => {
-      setLastUpdate(Date.now());
-    };
+    const handleTimelineUpdate = () => { setLastUpdate(Date.now()); };
     window.addEventListener('timeline-update', handleTimelineUpdate);
-    return () => {
-      window.removeEventListener('timeline-update', handleTimelineUpdate);
-    };
-  }, [lastUpdate]);
+    return () => { window.removeEventListener('timeline-update', handleTimelineUpdate); };
+  }, [lastUpdate, isFavorite]);
 
   const toggleCategory = (category: string) => {
     const newCategories = new Set(selectedCategories);
@@ -143,33 +133,6 @@ export default function Timeline({ showFavoritesOnly = false, allowClipboard = f
       newCategories.add(category);
     }
     setSelectedCategories(newCategories);
-  };
-
-  const toggleFavorite = (dayTitle: string, event: Event) => {
-    if (!timelineData) return;
-
-    const eventKey = `${dayTitle}-${event.time}-${event.title}`;
-    const favorites = JSON.parse(localStorage.getItem('favorites') || '{}');
-    const newFavoriteState = !event.favorite;
-
-    // Aktualisiere localStorage
-    favorites[eventKey] = newFavoriteState;
-    localStorage.setItem('favorites', JSON.stringify(favorites));
-
-    // Aktualisiere Timeline-Daten
-    const updatedTimeline = {
-      ...timelineData,
-      days: timelineData.days.map((day) => ({
-        ...day,
-        events: day.events.map((e) =>
-          e.time === event.time && e.title === event.title
-            ? { ...e, favorite: newFavoriteState }
-            : e,
-        ),
-      })),
-    };
-
-    setTimelineData(updatedTimeline);
   };
 
   if (!timelineData) {
@@ -202,6 +165,11 @@ export default function Timeline({ showFavoritesOnly = false, allowClipboard = f
       return category && selectedCategories.has(category._id);
     }
   );
+
+  // Filter für showFavoritesOnly
+  const displayedEvents = showFavoritesOnly
+    ? filteredEvents.filter(event => isFavorite(`${timelineData.days[selectedDay].title}-${event.time}-${event.title}`))
+    : filteredEvents;
 
   return (
     <div className="w-full max-w-4xl mx-auto">
@@ -313,45 +281,54 @@ export default function Timeline({ showFavoritesOnly = false, allowClipboard = f
               if (daysWithFavorites.length === 0) {
                 return <p className="text-[#ff9900]/60 text-center py-4">Keine Favoriten vorhanden</p>;
               }
-              return daysWithFavorites.map(({ dayTitle, favoriteEvents }) => (
-                <div key={dayTitle}>
-                  <h4 className="text-[#ff9900] font-semibold mb-2 text-base">{dayTitle}</h4>
-                  <div className="space-y-4">
-                    {favoriteEvents.map((event) => {
-                      const category = timelineData.categories.find((c) => c._id === event.categoryId);
-                      const IconComponent = category ? getIconComponent(category.icon) : FaQuestion;
-                      return (
-                        <div
-                          key={`${dayTitle}-${event.time}-${event.title}`}
-                          className="bg-[#460b6c]/40 backdrop-blur-sm rounded-lg p-3 border border-[#ff9900]/20"
-                        >
-                          <div className="flex items-center justify-between">
-                            <div className="flex items-center space-x-3">
-                              <div className="p-2 bg-[#ff9900]/20 rounded-full">
-                                <IconComponent className="text-[#ff9900] text-lg" />
-                              </div>
-                              <div>
-                                <h5 className="text-[#ff9900] font-medium">
-                                  {event.time} - {event.title}
-                                </h5>
-                                {event.description && (
-                                  <p className="text-[#ff9900]/60 text-xs mt-1">{event.description}</p>
-                                )}
-                              </div>
-                            </div>
-                            <button
-                              onClick={() => toggleFavorite(dayTitle, event)}
-                              className="text-[#ff9900] p-1"
-                            >
-                              <FaHeart />
-                            </button>
-                          </div>
-                        </div>
-                      );
-                    })}
+              return daysWithFavorites.map(({ dayTitle, favoriteEvents }) => {
+                // Robuster Vergleich für Tag
+                const day = timelineData.days.find(
+                  (d) => d.title.trim().toLowerCase() === dayTitle.trim().toLowerCase()
+                );
+                // Debug-Ausgabe
+                console.log('Favoriten-Gruppierung:', { days: timelineData.days, dayTitle, foundDay: day });
+                return (
+                  <div key={dayTitle}>
+                    <h4 className="text-[#ff9900] font-semibold mb-2 text-base flex items-center gap-2">
+                      <span>{dayTitle}</span>
+                      {day?.date
+                        ? (
+                          <span className="text-xs text-[#ff9900]/60 font-normal ml-2">{formatDate(day.date)}</span>
+                        )
+                        : (
+                          <span className="text-xs text-red-400 ml-2">(kein Datum)</span>
+                        )}
+                    </h4>
+                    <div className="space-y-4">
+                      {favoriteEvents.map((event) => {
+                        const category = timelineData.categories.find((c) => c._id === event.categoryId);
+                        return (
+                          <TimelineEventCard
+                            key={`${dayTitle}-${event.time}-${event.title}`}
+                            event={event}
+                            dayTitle={dayTitle}
+                            category={category}
+                            getIconComponent={getIconComponent}
+                            favoriteButtonProps={{
+                              item: {
+                                id: `${dayTitle}-${event.time}-${event.title}`,
+                                type: 'timeline' as const,
+                                data: {
+                                  ...event,
+                                  dayTitle,
+                                  dayDate: day?.date,
+                                  categoryIcon: category?.icon,
+                                },
+                              },
+                            }}
+                          />
+                        );
+                      })}
+                    </div>
                   </div>
-                </div>
-              ));
+                );
+              });
             })()}
           </div>
         </div>
@@ -360,36 +337,29 @@ export default function Timeline({ showFavoritesOnly = false, allowClipboard = f
           {!showFavoritesOnly && (
             <div className="relative px-4">
               <div className="absolute left-4 top-0 bottom-0 w-0.5 bg-[#ff9900]/20" />
-              {filteredEvents.map((event) => {
+              {displayedEvents.map((event) => {
+                const day = timelineData.days[selectedDay];
                 const category = timelineData.categories.find((c) => c._id === event.categoryId);
-                const IconComponent = category ? getIconComponent(category.icon) : FaQuestion;
                 return (
-                  <div
+                  <TimelineEventCard
                     key={`${event.time}-${event.title}`}
-                    className="bg-[#460b6c]/50 backdrop-blur-sm border border-[#ff9900]/20 rounded-lg p-4"
-                  >
-                    <div className="flex items-start justify-between">
-                      <div className="flex items-center space-x-3">
-                        <div className="p-2 bg-[#ff9900]/20 rounded-full">
-                          <IconComponent className="text-[#ff9900] text-lg" />
-                        </div>
-                        <div>
-                          <h3 className="text-[#ff9900] font-medium">{event.title}</h3>
-                          <p className="text-white/80 text-sm mt-1">{event.description}</p>
-                        </div>
-                      </div>
-                      <div className="flex items-center space-x-2">
-                        <div className="text-[#ff9900] text-sm">{event.time}</div>
-                        <button
-                          onClick={() => toggleFavorite(timelineData.days[selectedDay].title, event)}
-                          className="text-[#ff9900] p-1"
-                          title={event.favorite ? 'Aus Favoriten entfernen' : 'Zu Favoriten hinzufügen'}
-                        >
-                          {event.favorite ? <FaHeart /> : <FaHeart style={{ fill: 'none', stroke: '#ff9900', strokeWidth: 2 }} />}
-                        </button>
-                      </div>
-                    </div>
-                  </div>
+                    event={event}
+                    dayTitle={day.title}
+                    category={category}
+                    getIconComponent={getIconComponent}
+                    favoriteButtonProps={{
+                      item: {
+                        id: `${day.title}-${event.time}-${event.title}`,
+                        type: 'timeline' as const,
+                        data: {
+                          ...event,
+                          dayTitle: day.title,
+                          dayDate: day.date,
+                          categoryIcon: category?.icon,
+                        },
+                      },
+                    }}
+                  />
                 );
               })}
             </div>

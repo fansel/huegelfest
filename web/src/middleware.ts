@@ -1,23 +1,24 @@
 import { NextResponse } from 'next/server';
 import type { NextRequest } from 'next/server';
-import { verifyToken } from './features/auth/services/authService';
+import { jwtVerify } from 'jose'; // jose ist Edge-kompatibel
+
+const JWT_SECRET = new TextEncoder().encode(process.env.JWT_SECRET);
 
 export async function middleware(request: NextRequest) {
-
   const token = request.cookies.get('authToken')?.value;
   if (!token) {
     return NextResponse.redirect(new URL('/login', request.url));
   }
-  const payload = await verifyToken(token);
-  if (!payload) {
-    // Token ungültig oder abgelaufen
+  try {
+    const { payload } = await jwtVerify(token, JWT_SECRET);
+    // Optional: Admin-Check
+    // if (!payload.isAdmin) {
+    //   return NextResponse.redirect(new URL('/login', request.url));
+    // }
+    return NextResponse.next();
+  } catch {
     return NextResponse.redirect(new URL('/login', request.url));
   }
-  // Optional: Admin-Check
-  // if (!payload.isAdmin) {
-  //   return NextResponse.redirect(new URL('/login', request.url));
-  // }
-  return NextResponse.next();
 }
 
 export const config = {

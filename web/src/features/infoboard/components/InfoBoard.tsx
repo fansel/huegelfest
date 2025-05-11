@@ -4,6 +4,7 @@ import { useState, useEffect, useRef, ReactNode } from 'react';
 import { IAnnouncement, ReactionType, REACTION_EMOJIS } from '../../../shared/types/types';
 import { getAllAnnouncementsAction } from '../../announcements/actions/getAllAnnouncements';
 import { updateAnnouncementReactionsAction } from '../../announcements/actions/updateAnnouncementReactions';
+import { AnnouncementCard } from '@/features/announcements/components/AnnouncementCard';
 
 const REACTION_TYPES: ReactionType[] = ['thumbsUp', 'clap', 'laugh', 'surprised', 'heart'];
 
@@ -180,72 +181,20 @@ export default function InfoBoard({ isPWA = false, allowClipboard = false }: Inf
   // UI-Rendering
   return (
     <div className="relative min-h-screen w-full">
-      <div ref={boardRef} className="relative z-10 px-0 sm:px-6 w-full">
+      <div ref={boardRef} className="relative z-10 w-full px-2 sm:px-6 mt-4 sm:mt-6 lg:mt-10">
         <div className="space-y-2 sm:space-y-4 w-full">
           {announcements.length === 0 ? (
             <p className="text-gray-400 text-center">Keine aktuellen Informationen</p>
           ) : (
             announcements.map((announcement) => (
-              <div
+              <AnnouncementCard
                 key={announcement.id}
-                className={`w-full p-4 sm:p-4 ${isPWA ? 'rounded-2xl' : 'rounded-none sm:rounded-lg'} border ${
-                  announcement.important
-                    ? 'border-2 shadow-lg transform hover:scale-[1.02] transition-transform'
-                    : 'border-opacity-30'
-                }`}
-                style={{
-                  backgroundColor: getBackgroundColor(announcement.groupColor, announcement.important ? (isPWA ? 0.4 : 0.25) : (isPWA ? 0.3 : 0.2)),
-                  borderColor: announcement.groupColor
-                }}
-              >
-                <div className="flex-1 min-w-0">
-                  <div className="flex flex-col sm:flex-row sm:items-start sm:justify-between space-y-2 sm:space-y-0">
-                    <div className="flex items-center space-x-2">
-                      <span
-                        className={`${isPWA ? 'text-[10px]' : 'text-xs'} sm:text-xs px-2 sm:px-2 py-1 sm:py-1 rounded-full`}
-                        style={{
-                          backgroundColor: getBackgroundColor(announcement.groupColor, isPWA ? 0.4 : 0.3),
-                          color: announcement.groupColor
-                        }}
-                      >
-                        {announcement.groupName}
-                      </span>
-                      {announcement.important && (
-                        <span className={`${isPWA ? 'text-[10px]' : 'text-xs'} sm:text-xs px-2 sm:px-2 py-1 sm:py-1 ${isPWA ? 'bg-red-300 text-red-700' : 'bg-red-200 text-red-600'} rounded-full font-medium`}>
-                          Wichtig
-                        </span>
-                      )}
-                    </div>
-                    <div className={`${isPWA ? 'text-[10px]' : 'text-xs'} sm:text-sm text-gray-300 flex items-center space-x-2`}>
-                      {formatDate(announcement.createdAt) === 'Heute' && (
-                        <span className="bg-green-500 bg-opacity-20 text-green-300 px-2 py-1 rounded-full">
-                          Heute
-                        </span>
-                      )}
-                      <span>{announcement.time}</span>
-                    </div>
-                  </div>
-                  <p className={`mt-${isPWA ? '2' : '3'} ${isPWA ? 'text-sm' : 'text-base'} sm:text-base text-white whitespace-pre-wrap`}>
-                    {announcement.content}
-                  </p>
-                  <div className="flex gap-2 mt-2">
-                    {Object.entries(announcement.reactions as Record<ReactionType, Reaction> || {}).map(([type, reaction]) => (
-                      <button
-                        key={type}
-                        onClick={() => handleReaction(announcement.id, type as ReactionType)}
-                        className={`flex items-center gap-1 px-2 py-1 rounded-full text-sm transition-colors ${
-                          (reaction as Reaction)?.deviceReactions?.[deviceId]
-                            ? 'bg-gray-100 text-gray-800'
-                            : 'bg-primary text-white hover:bg-primary/90'
-                        }`}
-                      >
-                        <span>{getReactionEmoji(type as ReactionType)}</span>
-                        {(reaction as Reaction)?.count > 0 && <span>{(reaction as Reaction).count}</span>}
-                      </button>
-                    ))}
-                  </div>
-                </div>
-              </div>
+                content={announcement.content}
+                groupName={announcement.groupName ?? 'Gruppe'}
+                groupColor={announcement.groupColor}
+                important={announcement.important}
+                createdAt={announcement.createdAt}
+              />
             ))
           )}
         </div>
