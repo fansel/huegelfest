@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import AnnouncementsDesktop from '../components/announcements/AnnouncementsDesktop';
 import GroupsManagerDesktop from '../components/groups/GroupsManagerDesktop';
-import TimelineManagerDesktop from '../components/timeline/TimelineManagerDesktop';
+import TimelineManagerDesktop from '../components/timeline/TimelineDesktop';
 // import GroupsDesktop from './GroupsDesktop'; // Placeholder, analog zu AnnouncementsDesktop
 // import TimelineDesktop from './TimelineDesktop'; // Placeholder, analog zu AnnouncementsDesktop
 import { toast } from 'react-hot-toast';

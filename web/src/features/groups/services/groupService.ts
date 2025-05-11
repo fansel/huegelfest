@@ -1,5 +1,5 @@
 import { connectDB } from '@/lib/db/connector';
-import Group from '@/lib/db/models/Group';
+import { Group } from '@/lib/db/models/Group';
 
 export type GroupColors = Record<string, string>;
 

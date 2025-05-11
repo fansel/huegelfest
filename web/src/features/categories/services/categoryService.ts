@@ -1,9 +1,11 @@
-import { connectDB } from '@/database/config/apiConnector';
-import Category from '@/lib/db/models/Category';
+import { connectDB } from '@/lib/db/connector';
+import { Category } from '@/lib/db/models/Category';
 import { logger } from '@/lib/logger';
+import { ensureDefaultCategories } from '@/lib/db/initDefaults';
 
 export async function getCategories() {
   await connectDB();
+  await ensureDefaultCategories();
   return await Category.find().sort({ name: 1 });
 }
 

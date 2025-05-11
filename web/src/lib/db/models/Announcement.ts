@@ -1,5 +1,5 @@
 import mongoose, { Document, Model } from 'mongoose';
-import Group from './Group';
+import { Group } from './Group';
 import { ReactionType } from '@/types/types';
 
 interface IDeviceReaction {

@@ -1,5 +1,7 @@
-import mongoose from 'mongoose';
+import mongoose, { Model, Document } from 'mongoose';
 import { Category } from './Category';
+import type { Day } from '@/features/timeline/types/types';
+import { Types } from 'mongoose';
 // logger ggf. aus web/src/lib/logger importieren, falls benötigt
 
 const eventSchema = new mongoose.Schema({
@@ -13,7 +15,8 @@ const eventSchema = new mongoose.Schema({
   },
   description: {
     type: String,
-    required: true
+    required: false,
+    default: ''
   },
   categoryId: {
     type: mongoose.Schema.Types.ObjectId,
@@ -33,7 +36,8 @@ const daySchema = new mongoose.Schema({
   },
   description: {
     type: String,
-    required: true
+    required: false,
+    default: ''
   },
   date: {
     type: Date,
@@ -88,6 +92,8 @@ const timelineSchema = new mongoose.Schema({
   }
 });
 
+export type ITimelineDocument = Document & { days: Day[] };
+
 timelineSchema.pre('save', async function(next) {
   try {
     const otherCategory = await Category.findOne({ value: 'other' }).lean().exec();
@@ -98,13 +104,13 @@ timelineSchema.pre('save', async function(next) {
       for (const event of day.events) {
         const categoryExists = await Category.exists({ _id: event.categoryId }).lean().exec();
         if (!categoryExists) {
-          event.categoryId = otherCategory._id;
+          event.categoryId = new Types.ObjectId(otherCategory._id.toString());
         }
       }
     }
     next();
   } catch (error) {
-    next(error);
+    next(error as import('mongoose').CallbackError);
   }
 });
 
@@ -125,6 +131,6 @@ daySchema.virtual('formattedDate').get(function() {
   });
 });
 
-const Timeline = mongoose.models?.Timeline || mongoose.model('Timeline', timelineSchema);
+const Timeline: Model<ITimelineDocument> = mongoose.models?.Timeline || mongoose.model<ITimelineDocument>('Timeline', timelineSchema);
 
 export { Timeline }; 

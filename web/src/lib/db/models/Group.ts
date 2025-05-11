@@ -65,6 +65,11 @@ groupSchema.pre('save', async function(next) {
   }
 });
 
-const Group: Model<IGroupDocument> = mongoose.models.Group || mongoose.model<IGroupDocument>('Group', groupSchema);
+let Group: Model<IGroupDocument>;
+try {
+  Group = mongoose.model<IGroupDocument>('Group');
+} catch {
+  Group = mongoose.model<IGroupDocument>('Group', groupSchema);
+}
 
-export default Group; 
+export { Group }; 

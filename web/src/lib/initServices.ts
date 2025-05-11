@@ -1,7 +1,7 @@
 import { connectDB } from './db/connector';
 import { webPushService } from './webpush/webPushService';
 import { logger } from './logger';
-import { ensureDefaultGroup } from './db/initDefaultGroup';
+import { ensureDefaultGroup } from './db/initDefaults';
 
 export interface InitStatus {
   db: boolean;

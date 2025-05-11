@@ -20,4 +20,11 @@ const subscriberSchema = new mongoose.Schema({
   createdAt: { type: Date, default: Date.now }
 });
 
-export const Subscriber: Model<ISubscriber> = mongoose.models.Subscriber || mongoose.model<ISubscriber>('Subscriber', subscriberSchema); 
+let Subscriber: Model<ISubscriber>;
+try {
+  Subscriber = mongoose.model<ISubscriber>('Subscriber');
+} catch {
+  Subscriber = mongoose.model<ISubscriber>('Subscriber', subscriberSchema);
+}
+
+export { Subscriber }; 

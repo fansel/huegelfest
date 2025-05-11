@@ -1,6 +1,6 @@
 import { connectDB } from '@/lib/db/connector';
 import Announcement from '@/lib/db/models/Announcement';
-import Group from '@/lib/db/models/Group';
+import { Group } from '@/lib/db/models/Group';
 import { revalidatePath } from 'next/cache';
 import { webPushService } from '@/lib/webpush/webPushService';
 import { logger } from '@/lib/logger';

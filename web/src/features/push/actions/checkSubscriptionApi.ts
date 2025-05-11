@@ -1,5 +1,5 @@
 import { NextResponse } from 'next/server';
-import { Subscriber } from '@/database/models/Subscriber';
+import { Subscriber } from '@/lib/db/models/Subscriber';
 import { isServicesInitialized } from '@/server/lib/init';
 import { logger } from '@/server/lib/logger';
 
