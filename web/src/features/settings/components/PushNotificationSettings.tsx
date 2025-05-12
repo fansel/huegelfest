@@ -5,6 +5,7 @@ import { env } from 'next-runtime-env';
 import { subscribePushAction } from '@/features/push/actions/subscribePush';
 import { checkSubscription } from '@/features/push/actions/checkSubscription';
 import { unsubscribePushAction } from '@/features/push/actions/unsubscribePush';
+import { logger } from '@/lib/logger';
 
 // VAPID-Schlüssel als Konstanten
 const VAPID_PUBLIC_KEY = env('NEXT_PUBLIC_VAPID_PUBLIC_KEY');
@@ -48,23 +49,31 @@ export default function PushNotificationSettings({ isSubscribed, deviceId }: Pus
 
   useEffect(() => {
     const checkSupport = async () => {
+      logger.info('Starte Push-Settings Check');
       const notificationsSupported = 'Notification' in window;
       const serviceWorkerSupported = 'serviceWorker' in navigator;
       const pushManagerSupported = 'PushManager' in window;
+      logger.info('Support:', { notificationsSupported, serviceWorkerSupported, pushManagerSupported });
 
       setIsSupported(notificationsSupported && serviceWorkerSupported && pushManagerSupported);
       setPermission(Notification.permission);
+      logger.info('Notification Permission:', Notification.permission);
 
       if (serviceWorkerSupported) {
         try {
+          logger.info('Warte auf Service Worker Registrierung...');
           const registration = await navigator.serviceWorker.ready;
+          logger.info('Service Worker ready:', registration);
           const pushSubscription = await registration.pushManager.getSubscription();
+          logger.info('Push Subscription:', pushSubscription);
           
           if (pushSubscription) {
             const deviceId = localStorage.getItem('deviceId');
+            logger.info('Gefundene deviceId:', deviceId);
             if (deviceId) {
               // Prüfe ob die Subscription in der Datenbank existiert
               const { exists } = await checkSubscription(deviceId);
+              logger.info('Subscription in DB exists:', exists);
               if (exists) {
                 const subscriptionData: PushSubscriptionData = {
                   endpoint: pushSubscription.endpoint,
@@ -77,17 +86,26 @@ export default function PushNotificationSettings({ isSubscribed, deviceId }: Pus
                 };
                 setSubscription(subscriptionData);
                 setIsEnabled(true);
+                logger.info('Subscription erfolgreich gesetzt', subscriptionData);
               } else {
                 // Subscription existiert nicht in der Datenbank, also abbestellen
+                logger.info('Subscription nicht in DB, unsubscribing...');
                 await pushSubscription.unsubscribe();
                 setSubscription(null);
                 setIsEnabled(false);
               }
+            } else {
+              logger.warn('Keine deviceId im localStorage gefunden');
             }
+          } else {
+            logger.info('Kein PushSubscription im Browser gefunden');
           }
         } catch (error) {
           console.error('Fehler beim Prüfen des Subscription-Status:', error);
+          logger.error('Fehler beim Prüfen des Subscription-Status', error);
         }
+      } else {
+        logger.warn('Service Worker wird nicht unterstützt');
       }
       
       setDebugInfo(prev => ({ 
@@ -98,8 +116,8 @@ export default function PushNotificationSettings({ isSubscribed, deviceId }: Pus
         serviceWorkerState: serviceWorkerSupported ? 'Registriert' : 'Nicht unterstützt'
       }));
       setIsLoading(false);
+      logger.info('Push-Settings Check abgeschlossen');
     };
-
     checkSupport();
   }, []);
 
@@ -139,6 +157,7 @@ export default function PushNotificationSettings({ isSubscribed, deviceId }: Pus
       }));
     } catch (error) {
       console.error('Fehler beim Abonnieren:', error);
+      logger.error('Fehler beim Abonnieren der Push-Benachrichtigungen', error);
       setError('Fehler beim Abonnieren der Push-Benachrichtigungen');
     } finally {
       setIsLoading(false);
@@ -168,6 +187,7 @@ export default function PushNotificationSettings({ isSubscribed, deviceId }: Pus
       }));
     } catch (error) {
       console.error('Fehler beim Abbestellen:', error);
+      logger.error('Fehler beim Abbestellen der Push-Benachrichtigungen', error);
       setError('Fehler beim Abbestellen der Push-Benachrichtigungen');
     } finally {
       setIsLoading(false);
@@ -186,6 +206,7 @@ export default function PushNotificationSettings({ isSubscribed, deviceId }: Pus
       });
     } catch (error) {
       console.error('Fehler beim Senden der Test-Benachrichtigung:', error);
+      logger.error('Fehler beim Senden der Test-Benachrichtigung', error);
       setError('Fehler beim Senden der Test-Benachrichtigung');
     }
   };

@@ -44,3 +44,10 @@ export async function subscribePush(payload: PushSubscriptionPayload) {
   }
   return { status: 'success', message: 'Subscription erfolgreich gespeichert' };
 } 
+
+export async function unsubscribePush(endpoint: string) {
+  await initServices();
+  await Subscriber.deleteOne({ endpoint });
+  logger.info('[Push/Unsubscribe] Subscriber gelöscht', { endpoint });
+  return { status: 'success', message: 'Subscription erfolgreich gelöscht' };
+}
