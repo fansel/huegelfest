@@ -80,6 +80,24 @@ const formatDate = (dateInput?: string | { $date: string }): string | null => {
   return `${day}.${month}.${year}`;
 };
 
+function saveTimelineToCache(data: any) {
+  try {
+    localStorage.setItem('timelineData', JSON.stringify(data));
+  } catch (e) {
+    console.error('Fehler beim Speichern der Timeline im Cache:', e);
+  }
+}
+
+function loadTimelineFromCache(): any | null {
+  try {
+    const cached = localStorage.getItem('timelineData');
+    return cached ? JSON.parse(cached) : null;
+  } catch (e) {
+    console.error('Fehler beim Laden der Timeline aus dem Cache:', e);
+    return null;
+  }
+}
+
 export default function Timeline({ showFavoritesOnly = false, allowClipboard = false }: TimelineProps) {
   const [timelineData, setTimelineData] = useState<TimelineData | null>(null);
   const [selectedDay, setSelectedDay] = useState(0);
@@ -114,9 +132,17 @@ export default function Timeline({ showFavoritesOnly = false, allowClipboard = f
           })),
         };
         setTimelineData(timelineWithFavorites);
+        // Timeline im LocalStorage speichern
+        saveTimelineToCache(timelineWithFavorites);
       } catch (error) {
         console.error('[Timeline] Fehler beim Laden der Daten (Actions):', error);
-        setTimelineData({ days: [], categories: [], error: 'Ein Fehler ist aufgetreten. Bitte versuchen Sie es später erneut.' });
+        // Fallback: Timeline aus LocalStorage laden
+        const cached = loadTimelineFromCache();
+        if (cached) {
+          setTimelineData(cached);
+        } else {
+          setTimelineData({ days: [], categories: [], error: 'Ein Fehler ist aufgetreten. Bitte versuchen Sie es später erneut.' });
+        }
       }
     };
     loadData();

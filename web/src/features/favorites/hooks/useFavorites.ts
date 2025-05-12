@@ -1,3 +1,4 @@
+'use client';
 import { useState, useEffect, useCallback } from 'react';
 import { FavoriteItem } from '../types/favorites';
 import { getFavorites, saveFavorites } from '../services/favoritesStorage';
@@ -13,7 +14,8 @@ export const useFavorites = (): UseFavoritesResult => {
   const [favorites, setFavorites] = useState<FavoriteItem[]>([]);
 
   useEffect(() => {
-    setFavorites(getFavorites());
+    const loaded = getFavorites();
+    setFavorites(Array.isArray(loaded) ? loaded : []);
   }, []);
 
   const addFavorite = useCallback((item: FavoriteItem) => {
@@ -33,9 +35,10 @@ export const useFavorites = (): UseFavoritesResult => {
     });
   }, []);
 
-  const isFavorite = useCallback((id: string) => {
+  const isFavorite = useCallback((id: string | undefined) => {
+    if (!id) return false;
     return favorites.some((item) => item.id === id);
   }, [favorites]);
 
   return { favorites, addFavorite, removeFavorite, isFavorite };
-}; 
+};

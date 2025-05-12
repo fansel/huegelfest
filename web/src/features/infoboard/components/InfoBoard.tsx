@@ -29,6 +29,26 @@ interface Reactions {
   heart: Reaction;
 }
 
+function saveAnnouncementsToCache(data: IAnnouncement[]) {
+  try {
+    localStorage.setItem('infoboardAnnouncements', JSON.stringify(data));
+  } catch (e) {
+    console.error('Fehler beim Speichern der InfoBoard-Daten im Cache:', e);
+  }
+}
+
+function loadAnnouncementsFromCache(): IAnnouncement[] {
+  try {
+    const cached = localStorage.getItem('infoboardAnnouncements');
+    if (!cached) return [];
+    const parsed = JSON.parse(cached);
+    return Array.isArray(parsed) ? parsed : [];
+  } catch (e) {
+    console.error('Fehler beim Laden der InfoBoard-Daten aus dem Cache:', e);
+    return [];
+  }
+}
+
 export default function InfoBoard({ isPWA = false, allowClipboard = false }: InfoBoardProps) {
   const [announcements, setAnnouncements] = useState<IAnnouncement[]>([]);
   const boardRef = useRef<HTMLDivElement>(null);
@@ -68,16 +88,17 @@ export default function InfoBoard({ isPWA = false, allowClipboard = false }: Inf
     const loadData = async () => {
       try {
         const loadedAnnouncements = await getAllAnnouncementsAction();
-        setAnnouncements(
-          loadedAnnouncements.map((a: any) => ({
-            ...a,
-            groupName: a.groupName ?? a.groupInfo?.name ?? '',
-            groupColor: a.groupColor ?? a.groupInfo?.color ?? '#cccccc',
-          }))
-        );
+        const mapped = loadedAnnouncements.map((a: any) => ({
+          ...a,
+          groupName: a.groupName ?? a.groupInfo?.name ?? '',
+          groupColor: a.groupColor ?? a.groupInfo?.color ?? '#cccccc',
+        }));
+        setAnnouncements(mapped);
+        saveAnnouncementsToCache(mapped);
       } catch (error) {
         console.error('[InfoBoard] Fehler beim Laden der Daten:', error);
-        setAnnouncements([]);
+        // Fallback: aus LocalStorage laden
+        setAnnouncements(loadAnnouncementsFromCache());
       }
     };
     loadData();

@@ -14,6 +14,7 @@ import { useAuth } from '@/features/auth/AuthContext';
 import BottomBar from '@/features/pwa/BottomBar';
 import AdminDashboardWrapper from '@/features/admin/dashboard/AdminDashboardWrapper';
 import { FavoritesList } from '@/features/favorites/components/FavoritesList';
+import OfflineBanner from './OfflineBanner';
 
 
 type View =
@@ -100,6 +101,7 @@ export default function PWAContainer({ children }: React.PropsWithChildren) {
 
   return (
     <div className="relative min-h-screen bg-[#460b6c] text-[#ff9900] flex flex-col">
+      <OfflineBanner />
       {showStarfield && <Starfield />}
       <div className="flex flex-col items-center justify-center gap-2 pt-4">
         <div className="flex items-center justify-center w-full">

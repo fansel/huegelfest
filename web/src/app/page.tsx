@@ -63,12 +63,22 @@ export default function Home() {
 
   useEffect(() => {
     const loadData = async () => {
-      const [loadedAnnouncements, loadedGroupColors] = await Promise.all([
-        getAllAnnouncementsAction(),
-        getGroupColorsAction(),
-      ]);
-      setAnnouncements(loadedAnnouncements);
-      setGroupColors(loadedGroupColors);
+      try {
+        const [loadedAnnouncements, loadedGroupColors] = await Promise.all([
+          getAllAnnouncementsAction(),
+          getGroupColorsAction(),
+        ]);
+        setAnnouncements(loadedAnnouncements);
+        setGroupColors(loadedGroupColors);
+        // Ankündigungen im LocalStorage speichern
+        localStorage.setItem('announcementsData', JSON.stringify(loadedAnnouncements));
+      } catch (error) {
+        // Fallback: Ankündigungen aus LocalStorage laden
+        const cached = localStorage.getItem('announcementsData');
+        if (cached) {
+          setAnnouncements(JSON.parse(cached));
+        }
+      }
     };
     loadData();
 

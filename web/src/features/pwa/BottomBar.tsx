@@ -1,6 +1,7 @@
 'use client';
 import React from 'react';
 import { Calendar, MapPin, Megaphone, Settings as SettingsIcon, Heart, Shield, Users, Clock, SlidersHorizontal } from 'lucide-react';
+import { useNetworkStatus } from '@/shared/hooks/useNetworkStatus';
 
 interface Tab {
   id: string;
@@ -34,6 +35,7 @@ const adminTabs: Tab[] = [
 
 const BottomBar: React.FC<BottomBarProps> = ({ mode, activeTab, onTabChange, isAdminActive, onAdminToggle, showAdminButton }) => {
   const tabs = mode === 'admin' ? adminTabs : userTabs;
+  const isOnline = useNetworkStatus();
   return (
     <nav className={`fixed bottom-0 left-0 right-0 z-50 bg-[#460b6c]/90 backdrop-blur-md border-t border-[#ff9900]/20 pb-[env(safe-area-inset-bottom)] shadow-t`}> 
       <div className="flex justify-between items-center h-16 px-2 sm:px-4">
@@ -50,7 +52,13 @@ const BottomBar: React.FC<BottomBarProps> = ({ mode, activeTab, onTabChange, isA
         {/* Shield-Button nur wenn showAdminButton true ist */}
         {showAdminButton && (
           <button
-            onClick={onAdminToggle}
+            onClick={() => {
+              if (!isOnline) {
+                window.alert('Admin-Modus ist offline nicht verfügbar');
+                return;
+              }
+              onAdminToggle();
+            }}
             className={`flex flex-col items-center justify-center min-w-[60px] transition-all duration-200 ${isAdminActive ? 'text-white scale-110' : 'text-[#ff9900]/60 hover:text-[#ff9900]'} `}
             aria-label="Admin-Modus"
           >

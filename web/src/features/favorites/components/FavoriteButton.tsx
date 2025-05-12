@@ -11,7 +11,7 @@ interface FavoriteButtonProps {
 
 export const FavoriteButton: React.FC<FavoriteButtonProps> = ({ item }) => {
   const { isFavorite, addFavorite, removeFavorite } = useFavorites();
-  const favorite = isFavorite(item.id);
+  const favorite = item?.id ? isFavorite(item.id) : false;
 
   const handleClick = () => {
     if (favorite) {

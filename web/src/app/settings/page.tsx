@@ -1,3 +1,4 @@
+'use client';
 import Settings from '@/features/settings/components/Settings';
 import { useState } from 'react';
 
