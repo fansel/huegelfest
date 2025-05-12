@@ -1,16 +1,27 @@
 "use server";
 
-import { verifyToken } from '../services/authService';
+import { cookies } from 'next/headers';
+import { verifyToken as verifyTokenService } from '../services/authService';
 
 export interface VerifyTokenResult {
-  valid: boolean;
-  payload?: any;
+  success: boolean;
+  isAdmin?: boolean;
+  error?: string;
 }
 
-export async function verify(token: string): Promise<VerifyTokenResult> {
-  const payload = await verifyToken(token);
-  if (!payload) {
-    return { valid: false };
+export async function verifyToken(): Promise<VerifyTokenResult> {
+  try {
+    const cookieStore = await cookies();
+    const token = cookieStore.get('authToken')?.value;
+    if (!token) {
+      return { success: false, error: 'Kein Token gefunden' };
+    }
+    const payload = await verifyTokenService(token);
+    if (!payload) {
+      return { success: false, error: 'Token ungültig' };
+    }
+    return { success: true, isAdmin: !!payload.isAdmin };
+  } catch (error: any) {
+    return { success: false, error: error.message || 'Fehler bei der Token-Prüfung' };
   }
-  return { valid: true, payload };
 } 
