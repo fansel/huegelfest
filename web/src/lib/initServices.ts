@@ -1,7 +1,7 @@
 import { connectDB } from './db/connector';
 import { webPushService } from './webpush/webPushService';
 import { logger } from './logger';
-import { ensureDefaultGroup } from './db/initDefaults';
+import { ensureDefaultCategories, ensureDefaultGroup } from './db/initDefaults';
 
 export interface InitStatus {
   db: boolean;
@@ -31,6 +31,8 @@ export async function initServices(): Promise<InitStatus> {
     logger.info('[Init] Datenbank erfolgreich initialisiert.');
     await ensureDefaultGroup();
     logger.info('[Init] Default-Gruppe sichergestellt.');
+    await ensureDefaultCategories();
+    logger.info('[Init] Default-Kategorien sichergestellt.');
   } catch (err) {
     status.errors.push('DB: ' + (err instanceof Error ? err.message : String(err)));
     logger.error('[Init] Fehler bei der DB-Initialisierung:', err);

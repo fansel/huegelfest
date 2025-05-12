@@ -2,6 +2,7 @@
 import React, { createContext, useContext, useState, useEffect, ReactNode } from 'react';
 import { login as loginAction } from './actions/login';
 import { logout as logoutAction } from './actions/logout';
+import { verifyToken } from './actions/verifyToken';
 import { cookies } from 'next/headers';
 
 // Typen für den Auth-Status
@@ -38,19 +39,19 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
     const checkAuth = async () => {
       setLoading(true);
       try {
-        // Prüfe Token/Session via Server Action (z.B. verifyToken)
-        const res = await fetch('/api/auth/me');
-        if (res.ok) {
-          const data = await res.json();
+        // Prüfe Token/Session via Server Action (verifyToken)
+        const result = await verifyToken();
+        if (result.success) {
           setIsAuthenticated(true);
-          setIsAdmin(!!data.isAdmin);
+          setIsAdmin(!!result.isAdmin);
         } else {
           setIsAuthenticated(false);
           setIsAdmin(false);
         }
-      } catch {
+      } catch (err: any) {
         setIsAuthenticated(false);
         setIsAdmin(false);
+        setError(err.message || 'Fehler bei der Authentifizierung');
       } finally {
         setLoading(false);
       }
