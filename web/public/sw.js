@@ -4,12 +4,9 @@ console.log('Service Worker wird geladen...');
 const CACHE_NAME = 'huegelfest-cache-v3';
 const APP_SHELL = [
   '/',
-  '/index.html',
-  '/_next/static/css/app.css',
-  '/_next/static/css/globals.css',
-  '/_next/static/css/tailwind.css',
   '/android-chrome-192x192.png',
   '/logo.jpg',
+  // ggf. weitere statische Dateien aus /public
 ];
 
 // Funktion zum Benachrichtigen aller Clients über den Netzwerkstatus
@@ -29,7 +26,16 @@ self.addEventListener('install', (event) => {
   console.log('Service Worker: Installation gestartet');
   event.waitUntil(
     caches.open(CACHE_NAME).then((cache) => {
-      return cache.addAll(APP_SHELL);
+      return Promise.all(APP_SHELL.map((url) =>
+        fetch(url)
+          .then((response) => {
+            if (!response.ok) throw new Error(`Request for ${url} failed with status ${response.status}`);
+            return cache.put(url, response);
+          })
+          .catch((err) => {
+            console.error('Failed to cache', url, err);
+          })
+      ));
     }).then(() => self.skipWaiting())
   );
 });

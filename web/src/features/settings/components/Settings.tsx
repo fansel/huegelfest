@@ -6,7 +6,7 @@ import AdminSettings from './AdminSettings';
 import LegalNotice from './LegalNotice';
 import dynamic from 'next/dynamic';
 import { useEffect, useState } from 'react';
-import PushNotificationSettingsServer from './PushNotificationSettingsServer';
+
 
 
 interface SettingsProps {
@@ -21,12 +21,19 @@ export default function Settings({
   const [deviceId, setDeviceId] = useState<string | null>(null);
 
   useEffect(() => {
-    let id = localStorage.getItem('deviceId');
-    if (!id) {
-      id = crypto.randomUUID();
-      localStorage.setItem('deviceId', id);
+    try {
+      let id = localStorage.getItem('deviceId');
+      if (!id) {
+        id = btoa(`${navigator.userAgent}-${Date.now()}-${Math.random()}`);
+        localStorage.setItem('deviceId', id);
+        console.log('Neue deviceId generiert:', id);
+      } else {
+        console.log('deviceId aus localStorage:', id);
+      }
+      setDeviceId(id);
+    } catch (e) {
+      console.error('Fehler beim Setzen der deviceId:', e);
     }
-    setDeviceId(id);
   }, []);
 
   return (
