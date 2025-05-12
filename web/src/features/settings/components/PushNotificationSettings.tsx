@@ -2,6 +2,9 @@
 
 import { useState, useEffect } from 'react';
 import { env } from 'next-runtime-env';
+import { subscribePushAction } from '@/features/push/actions/subscribePush';
+import { checkSubscription } from '@/features/push/actions/checkSubscription';
+import { unsubscribePushAction } from '@/features/push/actions/unsubscribePush';
 
 // VAPID-Schlüssel als Konstanten
 const VAPID_PUBLIC_KEY = env('NEXT_PUBLIC_VAPID_PUBLIC_KEY');
@@ -61,16 +64,7 @@ export default function PushNotificationSettings({ isSubscribed, deviceId }: Pus
             const deviceId = localStorage.getItem('deviceId');
             if (deviceId) {
               // Prüfe ob die Subscription in der Datenbank existiert
-              const response = await fetch('/api/push/check-subscription', {
-                method: 'POST',
-                headers: {
-                  'Content-Type': 'application/json',
-                },
-                body: JSON.stringify({ deviceId }),
-              });
-              
-              const { exists } = await response.json();
-              
+              const { exists } = await checkSubscription(deviceId);
               if (exists) {
                 const subscriptionData: PushSubscriptionData = {
                   endpoint: pushSubscription.endpoint,
@@ -135,16 +129,7 @@ export default function PushNotificationSettings({ isSubscribed, deviceId }: Pus
         }
       };
 
-      await fetch('/api/push/subscribe', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({
-          ...subscriptionData,
-          deviceId
-        }),
-      });
+      await subscribePushAction({ ...subscriptionData, deviceId });
 
       setSubscription(subscriptionData);
       setIsEnabled(true);
@@ -172,15 +157,7 @@ export default function PushNotificationSettings({ isSubscribed, deviceId }: Pus
       
       if (pushSubscription) {
         await pushSubscription.unsubscribe();
-        await fetch('/api/push/unsubscribe', {
-          method: 'POST',
-          headers: {
-            'Content-Type': 'application/json',
-          },
-          body: JSON.stringify({
-            endpoint: pushSubscription.endpoint
-          }),
-        });
+        await unsubscribePushAction(pushSubscription.endpoint);
       }
 
       setSubscription(null);
