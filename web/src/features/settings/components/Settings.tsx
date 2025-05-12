@@ -39,7 +39,7 @@ export default function Settings({
 
       {/* Einstellungen */}
       <div className="divide-y divide-[#460b6c]/20">
-        {deviceId ? <PushNotificationSettingsServer deviceId={deviceId} /> : <div>Lade Push-Einstellungen...</div>}
+        {deviceId ? <PushNotificationSettings isSubscribed={false} deviceId={deviceId} /> : <div>Lade Push-Einstellungen...</div>}
         <StarfieldSettings showStarfield={showStarfield} onToggle={onToggleStarfield} />
         <AdminSettings />
         <LegalNotice />
