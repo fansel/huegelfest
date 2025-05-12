@@ -4,6 +4,9 @@ import PushNotificationSettings from './PushNotificationSettings';
 import StarfieldSettings from './StarfieldSettings';
 import AdminSettings from './AdminSettings';
 import LegalNotice from './LegalNotice';
+import dynamic from 'next/dynamic';
+import { useEffect, useState } from 'react';
+import PushNotificationSettingsServer from './PushNotificationSettingsServer';
 
 
 interface SettingsProps {
@@ -15,6 +18,17 @@ export default function Settings({
   showStarfield,
   onToggleStarfield,
 }: SettingsProps) {
+  const [deviceId, setDeviceId] = useState<string | null>(null);
+
+  useEffect(() => {
+    let id = localStorage.getItem('deviceId');
+    if (!id) {
+      id = crypto.randomUUID();
+      localStorage.setItem('deviceId', id);
+    }
+    setDeviceId(id);
+  }, []);
+
   return (
     <div className="bg-[#460b6c]/30 rounded-lg overflow-hidden">
       {/* Header */}
@@ -25,7 +39,7 @@ export default function Settings({
 
       {/* Einstellungen */}
       <div className="divide-y divide-[#460b6c]/20">
-        <PushNotificationSettings />
+        {deviceId ? <PushNotificationSettingsServer deviceId={deviceId} /> : <div>Lade Push-Einstellungen...</div>}
         <StarfieldSettings showStarfield={showStarfield} onToggle={onToggleStarfield} />
         <AdminSettings />
         <LegalNotice />

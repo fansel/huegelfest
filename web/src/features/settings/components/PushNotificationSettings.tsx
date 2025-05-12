@@ -23,11 +23,16 @@ interface DebugInfo {
   subscription?: PushSubscriptionData | null;
 }
 
-export default function PushNotificationSettings() {
+interface PushNotificationSettingsProps {
+  isSubscribed: boolean;
+  deviceId: string;
+}
+
+export default function PushNotificationSettings({ isSubscribed, deviceId }: PushNotificationSettingsProps) {
   const [isSupported, setIsSupported] = useState(false);
   const [permission, setPermission] = useState<NotificationPermission>('default');
   const [subscription, setSubscription] = useState<PushSubscriptionData | null>(null);
-  const [isEnabled, setIsEnabled] = useState(false);
+  const [isEnabled, setIsEnabled] = useState(isSubscribed);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [showDebug, setShowDebug] = useState(false);
@@ -71,9 +76,9 @@ export default function PushNotificationSettings() {
                   endpoint: pushSubscription.endpoint,
                   keys: {
                     p256dh: btoa(String.fromCharCode.apply(null, 
-                      new Uint8Array(pushSubscription.getKey('p256dh') || new ArrayBuffer(0)))),
+                      Array.from(new Uint8Array(pushSubscription.getKey('p256dh') || new ArrayBuffer(0))))),
                     auth: btoa(String.fromCharCode.apply(null, 
-                      new Uint8Array(pushSubscription.getKey('auth') || new ArrayBuffer(0))))
+                      Array.from(new Uint8Array(pushSubscription.getKey('auth') || new ArrayBuffer(0))))),
                   }
                 };
                 setSubscription(subscriptionData);
@@ -124,9 +129,9 @@ export default function PushNotificationSettings() {
         endpoint: pushSubscription.endpoint,
         keys: {
           p256dh: btoa(String.fromCharCode.apply(null, 
-            new Uint8Array(pushSubscription.getKey('p256dh') || new ArrayBuffer(0)))),
+            Array.from(new Uint8Array(pushSubscription.getKey('p256dh') || new ArrayBuffer(0))))),
           auth: btoa(String.fromCharCode.apply(null, 
-            new Uint8Array(pushSubscription.getKey('auth') || new ArrayBuffer(0))))
+            Array.from(new Uint8Array(pushSubscription.getKey('auth') || new ArrayBuffer(0))))),
         }
       };
 
