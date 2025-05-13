@@ -2,6 +2,7 @@
 import React from 'react';
 import { Calendar, MapPin, Megaphone, Settings as SettingsIcon, Heart, Shield, Users, Clock, SlidersHorizontal, Music } from 'lucide-react';
 import { useNetworkStatus } from '@/shared/hooks/useNetworkStatus';
+import { useFestivalSignupPhase } from '@/contexts/FestivalSignupPhaseContext';
 
 interface Tab {
   id: string;
@@ -31,12 +32,25 @@ const adminTabs: Tab[] = [
   { id: 'groups', icon: <Users size={24} />, label: 'Gruppen' },
   { id: 'timeline', icon: <Clock size={24} />, label: 'Timeline' },
   { id: 'music', icon: <Music size={24} />, label: 'Musik' },
-  { id: 'settings', icon: <SlidersHorizontal size={24} />, label: 'Admin-Einstellungen' },
+  { id: 'admin-settings', icon: <SlidersHorizontal size={24} />, label: 'Admin-Einstellungen' },
+];
+
+const signupPhaseTabs: Tab[] = [
+  { id: 'signup', icon: <Users size={24} />, label: 'Anmeldung' },
 ];
 
 const BottomBar: React.FC<BottomBarProps> = ({ mode, activeTab, onTabChange, isAdminActive, onAdminToggle, showAdminButton }) => {
-  const tabs = mode === 'admin' ? adminTabs : userTabs;
+  const { isSignupPhase, isAdminPreview } = useFestivalSignupPhase();
   const isOnline = useNetworkStatus();
+
+  // Während der Anmeldephase: Nur Anmeldung-Tab für normale Nutzer (außer Admins oder Admin-Preview)
+  let tabs: Tab[];
+  if (isSignupPhase && !(mode === 'admin' && !isAdminPreview)) {
+    tabs = signupPhaseTabs;
+  } else {
+    tabs = mode === 'admin' ? adminTabs : userTabs;
+  }
+
   return (
     <nav className={`fixed bottom-0 left-0 right-0 z-50 bg-[#460b6c]/90 backdrop-blur-md border-t border-[#ff9900]/20 pb-[env(safe-area-inset-bottom)] shadow-t`}> 
       <div className="flex justify-between items-center h-16 px-2 sm:px-4">

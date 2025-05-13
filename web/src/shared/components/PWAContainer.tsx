@@ -17,6 +17,9 @@ import { FavoritesList } from '@/features/favorites/components/FavoritesList';
 import OfflineBanner from './OfflineBanner';
 import { AdminTab } from '@/features/admin/types/AdminTab';
 import MusicNote from '@/features/music/components/MusicNote';
+import SignupPhaseInfo from '@/features/pwa/SignupPhaseInfo';
+import { useFestivalSignupPhase } from '@/contexts/FestivalSignupPhaseContext';
+import AdminSettingsPanel from '@/features/admin/components/settings/AdminSettingsPanel';
 
 
 type View =
@@ -29,7 +32,8 @@ type View =
   | 'announcements'
   | 'groups'
   | 'timeline'
-  | 'admin-settings';
+  | 'admin-settings'
+  | 'signup';
 
 const isDesktop = () => {
   if (typeof window === 'undefined') return false;
@@ -45,6 +49,7 @@ export default function PWAContainer({ children }: React.PropsWithChildren) {
   const [showStarfield, setShowStarfield] = useState(true);
   const [isDesktopDevice, setIsDesktopDevice] = useState(false);
   const { isAdmin } = useAuth();
+  const { isSignupPhase } = useFestivalSignupPhase();
 
   useEffect(() => {
     setIsDesktopDevice(isDesktop());
@@ -78,6 +83,14 @@ export default function PWAContainer({ children }: React.PropsWithChildren) {
 
   // Content je nach Modus und Tab
   const renderContent = () => {
+    // Anmeldemodus: Nur Anmeldung und ggf. Settings anzeigen, außer für Admins
+    if (isSignupPhase && mode !== 'admin') {
+      if (activeTab === 'settings') {
+        return <Settings showStarfield={showStarfield} onToggleStarfield={() => setShowStarfield(!showStarfield)} />;
+      }
+      // Standard: Anmeldung
+      return <SignupPhaseInfo />;
+    }
     if (mode === 'admin') {
       const handleSetAdminActiveTab = (tab: AdminTab) => setAdminActiveTab(tab);
       return <AdminDashboardWrapper activeAdminTab={adminActiveTab} setActiveAdminTab={handleSetAdminActiveTab} />;

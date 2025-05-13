@@ -25,13 +25,6 @@ export default function SettingsPage() {
       <Settings
         showStarfield={showStarfield}
         onToggleStarfield={handleToggleStarfield}
-        showAdmin={showAdmin}
-        onToggleAdmin={handleToggleAdmin}
-        isAuthenticated={isAuthenticated}
-        onLogout={handleLogout}
-        onLogin={handleLogin}
-        loginError={loginError}
-        onNavigateToAdmin={handleNavigateToAdmin}
       />
     </div>
   );

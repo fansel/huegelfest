@@ -5,11 +5,27 @@ import TimelineManagerDesktop from '../components/timeline/TimelineDesktop';
 import MusicManager from '../components/music/MusicManager';
 import { toast } from 'react-hot-toast';
 import { useRouter } from 'next/navigation';
+import Settings from '@/features/settings/components/Settings';
+import { useTimeline } from '@/features/timeline/hooks/useTimeline';
 
 const AdminDashboardDesktop: React.FC = () => {
-  const [activeTab, setActiveTab] = useState<'announcements' | 'groups' | 'timeline' | 'music'>('announcements');
+  const [activeTab, setActiveTab] = useState<'announcements' | 'groups' | 'timeline' | 'music' | 'settings'>('announcements');
   const [isLoggingOut, setIsLoggingOut] = useState(false);
   const router = useRouter();
+
+  const {
+    timeline,
+    loading,
+    error,
+    refetch,
+    createDay,
+    removeDay,
+    updateDay,
+    createEvent,
+    removeEvent,
+    moveEvent,
+    updateEvent,
+  } = useTimeline();
 
   const handleLogout = async () => {
     setIsLoggingOut(true);
@@ -92,6 +108,16 @@ const AdminDashboardDesktop: React.FC = () => {
               >
                 Musik
               </button>
+              <button
+                onClick={() => setActiveTab('settings')}
+                className={`py-4 px-3 border-b-2 font-medium text-sm ${
+                  activeTab === 'settings'
+                    ? 'border-[#ff9900] text-[#ff9900]'
+                    : 'border-transparent text-[#ff9900]/60 hover:text-[#ff9900] hover:border-[#ff9900]/40'
+                }`}
+              >
+                Admin-Einstellungen
+              </button>
             </nav>
           </div>
 
@@ -104,10 +130,25 @@ const AdminDashboardDesktop: React.FC = () => {
               <GroupsManagerDesktop />
             )}
             {activeTab === 'timeline' && (
-              <TimelineManagerDesktop />
+              <TimelineManagerDesktop
+                timeline={timeline}
+                loading={loading}
+                error={error}
+                refetch={refetch}
+                createDay={createDay}
+                removeDay={removeDay}
+                updateDay={updateDay}
+                createEvent={createEvent}
+                removeEvent={removeEvent}
+                moveEvent={moveEvent}
+                updateEvent={updateEvent}
+              />
             )}
             {activeTab === 'music' && (
               <MusicManager />
+            )}
+            {activeTab === 'settings' && (
+              <Settings showStarfield={false} onToggleStarfield={() => {}} />
             )}
           </div>
         </div>

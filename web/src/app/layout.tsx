@@ -7,6 +7,7 @@ import { Toaster } from 'react-hot-toast';
 import { PWARegister } from "@/shared/components/PWARegister";
 import AppLayout from "@/shared/components/AppLayout";
 import { AuthProvider } from '@/features/auth/AuthContext';
+import { FestivalSignupPhaseProvider } from '@/contexts/FestivalSignupPhaseContext';
 
 export const metadata: Metadata = {
   title: 'Hügelfest',
@@ -36,8 +37,10 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
         <PWARegister />
         <PWAProvider>
           <AuthProvider>
-            <AppLayout>{children}</AppLayout>
-            <Toaster position="top-right" />
+            <FestivalSignupPhaseProvider>
+              <AppLayout>{children}</AppLayout>
+              <Toaster position="top-right" />
+            </FestivalSignupPhaseProvider>
           </AuthProvider>
         </PWAProvider>
       </body>
