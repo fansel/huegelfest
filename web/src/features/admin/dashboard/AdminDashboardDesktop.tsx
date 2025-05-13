@@ -1,14 +1,13 @@
 import React, { useState } from 'react';
 import AnnouncementsDesktop from '../components/announcements/AnnouncementsDesktop';
 import GroupsManagerDesktop from '../components/groups/GroupsManagerDesktop';
-import TimelineManagerDesktop from '../components/timeline/TimelineDesktop'
-// import GroupsDesktop from './GroupsDesktop'; // Placeholder, analog zu AnnouncementsDesktop
-// import TimelineDesktop from './TimelineDesktop'; // Placeholder, analog zu AnnouncementsDesktop
+import TimelineManagerDesktop from '../components/timeline/TimelineDesktop';
+import MusicManager from '../components/music/MusicManager';
 import { toast } from 'react-hot-toast';
 import { useRouter } from 'next/navigation';
 
 const AdminDashboardDesktop: React.FC = () => {
-  const [activeTab, setActiveTab] = useState<'announcements' | 'groups' | 'timeline'>('announcements');
+  const [activeTab, setActiveTab] = useState<'announcements' | 'groups' | 'timeline' | 'music'>('announcements');
   const [isLoggingOut, setIsLoggingOut] = useState(false);
   const router = useRouter();
 
@@ -83,6 +82,16 @@ const AdminDashboardDesktop: React.FC = () => {
               >
                 Timeline
               </button>
+              <button
+                onClick={() => setActiveTab('music')}
+                className={`py-4 px-3 border-b-2 font-medium text-sm ${
+                  activeTab === 'music'
+                    ? 'border-[#ff9900] text-[#ff9900]'
+                    : 'border-transparent text-[#ff9900]/60 hover:text-[#ff9900] hover:border-[#ff9900]/40'
+                }`}
+              >
+                Musik
+              </button>
             </nav>
           </div>
 
@@ -96,6 +105,9 @@ const AdminDashboardDesktop: React.FC = () => {
             )}
             {activeTab === 'timeline' && (
               <TimelineManagerDesktop />
+            )}
+            {activeTab === 'music' && (
+              <MusicManager />
             )}
           </div>
         </div>

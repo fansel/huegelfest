@@ -1,0 +1,1 @@
+export type AdminTab = 'announcements' | 'groups' | 'timeline' | 'music'; 

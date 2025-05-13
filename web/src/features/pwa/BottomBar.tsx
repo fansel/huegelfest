@@ -1,6 +1,6 @@
 'use client';
 import React from 'react';
-import { Calendar, MapPin, Megaphone, Settings as SettingsIcon, Heart, Shield, Users, Clock, SlidersHorizontal } from 'lucide-react';
+import { Calendar, MapPin, Megaphone, Settings as SettingsIcon, Heart, Shield, Users, Clock, SlidersHorizontal, Music } from 'lucide-react';
 import { useNetworkStatus } from '@/shared/hooks/useNetworkStatus';
 
 interface Tab {
@@ -30,6 +30,7 @@ const adminTabs: Tab[] = [
   { id: 'announcements', icon: <Megaphone size={24} />, label: 'Ankündigungen' },
   { id: 'groups', icon: <Users size={24} />, label: 'Gruppen' },
   { id: 'timeline', icon: <Clock size={24} />, label: 'Timeline' },
+  { id: 'music', icon: <Music size={24} />, label: 'Musik' },
   { id: 'settings', icon: <SlidersHorizontal size={24} />, label: 'Admin-Einstellungen' },
 ];
 

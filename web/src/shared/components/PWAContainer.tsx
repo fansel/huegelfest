@@ -15,6 +15,8 @@ import BottomBar from '@/features/pwa/BottomBar';
 import AdminDashboardWrapper from '@/features/admin/dashboard/AdminDashboardWrapper';
 import { FavoritesList } from '@/features/favorites/components/FavoritesList';
 import OfflineBanner from './OfflineBanner';
+import { AdminTab } from '@/features/admin/types/AdminTab';
+import MusicNote from '@/features/music/components/MusicNote';
 
 
 type View =
@@ -29,8 +31,6 @@ type View =
   | 'timeline'
   | 'admin-settings';
 
-type TabKey = 'announcements' | 'groups' | 'timeline';
-
 const isDesktop = () => {
   if (typeof window === 'undefined') return false;
   return !/Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent);
@@ -38,7 +38,7 @@ const isDesktop = () => {
 
 export default function PWAContainer({ children }: React.PropsWithChildren) {
   const [activeTab, setActiveTab] = useState<View>('home');
-  const [adminActiveTab, setAdminActiveTab] = useState<TabKey>('announcements');
+  const [adminActiveTab, setAdminActiveTab] = useState<AdminTab>('announcements');
   const [mode, setMode] = useState<'user' | 'admin'>('user');
   const [isAdminActive, setIsAdminActive] = useState(false);
   const [isPWA, setIsPWA] = useState(false);
@@ -69,18 +69,18 @@ export default function PWAContainer({ children }: React.PropsWithChildren) {
     } else if (isAdmin) {
       setMode('admin');
       setIsAdminActive(true);
-      setAdminActiveTab('announcements');
     }
   };
 
   // Tab-Wechsel
   const handleUserTabChange = (tab: string) => setActiveTab(tab as View);
-  const handleAdminTabChange = (tab: string) => setAdminActiveTab(tab as TabKey);
+  const handleAdminTabChange = (tab: string) => setAdminActiveTab(tab as AdminTab);
 
   // Content je nach Modus und Tab
   const renderContent = () => {
     if (mode === 'admin') {
-      return <AdminDashboardWrapper activeAdminTab={adminActiveTab} />;
+      const handleSetAdminActiveTab = (tab: AdminTab) => setAdminActiveTab(tab);
+      return <AdminDashboardWrapper activeAdminTab={adminActiveTab} setActiveAdminTab={handleSetAdminActiveTab} />;
     } else {
       switch (activeTab) {
         case 'home':
@@ -103,6 +103,9 @@ export default function PWAContainer({ children }: React.PropsWithChildren) {
     <div className="relative min-h-screen bg-[#460b6c] text-[#ff9900] flex flex-col">
       <OfflineBanner />
       {showStarfield && <Starfield />}
+      <div className="absolute top-4 right-4 z-50">
+        <MusicNote />
+      </div>
       <div className="flex flex-col items-center justify-center gap-2 pt-4">
         <div className="flex items-center justify-center w-full">
           <Image src="/android-chrome-192x192.png" alt="Hügelfest Logo" width={48} height={48} />
