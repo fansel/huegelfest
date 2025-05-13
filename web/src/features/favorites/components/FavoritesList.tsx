@@ -3,7 +3,7 @@
 import React, { useMemo } from 'react';
 import { useFavorites } from '../hooks/useFavorites';
 import { TimelineEventCard } from '@/features/timeline/components/TimelineEventCard';
-import * as Icons from 'react-icons/fa';
+import * as LucideIcons from 'lucide-react';
 import { useTimeline } from '@/features/timeline/hooks/useTimeline';
 
 export const FavoritesList: React.FC = () => {
@@ -12,8 +12,8 @@ export const FavoritesList: React.FC = () => {
 
   // Dynamisches Icon-Mapping wie in Timeline
   const getIconComponent = (iconName: string) => {
-    const IconComponent = (Icons as any)[iconName];
-    return IconComponent || Icons.FaQuestion;
+    const IconComponent = (LucideIcons as any)[iconName];
+    return IconComponent || LucideIcons.HelpCircle;
   };
 
   // Favoriten nach Tag gruppieren

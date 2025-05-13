@@ -16,6 +16,8 @@ export interface MusicEntry {
   _id: string;
   url: string;
   trackInfo: TrackInfo;
+  coverArtData?: string; // Base64
+  coverArtMimeType?: string;
 }
 
 export async function getAllTracks(): Promise<MusicEntry[]> {
@@ -23,8 +25,12 @@ export async function getAllTracks(): Promise<MusicEntry[]> {
     const music = await MusicService.getAllMusic();
     return music.map((entry: any) => ({
       _id: entry._id?.toString?.() ?? entry._id,
-      url: entry.url,
-      trackInfo: entry.trackInfo
+      url: `/api/music/stream?id=${encodeURIComponent(entry._id?.toString?.() ?? entry._id)}`,
+      trackInfo: entry.trackInfo && typeof entry.trackInfo.toObject === 'function'
+        ? entry.trackInfo.toObject()
+        : JSON.parse(JSON.stringify(entry.trackInfo)),
+      coverArtData: entry.coverArtData ? entry.coverArtData.toString('base64') : undefined,
+      coverArtMimeType: entry.coverArtMimeType
     }));
   } catch (error) {
     logger.error('[getAllTracks] Fehler beim Laden der Musik:', error);

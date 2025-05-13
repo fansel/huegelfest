@@ -3,7 +3,7 @@
 import React from 'react';
 import { useFavorites } from '../hooks/useFavorites';
 import { FavoriteItem } from '../types/favorites';
-import { FaHeart } from 'react-icons/fa';
+import { Heart } from 'lucide-react';
 
 interface FavoriteButtonProps {
   item: FavoriteItem;
@@ -28,7 +28,7 @@ export const FavoriteButton: React.FC<FavoriteButtonProps> = ({ item }) => {
       className="p-1 focus:outline-none"
       style={{ background: 'none', border: 'none', cursor: 'pointer' }}
     >
-      <FaHeart
+      <Heart
         size={22}
         color={favorite ? '#ff9900' : 'transparent'}
         style={{

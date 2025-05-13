@@ -1,7 +1,7 @@
 import React, { useEffect, useState } from 'react';
 import { getGroupsArrayAction, createGroupAction, deleteGroupAction, updateGroupAction } from '../../../groups/actions/getGroupColors';
 import { toast } from 'react-hot-toast';
-import { FaTrash, FaEdit, FaPlus, FaCheck, FaTimes } from 'react-icons/fa';
+import { Trash2, Pencil, Plus, Check, X } from 'lucide-react';
 
 interface Group {
   id: string;
@@ -119,14 +119,14 @@ const GroupsManagerMobile: React.FC = () => {
                       className="rounded-full bg-blue-50 hover:bg-blue-200 active:scale-95 transition-all shadow w-8 h-8 flex items-center justify-center text-blue-600 hover:text-blue-800 focus:outline-none border border-blue-100"
                       aria-label="Speichern"
                     >
-                      <FaCheck className="h-4 w-4" />
+                      <Check className="h-4 w-4" />
                     </button>
                     <button
                       onClick={() => setEditId(null)}
                       className="rounded-full bg-gray-200 hover:bg-gray-300 active:scale-95 transition-all shadow w-8 h-8 flex items-center justify-center text-gray-600 hover:text-gray-800 focus:outline-none border border-gray-300"
                       aria-label="Abbrechen"
                     >
-                      <FaTimes className="h-4 w-4" />
+                      <X className="h-4 w-4" />
                     </button>
                   </>
                 ) : (
@@ -136,14 +136,14 @@ const GroupsManagerMobile: React.FC = () => {
                       className="rounded-full bg-blue-50 hover:bg-blue-200 active:scale-95 transition-all shadow w-8 h-8 flex items-center justify-center text-blue-600 hover:text-blue-800 focus:outline-none border border-blue-100"
                       aria-label="Umbenennen"
                     >
-                      <FaEdit className="h-4 w-4" />
+                      <Pencil className="h-4 w-4" />
                     </button>
                     <button
                       onClick={() => handleDelete(group.id)}
                       className="rounded-full bg-red-50 hover:bg-red-200 active:scale-95 transition-all shadow w-8 h-8 flex items-center justify-center text-red-600 hover:text-red-800 focus:outline-none border border-red-100"
                       aria-label="Löschen"
                     >
-                      <FaTrash className="h-4 w-4" />
+                      <Trash2 className="h-4 w-4" />
                     </button>
                   </>
                 )}
@@ -159,7 +159,7 @@ const GroupsManagerMobile: React.FC = () => {
           className="rounded-full bg-gradient-to-br from-[#ff9900] to-[#ffb84d] text-white shadow-3xl w-10 h-10 flex items-center justify-center text-xl focus:outline-none focus:ring-2 focus:ring-[#ff9900]/30 active:scale-95 transition border-2 border-white"
           aria-label="Neue Gruppe erstellen"
         >
-          <FaPlus className="h-5 w-5" />
+          <Plus className="h-5 w-5" />
         </button>
       </div>
       {/* Abstand zwischen Plus-Button und Liste */}

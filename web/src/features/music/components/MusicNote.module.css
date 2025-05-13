@@ -13,9 +13,9 @@
   transition: all 0.3s ease;
   z-index: 9999;
   backdrop-filter: blur(8px);
-  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.2);
-  background: rgba(70, 11, 108, 0.8);
-  color: #ff9900;
+  box-shadow: 0 2px 8px rgba(255, 153, 0, 0.2);
+  background: #ff9900;
+  color: #fff;
 }
 
 .musicNote::after {
@@ -87,11 +87,12 @@
 
 .spinning {
   animation: spin 3s linear infinite;
-  transform-origin: center;
+  animation-play-state: running;
 }
 
 .paused {
-  animation: none;
+  animation: spin 3s linear infinite;
+  animation-play-state: paused;
 }
 
 .playerControls {
@@ -224,19 +225,28 @@
   margin-top: 2px;
 }
 
-.marquee {
-  animation: marquee 8s linear infinite;
-  display: inline-block;
+.trackTitleMarquee {
+  width: 100%;
+  overflow: hidden;
   position: relative;
-  left: 100%;
+  height: 1.3em;
+  display: flex;
+  align-items: center;
 }
 
-@keyframes marquee {
+.marqueeInner {
+  display: inline-block;
+  white-space: nowrap;
+  animation: marquee-scroll 10s linear infinite;
+  padding-right: 2em;
+}
+
+@keyframes marquee-scroll {
   0% {
-    left: 100%;
+    transform: translateX(100%);
   }
   100% {
-    left: -100%;
+    transform: translateX(-100%);
   }
 }
 
@@ -260,11 +270,15 @@
   }
 }
 
-/* ReactPlayer Styles */
-:global(.react-player) {
-  display: none !important;
-  visibility: hidden !important;
-  opacity: 0 !important;
-  position: absolute !important;
-  pointer-events: none !important;
+/* Schallplatte mit orangem Rand */
+.vinylBg {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 48px;
+  height: 48px;
+  border-radius: 50%;
+  background: black;
+  border: 2px solid #ff9900;
+  z-index: 0;
 } 

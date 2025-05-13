@@ -2,7 +2,7 @@
 
 import { useState, useRef } from 'react';
 import Link from "next/link";
-import { FaGavel, FaUserShield, FaChevronDown } from "react-icons/fa";
+import { Gavel, Shield, ChevronDown } from 'lucide-react';
 
 function Sheet({ title, onClose, children }: { title: string, onClose: () => void, children: React.ReactNode }) {
   const [touchStartY, setTouchStartY] = useState<number | null>(null);
@@ -62,7 +62,7 @@ function Sheet({ title, onClose, children }: { title: string, onClose: () => voi
             className="absolute right-4 top-4 text-2xl text-[#460b6c] hover:text-[#ff9900] focus:outline-none"
             aria-label="Schließen"
           >
-            <FaChevronDown />
+            <ChevronDown />
           </button>
         </div>
         {/* Content */}
@@ -164,7 +164,7 @@ export default function LegalNotice() {
             onClick={() => setSheet('datenschutz')}
             className="flex items-center gap-2 px-4 py-2 rounded-lg border border-gray-200 bg-white shadow hover:bg-gray-50 transition-colors text-[#460b6c] focus:outline-none focus:ring-2 focus:ring-[#ff9900]"
           >
-            <FaUserShield className="text-[#ff9900]" />
+            <Shield className="text-[#ff9900]" />
             <span>Datenschutz</span>
           </button>
           <button
@@ -172,7 +172,7 @@ export default function LegalNotice() {
             onClick={() => setSheet('impressum')}
             className="flex items-center gap-2 px-4 py-2 rounded-lg border border-gray-200 bg-white shadow hover:bg-gray-50 transition-colors text-[#460b6c] focus:outline-none focus:ring-2 focus:ring-[#ff9900]"
           >
-            <FaGavel className="text-[#ff9900]" />
+            <Gavel className="text-[#ff9900]" />
             <span>Impressum</span>
           </button>
         </div>

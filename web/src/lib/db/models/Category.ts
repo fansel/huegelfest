@@ -32,9 +32,10 @@ const categorySchema = new Schema<ICategory>(
       required: true,
       validate: {
         validator: function(v: string) {
-          return v.startsWith('Fa');
+          // Erlaube lucide-react Icon-Namen (z.B. Music, Utensils, Gamepad2, HelpCircle) und alte Fa-Icons
+          return /^[A-Za-z0-9]+$/.test(v);
         },
-        message: 'Icon muss mit "Fa" beginnen'
+        message: 'Icon muss ein gültiger lucide-react Icon-Name sein (z.B. Music, Utensils, Gamepad2, HelpCircle) oder ein alter Fa-Name.'
       }
     },
     color: {

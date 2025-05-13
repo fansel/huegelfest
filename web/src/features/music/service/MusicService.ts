@@ -79,7 +79,7 @@ export class MusicService {
     }
   }
 
-  private static async downloadAudio(url: string): Promise<{ buffer: Buffer; mimeType: string; soundcloudResponse: any }> {
+  private static async downloadAudio(url: string): Promise<{ buffer: Buffer; mimeType: string }> {
     logger.debug('[MusicService] Starte Audio-Download für URL:', url);
     try {
       const clientId = this.getClientId();
@@ -111,8 +111,7 @@ export class MusicService {
       }
       return {
         buffer,
-        mimeType: 'audio/mpeg',
-        soundcloudResponse: trackInfo
+        mimeType: 'audio/mpeg'
       };
     } catch (error) {
       logger.error('[MusicService] Fehler beim Herunterladen der Audio-Datei:', error);
@@ -132,6 +131,24 @@ export class MusicService {
     return music;
   }
 
+  /**
+   * Lädt ein Bild von einer URL herunter und gibt Buffer und Mime-Type zurück
+   */
+  private static async downloadImageAsBuffer(url: string): Promise<{ buffer: Buffer; mimeType: string }> {
+    try {
+      const response = await fetch(url);
+      if (!response.ok) {
+        throw new Error(`Fehler beim Laden des Bildes: ${response.statusText}`);
+      }
+      const mimeType = response.headers.get('content-type') || 'image/jpeg';
+      const arrayBuffer = await response.arrayBuffer();
+      return { buffer: Buffer.from(arrayBuffer), mimeType };
+    } catch (error) {
+      logger.error('[MusicService] Fehler beim Herunterladen des Coverarts:', error);
+      throw error;
+    }
+  }
+
   public static async addMusic(url: string): Promise<{ url: string; trackInfo: TrackInfo }> {
     logger.info('[MusicService] Starte Prozess zum Hinzufügen neuer Musik:', url);
     if (!url || !this.isValidUrl(url)) {
@@ -145,21 +162,55 @@ export class MusicService {
       }
       logger.debug('[MusicService] Hole Track-Informationen...');
       const trackInfo = await this.getTrackInfo(url);
-      logger.info('[MusicService] Track-Info erfolgreich erhalten');
+      logger.info('[MusicService] Track-Info erfolgreich erhalten:', trackInfo);
       logger.debug('[MusicService] Starte Audio-Download...');
-      const { buffer, mimeType, soundcloudResponse } = await this.downloadAudio(url);
-      logger.info('[MusicService] Audio erfolgreich heruntergeladen');
+      const { buffer, mimeType } = await this.downloadAudio(url);
+      logger.info('[MusicService] Audio erfolgreich heruntergeladen, Größe:', buffer.length, 'Bytes');
+
+      // Coverart herunterladen
+      let coverArtData: Buffer | undefined = undefined;
+      let coverArtMimeType: string | undefined = undefined;
+      logger.info('[MusicService] Coverart-URL:', trackInfo.thumbnail_url);
+      if (trackInfo.thumbnail_url) {
+        try {
+          logger.info('[MusicService] Versuche Coverart zu laden:', trackInfo.thumbnail_url);
+          const response = await fetch(trackInfo.thumbnail_url);
+          logger.info('[MusicService] HTTP-Status Coverart:', response.status);
+          if (!response.ok) {
+            throw new Error(`Fehler beim Laden des Bildes: ${response.statusText}`);
+          }
+          coverArtMimeType = response.headers.get('content-type') || 'image/jpeg';
+          const arrayBuffer = await response.arrayBuffer();
+          coverArtData = Buffer.from(arrayBuffer);
+          logger.info('[MusicService] Coverart erfolgreich heruntergeladen, Größe:', coverArtData.length, 'Bytes, Mime-Type:', coverArtMimeType);
+        } catch (coverError) {
+          logger.error('[MusicService] Fehler beim Herunterladen des Coverarts:', coverError);
+        }
+      } else {
+        logger.warn('[MusicService] Kein Coverart-URL gefunden');
+      }
+
       logger.debug('[MusicService] Verbinde mit Datenbank...');
       await connectDB();
-      logger.debug('[MusicService] Speichere Musik in Datenbank...');
+      logger.debug('[MusicService] Speichere Musik in Datenbank mit Feldern:', {
+        url,
+        trackInfo,
+        audioData: buffer ? `[Buffer: ${buffer.length} Bytes]` : undefined,
+        mimeType,
+        coverArtData: coverArtData ? `[Buffer: ${coverArtData.length} Bytes]` : undefined,
+        coverArtMimeType
+      });
       const result = await Music.findOneAndUpdate(
         { url },
         {
-          url,
-          trackInfo,
-          audioData: buffer,
-          mimeType,
-          soundcloudResponse
+          $set: {
+            url,
+            trackInfo,
+            audioData: buffer,
+            mimeType,
+            coverArtData,
+            coverArtMimeType
+          }
         },
         { upsert: true, new: true }
       );
@@ -168,17 +219,23 @@ export class MusicService {
         url: result.url,
         hasAudioData: !!result.audioData,
         audioDataLength: result.audioData?.length,
-        mimeType: result.mimeType
+        mimeType: result.mimeType,
+        hasCoverArt: !!result.coverArtData,
+        coverArtDataLength: result.coverArtData?.length,
+        coverArtMimeType: result.coverArtMimeType
       });
       return {
         url: result.url,
-        trackInfo: result.trackInfo
+        trackInfo: result.trackInfo && typeof result.trackInfo.toObject === 'function'
+          ? result.trackInfo.toObject()
+          : JSON.parse(JSON.stringify(result.trackInfo))
       };
     } catch (error) {
-      logger.error('[MusicService] Fehler beim Hinzufügen der Musik:', error);
       if (error instanceof Error) {
-        logger.error('[MusicService] Fehlerdetails:', error.message);
+        logger.error('[MusicService] Fehler beim Hinzufügen der Musik:', error.message);
         logger.error('[MusicService] Stack Trace:', error.stack);
+      } else {
+        logger.error('[MusicService] Fehler beim Hinzufügen der Musik:', String(error));
       }
       throw error;
     }
@@ -188,6 +245,13 @@ export class MusicService {
     logger.info('[MusicService] Entferne Musik:', url);
     await connectDB();
     const result = await Music.deleteOne({ url });
+    logger.info('[MusicService] Lösch-Ergebnis:', result);
+  }
+
+  public static async removeMusicById(id: string): Promise<void> {
+    logger.info('[MusicService] Entferne Musik anhand der ID:', id);
+    await connectDB();
+    const result = await Music.deleteOne({ _id: id });
     logger.info('[MusicService] Lösch-Ergebnis:', result);
   }
 

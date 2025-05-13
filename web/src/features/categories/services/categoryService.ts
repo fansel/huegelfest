@@ -13,9 +13,6 @@ export async function createCategory(data: any) {
   if (!data.name || !data.icon) {
     throw new Error('Name und Icon sind erforderlich');
   }
-  if (!data.icon.startsWith('Fa')) {
-    throw new Error('Icon muss mit "Fa" beginnen');
-  }
   const categoryData = {
     name: data.name,
     label: data.name,
@@ -27,7 +24,11 @@ export async function createCategory(data: any) {
   };
   const category = new Category(categoryData);
   await category.save();
-  return category;
+  const plain = category.toObject ? category.toObject() : category;
+  return {
+    ...plain,
+    _id: typeof plain._id === 'string' ? plain._id : (plain._id?.toString?.() ?? ''),
+  };
 }
 
 export async function updateCategory(id: string, updateData: any) {
@@ -44,7 +45,11 @@ export async function updateCategory(id: string, updateData: any) {
   if (!category) {
     throw new Error('Kategorie nicht gefunden');
   }
-  return category;
+  const plain = category.toObject ? category.toObject() : category;
+  return {
+    ...plain,
+    _id: typeof plain._id === 'string' ? plain._id : (plain._id?.toString?.() ?? ''),
+  };
 }
 
 export async function deleteCategory(id: string) {

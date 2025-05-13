@@ -2,7 +2,7 @@
 
 import { useState, useEffect } from 'react';
 import styles from './content.module.css';
-import { FaTrain, FaCar, FaMapMarkerAlt, FaPhone, FaWhatsapp } from 'react-icons/fa';
+import { Train, Car, MapPin, Phone, PhoneCall } from 'lucide-react';
 
 interface Ride {
   _id?: string;
@@ -194,15 +194,15 @@ export default function AnreiseContent({ allowClipboard = false }: ContentProps)
             className={styles.travelOption}
             onClick={() => setActiveOption(activeOption === 'train' ? null : 'train')}
           >
-            <FaTrain className={styles.travelOptionIcon} />
-            <h2 className={styles.travelOptionTitle}>Mit dem Zug</h2>
+            <Train className={styles.travelOptionIcon} />
+            <h2 className={styles.travelOptionTitle}>Mit der Bahn</h2>
           </div>
 
           <div 
             className={styles.travelOption}
             onClick={() => setActiveOption(activeOption === 'car' ? null : 'car')}
           >
-            <FaCar className={styles.travelOptionIcon} />
+            <Car className={styles.travelOptionIcon} />
             <h2 className={styles.travelOptionTitle}>Mit dem Auto</h2>
           </div>
         </div>
@@ -216,7 +216,7 @@ export default function AnreiseContent({ allowClipboard = false }: ContentProps)
             
             <p>Einfach anrufen oder per WhatsApp kurz schreiben:</p>
             <div className={styles.highlightText}>
-              <FaPhone /> 0123 456789
+              <Phone /> 0123 456789
             </div>
             
             <p>Shuttle-Zeiten: ca. 10:00 bis 20:00 Uhr, alle 30 Minuten.</p>
@@ -229,7 +229,7 @@ export default function AnreiseContent({ allowClipboard = false }: ContentProps)
           <div className={styles.detailsContent}>
             <p>Adresse für&apos;s Navi:</p>
             <div className={styles.highlightText}>
-              <FaMapMarkerAlt /> Hügelweg 123, 12345 Truchtlachingen
+              <MapPin /> Hügelweg 123, 12345 Truchtlachingen
             </div>
             
             <p>Oder einfach auf Google Maps suchen: <span className={styles.highlightText}>Hügelfest 2025</span>.</p>

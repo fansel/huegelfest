@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { useAnnouncementsManager } from '../../hooks/useAnnouncementsManager';
 import { IAnnouncement } from '@/shared/types/types';
-import { FaPlus, FaTrash, FaEdit } from 'react-icons/fa';
+import { Plus, Trash2, Pencil } from 'lucide-react';
 import { toast } from 'react-hot-toast';
 import { AnnouncementCard } from '@/features/announcements/components/AnnouncementCard';
 

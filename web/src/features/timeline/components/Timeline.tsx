@@ -2,14 +2,14 @@
 
 import React, { useEffect, useState } from 'react';
 import {
-  FaMusic,
-  FaUtensils,
-  FaGamepad,
-  FaQuestion,
-  FaHeart,
-  FaList,
-} from 'react-icons/fa';
-import * as Icons from 'react-icons/fa';
+  Music,
+  Utensils,
+  Gamepad2,
+  HelpCircle,
+  Heart,
+  List,
+} from 'lucide-react';
+import * as LucideIcons from 'lucide-react';
 import { fetchTimeline } from '../../timeline/actions/fetchTimeline';
 import { getCategoriesAction } from '../../categories/actions/getCategories';
 import { useFavorites } from '../../../features/favorites/hooks/useFavorites';
@@ -58,8 +58,8 @@ interface TimelineProps {
 
 // Dynamisches Icon-Mapping
 const getIconComponent = (iconName: string) => {
-  const IconComponent = (Icons as any)[iconName];
-  return IconComponent || FaQuestion;
+  const IconComponent = (LucideIcons as any)[iconName];
+  return IconComponent || HelpCircle;
 };
 
 // Hilfsfunktion zur Datumsformatierung (dd.mm.yyyy)
@@ -248,7 +248,7 @@ export default function Timeline({ showFavoritesOnly = false, allowClipboard = f
                 }`}
                 title="Alle Kategorien"
               >
-                <FaList className="text-lg" />
+                <List className="text-lg" />
               </button>
               {timelineData?.categories.map((category) => {
                 const IconComponent = getIconComponent(category.icon);

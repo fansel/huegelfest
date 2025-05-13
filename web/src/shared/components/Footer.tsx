@@ -1,7 +1,7 @@
 'use client';
 
 import Link from 'next/link';
-import { FaInstagram } from 'react-icons/fa6';
+import { Instagram } from 'lucide-react';
 import React from 'react';
 
 /**
@@ -15,12 +15,12 @@ export const Footer: React.FC = () => {
         <div className="flex flex-col items-center space-y-4">
           <div className="flex items-center space-x-4">
             <Link
-              href="https://www.instagram.com/huegelfest"
+              href="https://www.instagram.com/huegel_fest"
               target="_blank"
               rel="noopener noreferrer"
               className="hover:text-[#ff9900]/80 transition-colors"
             >
-              <FaInstagram className="text-xl" />
+              <Instagram className="text-xl" />
             </Link>
           </div>
           <div className="text-center">

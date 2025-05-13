@@ -1,5 +1,5 @@
 import React from 'react';
-import { FaEdit, FaTrash } from 'react-icons/fa';
+import { Pencil, Trash2 } from 'lucide-react';
 
 interface AnnouncementCardProps {
   content: string;
@@ -44,7 +44,7 @@ export const AnnouncementCard: React.FC<AnnouncementCardProps> = ({
               className="rounded-full bg-blue-50 hover:bg-blue-200 active:scale-95 transition-all shadow w-8 h-8 flex items-center justify-center text-blue-600 hover:text-blue-800 focus:outline-none border border-blue-100"
               aria-label="Bearbeiten"
             >
-              <FaEdit className="h-4 w-4" />
+              <Pencil className="h-4 w-4" />
             </button>
           )}
           {onDelete && (
@@ -54,7 +54,7 @@ export const AnnouncementCard: React.FC<AnnouncementCardProps> = ({
               aria-label="Löschen"
               disabled={isLoadingDelete}
             >
-              <FaTrash className="h-4 w-4" />
+              <Trash2 className="h-4 w-4" />
             </button>
           )}
         </div>

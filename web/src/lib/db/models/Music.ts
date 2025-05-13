@@ -14,7 +14,8 @@ export interface MusicDocument extends Document {
   trackInfo: TrackInfo;
   audioData?: Buffer;
   mimeType?: string;
-  soundcloudResponse?: any;
+  coverArtData?: Buffer;
+  coverArtMimeType?: string;
   createdAt: Date;
   updatedAt: Date;
 }
@@ -31,9 +32,10 @@ const TrackInfoSchema = new Schema<TrackInfo>({
 const MusicSchema = new Schema<MusicDocument>({
   url: { type: String, required: true, unique: true },
   trackInfo: { type: TrackInfoSchema, required: true },
-  audioData: { type: Buffer },
   mimeType: { type: String },
-  soundcloudResponse: { type: Schema.Types.Mixed },
+  coverArtData: { type: Buffer },
+  coverArtMimeType: { type: String },
+  audioData: { type: Buffer },
 }, { timestamps: true });
 
 export default mongoose.models.Music || mongoose.model<MusicDocument>('Music', MusicSchema); 

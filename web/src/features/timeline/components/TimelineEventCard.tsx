@@ -1,6 +1,6 @@
 import React from 'react';
 import { FavoriteButton } from '../../favorites/components/FavoriteButton';
-import { FaQuestion } from 'react-icons/fa';
+import { HelpCircle } from 'lucide-react';
 
 interface TimelineEventCardProps {
   event: any;
@@ -23,7 +23,7 @@ export const TimelineEventCard: React.FC<TimelineEventCardProps> = ({
   getIconComponent,
   favoriteButtonProps,
 }) => {
-  const IconComponent = category ? getIconComponent(category.icon) : FaQuestion;
+  const IconComponent = category ? getIconComponent(category.icon) : HelpCircle;
   return (
     <div className="bg-[#460b6c]/50 backdrop-blur-sm border border-[#ff9900]/20 rounded-lg p-4">
       <div className="flex items-start justify-between">

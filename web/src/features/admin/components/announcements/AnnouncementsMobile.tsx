@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { IAnnouncement } from '@/shared/types/types';
-import { FaPlus, FaTrash, FaEdit } from 'react-icons/fa';
+import { Plus, Trash2, Pencil } from 'lucide-react';
 import { useAnnouncementsManager } from '../../hooks/useAnnouncementsManager';
 import { toast } from 'react-hot-toast';
 import { AnnouncementCard } from '@/features/announcements/components/AnnouncementCard';
@@ -96,7 +96,7 @@ const AnnouncementsMobile: React.FC = () => {
           className="rounded-full bg-gradient-to-br from-[#ff9900] to-[#ffb84d] text-white shadow-3xl w-10 h-10 flex items-center justify-center text-xl focus:outline-none focus:ring-2 focus:ring-[#ff9900]/30 active:scale-95 transition border-2 border-white"
           aria-label="Neue Ankündigung erstellen"
         >
-          <FaPlus className="h-5 w-5" />
+          <Plus className="h-5 w-5" />
         </button>
       </div>
       {/* Liste */}

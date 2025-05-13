@@ -15,10 +15,14 @@ import {
   useSortable,
 } from '@dnd-kit/sortable';
 import { CSS } from '@dnd-kit/utilities';
-import { FaPlus, FaTrash, FaPencilAlt, FaCheck, FaTimes, FaEdit, FaLock, FaSpinner } from 'react-icons/fa';
+import { Plus, Trash2, Pencil, Check, X, PencilLine, Lock, Loader2 } from 'lucide-react';
 import clsx from 'clsx';
 import toast from 'react-hot-toast';
 import { useTimeline } from '@/features/timeline/hooks/useTimeline';
+import * as LucideIcons from 'lucide-react';
+import { createCategoryAction } from '@/features/categories/actions/createCategory';
+import { updateCategoryAction } from '@/features/categories/actions/updateCategory';
+import { deleteCategoryAction } from '@/features/categories/actions/deleteCategory';
 
 // Hilfsfunktion für ID-String
 function getIdString(id: string | { $oid: string } | undefined): string {
@@ -29,9 +33,8 @@ function getIdString(id: string | { $oid: string } | undefined): string {
 }
 
 const getIconComponent = (iconName: string) => {
-  const Icons = require('react-icons/fa');
-  const IconComponent = Icons[iconName];
-  return IconComponent || Icons.FaQuestion;
+  const IconComponent = (LucideIcons as any)[iconName];
+  return IconComponent || LucideIcons.HelpCircle;
 };
 
 /**
@@ -233,7 +236,7 @@ const TimelineDesktop: React.FC<TimelineDesktopProps> = ({
       <h2 className="text-3xl font-bold mb-6 text-[#460b6c] text-center tracking-tight drop-shadow-sm">Timeline-Editor (Desktop)</h2>
       {(loading || categoriesLoading) ? (
         <div className="flex justify-center items-center h-40">
-          <FaSpinner className="animate-spin text-[#ff9900] text-3xl" />
+          <Loader2 className="animate-spin text-[#ff9900] text-3xl" />
         </div>
       ) : (
         <>
@@ -271,20 +274,20 @@ const TimelineDesktop: React.FC<TimelineDesktopProps> = ({
                                 title="Tag bearbeiten"
                                 aria-label="Tag bearbeiten"
                               >
-                                <FaEdit className="h-4 w-4" />
+                                <Pencil className="h-4 w-4" />
                               </button>
                               <button
                                 onClick={() => setConfirmDelete({ type: 'day', id: dayId })}
                                 className="rounded-full p-2 hover:bg-red-100 active:bg-red-200 transition"
                                 title="Tag löschen"
                               >
-                                <FaTrash className="w-5 h-5 text-red-500" />
+                                <Trash2 className="w-5 h-5 text-red-500" />
                               </button>
                             </div>
                             {day.events.map(event => {
                               const eventId = getIdString(event._id);
                               const category = categories.find(cat => getIdString(cat._id) === (typeof event.categoryId === 'string' ? event.categoryId : (event.categoryId as any)?.$oid || ''));
-                              const IconComponent = category ? getIconComponent(category.icon) : getIconComponent('FaQuestion');
+                              const IconComponent = category ? getIconComponent(category.icon) : getIconComponent('HelpCircle');
                               return (
                                 <div
                                   key={eventId}
@@ -314,7 +317,7 @@ const TimelineDesktop: React.FC<TimelineDesktopProps> = ({
                                       title="Bearbeiten"
                                       aria-label="Bearbeiten"
                                     >
-                                      <FaEdit className="h-4 w-4" />
+                                      <Pencil className="h-4 w-4" />
                                     </button>
                                     <button
                                       onClick={() => setConfirmDelete({ type: 'event', id: eventId, parentId: dayId })}
@@ -322,7 +325,7 @@ const TimelineDesktop: React.FC<TimelineDesktopProps> = ({
                                       title="Löschen"
                                       aria-label="Löschen"
                                     >
-                                      <FaTrash className="h-4 w-4" />
+                                      <Trash2 className="h-4 w-4" />
                                     </button>
                                   </div>
                                 </div>
@@ -339,7 +342,7 @@ const TimelineDesktop: React.FC<TimelineDesktopProps> = ({
                                 className="rounded-full bg-gradient-to-br from-[#ff9900] to-[#ffb84d] text-white shadow-3xl w-10 h-10 flex items-center justify-center text-xl focus:outline-none focus:ring-2 focus:ring-[#ff9900]/30 active:scale-95 transition border-2 border-white"
                                 aria-label="Neues Event anlegen"
                               >
-                                <FaPlus className="h-5 w-5" />
+                                <Plus className="h-5 w-5" />
                               </button>
                             </div>
                           </div>
@@ -358,7 +361,7 @@ const TimelineDesktop: React.FC<TimelineDesktopProps> = ({
                     className="rounded-full bg-gradient-to-br from-[#ff9900] to-[#ffb84d] text-white shadow-3xl w-10 h-10 flex items-center justify-center text-xl focus:outline-none focus:ring-2 focus:ring-[#ff9900]/30 active:scale-95 transition border-2 border-white"
                     aria-label="Neuen Tag anlegen"
                   >
-                    <FaPlus className="h-5 w-5" />
+                    <Plus className="h-5 w-5" />
                   </button>
                 </div>
               </div>
@@ -526,14 +529,14 @@ const TimelineDesktop: React.FC<TimelineDesktopProps> = ({
                   {categories.map(cat => (
                     <li key={cat._id} className="bg-white shadow rounded-xl px-4 py-3 flex items-center justify-between">
                       <div className="flex items-center gap-3">
-                        <span className="rounded-full border-2 border-white shadow p-2 bg-gray-50"><span className="text-xl" style={{ color: cat.color }}><>{getIconComponent(cat.icon)}</></span></span>
+                        <span className="rounded-full border-2 border-white shadow p-2 bg-gray-50"><span className="text-xl" style={{ color: cat.color }}>{(() => { const IconComponent = getIconComponent(cat.icon); return <IconComponent className="text-2xl" />; })()}</span></span>
                         <span className="font-medium text-gray-800">{cat.name}</span>
-                        {cat.isDefault && <span className="ml-2 text-gray-400" title="Standard-Kategorie"><FaLock /></span>}
+                        {cat.isDefault && <span className="ml-2 text-gray-400" title="Standard-Kategorie"><Lock /></span>}
                       </div>
                       {!cat.isDefault && (
                         <div className="flex gap-1">
-                          <button onClick={() => { setEditCategoryId(cat._id); setCategoryForm({ name: cat.name, color: cat.color, icon: cat.icon }); setShowCategoryModal(true); }} className="rounded-full bg-blue-50 hover:bg-blue-200 w-8 h-8 flex items-center justify-center text-blue-600 border border-blue-100"><FaEdit /></button>
-                          <button onClick={async () => { await removeEvent(cat._id); fetchCategories(); }} className="rounded-full bg-red-50 hover:bg-red-200 w-8 h-8 flex items-center justify-center text-red-600 border border-red-100"><FaTrash /></button>
+                          <button onClick={() => { setEditCategoryId(cat._id); setCategoryForm({ name: cat.name, color: cat.color, icon: cat.icon }); setShowCategoryModal(true); }} className="rounded-full bg-blue-50 hover:bg-blue-200 w-8 h-8 flex items-center justify-center text-blue-600 border border-blue-100"><Pencil /></button>
+                          <button onClick={async () => { await deleteCategoryAction(cat._id); fetchCategories(); }} className="rounded-full bg-red-50 hover:bg-red-200 w-8 h-8 flex items-center justify-center text-red-600 border border-red-100"><Trash2 /></button>
                         </div>
                       )}
                     </li>
@@ -545,7 +548,7 @@ const TimelineDesktop: React.FC<TimelineDesktopProps> = ({
                     className="rounded-full bg-gradient-to-br from-[#ff9900] to-[#ffb84d] text-white shadow-3xl w-10 h-10 flex items-center justify-center text-xl focus:outline-none focus:ring-2 focus:ring-[#ff9900]/30 active:scale-95 transition border-2 border-white"
                     aria-label="Neue Kategorie anlegen"
                   >
-                    <FaPlus className="h-5 w-5" />
+                    <Plus className="h-5 w-5" />
                   </button>
                 </div>
                 {showCategoryModal && (
@@ -564,8 +567,8 @@ const TimelineDesktop: React.FC<TimelineDesktopProps> = ({
                         <div className="w-full">
                           <input type="text" placeholder="Icon suchen..." className="border-b border-gray-200 px-2 py-1 mb-2 w-full" value={iconSearch} onChange={e => setIconSearch(e.target.value)} />
                           <div className="grid grid-cols-6 gap-2 max-h-32 overflow-y-auto">
-                            {Object.keys(require('react-icons/fa')).filter(name => name.startsWith('Fa') && name.toLowerCase().includes(iconSearch.toLowerCase())).map(name => {
-                              const Icon = require('react-icons/fa')[name];
+                            {Object.keys(LucideIcons).filter(name => name.toLowerCase().includes(iconSearch.toLowerCase())).map(name => {
+                              const Icon = (LucideIcons as any)[name];
                               return <button key={name} className={`rounded p-1 border ${categoryForm.icon === name ? 'border-[#ff9900] bg-[#ff9900]/10' : 'border-transparent'}`} onClick={() => setCategoryForm(f => ({ ...f, icon: name }))}><Icon className="text-2xl" /></button>;
                             })}
                           </div>
@@ -575,9 +578,9 @@ const TimelineDesktop: React.FC<TimelineDesktopProps> = ({
                         <button onClick={async () => {
                           if (!categoryForm.name || !categoryForm.icon) return;
                           if (editCategoryId) {
-                            // updateCategoryAction analog wie mobil
+                            await updateCategoryAction(editCategoryId, { name: categoryForm.name, color: categoryForm.color, icon: categoryForm.icon });
                           } else {
-                            // createCategoryAction analog wie mobil
+                            await createCategoryAction({ name: categoryForm.name, color: categoryForm.color, icon: categoryForm.icon });
                           }
                           setShowCategoryModal(false);
                           fetchCategories();

@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useRef, useEffect } from 'react';
 import type { TimelineData, Day, Event, Category } from '@/features/timeline/types/types';
 import {
   DndContext,
@@ -15,15 +15,30 @@ import {
   useSortable,
 } from '@dnd-kit/sortable';
 import { CSS } from '@dnd-kit/utilities';
-import { FaPlus, FaTrash, FaPen, FaCheck, FaTimes, FaEdit, FaLock, FaSpinner } from 'react-icons/fa';
+import { Plus, Trash2, Pen, Check, X, Pencil, Lock, Loader2, Clock } from 'lucide-react';
 import clsx from 'clsx';
 import toast from 'react-hot-toast';
 import { useTimeline } from '@/features/timeline/hooks/useTimeline';
 import Datepicker from 'react-tailwindcss-datepicker';
-import * as Icons from 'react-icons/fa';
+import * as LucideIcons from 'lucide-react';
 import { createCategoryAction } from '@/features/categories/actions/createCategory';
 import { updateCategoryAction } from '@/features/categories/actions/updateCategory';
-import { deleteCategoryAction } from '@/features/categories/actions/deleteCategory';
+import { deleteCategoryAction } from '@/features/categories/actions/deleteCategory'
+import tags from 'lucide-static/tags.json';
+import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetFooter } from '@/components/ui/sheet';
+import { Input } from '@/components/ui/input';
+import { Textarea } from '@/components/ui/textarea';
+import { Button } from '@/components/ui/button';
+import { Calendar } from '@/components/ui/calendar';
+import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
+import { format } from 'date-fns';
+import { Select, SelectTrigger, SelectContent, SelectItem, SelectValue } from '@/components/ui/select';
+import { Tabs, TabsList, TabsTrigger, TabsContent } from '@/components/ui/tabs';
+import { AlertDialog, AlertDialogTrigger, AlertDialogContent, AlertDialogHeader, AlertDialogTitle, AlertDialogDescription, AlertDialogFooter, AlertDialogCancel, AlertDialogAction } from '@/components/ui/alert-dialog';
+import { de } from 'date-fns/locale';
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { Accordion, AccordionItem, AccordionTrigger, AccordionContent } from '@/components/ui/accordion';
+import { Badge } from '@/components/ui/badge';
 
 console.log('TimelineMobile render');
 
@@ -110,9 +125,16 @@ function CategorySelect({
 
 // Hilfsfunktion für dynamisches Icon
 const getIconComponent = (iconName: string) => {
-  const IconComponent = (Icons as any)[iconName];
-  return IconComponent || Icons.FaQuestion;
+  const IconComponent = (LucideIcons as any)[iconName];
+  return IconComponent || LucideIcons.HelpCircle;
 };
+
+function toPascalCase(kebab: string) {
+  return kebab
+    .split('-')
+    .map(part => part.charAt(0).toUpperCase() + part.slice(1))
+    .join('');
+}
 
 /**
  * Mobile-Variante des Timeline-Editors für Admins
@@ -158,6 +180,20 @@ const TimelineMobile: React.FC = () => {
   const [categoryForm, setCategoryForm] = useState<{ name: string; color: string; icon: string }>({ name: '', color: '#ff9900', icon: '' });
   const [editCategoryId, setEditCategoryId] = useState<string | null>(null);
   const [iconSearch, setIconSearch] = useState('');
+  const [iconPage, setIconPage] = useState(0);
+  const ICONS_PER_PAGE = 24;
+
+  const iconList = Object.entries(tags).map(([name, tags]) => ({ name, tags: tags as string[] }));
+
+  const filteredIcons = iconList.filter((icon: { name: string; tags: string[] }) => {
+    const term = iconSearch.toLowerCase();
+    return (
+      icon.name.toLowerCase().includes(term) ||
+      icon.tags.some((tag: string) => tag.toLowerCase().includes(term))
+    );
+  });
+  const pageCount = Math.ceil(filteredIcons.length / ICONS_PER_PAGE);
+  const pagedIcons = filteredIcons.slice(iconPage * ICONS_PER_PAGE, (iconPage + 1) * ICONS_PER_PAGE);
 
   const handleDragEnd = async (event: DragEndEvent) => {
     const { active, over } = event;
@@ -249,6 +285,56 @@ const TimelineMobile: React.FC = () => {
 
   console.log('showEventModalOpen', showEventModalOpen);
 
+  const dayTitleRef = useRef<HTMLInputElement>(null);
+  const eventTitleRef = useRef<HTMLInputElement>(null);
+
+  const [isDatePickerOpen, setIsDatePickerOpen] = useState(false);
+
+  useEffect(() => {
+    if (showDayModal && dayTitleRef.current && !isDatePickerOpen) {
+      setTimeout(() => {
+        dayTitleRef.current?.focus();
+      }, 50);
+    }
+  }, [showDayModal, isDatePickerOpen]);
+
+  useEffect(() => {
+    if (showEventModalOpen && eventTitleRef.current) {
+      eventTitleRef.current.focus();
+    }
+  }, [showEventModalOpen]);
+
+  useEffect(() => {
+    fetchCategories();
+  }, []);
+
+  useEffect(() => {
+    if (
+      showEventModalOpen &&
+      categories.length > 0 &&
+      (!eventForm.categoryId || !categories.some(cat => getIdString(cat._id) === eventForm.categoryId))
+    ) {
+      setEventForm(f => ({
+        ...f,
+        categoryId: getIdString(categories[0]._id),
+      }));
+    }
+  }, [showEventModalOpen, categories, eventForm.categoryId]);
+
+  useEffect(() => {
+    if (
+      showEventModalOpen &&
+      categories.length > 0 &&
+      eventForm.categoryId &&
+      categories.some(cat => getIdString(cat._id) === eventForm.categoryId) &&
+      eventTitleRef.current
+    ) {
+      setTimeout(() => {
+        eventTitleRef.current?.focus();
+      }, 50);
+    }
+  }, [showEventModalOpen, categories, eventForm.categoryId]);
+
   return (
     <>
       <div className="w-full px-2 sm:px-0 relative min-h-[60vh] pb-24">
@@ -256,81 +342,60 @@ const TimelineMobile: React.FC = () => {
         {/* Timeline-Tab: Ladezustand */}
         {(loading || categoriesLoading) ? (
           <div className="flex justify-center items-center h-40">
-            <FaSpinner className="animate-spin text-[#ff9900] text-3xl" />
+            <Loader2 className="animate-spin text-[#ff9900] text-3xl" />
           </div>
         ) : (
           <>
             {/* Tab-Bar nur hier! */}
-            <div className="flex justify-center gap-2 mb-4 mt-2">
-              <button onClick={() => setActiveTab('timeline')} className={`px-4 py-2 rounded-full font-bold transition ${activeTab === 'timeline' ? 'bg-white text-[#460b6c] shadow' : 'bg-[#460b6c] text-white'}`}>Timeline</button>
-              <button onClick={() => setActiveTab('categories')} className={`px-4 py-2 rounded-full font-bold transition ${activeTab === 'categories' ? 'bg-white text-[#460b6c] shadow' : 'bg-[#460b6c] text-white'}`}>Kategorien</button>
-            </div>
-            {activeTab === 'timeline' ? (
-              <>
+            <Tabs value={activeTab} onValueChange={(v: string) => setActiveTab(v as 'timeline' | 'categories')} className="mb-4 mt-2">
+              <TabsList className="flex justify-center gap-2">
+                <TabsTrigger value="timeline">Timeline</TabsTrigger>
+                <TabsTrigger value="categories">Kategorien</TabsTrigger>
+              </TabsList>
+              <TabsContent value="timeline">
                 {error && <div className="text-red-500">{error}</div>}
                 {categoriesError && <div className="text-red-500">{categoriesError}</div>}
                 {/* Timeline-Ansicht */}
                 {activeTab === 'timeline' && (
                   <>
-                    <div className="flex flex-col gap-4">
+                    <Accordion type="single" collapsible className="flex flex-col gap-6">
                       {timeline?.days?.length ? (
                         timeline.days.map(day => {
                           const dayId = getIdString(day._id);
                           const isOpen = openDay === dayId;
                           return (
-                            <div
-                              key={dayId}
-                              className="bg-white shadow-lg rounded-2xl px-4 py-3 flex flex-col w-full mb-4 transition-all duration-200 hover:scale-[1.01] border border-gray-200"
-                            >
-                              <button
-                                className={
-                                  'w-full flex items-center justify-between px-0 py-0 bg-transparent text-gray-900 font-semibold text-lg tracking-tight transition-all duration-200' +
-                                  (isOpen ? ' rounded-t-2xl' : ' rounded-2xl')
-                                }
+                            <AccordionItem value={dayId} key={dayId} className="border-none bg-transparent">
+                              <Card className={`transition-all ${isOpen ? 'shadow-xl hover:shadow-2xl bg-white/90' : 'shadow-sm bg-white/70'} border-0 backdrop-blur-md` }>
+                                <AccordionTrigger
+                                  className="flex items-center justify-between px-6 py-4 gap-4 rounded-2xl hover:bg-gray-50/80 transition-all"
                                 onClick={() => setOpenDay(isOpen ? null : dayId)}
                                 aria-expanded={isOpen}
                               >
-                                <span className="flex-1 text-left truncate">{day.title}</span>
-                                <span className="ml-2 text-xs text-gray-500">{isOpen ? '▲' : '▼'}</span>
-                              </button>
-                              {isOpen && (
-                                <div className="p-4 flex flex-col gap-3 bg-white/90">
-                                  {/* Tag bearbeiten/löschen */}
-                                  <div className="flex gap-2 items-center mb-2">
-                                    <button
-                                      onClick={() => { setEditDayId(dayId); openDayForm(day); }}
-                                      className="rounded-full bg-blue-50 hover:bg-blue-200 active:scale-95 transition-all shadow w-8 h-8 flex items-center justify-center text-blue-600 hover:text-blue-800 focus:outline-none border border-blue-100"
-                                      title="Tag bearbeiten"
-                                      aria-label="Tag bearbeiten"
-                                    >
-                                      <FaEdit className="h-4 w-4" />
-                                    </button>
-                                    <button
-                                      onClick={() => setConfirmDelete({ type: 'day', id: dayId })}
-                                      className="rounded-full p-2 hover:bg-red-100 active:bg-red-200 transition"
-                                      title="Tag löschen"
-                                    >
-                                      <FaTrash className="w-5 h-5 text-red-500" />
-                                    </button>
+                                  <div className="flex-1 min-w-0 flex flex-row items-center gap-2">
+                                    <span className="font-bold text-lg text-[#460b6c] truncate">{day.title}</span>
+                                    <span className="text-sm text-gray-500 font-medium ml-auto whitespace-nowrap">{day.date ? format(new Date(day.date), 'EEE, dd.MM.yyyy', { locale: de }) : ''}</span>
                                   </div>
-                                  {/* Events als Cards mit DnD */}
+                                </AccordionTrigger>
+                                <AccordionContent className="px-6 pb-4 pt-2">
+                                  <div className="flex flex-col gap-4">
                                   {day.events.map(event => {
                                     const eventId = getIdString(event._id);
                                     const category = categories.find(cat => getIdString(cat._id) === (typeof event.categoryId === 'string' ? event.categoryId : (event.categoryId as any)?.$oid || ''));
-                                    const IconComponent = category ? getIconComponent(category.icon) : Icons.FaQuestion;
+                                    const IconComponent = category ? getIconComponent(category.icon) : LucideIcons.HelpCircle;
                                     return (
-                                      <div
-                                        key={eventId}
-                                        className="bg-white shadow-lg rounded-2xl px-4 py-3 flex items-center justify-between gap-3 mb-2 border border-gray-200 hover:shadow-lg transition-all duration-200 hover:scale-[1.01]"
-                                      >
-                                        <div className="flex items-center gap-3 min-w-0 flex-1">
-                                          <span className="mr-2 flex-shrink-0"><IconComponent className="text-lg" style={{ color: category?.color || '#ff9900' }} /></span>
-                                          <div className="min-w-0">
+                                        <Card key={eventId} className="flex items-center gap-3 px-4 py-3 rounded-xl shadow border-0 bg-white/95 hover:shadow-lg transition-all">
+                                          <span className="flex-shrink-0">
+                                            {IconComponent && <IconComponent className="text-xl" style={{ color: category?.color || '#ff9900' }} />}
+                                          </span>
+                                          <div className="flex-1 min-w-0">
                                             <div className="font-semibold text-gray-900 truncate text-base">{event.title}</div>
-                                            <div className="text-xs text-gray-500 mt-0.5 truncate">{event.time}{event.description ? ' · ' + event.description : ''}</div>
+                                            <div className="text-xs text-gray-500 mt-0.5 truncate flex items-center gap-2">
+                                              <Badge style={{ background: category?.color || '#ff9900', color: '#fff' }} className="px-2 py-0.5 text-xs font-medium rounded">{category?.label || category?.name || 'Kategorie'}</Badge>
+                                              <span>{event.time}</span>
+                                              {event.description && <span className="text-gray-400">· {event.description}</span>}
+                                            </div>
                                           </div>
-                                        </div>
-                                        <div className="flex gap-1 items-center">
+                                          <div className="flex gap-1 items-center ml-2">
                                           <button
                                             onClick={() => {
                                               if (!dayId || !event) {
@@ -351,7 +416,7 @@ const TimelineMobile: React.FC = () => {
                                             title="Bearbeiten"
                                             aria-label="Bearbeiten"
                                           >
-                                            <FaEdit className="h-4 w-4" />
+                                            <Pencil className="h-4 w-4" />
                                           </button>
                                           <button
                                             onClick={() => {
@@ -365,30 +430,57 @@ const TimelineMobile: React.FC = () => {
                                             title="Löschen"
                                             aria-label="Löschen"
                                           >
-                                            <FaTrash className="h-4 w-4" />
+                                            <Trash2 className="h-4 w-4" />
                                           </button>
                                         </div>
-                                      </div>
+                                        </Card>
                                     );
                                   })}
-                                  {/* Event anlegen */}
-                                  <div className="mt-6 flex justify-center mb-6">
+                                    <div className="mt-4 flex flex-col items-center">
                                     <button
                                       onClick={() => {
+                                          if (categories.length === 0) return;
                                         setEventToEdit(null);
                                         setEventDayId(dayId);
-                                        setEventForm({ time: '', title: '', description: '', categoryId: '' });
+                                          setEventForm({
+                                            time: '',
+                                            title: '',
+                                            description: '',
+                                            categoryId: getIdString(categories[0]._id),
+                                          });
                                         setShowEventModalOpen(true);
                                       }}
                                       className="rounded-full bg-gradient-to-br from-[#ff9900] to-[#ffb84d] text-white shadow-3xl w-10 h-10 flex items-center justify-center text-xl focus:outline-none focus:ring-2 focus:ring-[#ff9900]/30 active:scale-95 transition border-2 border-white"
                                       aria-label="Neues Event anlegen"
+                                        disabled={categories.length === 0}
+                                      >
+                                        <Plus className="h-5 w-5" />
+                                      </button>
+                                      {categories.length === 0 && (
+                                        <div className="text-xs text-red-500 mt-2">Bitte zuerst eine Kategorie anlegen.</div>
+                                      )}
+                                    </div>
+                                  </div>
+                                  <div className="flex gap-2 items-center mt-6">
+                                    <button
+                                      onClick={() => { setEditDayId(dayId); openDayForm(day); }}
+                                      className="rounded-full bg-blue-50 hover:bg-blue-200 active:scale-95 transition-all shadow w-8 h-8 flex items-center justify-center text-blue-600 hover:text-blue-800 focus:outline-none border border-blue-100"
+                                      title="Tag bearbeiten"
+                                      aria-label="Tag bearbeiten"
                                     >
-                                      <FaPlus className="h-5 w-5" />
+                                      <Pencil className="h-4 w-4" />
+                                    </button>
+                                    <button
+                                      onClick={() => setConfirmDelete({ type: 'day', id: dayId })}
+                                      className="rounded-full p-2 hover:bg-red-100 active:bg-red-200 transition"
+                                      title="Tag löschen"
+                                    >
+                                      <Trash2 className="w-5 h-5 text-red-500" />
                                     </button>
                                   </div>
-                                </div>
-                              )}
-                            </div>
+                                </AccordionContent>
+                              </Card>
+                            </AccordionItem>
                           );
                         })
                       ) : (
@@ -396,7 +488,7 @@ const TimelineMobile: React.FC = () => {
                           {loading ? 'Lade Timeline...' : 'Noch keine Tage vorhanden.'}
                         </div>
                       )}
-                    </div>
+                    </Accordion>
                     {/* Tag anlegen Floating-Button */}
                     <div className="mt-6 flex justify-center mb-6">
                       <button
@@ -404,22 +496,25 @@ const TimelineMobile: React.FC = () => {
                         className="rounded-full bg-gradient-to-br from-[#ff9900] to-[#ffb84d] text-white shadow-3xl w-10 h-10 flex items-center justify-center text-xl focus:outline-none focus:ring-2 focus:ring-[#ff9900]/30 active:scale-95 transition border-2 border-white"
                         aria-label="Neuen Tag anlegen"
                       >
-                        <FaPlus className="h-5 w-5" />
+                        <Plus className="h-5 w-5" />
                       </button>
                     </div>
                     {/* Bestätigungsdialog für Löschen */}
                     {confirmDelete && (
-                      <div className="fixed inset-0 bg-black bg-opacity-30 flex items-center justify-center z-50">
-                        <div className="bg-white rounded shadow-lg p-6 flex flex-col gap-4 min-w-[300px]">
-                          <div className="font-bold text-lg">Wirklich löschen?</div>
-                          <div className="text-gray-600">
+                      <AlertDialog open={!!confirmDelete} onOpenChange={open => { if (!open) setConfirmDelete(null); }}>
+                        <AlertDialogContent>
+                          <AlertDialogHeader>
+                            <AlertDialogTitle>Wirklich löschen?</AlertDialogTitle>
+                            <AlertDialogDescription>
                             {confirmDelete.type === 'day' ? 'Diesen Tag und alle zugehörigen Events löschen?' : 'Dieses Event löschen?'}
-                          </div>
-                          <div className="flex gap-2 justify-end">
-                            <button className="btn btn-sm" onClick={() => setConfirmDelete(null)}>Abbrechen</button>
-                            <button
-                              className="btn btn-sm btn-error"
-                              onClick={async () => {
+                            </AlertDialogDescription>
+                          </AlertDialogHeader>
+                          <AlertDialogFooter>
+                            <AlertDialogCancel asChild>
+                              <Button variant="secondary" onClick={() => setConfirmDelete(null)}>Abbrechen</Button>
+                            </AlertDialogCancel>
+                            <AlertDialogAction asChild>
+                              <Button variant="destructive" onClick={async () => {
                                 try {
                                   if (confirmDelete.type === 'day') {
                                     await removeDay(confirmDelete.id);
@@ -428,171 +523,150 @@ const TimelineMobile: React.FC = () => {
                                   } else if (confirmDelete.type === 'event' && confirmDelete.parentId) {
                                     const dayId = getIdString(confirmDelete.parentId);
                                     const eventId = getIdString(confirmDelete.id);
-                                    console.log('[TimelineMobile] removeEvent:', { dayId, eventId });
                                     await removeEvent(dayId, eventId);
                                     toast.success('Event gelöscht');
                                     await refetch();
                                   }
                                   setConfirmDelete(null);
                                 } catch (err: any) {
-                                  console.error('[TimelineMobile] Fehler beim Löschen:', err);
                                   toast.error('Fehler beim Löschen: ' + (err?.message || err));
                                 }
-                              }}
-                            >Löschen</button>
-                          </div>
-                        </div>
-                      </div>
+                              }}>Löschen</Button>
+                            </AlertDialogAction>
+                          </AlertDialogFooter>
+                        </AlertDialogContent>
+                      </AlertDialog>
                     )}
                     {/* Modal für Tag anlegen/bearbeiten */}
                     {showDayModal && (
-                      <div className="fixed inset-0 z-50 flex items-end justify-center bg-black/40">
-                        <div className="w-full max-w-lg mx-auto rounded-t-3xl shadow-[0_8px_40px_0_rgba(70,11,108,0.18)] border border-white/30 bg-white/95 backdrop-blur-xl flex flex-col overflow-hidden animate-modern-sheet h-[70vh]">
-                          {/* Drag Handle */}
-                          <div className="flex justify-center pt-4 pb-2 bg-transparent rounded-t-3xl">
-                            <div className="w-16 h-1.5 bg-gray-300/80 rounded-full shadow-sm" />
-                          </div>
-                          {/* Header */}
-                          <div className="flex items-center justify-between px-8 py-4 bg-transparent">
-                            <span className="text-xl font-bold text-[#460b6c] tracking-tight">
-                              {editDayId ? 'Tag bearbeiten' : 'Tag anlegen'}
-                            </span>
-                            <button
-                              onClick={() => { setShowDayModal(false); setEditDayId(null); }}
-                              className="w-10 h-10 flex items-center justify-center rounded-full bg-white/70 hover:bg-white/90 text-gray-500 hover:text-[#460b6c] text-2xl font-bold focus:outline-none shadow transition-colors"
-                              aria-label="Schließen"
-                            >
-                              ×
-                            </button>
-                          </div>
-                          {/* Content */}
-                          <div className="flex-1 overflow-y-auto px-8 py-8 flex flex-col gap-6 items-center justify-center">
-                            <input
-                              className="border-b-2 border-[#ff9900] focus:outline-none px-2 py-2 text-lg rounded w-full bg-gray-50"
+                      <Sheet open={showDayModal} onOpenChange={(open) => { setShowDayModal(open); if (!open) setEditDayId(null); }}>
+                        <SheetContent side="bottom" className="max-w-lg mx-auto rounded-t-3xl h-[70vh]">
+                          <SheetHeader>
+                            <SheetTitle>{editDayId ? 'Tag bearbeiten' : 'Tag anlegen'}</SheetTitle>
+                          </SheetHeader>
+                          <div className="flex flex-col gap-6 items-center justify-center py-8">
+                            <div className="w-full max-w-md mx-auto flex flex-col gap-4 px-4">
+                              <label htmlFor="day-title" className="text-sm font-medium text-gray-700">Titel</label>
+                              <Input
+                                id="day-title"
+                                ref={dayTitleRef}
                               placeholder="Titel"
                               value={dayForm.title}
                               onChange={e => setDayForm(f => ({ ...f, title: e.target.value }))}
                               required
-                              autoFocus
+                                className="w-full"
                             />
-                            <textarea
-                              className="border-b-2 border-[#ff9900] focus:outline-none px-2 py-2 text-lg rounded w-full bg-gray-50"
+                              <label htmlFor="day-description" className="text-sm font-medium text-gray-700">Beschreibung</label>
+                              <Textarea
+                                id="day-description"
                               placeholder="Beschreibung (optional)"
                               value={dayForm.description}
                               onChange={e => setDayForm(f => ({ ...f, description: e.target.value }))}
                               rows={2}
-                            />
-                            <Datepicker
-                              value={dayForm.date ? { startDate: dayForm.date, endDate: dayForm.date } : { startDate: null, endDate: null }}
-                              onChange={(val: any) => setDayForm(f => ({ ...f, date: val?.startDate ? new Date(val.startDate) : null }))}
-                              asSingle={true}
-                              useRange={false}
-                              displayFormat="YYYY-MM-DD"
-                              inputClassName="border-b-2 border-[#ff9900] focus:outline-none px-2 py-2 text-lg rounded w-full bg-gray-50"
-                              placeholder="Datum wählen"
-                              required
-                            />
-                            <div className="flex gap-2 justify-end mt-4 w-full">
-                              <button className="bg-gray-200 hover:bg-gray-300 text-gray-700 font-bold py-3 px-6 rounded-full flex-1 transition" onClick={() => { setShowDayModal(false); setEditDayId(null); }}>Abbrechen</button>
-                              <button className="bg-[#ff9900] hover:bg-orange-600 text-white font-bold py-3 px-6 rounded-full flex-1 transition" onClick={handleSaveDay}>{editDayId ? 'Speichern' : 'Anlegen'}</button>
+                                className="w-full"
+                              />
+                              <label htmlFor="day-date" className="text-sm font-medium text-gray-700">Datum</label>
+                              <Popover open={isDatePickerOpen} onOpenChange={setIsDatePickerOpen}>
+                                <PopoverTrigger asChild>
+                                  <Button variant="outline" className="w-full justify-start text-left font-normal" id="day-date">
+                                    {dayForm.date ? format(dayForm.date, 'dd.MM.yyyy', { locale: de }) : 'Datum wählen'}
+                                  </Button>
+                                </PopoverTrigger>
+                                <PopoverContent className="w-auto p-0">
+                                  <Calendar
+                                    mode="single"
+                                    selected={dayForm.date ?? undefined}
+                                    onSelect={date => { setDayForm(f => ({ ...f, date: date ?? null })); setIsDatePickerOpen(false); }}
+                                    locale={de}
+                                  />
+                                </PopoverContent>
+                              </Popover>
+                            </div>
+                            <div className="flex justify-end gap-2 px-6 pb-6 pt-2">
+                              <Button variant="secondary" onClick={() => { setShowDayModal(false); setEditDayId(null); }}>Abbrechen</Button>
+                              <Button className="bg-[#ff9900] hover:bg-orange-600" onClick={handleSaveDay}>{editDayId ? 'Speichern' : 'Anlegen'}</Button>
                             </div>
                           </div>
-                          <style jsx global>{`
-                            @keyframes modern-sheet {
-                              0% { transform: translateY(100%) scale(0.98); opacity: 0.7; }
-                              80% { transform: translateY(-8px) scale(1.02); opacity: 1; }
-                              100% { transform: translateY(0) scale(1); opacity: 1; }
-                            }
-                            .animate-modern-sheet {
-                              animation: modern-sheet 0.32s cubic-bezier(0.22, 1, 0.36, 1);
-                            }
-                          `}</style>
-                        </div>
-                      </div>
+                        </SheetContent>
+                      </Sheet>
                     )}
                     {/* Modal für Event anlegen/bearbeiten */}
                     {showEventModalOpen && (
-                      <div className="fixed inset-0 z-50 flex items-end justify-center bg-black/40">
-                        <div className="w-full max-w-lg mx-auto rounded-t-3xl shadow-[0_8px_40px_0_rgba(70,11,108,0.18)] border border-white/30 bg-white/95 backdrop-blur-xl flex flex-col overflow-hidden animate-modern-sheet h-[80vh]">
-                          {/* Drag Handle */}
-                          <div className="flex justify-center pt-4 pb-2 bg-transparent rounded-t-3xl">
-                            <div className="w-16 h-1.5 bg-gray-300/80 rounded-full shadow-sm" />
-                          </div>
-                          {/* Header */}
-                          <div className="flex items-center justify-between px-8 py-4 bg-transparent">
-                            <span className="text-xl font-bold text-[#460b6c] tracking-tight">
-                              {eventToEdit ? 'Event bearbeiten' : 'Event anlegen'}
-                            </span>
-                            <button
-                              onClick={() => {
-                                setShowEventModalOpen(false);
-                                setEventToEdit(null);
-                                setEventDayId(null);
-                              }}
-                              className="w-10 h-10 flex items-center justify-center rounded-full bg-white/70 hover:bg-white/90 text-gray-500 hover:text-[#460b6c] text-2xl font-bold focus:outline-none shadow transition-colors"
-                              aria-label="Schließen"
-                            >
-                              ×
-                            </button>
-                          </div>
-                          {/* Content */}
-                          <div className="flex-1 overflow-y-auto px-8 py-8 flex flex-col gap-6 items-center justify-center">
-                            <input
-                              className="border-b-2 border-[#ff9900] focus:outline-none px-2 py-2 text-lg rounded w-full bg-gray-50"
+                      <Sheet open={showEventModalOpen} onOpenChange={(open) => { setShowEventModalOpen(open); if (!open) { setEventToEdit(null); setEventDayId(null); } }}>
+                        <SheetContent side="bottom" className="max-w-lg mx-auto rounded-t-3xl h-[80vh]">
+                          <SheetHeader>
+                            <SheetTitle>{eventToEdit ? 'Event bearbeiten' : 'Event anlegen'}</SheetTitle>
+                          </SheetHeader>
+                          <div className="flex flex-col gap-6 items-center justify-center py-8">
+                            <div className="w-full max-w-md mx-auto flex flex-col gap-4 px-4">
+                              <label htmlFor="event-title" className="text-sm font-medium text-gray-700">Titel</label>
+                              <Input
+                                id="event-title"
+                                ref={eventTitleRef}
                               placeholder="Titel"
                               value={eventForm.title}
                               onChange={e => setEventForm(f => ({ ...f, title: e.target.value }))}
                               required
-                              autoFocus
-                            />
-                            <input
-                              className="border-b-2 border-[#ff9900] focus:outline-none px-2 py-2 text-lg rounded w-full bg-gray-50"
-                              placeholder="Zeit (z.B. 14:00)"
+                                className="w-full"
+                              />
+                              <label htmlFor="event-time" className="text-sm font-medium text-gray-700">Uhrzeit</label>
+                              <Input
+                                id="event-time"
                               type="time"
+                                placeholder="--:--"
                               value={eventForm.time}
                               onChange={e => setEventForm(f => ({ ...f, time: e.target.value }))}
                               required
+                                className="w-full"
                             />
-                            <textarea
-                              className="border-b-2 border-[#ff9900] focus:outline-none px-2 py-2 text-lg rounded w-full bg-gray-50"
+                              <label htmlFor="event-description" className="text-sm font-medium text-gray-700">Beschreibung</label>
+                              <Textarea
+                                id="event-description"
                               placeholder="Beschreibung (optional)"
                               value={eventForm.description}
                               onChange={e => setEventForm(f => ({ ...f, description: e.target.value }))}
                               rows={2}
+                                className="w-full"
                             />
-                            <CategorySelect
-                              categories={categories}
+                              <label htmlFor="event-category" className="text-sm font-medium text-gray-700">Kategorie</label>
+                              {categories.length > 0 && eventForm.categoryId && categories.some(cat => getIdString(cat._id) === eventForm.categoryId) ? (
+                                <Select
                               value={eventForm.categoryId}
-                              onChange={v => setEventForm(f => ({ ...f, categoryId: v }))}
+                                  onValueChange={v => setEventForm(f => ({ ...f, categoryId: v }))}
                               disabled={categoriesLoading}
-                            />
-                            <div className="flex gap-2 justify-end mt-4 w-full">
-                              <button className="bg-[#ff9900] hover:bg-orange-600 text-white font-bold py-3 px-6 rounded-full flex-1 transition" onClick={handleSaveEvent}>Speichern</button>
-                              <button className="bg-gray-200 hover:bg-gray-300 text-gray-700 font-bold py-3 px-6 rounded-full flex-1 transition" onClick={() => {
-                                setShowEventModalOpen(false);
-                                setEventToEdit(null);
-                                setEventDayId(null);
-                              }}>Abbrechen</button>
+                                  required
+                                >
+                                  <SelectTrigger className="w-full" id="event-category">
+                                    <SelectValue>
+                                      {categories.find(cat => getIdString(cat._id) === eventForm.categoryId)?.label ||
+                                        categories.find(cat => getIdString(cat._id) === eventForm.categoryId)?.name ||
+                                        'Kategorie wählen'}
+                                    </SelectValue>
+                                  </SelectTrigger>
+                                  <SelectContent>
+                                    {categories.map(cat => (
+                                      <SelectItem key={cat._id} value={getIdString(cat._id)}>
+                                        {cat.label || cat.name}
+                                      </SelectItem>
+                                    ))}
+                                  </SelectContent>
+                                </Select>
+                              ) : (
+                                <div className="text-xs text-red-500 mt-2">Bitte zuerst eine Kategorie anlegen.</div>
+                              )}
+                            </div>
+                            <div className="flex justify-end gap-2 px-6 pb-6 pt-2">
+                              <Button variant="secondary" onClick={() => { setShowEventModalOpen(false); setEventToEdit(null); setEventDayId(null); }}>Abbrechen</Button>
+                              <Button className="bg-[#ff9900] hover:bg-orange-600" onClick={handleSaveEvent}>Speichern</Button>
                             </div>
                           </div>
-                          <style jsx global>{`
-                            @keyframes modern-sheet {
-                              0% { transform: translateY(100%) scale(0.98); opacity: 0.7; }
-                              80% { transform: translateY(-8px) scale(1.02); opacity: 1; }
-                              100% { transform: translateY(0) scale(1); opacity: 1; }
-                            }
-                            .animate-modern-sheet {
-                              animation: modern-sheet 0.32s cubic-bezier(0.22, 1, 0.36, 1);
-                            }
-                          `}</style>
-                        </div>
-                      </div>
+                        </SheetContent>
+                      </Sheet>
                     )}
                   </>
                 )}
-              </>
-            ) : (
-              <>
+              </TabsContent>
+              <TabsContent value="categories">
                 <div className="max-w-lg mx-auto w-full">
                   <div className="flex justify-between items-center mb-4">
                     <h3 className="text-xl font-bold text-[#460b6c]">Kategorien</h3>
@@ -600,15 +674,15 @@ const TimelineMobile: React.FC = () => {
                   <ul className="space-y-3">
                     {categories.map(cat => (
                       <li key={cat._id} className="bg-white shadow rounded-xl px-4 py-3 flex items-center justify-between">
-                        <div className="flex items-center gap-3">
-                          <span className="rounded-full border-2 border-white shadow p-2 bg-gray-50"><span className="text-xl" style={{ color: cat.color }}><>{getIconComponent(cat.icon)}</></span></span>
-                          <span className="font-medium text-gray-800">{cat.name}</span>
-                          {cat.isDefault && <span className="ml-2 text-gray-400" title="Standard-Kategorie"><FaLock /></span>}
+                        <div className="flex items-center gap-3 flex-1 min-w-0">
+                          <span className="rounded-full border-2 border-white shadow p-2 bg-gray-50">{(() => { const IconComponent = getIconComponent(cat.icon); return <IconComponent className="text-2xl" style={{ color: cat.color }} />; })()}</span>
+                          <span className="font-medium text-gray-800 truncate">{cat.name}</span>
                         </div>
+                        {cat.isDefault && <span className="ml-auto flex-shrink-0 text-gray-400" title="Standard-Kategorie"><Lock /></span>}
                         {!cat.isDefault && (
-                          <div className="flex gap-1">
-                            <button onClick={() => { setEditCategoryId(cat._id); setCategoryForm({ name: cat.name, color: cat.color, icon: cat.icon }); setShowCategoryModal(true); }} className="rounded-full bg-blue-50 hover:bg-blue-200 w-8 h-8 flex items-center justify-center text-blue-600 border border-blue-100"><FaEdit /></button>
-                            <button onClick={async () => { await deleteCategoryAction(cat._id); fetchCategories(); }} className="rounded-full bg-red-50 hover:bg-red-200 w-8 h-8 flex items-center justify-center text-red-600 border border-red-100"><FaTrash /></button>
+                          <div className="flex gap-1 ml-2">
+                            <button onClick={() => { setEditCategoryId(cat._id); setCategoryForm({ name: cat.name, color: cat.color, icon: cat.icon }); setShowCategoryModal(true); }} className="rounded-full bg-blue-50 hover:bg-blue-200 w-8 h-8 flex items-center justify-center text-blue-600 border border-blue-100"><Pencil /></button>
+                            <button onClick={async () => { await deleteCategoryAction(cat._id); fetchCategories(); }} className="rounded-full bg-red-50 hover:bg-red-200 w-8 h-8 flex items-center justify-center text-red-600 border border-red-100"><Trash2 /></button>
                           </div>
                         )}
                       </li>
@@ -621,52 +695,57 @@ const TimelineMobile: React.FC = () => {
                       className="rounded-full bg-gradient-to-br from-[#ff9900] to-[#ffb84d] text-white shadow-3xl w-10 h-10 flex items-center justify-center text-xl focus:outline-none focus:ring-2 focus:ring-[#ff9900]/30 active:scale-95 transition border-2 border-white"
                       aria-label="Neue Kategorie anlegen"
                     >
-                      <FaPlus className="h-5 w-5" />
+                      <Plus className="h-5 w-5" />
                     </button>
                   </div>
                   {/* Modal für Kategorie anlegen/bearbeiten */}
                   {showCategoryModal && (
-                    <div className="fixed left-0 right-0 top-0 bottom-[64px] z-50 flex items-end justify-center bg-black/40">
-                      <div className="w-full max-w-lg mx-auto rounded-t-3xl shadow-[0_8px_40px_0_rgba(70,11,108,0.18)] border border-white/30 bg-white/95 backdrop-blur-xl flex flex-col overflow-hidden animate-modern-sheet h-[80vh] relative">
-                        <div className="flex justify-center pt-4 pb-2 bg-transparent rounded-t-3xl">
-                          <div className="w-16 h-1.5 bg-gray-300/80 rounded-full shadow-sm" />
-                        </div>
-                        <div className="flex items-center justify-between px-8 py-4 bg-transparent">
-                          <span className="text-xl font-bold text-[#460b6c] tracking-tight">{editCategoryId ? 'Kategorie bearbeiten' : 'Kategorie anlegen'}</span>
-                          <button onClick={() => setShowCategoryModal(false)} className="w-10 h-10 flex items-center justify-center rounded-full bg-white/70 hover:bg-white/90 text-gray-500 hover:text-[#460b6c] text-2xl font-bold focus:outline-none shadow transition-colors" aria-label="Schließen">×</button>
-                        </div>
-                        <div className="flex-1 overflow-y-auto px-8 py-8 flex flex-col gap-6 items-center justify-center pb-24">
-                          <input className="border-b-2 border-[#ff9900] focus:outline-none px-2 py-2 text-lg rounded w-full bg-gray-50" placeholder="Name" value={categoryForm.name} onChange={e => setCategoryForm(f => ({ ...f, name: e.target.value }))} required autoFocus />
-                          <input type="color" className="w-16 h-16 p-0 border-none bg-transparent" value={categoryForm.color} onChange={e => setCategoryForm(f => ({ ...f, color: e.target.value }))} />
-                          {/* Icon-Auswahl */}
-                          <div className="w-full">
-                            <input type="text" placeholder="Icon suchen..." className="border-b border-gray-200 px-2 py-1 mb-2 w-full" value={iconSearch} onChange={e => setIconSearch(e.target.value)} />
-                            <div className="grid grid-cols-6 gap-2 max-h-32 overflow-y-auto">
-                              {Object.keys(Icons).filter(name => name.startsWith('Fa') && name.toLowerCase().includes(iconSearch.toLowerCase())).map(name => {
-                                const Icon = (Icons as any)[name];
-                                return <button key={name} className={`rounded p-1 border ${categoryForm.icon === name ? 'border-[#ff9900] bg-[#ff9900]/10' : 'border-transparent'}`} onClick={() => setCategoryForm(f => ({ ...f, icon: name }))}><Icon className="text-2xl" /></button>;
-                              })}
-                            </div>
+                    <Sheet open={showCategoryModal} onOpenChange={setShowCategoryModal}>
+                      <SheetContent side="bottom" className="max-w-lg mx-auto rounded-t-3xl h-[60vh]">
+                        <SheetHeader>
+                          <SheetTitle>{editCategoryId ? 'Kategorie bearbeiten' : 'Kategorie anlegen'}</SheetTitle>
+                        </SheetHeader>
+                        <div className="w-full max-w-md mx-auto flex flex-col gap-4 px-4 py-8">
+                          <label htmlFor="category-name" className="text-sm font-medium text-gray-700">Name</label>
+                          <Input
+                            id="category-name"
+                            placeholder="Name"
+                            value={categoryForm.name}
+                            onChange={e => setCategoryForm(f => ({ ...f, name: e.target.value }))}
+                            required
+                            className="w-full"
+                            autoFocus
+                          />
+                          <label htmlFor="category-icon" className="text-sm font-medium text-gray-700">Icon</label>
+                          <input type="text" placeholder="Icon suchen..." className="border-b border-gray-200 px-2 py-1 mb-2 w-full" value={iconSearch} onChange={e => { setIconSearch(e.target.value); setIconPage(0); }} id="category-icon" />
+                          <div className="grid grid-cols-6 gap-2 max-h-32 overflow-y-auto">
+                            {pagedIcons.map((icon: { name: string; tags: string[] }) => {
+                              const Icon = (LucideIcons as any)[toPascalCase(icon.name)];
+                              if (!Icon) return null;
+                              return (
+                                <button key={icon.name} className={`rounded p-1 border ${categoryForm.icon === toPascalCase(icon.name) ? 'border-[#ff9900] bg-[#ff9900]/10' : 'border-transparent'}`} onClick={() => setCategoryForm(f => ({ ...f, icon: toPascalCase(icon.name) }))}><Icon className="text-2xl" title={icon.name} /></button>
+                              );
+                            })}
+                          </div>
+                          <div className="flex justify-end gap-2 px-6 pb-6 pt-2">
+                            <Button className="bg-[#ff9900] hover:bg-orange-600 w-full" onClick={async () => {
+                              if (!categoryForm.name || !categoryForm.icon) return;
+                              if (editCategoryId) {
+                                await updateCategoryAction(editCategoryId, { name: categoryForm.name, color: '#ff9900', icon: categoryForm.icon });
+                              } else {
+                                await createCategoryAction({ name: categoryForm.name, color: '#ff9900', icon: categoryForm.icon });
+                              }
+                              setShowCategoryModal(false);
+                              fetchCategories();
+                            }}>{editCategoryId ? 'Speichern' : 'Anlegen'}</Button>
                           </div>
                         </div>
-                        <div className="absolute bottom-0 left-0 w-full bg-white/95 px-8 pb-6 pt-2 z-10">
-                          <button onClick={async () => {
-                            if (!categoryForm.name || !categoryForm.icon) return;
-                            if (editCategoryId) {
-                              await updateCategoryAction(editCategoryId, { name: categoryForm.name, color: categoryForm.color, icon: categoryForm.icon });
-                            } else {
-                              await createCategoryAction({ name: categoryForm.name, color: categoryForm.color, icon: categoryForm.icon });
-                            }
-                            setShowCategoryModal(false);
-                            fetchCategories();
-                          }} className="bg-[#ff9900] hover:bg-orange-600 text-white font-bold py-3 px-6 rounded-full w-full transition">{editCategoryId ? 'Speichern' : 'Anlegen'}</button>
-                        </div>
-                      </div>
-                    </div>
+                      </SheetContent>
+                    </Sheet>
                   )}
                 </div>
-              </>
-            )}
+              </TabsContent>
+            </Tabs>
           </>
         )}
       </div>
