@@ -1,3 +1,4 @@
+'use client';
 import React, { useState } from 'react';
 import AppLayout from '@/shared/components/AppLayout';
 import AdminDashboardWrapper from '../admin/dashboard/AdminDashboardWrapper';
