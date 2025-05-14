@@ -20,7 +20,7 @@ COPY web/ .
 ENV NEXT_TELEMETRY_DISABLED=1
 
 # Build the application
-RUN npm run build
+RUN npm run build && npm run build:server
 
 
 # Production image, copy all the files and run next
@@ -40,11 +40,7 @@ COPY --from=builder /app/.next/standalone ./
 COPY --from=builder /app/.next/static ./.next/static
 
 # Kopiere nur die benötigten node_modules ins Standalone-Verzeichnis
-COPY --from=builder /app/node_modules/ws .next/standalone/node_modules/ws
-COPY --from=builder /app/node_modules/next .next/standalone/node_modules/next
-COPY --from=builder /app/node_modules/react .next/standalone/node_modules/react
-COPY --from=builder /app/node_modules/react-dom .next/standalone/node_modules/react-dom
-# ggf. weitere benötigte Pakete
+COPY --from=builder /app/node_modules ./node_modules
 
 # Kopiere deine eigenen Module, falls sie nicht schon im Standalone-Build sind
 COPY --from=builder /app/src .next/standalone/src
