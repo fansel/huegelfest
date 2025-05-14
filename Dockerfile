@@ -40,7 +40,10 @@ COPY --from=builder /app/.next/standalone ./
 COPY --from=builder /app/.next/static ./.next/static
 
 # Kopiere nur die benötigten node_modules ins Standalone-Verzeichnis
-COPY --from=builder /app/node_modules ./node_modules
+COPY --from=builder /app/node_modules/next ./node_modules/next
+COPY --from=builder /app/node_modules/react ./node_modules/react
+COPY --from=builder /app/node_modules/react-dom ./node_modules/react-dom
+COPY --from=builder /app/node_modules/ws ./node_modules/ws
 
 # Kopiere deine eigenen Module, falls sie nicht schon im Standalone-Build sind
 COPY --from=builder /app/src .next/standalone/src
