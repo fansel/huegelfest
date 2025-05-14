@@ -38,8 +38,16 @@ RUN addgroup -S -g 1001 nodejs && \
 COPY --from=builder /app/public ./public
 COPY --from=builder /app/.next/standalone ./
 COPY --from=builder /app/.next/static ./.next/static
-COPY --from=builder /app/.next/standalone/server.js ./server.js
 
+# Kopiere nur die benötigten node_modules ins Standalone-Verzeichnis
+COPY --from=builder /app/node_modules/ws .next/standalone/node_modules/ws
+COPY --from=builder /app/node_modules/next .next/standalone/node_modules/next
+COPY --from=builder /app/node_modules/react .next/standalone/node_modules/react
+COPY --from=builder /app/node_modules/react-dom .next/standalone/node_modules/react-dom
+# ggf. weitere benötigte Pakete
+
+# Kopiere deine eigenen Module, falls sie nicht schon im Standalone-Build sind
+COPY --from=builder /app/src .next/standalone/src
 
 # Set permissions
 RUN chown -R nextjs:nodejs .next
@@ -51,4 +59,4 @@ EXPOSE 3000
 ENV PORT=3000
 ENV HOSTNAME="0.0.0.0"
 
-CMD ["node", "server.js"]
+CMD ["node", ".next/standalone/server.js"]
