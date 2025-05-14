@@ -8,6 +8,11 @@ on:
         required: false
         type: boolean
         default: false
+      no_cache:
+        description: 'Build ohne Cache'
+        required: false
+        type: boolean
+        default: false
 
 env:
   DOCKERHUB_USERNAME: ${{ secrets.DOCKERHUB_USERNAME }}
@@ -50,6 +55,7 @@ jobs:
           file: ./Dockerfile
           platforms: linux/arm64
           push: true
+          no-cache: ${{ github.event.inputs.no_cache == 'true' }}
           cache-from: type=registry,ref=${{ env.DOCKERHUB_USERNAME }}/huegelfest-web:buildcache,ignore-error=true
           cache-to: type=registry,ref=${{ env.DOCKERHUB_USERNAME }}/huegelfest-web:buildcache,mode=max
           tags: |
