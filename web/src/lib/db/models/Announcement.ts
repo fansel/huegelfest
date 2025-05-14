@@ -1,11 +1,7 @@
 import mongoose, { Document, Model } from 'mongoose';
 import { Group } from './Group';
-import { ReactionType } from '@/types/types';
-
-interface IDeviceReaction {
-  type: ReactionType;
-  announcementId: string;
-}
+import { ReactionType } from '@/shared/types/types';
+import type { CallbackError } from 'mongoose';
 
 interface IAnnouncementDocument extends Document {
   content: string;
@@ -16,26 +12,7 @@ interface IAnnouncementDocument extends Document {
   important: boolean;
   createdAt: Date;
   updatedAt: Date;
-  reactions: Record<ReactionType, {
-    count: number;
-    deviceReactions: Record<string, IDeviceReaction>;
-  }>;
 }
-
-const createDefaultReactions = () => {
-  const reactions: Record<ReactionType, {
-    count: number;
-    deviceReactions: Record<string, IDeviceReaction>;
-  }> = {} as any;
-  
-  ['thumbsUp', 'clap', 'laugh', 'surprised', 'heart'].forEach(type => {
-    reactions[type as ReactionType] = {
-      count: 0,
-      deviceReactions: {}
-    };
-  });
-  return reactions;
-};
 
 const announcementSchema = new mongoose.Schema({
   content: { type: String, required: true },
@@ -54,20 +31,6 @@ const announcementSchema = new mongoose.Schema({
     index: true
   },
   important: { type: Boolean, default: false },
-  reactions: {
-    type: Object,
-    of: {
-      count: { type: Number, default: 0 },
-      deviceReactions: {
-        type: Object,
-        of: {
-          type: { type: String, enum: ['thumbsUp', 'clap', 'laugh', 'surprised', 'heart'] },
-          announcementId: String
-        }
-      }
-    },
-    default: createDefaultReactions
-  }
 }, { 
   timestamps: true,
   toJSON: { 
@@ -106,7 +69,7 @@ announcementSchema.pre('save', async function(next) {
     }
     next();
   } catch (error) {
-    next(error);
+    next(error as CallbackError);
   }
 });
 

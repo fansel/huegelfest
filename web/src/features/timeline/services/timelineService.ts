@@ -1,6 +1,7 @@
 import { Timeline, ITimelineDocument } from '@/lib/db/models/Timeline';
 import type { TimelineData, Day, Event } from '../types/types';
 import { initServices } from '@/lib/initServices';
+import { broadcast } from '@/lib/websocket/broadcast';
 
 /**
  * Fehlerobjekt für Service-Methoden
@@ -88,6 +89,7 @@ export async function addDay(day: Day): Promise<TimelineData | TimelineServiceEr
       console.error('[addDay] Fehler: Timeline konnte nach dem Hinzufügen nicht geladen werden.');
       return { error: 'Timeline konnte nach dem Hinzufügen nicht geladen werden.' };
     }
+    await broadcast('timeline', { updated: true });
     return cleaned;
   } catch (error: any) {
     console.error('Fehler im Backend beim Hinzufügen des Tages:', error, error?.message);
@@ -116,6 +118,7 @@ export async function deleteDay(dayId: string): Promise<TimelineData | TimelineS
       console.error('[deleteDay] Fehler: Timeline konnte nach dem Löschen nicht geladen werden.');
       return { error: 'Timeline konnte nach dem Löschen nicht geladen werden.' };
     }
+    await broadcast('timeline', { updated: true });
     return cleaned;
   } catch (error) {
     console.error('[deleteDay] Fehler:', error);
@@ -144,6 +147,7 @@ export async function addEventToDay(dayId: string, event: Event): Promise<Timeli
     if (!cleaned) {
       return { error: 'Timeline konnte nach dem Hinzufügen des Events nicht geladen werden.' };
     }
+    await broadcast('timeline', { updated: true });
     return cleaned;
   } catch (error) {
     return { error: 'Fehler beim Hinzufügen des Events.' };
@@ -169,6 +173,7 @@ export async function deleteEventFromDay(dayId: string, eventId: string): Promis
     if (!cleaned) {
       return { error: 'Timeline konnte nach dem Löschen des Events nicht geladen werden.' };
     }
+    await broadcast('timeline', { updated: true });
     return cleaned;
   } catch (error) {
     return { error: 'Fehler beim Löschen des Events.' };
@@ -196,6 +201,7 @@ export async function moveEventToAnotherDay(fromDayId: string, toDayId: string, 
     if (!cleaned) {
       return { error: 'Timeline konnte nach dem Verschieben des Events nicht geladen werden.' };
     }
+    await broadcast('timeline', { updated: true });
     return cleaned;
   } catch (error) {
     return { error: 'Fehler beim Verschieben des Events.' };
@@ -224,6 +230,7 @@ export async function editEventInDay(dayId: string, event: Event): Promise<Timel
     if (!cleaned) {
       return { error: 'Timeline konnte nach dem Bearbeiten des Events nicht geladen werden.' };
     }
+    await broadcast('timeline', { updated: true });
     return cleaned;
   } catch (error) {
     return { error: 'Fehler beim Bearbeiten des Events.' };
@@ -237,11 +244,21 @@ export async function updateTimeline(data: TimelineData): Promise<TimelineData |
     timeline.days = data.days;
     await timeline.save();
     const plain = await Timeline.findById(timeline._id).lean();
-    return cleanTimelineData(plain);
+    const cleaned = cleanTimelineData(plain);
+    if (!cleaned) {
+      return null;
+    }
+    await broadcast('timeline', { updated: true });
+    return cleaned;
   } else {
     timeline = await Timeline.create(data);
     const plain = await Timeline.findById(timeline._id).lean();
-    return cleanTimelineData(plain);
+    const cleaned = cleanTimelineData(plain);
+    if (!cleaned) {
+      return null;
+    }
+    await broadcast('timeline', { updated: true });
+    return cleaned;
   }
 }
 
@@ -251,6 +268,7 @@ export async function deleteTimeline(id: string): Promise<{ success: boolean; er
   if (!timeline) {
     return { success: false, error: 'Timeline nicht gefunden' };
   }
+  await broadcast('timeline', { updated: true });
   return { success: true };
 }
 
@@ -270,6 +288,7 @@ export async function updateDay(dayId: string, day: Day): Promise<TimelineData |
     if (!cleaned) {
       return { error: 'Timeline konnte nach dem Bearbeiten des Tages nicht geladen werden.' };
     }
+    await broadcast('timeline', { updated: true });
     return cleaned;
   } catch (error) {
     return { error: 'Fehler beim Bearbeiten des Tages.' };

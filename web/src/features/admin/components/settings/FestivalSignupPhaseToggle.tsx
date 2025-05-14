@@ -1,5 +1,5 @@
 import React from 'react';
-import { useFestivalSignupPhase } from '@/contexts/FestivalSignupPhaseContext';
+import { useGlobalState } from '@/contexts/GlobalStateContext';
 import { useAuth } from '@/features/auth/AuthContext';
 
 /**
@@ -7,7 +7,7 @@ import { useAuth } from '@/features/auth/AuthContext';
  * Wird im Admin-Bereich unter Einstellungen eingebunden.
  */
 const FestivalSignupPhaseToggle: React.FC = () => {
-  const { isSignupPhase, setSignupPhase } = useFestivalSignupPhase();
+  const { signupOpen, setSignupOpen } = useGlobalState();
   const { isAdmin } = useAuth();
 
   if (!isAdmin) return null;
@@ -24,8 +24,8 @@ const FestivalSignupPhaseToggle: React.FC = () => {
         <input
           type="checkbox"
           className="sr-only peer"
-          checked={isSignupPhase}
-          onChange={() => setSignupPhase(!isSignupPhase)}
+          checked={signupOpen}
+          onChange={() => setSignupOpen(!signupOpen)}
         />
         <div className="w-12 h-6 bg-gray-200 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-[#ff9900] hover:bg-gray-300"></div>
       </label>

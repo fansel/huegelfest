@@ -2,7 +2,7 @@
 import React from 'react';
 import { Calendar, MapPin, Megaphone, Settings as SettingsIcon, Heart, Shield, Users, Clock, SlidersHorizontal, Music } from 'lucide-react';
 import { useNetworkStatus } from '@/shared/hooks/useNetworkStatus';
-import { useFestivalSignupPhase } from '@/contexts/FestivalSignupPhaseContext';
+import { useGlobalState } from '@/contexts/GlobalStateContext';
 
 interface Tab {
   id: string;
@@ -40,12 +40,12 @@ const signupPhaseTabs: Tab[] = [
 ];
 
 const BottomBar: React.FC<BottomBarProps> = ({ mode, activeTab, onTabChange, isAdminActive, onAdminToggle, showAdminButton }) => {
-  const { isSignupPhase, isAdminPreview } = useFestivalSignupPhase();
+  const { signupOpen } = useGlobalState();
   const isOnline = useNetworkStatus();
 
   // Während der Anmeldephase: Nur Anmeldung-Tab für normale Nutzer (außer Admins oder Admin-Preview)
   let tabs: Tab[];
-  if (isSignupPhase && !(mode === 'admin' && !isAdminPreview)) {
+  if (signupOpen && mode !== 'admin') {
     tabs = signupPhaseTabs;
   } else {
     tabs = mode === 'admin' ? adminTabs : userTabs;

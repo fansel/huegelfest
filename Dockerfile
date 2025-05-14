@@ -20,7 +20,7 @@ COPY web/ .
 ENV NEXT_TELEMETRY_DISABLED=1
 
 # Build the application
-RUN npm run build
+RUN npm run build && npm run build:server
 
 # Production image, copy all the files and run next
 FROM base AS runner
@@ -37,6 +37,7 @@ RUN addgroup -S -g 1001 nodejs && \
 COPY --from=builder /app/public ./public
 COPY --from=builder /app/.next/standalone ./
 COPY --from=builder /app/.next/static ./.next/static
+COPY --from=builder /app/server.js ./server.js
 
 # Set permissions
 RUN chown -R nextjs:nodejs .next

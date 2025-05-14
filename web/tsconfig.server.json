@@ -1,0 +1,15 @@
+{
+  "extends": "./tsconfig.json",
+  "compilerOptions": {
+    "outDir": ".next/standalone",
+    "noEmit": false,
+    "lib": ["ESNext"],
+    "module": "ESNext",
+    "target": "ES2019",
+    "jsx": "react-jsx",
+    "types": ["node"]
+  },
+  "include": [
+    "server.ts"
+  ]
+} 

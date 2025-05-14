@@ -1,5 +1,11 @@
 import React from 'react';
 import { Pencil, Trash2 } from 'lucide-react';
+import { ReactionType, REACTION_EMOJIS } from '@/shared/types/types';
+
+interface AnnouncementCardReactions {
+  counts: Record<ReactionType, number>;
+  userReaction?: ReactionType;
+}
 
 interface AnnouncementCardProps {
   content: string;
@@ -10,6 +16,9 @@ interface AnnouncementCardProps {
   onEdit?: () => void;
   onDelete?: () => void;
   isLoadingDelete?: boolean;
+  reactions?: AnnouncementCardReactions;
+  onReact?: (type: ReactionType) => void;
+  deviceId?: string;
 }
 
 const dateFormatter = new Intl.DateTimeFormat('de-DE', {
@@ -25,6 +34,9 @@ export const AnnouncementCard: React.FC<AnnouncementCardProps> = ({
   onEdit,
   onDelete,
   isLoadingDelete,
+  reactions,
+  onReact,
+  deviceId,
 }) => (
   <div
     className="bg-white/80 backdrop-blur-md p-3 rounded-xl shadow-[0_2px_8px_0_rgba(70,11,108,0.08)] border border-white/30 flex flex-col gap-2 relative transition-shadow hover:shadow-xl"
@@ -76,5 +88,26 @@ export const AnnouncementCard: React.FC<AnnouncementCardProps> = ({
     <p className="text-gray-900 text-sm font-normal whitespace-pre-wrap leading-snug">
       {content}
     </p>
+    {reactions && onReact && (
+      <div className="flex gap-2 mt-2">
+        {Object.keys(REACTION_EMOJIS).map((type) => {
+          const reactionType = type as ReactionType;
+          const count = reactions.counts[reactionType] || 0;
+          const hasReacted = reactions.userReaction === reactionType;
+          return (
+            <button
+              key={reactionType}
+              type="button"
+              className={`flex items-center gap-1 px-2 py-1 rounded-full text-base font-medium border transition-colors ${hasReacted ? 'bg-yellow-100 border-yellow-400' : 'bg-gray-100 border-gray-300 hover:bg-yellow-50'}`}
+              onClick={() => onReact(reactionType)}
+              aria-label={`Reagiere mit ${REACTION_EMOJIS[reactionType]}`}
+            >
+              <span>{REACTION_EMOJIS[reactionType]}</span>
+              <span className="text-xs">{count}</span>
+            </button>
+          );
+        })}
+      </div>
+    )}
   </div>
 ); 

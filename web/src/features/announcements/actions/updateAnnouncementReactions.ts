@@ -1,7 +1,12 @@
 "use server";
 
-import { updateAnnouncementReactions } from '../services/announcementService';
+import { updateAnnouncementReaction } from '../services/announcementService';
+import { ReactionType } from '@/shared/types/types';
 
-export async function updateAnnouncementReactionsAction(id: string, reactions: any, deviceId: string) {
-  return await updateAnnouncementReactions(id, reactions, deviceId);
+export async function updateAnnouncementReactionsAction(
+  announcementId: string,
+  reactionType: ReactionType,
+  deviceId: string
+) {
+  return await updateAnnouncementReaction(announcementId, reactionType, deviceId);
 } 
