@@ -21,7 +21,7 @@ ENV NEXT_TELEMETRY_DISABLED=1
 
 # Build the application
 RUN npm run build
-RUN npm run build:server
+
 
 # Production image, copy all the files and run next
 FROM base AS runner
@@ -49,6 +49,8 @@ COPY --from=builder /app/node_modules/react-dom .next/standalone/node_modules/re
 # Kopiere deine eigenen Module, falls sie nicht schon im Standalone-Build sind
 COPY --from=builder /app/src .next/standalone/src
 
+
+
 # Set permissions
 RUN chown -R nextjs:nodejs .next
 
@@ -59,4 +61,4 @@ EXPOSE 3000
 ENV PORT=3000
 ENV HOSTNAME="0.0.0.0"
 
-CMD ["node", ".next/standalone/server.js"]
+CMD ["node", "server.js"]
