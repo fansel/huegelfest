@@ -1,6 +1,6 @@
 import webpush from 'web-push';
-import { Subscriber } from '../db/models/Subscriber.ts';
-import { logger } from '../logger.ts';
+import { Subscriber } from '../db/models/Subscriber';
+import { logger } from '../logger';
 
 interface PushNotificationPayload {
   title: string;
@@ -33,8 +33,8 @@ class WebPushService {
 
     if (!vapidPublicKey || !vapidPrivateKey) {
       logger.error('VAPID-Schlüssel nicht gefunden. WebPush wird nicht initialisiert.');
-      logger.error(vapidPublicKey);
-      logger.error(vapidPrivateKey);
+      logger.error(vapidPublicKey ?? 'vapidPublicKey is undefined');
+      logger.error(vapidPrivateKey ?? 'vapidPrivateKey is undefined');
       return;
     }
 

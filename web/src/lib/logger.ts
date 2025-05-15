@@ -1,3 +1,4 @@
+declare const window: Window & typeof globalThis | undefined;
 // Prüfe, ob wir in der Edge Runtime sind
 const isEdgeRuntime = () => {
   return typeof process !== 'undefined' && process.env.NEXT_RUNTIME === 'edge';

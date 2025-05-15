@@ -8,7 +8,6 @@ import { toast } from 'react-hot-toast';
 import { useRouter } from 'next/navigation';
 import Settings from '@/features/admin/components/settings/Settings';
 import { useTimeline } from '@/features/timeline/hooks/useTimeline';
-
 const AdminDashboardDesktop: React.FC = () => {
   const [activeTab, setActiveTab] = useState<'announcements' | 'groups' | 'timeline' | 'music' | 'registrations' | 'settings'>('announcements');
   const [isLoggingOut, setIsLoggingOut] = useState(false);

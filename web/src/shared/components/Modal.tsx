@@ -41,13 +41,14 @@ const Modal: React.FC<ModalProps> = ({ isOpen, onClose, title, children }) => {
       onClick={onClose}
       aria-modal="true"
       role="dialog"
+      aria-labelledby={title ? "modal-title" : undefined}
     >
       <div
         className="bg-[#1a0033] rounded-lg shadow-lg p-6 min-w-[320px] max-w-full relative"
         onClick={e => e.stopPropagation()}
       >
         {title && (
-          <div className="mb-4 text-lg font-semibold text-[#ff9900]">{title}</div>
+          <h2 id="modal-title" className="mb-4 text-lg font-semibold text-[#ff9900]">{title}</h2>
         )}
         <button
           onClick={onClose}

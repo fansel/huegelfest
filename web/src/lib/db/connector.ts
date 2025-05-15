@@ -2,6 +2,8 @@ import mongoose from 'mongoose';
 import { User } from './models/User';
 // Passe ggf. logger-Import an, z.B. aus web/src/lib/logger
 
+declare const window: Window & typeof globalThis | undefined;
+
 const isEdgeRuntime = () => {
   if (typeof window === 'undefined' && process.env.NODE_ENV === 'production') {
     return process.env.NEXT_RUNTIME === 'edge';

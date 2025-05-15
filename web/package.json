@@ -6,13 +6,10 @@
   "scripts": {
     "dev": "next dev",
     "dev:secure": "next dev --experimental-https",
-    "build": "next build",
-    "build:server": "tsc --project tsconfig.server.json",
+    "build": "next build && tsc --project tsconfig.server.json && cp -r public .next/standalone/ && cp -r .next/static .next/standalone/.next/static && npm run postbuild:standalone",
+    "build:server": "next build && tsc --project tsconfig.server.json && node ./fix-import-extensions.js",
     "start": "NODE_ENV=production node .next/standalone/server.js",
-    "lint": "next lint",
-    "init": "ts-node -r tsconfig-paths/register scripts/init.ts",
-    "start:standalone": "cp -r public .next/standalone/ && cp -r .next/static .next/standalone/.next/static && NODE_ENV=production node .next/standalone/server.js",
-    "server": "ts-node server.ts"
+    "postbuild:standalone": "node ./fix-import-extensions.js"
   },
   "dependencies": {
     "@dnd-kit/core": "^6.3.1",
@@ -34,6 +31,8 @@
     "@tanstack/react-virtual": "^3.13.8",
     "@types/crypto-js": "^4.2.2",
     "@types/prop-types": "^15.7.14",
+    "agenda": "^5.0.0",
+    "babel-plugin-module-resolver": "^5.0.2",
     "bcryptjs": "^3.0.2",
     "class-variance-authority": "^0.7.1",
     "clsx": "^2.1.1",
@@ -52,6 +51,7 @@
     "next": "15.3.1",
     "next-pwa": "^5.6.0",
     "next-runtime-env": "^3.3.0",
+    "node-cron": "^4.0.5",
     "papaparse": "^5.5.2",
     "postcss": "^8.5.3",
     "prop-types": "^15.8.1",
@@ -71,6 +71,7 @@
     "zustand": "^5.0.4"
   },
   "devDependencies": {
+    "@babel/preset-typescript": "^7.27.1",
     "@types/js-cookie": "^3.0.6",
     "@types/node": "^20.17.46",
     "@types/papaparse": "^5.3.16",
