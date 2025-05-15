@@ -23,6 +23,27 @@ export interface Event {
   description: string;
   categoryId: string | { $oid: string };
   favorite?: boolean;
+  /**
+   * Status des Events: 'pending' (eingereicht, wartet auf Freigabe),
+   * 'approved' (freigegeben), 'rejected' (abgelehnt)
+   */
+  status?: 'pending' | 'approved' | 'rejected';
+  /**
+   * Optionaler Kommentar des Admins bei Ablehnung oder Änderung
+   */
+  moderationComment?: string;
+  /**
+   * Zeitpunkt der Einreichung (ISO-String)
+   */
+  submittedAt?: string;
+  /**
+   * True, wenn das Event von einem Admin erstellt wurde (dann auto-approved)
+   */
+  submittedByAdmin?: boolean;
+  /**
+   * Optional: Wer bietet das Event an (z.B. Name, Gruppe)
+   */
+  offeredBy?: string;
 }
 
 export interface Day {

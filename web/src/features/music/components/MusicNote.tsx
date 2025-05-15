@@ -6,6 +6,8 @@ import ReactPlayer from 'react-player';
 import Image from 'next/image';
 import styles from './MusicNote.module.css';
 import { getAllTracks, MusicEntry } from '@/features/music/actions/getAllTracks';
+import { useWebSocket } from '@/shared/hooks/useWebSocket';
+import { getWebSocketUrl } from '@/shared/utils/getWebSocketUrl';
 
 export interface TrackInfo {
   title: string;
@@ -47,6 +49,19 @@ export default function MusicNote() {
     };
     fetchTracks();
   }, []);
+
+  // WebSocket: Füge neuen Track hinzu, wenn Topic 'music-new-track'
+  useWebSocket(getWebSocketUrl(), {
+    onMessage: (msg) => {
+      if (msg.topic === 'music-new-track') {
+        const newTrack = msg.payload as MusicEntry;
+        setTracks((prev) => {
+          if (prev.some(t => t._id === newTrack._id)) return prev;
+          return [...prev, newTrack];
+        });
+      }
+    }
+  });
 
   useEffect(() => {
     if (!loading) {

@@ -102,6 +102,16 @@ export async function saveAnnouncements(announcements: IAnnouncement[]): Promise
           existingAnnouncement.time = announcement.time;
           existingAnnouncement.updatedAt = new Date();
           await existingAnnouncement.save();
+          // Push für aktualisierte Ankündigung
+          if (webPushService.isInitialized()) {
+            await webPushService.sendNotificationToAll({
+              title: `Gruppe ${group.name}`,
+              body: announcement.content,
+              icon: '/icon-192x192.png',
+              badge: '/badge-96x96.png',
+              data: { type: 'announcement', groupId: group._id, announcementId: existingAnnouncement._id }
+            });
+          }
           continue;
         }
       }
@@ -122,19 +132,16 @@ export async function saveAnnouncements(announcements: IAnnouncement[]): Promise
         updatedAt: new Date()
       });
       await newAnnouncement.save();
-    }
-    try {
+      // Push für neue Ankündigung
       if (webPushService.isInitialized()) {
         await webPushService.sendNotificationToAll({
-          title: 'Neue Ankündigungen',
-          body: 'Die Ankündigungen wurden aktualisiert',
+          title: `Gruppe ${group.name}`,
+          body: announcement.content,
           icon: '/icon-192x192.png',
           badge: '/badge-96x96.png',
-          data: { url: '/' }
+          data: { type: 'announcement', groupId: group._id, announcementId: newAnnouncement._id }
         });
       }
-    } catch (error) {
-      logger.error('[saveAnnouncements] Fehler beim Senden der Push-Benachrichtigung:', error);
     }
     if (typeof global !== 'undefined' && (global as any).sseService) {
       try {

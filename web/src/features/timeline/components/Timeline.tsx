@@ -10,39 +10,26 @@ import {
   List,
 } from 'lucide-react';
 import * as LucideIcons from 'lucide-react';
-import { fetchTimeline } from '../../timeline/actions/fetchTimeline';
-import { getCategoriesAction } from '../../categories/actions/getCategories';
+import { fetchDays } from '../actions/fetchDays';
+import { getCategoriesAction } from '@/features/categories/actions/getCategories';
 import { useFavorites } from '../../../features/favorites/hooks/useFavorites';
 import { FavoriteButton } from '../../../features/favorites/components/FavoriteButton';
 import { TimelineEventCard } from './TimelineEventCard';
 import { useTimelineWebSocket } from '../hooks/useTimelineWebSocket';
+import { EventSubmissionSheet } from './EventSubmissionSheet';
+import type { Category, Event } from '../types/types';
+import { createEvent } from '../actions/createEvent';
+import type { IEvent } from '@/lib/db/models/Event';
+import { fetchApprovedEventsByDay } from '@/features/timeline/actions/fetchApprovedEventsByDay';
 
 // Typen ggf. aus features/timeline/types/types importieren
 // import { Event, Category, TimelineData, TimelineProps } from '../types/types';
-
-interface Event {
-  _id?: string;
-  time: string;
-  title: string;
-  description: string;
-  categoryId: string;
-  favorite?: boolean;
-}
-
-interface Category {
-  _id: string;
-  value: string;
-  label: string;
-  icon: string;
-  color?: string;
-  description?: string;
-  isDefault?: boolean;
-}
 
 interface TimelineDay {
   _id?: string;
   title: string;
   date?: string; // Optionales Datum
+  description: string;
   events: Event[];
 }
 
@@ -99,59 +86,55 @@ function loadTimelineFromCache(): any | null {
   }
 }
 
+type EventSubmission = {
+  dayId: string;
+  time: string;
+  title: string;
+  description: string;
+  categoryId: string;
+  offeredBy?: string;
+};
+
 export default function Timeline({ showFavoritesOnly = false, allowClipboard = false }: TimelineProps) {
-  const [timelineData, setTimelineData] = useState<TimelineData | null>(null);
+  const [days, setDays] = useState<TimelineDay[]>([]);
+  const [categories, setCategories] = useState<Category[]>([]);
   const [selectedDay, setSelectedDay] = useState(0);
   const [selectedCategories, setSelectedCategories] = useState<Set<string>>(new Set());
-  const [lastUpdate, setLastUpdate] = useState<number>(Date.now());
+  const [showSubmissionSheet, setShowSubmissionSheet] = useState(false);
   const { favorites, addFavorite, removeFavorite, isFavorite } = useFavorites();
   const updateCount = useTimelineWebSocket();
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+  const [reload, setReload] = useState(0);
 
   useEffect(() => {
-    const loadData = async () => {
+    const load = async () => {
+      setLoading(true);
       try {
-        console.log('[Timeline] Starte Datenladung (Actions)');
-        const timelineResult = await fetchTimeline();
-        const categoriesResult = await getCategoriesAction();
-        if (!timelineResult || (Array.isArray((timelineResult as any).days) && (timelineResult as any).days.length === 0)) {
-          setTimelineData({ days: [], categories: [], error: 'Das Programm ist noch nicht bekanntgegeben' });
-          return;
+        const daysRes = await fetchDays();
+        const cats = await getCategoriesAction();
+        // Für jeden Day die Events laden
+        const daysWithEvents: TimelineDay[] = [];
+        for (const day of daysRes) {
+          const events = await fetchApprovedEventsByDay(String(day._id));
+          daysWithEvents.push({
+            _id: String(day._id),
+            title: day.title,
+            description: day.description ?? '',
+            date: day.date ? String(day.date) : undefined,
+            events: events as Event[],
+          });
         }
-        if (!categoriesResult || !Array.isArray(categoriesResult)) {
-          setTimelineData({ days: [], categories: [], error: 'Kategorien konnten nicht geladen werden' });
-          return;
-        }
-        // Markiere favorisierte Events über useFavorites
-        const timelineWithFavorites = {
-          ...timelineResult,
-          categories: categoriesResult,
-          days: (timelineResult as any).days.map((day: { _id?: string; title: string; events: Event[] }) => ({
-            ...day,
-            events: day.events.map((event: Event) => ({
-              ...event,
-              favorite: isFavorite(`${day.title}-${event.time}-${event.title}`),
-            })),
-          })),
-        };
-        setTimelineData(timelineWithFavorites);
-        // Timeline im LocalStorage speichern
-        saveTimelineToCache(timelineWithFavorites);
-      } catch (error) {
-        console.error('[Timeline] Fehler beim Laden der Daten (Actions):', error);
-        // Fallback: Timeline aus LocalStorage laden
-        const cached = loadTimelineFromCache();
-        if (cached) {
-          setTimelineData(cached);
-        } else {
-          setTimelineData({ days: [], categories: [], error: 'Ein Fehler ist aufgetreten. Bitte versuchen Sie es später erneut.' });
-        }
+        setDays(daysWithEvents);
+        setCategories(cats);
+      } catch (e: any) {
+        setError(e?.message || 'Fehler beim Laden der Timeline');
+      } finally {
+        setLoading(false);
       }
     };
-    loadData();
-    const handleTimelineUpdate = () => { setLastUpdate(Date.now()); };
-    window.addEventListener('timeline-update', handleTimelineUpdate);
-    return () => { window.removeEventListener('timeline-update', handleTimelineUpdate); };
-  }, [lastUpdate, isFavorite, updateCount]);
+    load();
+  }, [reload]);
 
   const toggleCategory = (category: string) => {
     const newCategories = new Set(selectedCategories);
@@ -163,40 +146,48 @@ export default function Timeline({ showFavoritesOnly = false, allowClipboard = f
     setSelectedCategories(newCategories);
   };
 
-  if (!timelineData) {
-    return (
-      <div className="flex justify-center items-center h-64 text-[#ff9900]">
-        Lade Timeline...
-      </div>
-    );
+  // Event-Submission-Handler
+  const handleEventSubmit = async (event: Omit<Event, '_id' | 'favorite' | 'status' | 'moderationComment' | 'submittedAt' | 'submittedByAdmin'> & { dayId: string; offeredBy?: string }) => {
+    try {
+      const eventData: EventSubmission = {
+        dayId: event.dayId,
+        time: event.time,
+        title: event.title,
+        description: event.description,
+        categoryId: typeof event.categoryId === 'string' ? event.categoryId : (event.categoryId as any)?.$oid || '',
+        ...(event.offeredBy ? { offeredBy: event.offeredBy } : {}),
+      };
+      await createEvent(eventData);
+      setShowSubmissionSheet(false);
+      setReload(r => r + 1); // Timeline neu laden
+    } catch (err: any) {
+      alert('Fehler beim Einreichen des Events: ' + (err?.message || 'Unbekannter Fehler'));
+    }
+  };
+
+  if (loading) {
+    return <div className="flex justify-center items-center h-64 text-[#ff9900]">Lade Timeline...</div>;
+  }
+  if (error) {
+    return <div className="flex flex-col items-center justify-center h-64 text-[#ff9900]">{error}</div>;
   }
 
-  // Zeige Fehlermeldung an, wenn ein Fehler aufgetreten ist oder keine Daten vorhanden sind
-  if (timelineData.error) {
-    return (
-      <div className="flex flex-col items-center justify-center h-64 text-[#ff9900]">
-        <p className="text-sm text-[#ff9900]/80">Hier gibt es noch nichts zu sehen ;)</p>
-      </div>
-    );
-  }
+  // Hinweis bei komplett leeren Tagen
+  const noDays = days.length === 0;
+  const noEvents = !noDays && days[selectedDay]?.events?.length === 0;
 
-  // Überprüfe, ob der ausgewählte Tag existiert
-  if (!timelineData.days[selectedDay]) {
-    setSelectedDay(0);
-    return null;
-  }
-
-  const filteredEvents = timelineData.days[selectedDay].events.filter(
+  const currentDay = days[selectedDay];
+  const filteredEvents = currentDay?.events?.filter(
     (event) => {
       if (selectedCategories.size === 0) return true;
-      const category = timelineData.categories.find(c => c._id === event.categoryId);
+      const category = categories.find(c => c._id === event.categoryId);
       return category && selectedCategories.has(category._id);
     }
-  );
+  ) ?? [];
 
   // Filter für showFavoritesOnly
   const displayedEvents = showFavoritesOnly
-    ? filteredEvents.filter(event => isFavorite(`${timelineData.days[selectedDay].title}-${event.time}-${event.title}`))
+    ? filteredEvents.filter(event => isFavorite(`${currentDay?.title ?? ''}-${event.time}-${event.title}`))
     : filteredEvents;
 
   return (
@@ -204,7 +195,7 @@ export default function Timeline({ showFavoritesOnly = false, allowClipboard = f
       <div className="sticky top-0 z-10 bg-[#460b6c]/90 backdrop-blur-sm py-2 px-4">
         {/* Tage-Auswahl für Desktop */}
         <div className="hidden md:grid md:grid-cols-3 lg:grid-cols-4 gap-2 mb-4">
-          {timelineData.days.map((day, index) => (
+          {days.map((day, index) => (
             <button
               key={day._id || `day-${index}`}
               onClick={() => setSelectedDay(index)}
@@ -221,7 +212,7 @@ export default function Timeline({ showFavoritesOnly = false, allowClipboard = f
 
         {/* Tage-Auswahl für Mobile/PWA */}
         <div className="md:hidden flex space-x-2 overflow-x-auto pb-2 -mx-4 px-4">
-          {timelineData.days.map((day, index) => (
+          {days.map((day, index) => (
             <button
               key={day._id || `day-${index}`}
               onClick={() => setSelectedDay(index)}
@@ -252,7 +243,7 @@ export default function Timeline({ showFavoritesOnly = false, allowClipboard = f
               >
                 <List className="text-lg" />
               </button>
-              {timelineData?.categories.map((category) => {
+              {categories.map((category) => {
                 const IconComponent = getIconComponent(category.icon);
                 return (
                   <button
@@ -277,7 +268,7 @@ export default function Timeline({ showFavoritesOnly = false, allowClipboard = f
             <div className="flex justify-center mt-2">
               <div className="flex flex-wrap gap-2 justify-center">
                 {Array.from(selectedCategories).map((categoryId) => {
-                  const category = timelineData?.categories.find((c) => c._id === categoryId);
+                  const category = categories.find((c) => c._id === categoryId);
                   if (!category) return null;
                   return (
                     <span
@@ -293,72 +284,34 @@ export default function Timeline({ showFavoritesOnly = false, allowClipboard = f
           )}
         </div>
       </div>
-
-      {showFavoritesOnly ? (
-        <div className="mb-4">
-          <h3 className="text-lg font-medium mb-2 text-[#ff9900]">Meine Favoriten</h3>
-          <div className="space-y-6">
-            {(() => {
-              // Alle Tage mit Favoriten filtern
-              const daysWithFavorites = timelineData.days
-                .map((day) => ({
-                  dayTitle: day.title,
-                  favoriteEvents: day.events.filter((event) => event.favorite),
-                }))
-                .filter(({ favoriteEvents }) => favoriteEvents.length > 0);
-              if (daysWithFavorites.length === 0) {
-                return <p className="text-[#ff9900]/60 text-center py-4">Keine Favoriten vorhanden</p>;
-              }
-              return daysWithFavorites.map(({ dayTitle, favoriteEvents }) => {
-                // Robuster Vergleich für Tag
-                const day = timelineData.days.find(
-                  (d) => d.title.trim().toLowerCase() === dayTitle.trim().toLowerCase()
-                );
-                // Debug-Ausgabe
-                console.log('Favoriten-Gruppierung:', { days: timelineData.days, dayTitle, foundDay: day });
-                return (
-                  <div key={dayTitle}>
-                    <h4 className="text-[#ff9900] font-semibold mb-2 text-base flex items-center gap-2">
-                      <span>{dayTitle}</span>
-                      {day?.date
-                        ? (
-                          <span className="text-xs text-[#ff9900]/60 font-normal ml-2">{formatDate(day.date)}</span>
-                        )
-                        : (
-                          <span className="text-xs text-red-400 ml-2">(kein Datum)</span>
-                        )}
-                    </h4>
-                    <div className="space-y-4">
-                      {favoriteEvents.map((event) => {
-                        const category = timelineData.categories.find((c) => c._id === event.categoryId);
-                        return (
-                          <TimelineEventCard
-                            key={`${dayTitle}-${event.time}-${event.title}`}
-                            event={event}
-                            dayTitle={dayTitle}
-                            category={category}
-                            getIconComponent={getIconComponent}
-                            favoriteButtonProps={{
-                              item: {
-                                id: `${dayTitle}-${event.time}-${event.title}`,
-                                type: 'timeline' as const,
-                                data: {
-                                  ...event,
-                                  dayTitle,
-                                  dayDate: day?.date,
-                                  categoryIcon: category?.icon,
-                                },
-                              },
-                            }}
-                          />
-                        );
-                      })}
-                    </div>
-                  </div>
-                );
-              });
-            })()}
-          </div>
+      {/* Dezent platzierter kleiner Button unterhalb der Tages-/Filterauswahl */}
+      <div className="flex justify-center my-4">
+        <button
+          className="flex items-center gap-1 px-2 py-1 rounded bg-[#ff9900]/20 text-[#ff9900] text-xs font-medium hover:bg-[#ff9900]/30 transition border border-[#ff9900]/30 shadow-none"
+          style={{ minHeight: 0, minWidth: 0 }}
+          onClick={() => setShowSubmissionSheet(true)}
+        >
+          <span className="text-base leading-none">＋</span> Event vorschlagen
+        </button>
+      </div>
+      {/* EventSubmissionSheet */}
+      <EventSubmissionSheet
+        open={showSubmissionSheet}
+        onClose={() => setShowSubmissionSheet(false)}
+        categories={categories}
+        days={days as any[]}
+        onSubmit={handleEventSubmit}
+      />
+      {/* Hinweis bei leeren Tagen/Events */}
+      {noDays ? (
+        <div className="text-center text-[#ff9900]/80 py-12 text-lg">
+          Noch keine Tage oder Events vorhanden.<br />
+          Sei der/die Erste, der/die ein Event vorschlägt!
+        </div>
+      ) : days[selectedDay]?.events?.length === 0 ? (
+        <div className="text-center text-[#ff9900]/80 py-8 text-base">
+          Für diesen Tag sind noch keine Events vorhanden.<br />
+          Schlage jetzt ein Event vor!
         </div>
       ) : (
         <>
@@ -366,27 +319,15 @@ export default function Timeline({ showFavoritesOnly = false, allowClipboard = f
             <div className="relative px-4">
               <div className="absolute left-4 top-0 bottom-0 w-0.5 bg-[#ff9900]/20" />
               {displayedEvents.map((event) => {
-                const day = timelineData.days[selectedDay];
-                const category = timelineData.categories.find((c) => c._id === event.categoryId);
+                const day = days[selectedDay];
+                const category = categories.find((c) => c._id === event.categoryId);
                 return (
                   <TimelineEventCard
-                    key={`${event.time}-${event.title}`}
+                    key={`${day._id}-${event.time}-${event.title}`}
                     event={event}
                     dayTitle={day.title}
                     category={category}
                     getIconComponent={getIconComponent}
-                    favoriteButtonProps={{
-                      item: {
-                        id: `${day.title}-${event.time}-${event.title}`,
-                        type: 'timeline' as const,
-                        data: {
-                          ...event,
-                          dayTitle: day.title,
-                          dayDate: day.date,
-                          categoryIcon: category?.icon,
-                        },
-                      },
-                    }}
                   />
                 );
               })}

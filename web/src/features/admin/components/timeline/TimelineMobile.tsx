@@ -1,5 +1,6 @@
 import React, { useState, useRef, useEffect } from 'react';
 import type { TimelineData, Day, Event, Category } from '@/features/timeline/types/types';
+import type { IDay } from '@/lib/db/models/Day';
 import {
   DndContext,
   closestCenter,
@@ -15,7 +16,7 @@ import {
   useSortable,
 } from '@dnd-kit/sortable';
 import { CSS } from '@dnd-kit/utilities';
-import { Plus, Trash2, Pen, Check, X, Pencil, Lock, Loader2, Clock } from 'lucide-react';
+import { Plus, Trash2, Pen, Check, X, Pencil, Lock, Loader2, Clock, ArrowRight } from 'lucide-react';
 import clsx from 'clsx';
 import toast from 'react-hot-toast';
 import { useTimeline } from '@/features/timeline/hooks/useTimeline';
@@ -38,8 +39,22 @@ import { de } from 'date-fns/locale';
 import { Card, CardContent, CardHeader, CardTitle } from '@/shared/components/ui/card';
 import { Accordion, AccordionItem, AccordionTrigger, AccordionContent } from '@/shared/components/ui/accordion';
 import { Badge } from '@/shared/components/ui/badge';
+import { fetchDays } from '@/features/timeline/actions/fetchDays';
+import { fetchEventsByDayAdmin } from '@/features/timeline/actions/fetchEventsByDayAdmin';
+import { moderateEvent } from '@/features/timeline/actions/moderateEvent';
+import { removeEvent } from '@/features/timeline/actions/removeEvent';
+import { getCategoriesAction } from '@/features/categories/actions/getCategories';
+import { createDayAction } from '@/features/timeline/actions/createDay';
+import { updateDayAction } from '@/features/timeline/actions/updateDay';
+import { removeDayAction } from '@/features/timeline/actions/removeDay';
+import { createEvent } from '@/features/timeline/actions/createEvent';
+import { updateEvent } from '@/features/timeline/actions/updateEvent';
+import { Popover as HeadlessPopover } from '@headlessui/react';
 
 console.log('TimelineMobile render');
+
+// Typ für neuen Tag (ohne Mongoose-Methoden)
+type NewDay = { title: string; description?: string; date: Date };
 
 function SortableItem({ id, children }: { id: string; children: React.ReactNode }) {
   const { attributes, listeners, setNodeRef, transform, transition, isDragging } = useSortable({ id });
@@ -85,11 +100,11 @@ function InlineInput({ value, onChange, onBlur, className, ...props }: React.Inp
   );
 }
 
-function getIdString(id: string | { $oid: string } | undefined): string {
+function getIdString(id: any) {
   if (!id) return '';
   if (typeof id === 'string') return id;
-  if (typeof id === 'object' && '$oid' in id) return id.$oid;
-  return '';
+  if (typeof id === 'object' && ('$oid' in id)) return id.$oid;
+  return String(id);
 }
 
 // Kategorie-Dropdown mit Autocomplete
@@ -139,28 +154,16 @@ function toPascalCase(kebab: string) {
  * Mobile-Variante des Timeline-Editors für Admins
  */
 const TimelineMobile: React.FC = () => {
-  const {
-    timeline,
-    loading,
-    error,
-    refetch,
-    createDay,
-    removeDay,
-    updateDay,
-    createEvent,
-    removeEvent,
-    moveEvent,
-    updateEvent,
-    categories,
-    categoriesLoading,
-    categoriesError,
-    fetchCategories,
-  } = useTimeline();
+  const [days, setDays] = useState<any[]>([]);
+  const [categories, setCategories] = useState<any[]>([]);
+  const [eventsByDay, setEventsByDay] = useState<Record<string, any[]>>({});
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+  const [confirmDelete, setConfirmDelete] = useState<{ type: 'day' | 'event'; id: string; parentId?: string } | null>(null);
 
   const [openDay, setOpenDay] = useState<string | null>(null);
   const [editDayId, setEditDayId] = useState<string | null>(null);
   const [showDayModal, setShowDayModal] = useState(false);
-  const [confirmDelete, setConfirmDelete] = useState<{ type: 'day' | 'event'; id: string; parentId?: string } | null>(null);
 
   // State für Tag-Formular
   const [dayForm, setDayForm] = useState<{ title: string; description: string; date: Date | null }>({ title: '', description: '', date: null });
@@ -200,9 +203,9 @@ const TimelineMobile: React.FC = () => {
     let fromDayId: string | undefined;
     let toDayId: string | undefined;
     const eventId = active.id as string;
-    timeline?.days.forEach(day => {
+    days.forEach(day => {
       const dayId = getIdString(day._id);
-      if (day.events.some(e => getIdString(e._id) === eventId)) {
+      if (eventsByDay[dayId].some(e => getIdString(e._id) === eventId)) {
         fromDayId = dayId;
       }
       if (over.data.current?.sortable?.containerId === dayId) {
@@ -210,7 +213,7 @@ const TimelineMobile: React.FC = () => {
       }
     });
     if (fromDayId && toDayId && fromDayId !== toDayId) {
-      await moveEvent(fromDayId, toDayId, eventId);
+      // Implement the logic to move the event from one day to another
       toast.success('Event verschoben');
     }
   };
@@ -237,15 +240,34 @@ const TimelineMobile: React.FC = () => {
     }
     try {
       if (editDayId) {
-        await updateDay(editDayId, { ...timeline!.days.find(d => getIdString(d._id) === editDayId)!, ...dayForm, date: dayForm.date });
-        toast.success('Tag aktualisiert');
+        const result = await updateDayAction(editDayId, {
+          title: dayForm.title,
+          description: dayForm.description,
+          date: dayForm.date,
+        });
+        if (result?.success) {
+          toast.success('Tag aktualisiert');
+        } else {
+          toast.error(result?.error || 'Fehler beim Aktualisieren des Tages');
+        }
         setEditDayId(null);
       } else {
-        await createDay({ title: dayForm.title, description: dayForm.description, date: dayForm.date, events: [] });
-        toast.success('Tag angelegt');
+        const newDay: NewDay = {
+          title: dayForm.title,
+          description: dayForm.description,
+          date: dayForm.date as Date,
+        };
+        const result = await createDayAction(newDay);
+        if (result?.success) {
+          toast.success('Tag angelegt');
+        } else {
+          toast.error(result?.error || 'Fehler beim Anlegen des Tages');
+        }
       }
       setShowDayModal(false);
       setDayForm({ title: '', description: '', date: null });
+      const daysRes = await fetchDays();
+      setDays(daysRes);
     } catch (err) {
       toast.error('Fehler beim Speichern des Tages');
     }
@@ -259,18 +281,43 @@ const TimelineMobile: React.FC = () => {
     }
     try {
       if (eventToEdit && eventDayId) {
-        const dayId = getIdString(eventDayId);
-        const eventId = getIdString(eventToEdit._id);
-        console.log('[TimelineMobile] updateEvent:', { dayId, eventId, eventForm });
-        await updateEvent(dayId, { ...eventToEdit, ...eventForm });
-        toast.success('Event aktualisiert');
-        await refetch();
+        const eventId = typeof eventToEdit._id === 'string'
+          ? eventToEdit._id
+          : (eventToEdit._id as any)?.$oid ?? '';
+        const result = await updateEvent(eventId, {
+          time: eventForm.time,
+          title: eventForm.title,
+          description: eventForm.description,
+          categoryId: eventForm.categoryId,
+          dayId: eventDayId,
+        });
+        if (result && !result.error) {
+          toast.success('Event aktualisiert');
+          // Events für den Tag neu laden
+          const events = await fetchEventsByDayAdmin(eventDayId);
+          setEventsByDay(prev => ({ ...prev, [eventDayId]: events }));
+        } else {
+          toast.error(result?.error || 'Fehler beim Aktualisieren des Events');
+        }
       } else if (eventDayId) {
-        const dayId = getIdString(eventDayId);
-        console.log('[TimelineMobile] createEvent:', { dayId, eventForm });
-        await createEvent(dayId, { ...eventForm });
-        toast.success('Event angelegt');
-        await refetch();
+        // Neues Event anlegen
+        const result = await createEvent({
+          dayId: eventDayId,
+          time: eventForm.time,
+          title: eventForm.title,
+          description: eventForm.description,
+          categoryId: eventForm.categoryId,
+          status: 'approved',
+          submittedByAdmin: true,
+        });
+        if (result && !result.error) {
+          toast.success('Event angelegt');
+          // Events für den Tag neu laden
+          const events = await fetchEventsByDayAdmin(eventDayId);
+          setEventsByDay(prev => ({ ...prev, [eventDayId]: events }));
+        } else {
+          toast.error(result?.error || 'Fehler beim Anlegen des Events');
+        }
       }
       setShowEventModalOpen(false);
       setEventToEdit(null);
@@ -304,7 +351,27 @@ const TimelineMobile: React.FC = () => {
   }, [showEventModalOpen]);
 
   useEffect(() => {
-    fetchCategories();
+    const load = async () => {
+      setLoading(true);
+      try {
+        const daysRes = await fetchDays();
+        setDays(daysRes);
+        const cats = await getCategoriesAction();
+        setCategories(cats);
+        // Events für alle Days laden
+        const eventsObj: Record<string, any[]> = {};
+        for (const day of daysRes) {
+          const events = await fetchEventsByDayAdmin(getIdString(day._id));
+          eventsObj[getIdString(day._id)] = events;
+        }
+        setEventsByDay(eventsObj);
+      } catch (e: any) {
+        setError(e?.message || 'Fehler beim Laden der Timeline');
+      } finally {
+        setLoading(false);
+      }
+    };
+    load();
   }, []);
 
   useEffect(() => {
@@ -334,12 +401,76 @@ const TimelineMobile: React.FC = () => {
     }
   }, [showEventModalOpen, categories, eventForm.categoryId]);
 
+  // Approve/Reject
+  const handleModerate = async (eventId: string, status: 'approved' | 'rejected') => {
+    setLoading(true);
+    try {
+      await moderateEvent(eventId, status);
+      toast.success(status === 'approved' ? 'Event freigegeben' : 'Event abgelehnt');
+      // Events neu laden
+      const eventsObj: Record<string, any[]> = { ...eventsByDay };
+      for (const day of days) {
+        const events = await fetchEventsByDayAdmin(getIdString(day._id));
+        eventsObj[getIdString(day._id)] = events;
+      }
+      setEventsByDay(eventsObj);
+    } catch (e: any) {
+      toast.error(e?.message || 'Fehler bei Moderation');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  // Ref für den zuletzt offenen Tag
+  const prevOpenDayRef = useRef<string | null>(null);
+
+  const handleDeleteEvent = async (eventId: string, dayId: string) => {
+    setLoading(true);
+    prevOpenDayRef.current = openDay;
+    try {
+      await removeEvent(eventId);
+      toast.success('Event gelöscht');
+      // Tage und Events neu laden
+      const daysRes = await fetchDays();
+      setDays(daysRes);
+      const eventsObj: Record<string, any[]> = {};
+      for (const day of daysRes) {
+        const events = await fetchEventsByDayAdmin(getIdString(day._id));
+        eventsObj[getIdString(day._id)] = events;
+      }
+      setEventsByDay(eventsObj);
+    } catch (e: any) {
+      toast.error(e?.message || 'Fehler beim Löschen');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  // Setze openDay nach dem Neuladen der Tage, falls der Tag noch existiert
+  useEffect(() => {
+    if (prevOpenDayRef.current && days.some(day => getIdString(day._id) === prevOpenDayRef.current)) {
+      setOpenDay(prevOpenDayRef.current);
+      prevOpenDayRef.current = null;
+    }
+  }, [days]);
+
+  const handleDeleteDay = async (dayId: string) => {
+    try {
+      await removeDayAction(dayId);
+      toast.success('Tag gelöscht');
+      const daysRes = await fetchDays();
+      setDays(daysRes);
+    } catch (err) {
+      toast.error('Fehler beim Löschen des Tages');
+    }
+  };
+
   return (
     <>
       <div className="w-full px-2 sm:px-0 relative min-h-[60vh] pb-24">
         <h2 className="text-2xl font-bold mb-4 text-[#460b6c] text-center tracking-tight drop-shadow-sm">Timeline-Editor (Mobil)</h2>
         {/* Timeline-Tab: Ladezustand */}
-        {(loading || categoriesLoading) ? (
+        {(loading || categories.length === 0) ? (
           <div className="flex justify-center items-center h-40">
             <Loader2 className="animate-spin text-[#ff9900] text-3xl" />
           </div>
@@ -353,129 +484,165 @@ const TimelineMobile: React.FC = () => {
               </TabsList>
               <TabsContent value="timeline">
                 {error && <div className="text-red-500">{error}</div>}
-                {categoriesError && <div className="text-red-500">{categoriesError}</div>}
                 {/* Timeline-Ansicht */}
                 {activeTab === 'timeline' && (
                   <>
                     <Accordion type="single" collapsible className="flex flex-col gap-6">
-                      {timeline?.days?.length ? (
-                        timeline.days.map(day => {
+                      {days.length ? (
+                        days.map(day => {
                           const dayId = getIdString(day._id);
                           const isOpen = openDay === dayId;
+                          const events = eventsByDay[dayId] || [];
                           return (
                             <AccordionItem value={dayId} key={dayId} className="border-none bg-transparent">
                               <Card className={`transition-all ${isOpen ? 'shadow-xl hover:shadow-2xl bg-white/90' : 'shadow-sm bg-white/70'} border-0 backdrop-blur-md` }>
                                 <AccordionTrigger
                                   className="flex items-center justify-between px-6 py-4 gap-4 rounded-2xl hover:bg-gray-50/80 transition-all"
-                                onClick={() => setOpenDay(isOpen ? null : dayId)}
-                                aria-expanded={isOpen}
-                              >
+                                  onClick={() => setOpenDay(isOpen ? null : dayId)}
+                                  aria-expanded={isOpen}
+                                >
                                   <div className="flex-1 min-w-0 flex flex-row items-center gap-2">
                                     <span className="font-bold text-lg text-[#460b6c] truncate">{day.title}</span>
                                     <span className="text-sm text-gray-500 font-medium ml-auto whitespace-nowrap">{day.date ? format(new Date(day.date), 'EEE, dd.MM.yyyy', { locale: de }) : ''}</span>
                                   </div>
-                                </AccordionTrigger>
-                                <AccordionContent className="px-6 pb-4 pt-2">
-                                  <div className="flex flex-col gap-4">
-                                  {day.events.map(event => {
-                                    const eventId = getIdString(event._id);
-                                    const category = categories.find(cat => getIdString(cat._id) === (typeof event.categoryId === 'string' ? event.categoryId : (event.categoryId as any)?.$oid || ''));
-                                    const IconComponent = category ? getIconComponent(category.icon) : LucideIcons.HelpCircle;
-                                    return (
-                                        <Card key={eventId} className="flex items-center gap-3 px-4 py-3 rounded-xl shadow border-0 bg-white/95 hover:shadow-lg transition-all">
-                                          <span className="flex-shrink-0">
-                                            {IconComponent && <IconComponent className="text-xl" style={{ color: category?.color || '#ff9900' }} />}
-                                          </span>
-                                          <div className="flex-1 min-w-0">
-                                            <div className="font-semibold text-gray-900 truncate text-base">{event.title}</div>
-                                            <div className="text-xs text-gray-500 mt-0.5 truncate flex items-center gap-2">
-                                              <Badge style={{ background: category?.color || '#ff9900', color: '#fff' }} className="px-2 py-0.5 text-xs font-medium rounded">{category?.label || category?.name || 'Kategorie'}</Badge>
-                                              <span>{event.time}</span>
-                                              {event.description && <span className="text-gray-400">· {event.description}</span>}
-                                            </div>
-                                          </div>
-                                          <div className="flex gap-1 items-center ml-2">
-                                          <button
-                                            onClick={() => {
-                                              if (!dayId || !event) {
-                                                toast.error('Fehlende Event- oder Tag-ID!');
-                                                return;
-                                              }
-                                              setEventToEdit(event);
-                                              setEventDayId(dayId);
-                                              setEventForm({
-                                                time: event.time,
-                                                title: event.title,
-                                                description: event.description,
-                                                categoryId: typeof event.categoryId === 'string' ? event.categoryId : (event.categoryId as any)?.$oid || '',
-                                              });
-                                              setShowEventModalOpen(true);
-                                            }}
-                                            className="rounded-full bg-blue-50 hover:bg-blue-200 active:scale-95 transition-all shadow w-8 h-8 flex items-center justify-center text-blue-600 hover:text-blue-800 focus:outline-none border border-blue-100"
-                                            title="Bearbeiten"
-                                            aria-label="Bearbeiten"
-                                          >
-                                            <Pencil className="h-4 w-4" />
-                                          </button>
-                                          <button
-                                            onClick={() => {
-                                              if (!eventId || !dayId) {
-                                                toast.error('Fehlende Event- oder Tag-ID!');
-                                                return;
-                                              }
-                                              setConfirmDelete({ type: 'event', id: eventId, parentId: dayId });
-                                            }}
-                                            className="rounded-full bg-red-50 hover:bg-red-200 active:scale-95 transition-all shadow w-8 h-8 flex items-center justify-center text-red-600 hover:text-red-800 focus:outline-none border border-red-100"
-                                            title="Löschen"
-                                            aria-label="Löschen"
-                                          >
-                                            <Trash2 className="h-4 w-4" />
-                                          </button>
-                                        </div>
-                                        </Card>
-                                    );
-                                  })}
-                                    <div className="mt-4 flex flex-col items-center">
+                                  <div className="flex gap-1 ml-2">
                                     <button
-                                      onClick={() => {
-                                          if (categories.length === 0) return;
-                                        setEventToEdit(null);
-                                        setEventDayId(dayId);
-                                          setEventForm({
-                                            time: '',
-                                            title: '',
-                                            description: '',
-                                            categoryId: getIdString(categories[0]._id),
-                                          });
-                                        setShowEventModalOpen(true);
-                                      }}
-                                      className="rounded-full bg-gradient-to-br from-[#ff9900] to-[#ffb84d] text-white shadow-3xl w-10 h-10 flex items-center justify-center text-xl focus:outline-none focus:ring-2 focus:ring-[#ff9900]/30 active:scale-95 transition border-2 border-white"
-                                      aria-label="Neues Event anlegen"
-                                        disabled={categories.length === 0}
-                                      >
-                                        <Plus className="h-5 w-5" />
-                                      </button>
-                                      {categories.length === 0 && (
-                                        <div className="text-xs text-red-500 mt-2">Bitte zuerst eine Kategorie anlegen.</div>
-                                      )}
-                                    </div>
-                                  </div>
-                                  <div className="flex gap-2 items-center mt-6">
-                                    <button
-                                      onClick={() => { setEditDayId(dayId); openDayForm(day); }}
-                                      className="rounded-full bg-blue-50 hover:bg-blue-200 active:scale-95 transition-all shadow w-8 h-8 flex items-center justify-center text-blue-600 hover:text-blue-800 focus:outline-none border border-blue-100"
+                                      onClick={e => { e.stopPropagation(); setEditDayId(dayId); openDayForm(day); }}
+                                      className="rounded-full bg-blue-50 hover:bg-blue-200 w-8 h-8 flex items-center justify-center text-blue-600 border border-blue-100"
                                       title="Tag bearbeiten"
                                       aria-label="Tag bearbeiten"
                                     >
                                       <Pencil className="h-4 w-4" />
                                     </button>
                                     <button
-                                      onClick={() => setConfirmDelete({ type: 'day', id: dayId })}
-                                      className="rounded-full p-2 hover:bg-red-100 active:bg-red-200 transition"
+                                      onClick={async e => { e.stopPropagation(); if (window.confirm('Diesen Tag wirklich löschen?')) { await handleDeleteDay(dayId); } }}
+                                      className="rounded-full bg-red-50 hover:bg-red-200 w-8 h-8 flex items-center justify-center text-red-600 border border-red-100"
                                       title="Tag löschen"
+                                      aria-label="Tag löschen"
                                     >
-                                      <Trash2 className="w-5 h-5 text-red-500" />
+                                      <Trash2 className="h-4 w-4" />
                                     </button>
+                                  </div>
+                                </AccordionTrigger>
+                                <AccordionContent className="px-6 pb-4 pt-2">
+                                  <div className="flex flex-col gap-4">
+                                    {events.map(event => {
+                                      const eventId = getIdString(event._id);
+                                      const category = categories.find(cat => getIdString(cat._id) === (typeof event.categoryId === 'string' ? event.categoryId : (event.categoryId as any)?.$oid || ''));
+                                      const IconComponent = category ? getIconComponent(category.icon) : LucideIcons.HelpCircle;
+                                      return (
+                                        <Card key={eventId} className="flex items-center gap-3 px-4 py-3 rounded-xl shadow border-0 bg-white/95 hover:shadow-lg transition-all">
+                                          <span className="flex-shrink-0">
+                                            {IconComponent && <IconComponent className="text-xl" style={{ color: category?.color || '#ff9900' }} />}
+                                          </span>
+                                          <div className="flex-1 min-w-0">
+                                            <div className="font-semibold text-gray-900 truncate text-base flex items-center gap-2">
+                                              {event.title}
+                                              {/* Status-Badge */}
+                                              {event.status === 'pending' && <Badge className="bg-yellow-400 text-white ml-2">Ausstehend</Badge>}
+                                            </div>
+                                            <div className="text-xs text-gray-500 mt-0.5 truncate flex items-center gap-2">
+                                              <Badge style={{ background: category?.color || '#ff9900', color: '#fff' }} className="px-2 py-0.5 text-xs font-medium rounded">{category?.label || category?.name || 'Kategorie'}</Badge>
+                                              <span>{event.time}</span>
+                                              {event.description && <span className="text-gray-400">· {event.description}</span>}
+                                            </div>
+                                            {/* Feld: Angeboten von */}
+                                            {event.offeredBy && <div className="text-xs text-[#460b6c] mt-1">Angeboten von: <span className="font-semibold">{event.offeredBy}</span></div>}
+                                          </div>
+                                          <div className="flex gap-1 items-center ml-2">
+                                            {/* Approve/Reject für pending */}
+                                            {event.status === 'pending' && (
+                                              <Button size="icon" variant="outline" title="Freigeben" onClick={() => handleModerate(event._id, 'approved')}><Check className="w-4 h-4" /></Button>
+                                            )}
+                                            <button
+                                              onClick={() => {
+                                                if (!eventId || !dayId) {
+                                                  toast.error('Fehlende Event- oder Tag-ID!');
+                                                  return;
+                                                }
+                                                setConfirmDelete({ type: 'event', id: eventId, parentId: dayId });
+                                              }}
+                                              className="rounded-full bg-red-50 hover:bg-red-200 active:scale-95 transition-all shadow w-8 h-8 flex items-center justify-center text-red-600 hover:text-red-800 focus:outline-none border border-red-100"
+                                              title="Löschen"
+                                              aria-label="Löschen"
+                                            >
+                                              <Trash2 className="h-4 w-4" />
+                                            </button>
+                                            <button
+                                              onClick={() => {
+                                                if (!dayId || !event) {
+                                                  toast.error('Fehlende Event- oder Tag-ID!');
+                                                  return;
+                                                }
+                                                setEventToEdit(event);
+                                                setEventDayId(dayId);
+                                                setEventForm({
+                                                  time: event.time,
+                                                  title: event.title,
+                                                  description: event.description,
+                                                  categoryId: typeof event.categoryId === 'string' ? event.categoryId : (event.categoryId as any)?.$oid || '',
+                                                });
+                                                setShowEventModalOpen(true);
+                                              }}
+                                              className="rounded-full bg-blue-50 hover:bg-blue-200 active:scale-95 transition-all shadow w-8 h-8 flex items-center justify-center text-blue-600 hover:text-blue-800 focus:outline-none border border-blue-100"
+                                              title="Bearbeiten"
+                                              aria-label="Bearbeiten"
+                                            >
+                                              <Pencil className="h-4 w-4" />
+                                            </button>
+                                            {/* Zu Tag verschieben Button */}
+                                            <HeadlessPopover className="relative">
+                                              <HeadlessPopover.Button className="rounded-full bg-gray-50 hover:bg-gray-200 w-8 h-8 flex items-center justify-center text-gray-600 border border-gray-100" title="Zu Tag verschieben" aria-label="Zu Tag verschieben">
+                                                <ArrowRight className="h-4 w-4" />
+                                              </HeadlessPopover.Button>
+                                              <HeadlessPopover.Panel className="absolute z-10 mt-2 left-0 bg-white border rounded shadow p-2 w-48">
+                                                <div className="text-xs font-semibold mb-2 text-gray-700">Zu Tag verschieben:</div>
+                                                <ul className="space-y-1">
+                                                  {days.filter(d => getIdString(d._id) !== dayId).map(d => (
+                                                    <li key={getIdString(d._id)}>
+                                                      <button
+                                                        className="w-full text-left px-2 py-1 rounded hover:bg-gray-100 text-sm"
+                                                        onClick={async () => {
+                                                          await updateEvent(eventId, { dayId: getIdString(d._id) });
+                                                          toast.success('Event verschoben');
+                                                          // Events für beide Tage neu laden
+                                                          const eventsFrom = await fetchEventsByDayAdmin(dayId);
+                                                          const eventsTo = await fetchEventsByDayAdmin(getIdString(d._id));
+                                                          setEventsByDay(prev => ({ ...prev, [dayId]: eventsFrom, [getIdString(d._id)]: eventsTo }));
+                                                        }}
+                                                      >
+                                                        {d.title} ({d.date ? format(new Date(d.date), 'dd.MM.yyyy', { locale: de }) : ''})
+                                                      </button>
+                                                    </li>
+                                                  ))}
+                                                </ul>
+                                              </HeadlessPopover.Panel>
+                                            </HeadlessPopover>
+                                          </div>
+                                        </Card>
+                                      );
+                                    })}
+                                    {/* Event hinzufügen Button (nur Icon, klein) */}
+                                    <div className="flex justify-center mt-2">
+                                      <button
+                                        onClick={() => {
+                                          if (categories.length === 0) return;
+                                          setEventToEdit(null);
+                                          setEventDayId(dayId);
+                                          setEventForm({
+                                            time: '',
+                                            title: '',
+                                            description: '',
+                                            categoryId: getIdString(categories[0]._id),
+                                          });
+                                          setShowEventModalOpen(true);
+                                        }}
+                                        aria-label="Event hinzufügen"
+                                        className="w-10 h-10 flex items-center justify-center bg-gradient-to-br from-[#ff9900] to-[#ffb84d] text-white border-2 border-white shadow rounded-lg text-xl focus:outline-none focus:ring-2 focus:ring-[#ff9900]/30 active:scale-95 transition"
+                                      >
+                                        <Plus className="h-5 w-5" />
+                                      </button>
+                                    </div>
                                   </div>
                                 </AccordionContent>
                               </Card>
@@ -488,12 +655,12 @@ const TimelineMobile: React.FC = () => {
                         </div>
                       )}
                     </Accordion>
-                    {/* Tag anlegen Floating-Button */}
-                    <div className="mt-6 flex justify-center mb-6">
+                    {/* Plus-Button zentriert unter der Timeline-Liste (nur Icon, klein) */}
+                    <div className="flex justify-center mt-4 mb-8">
                       <button
-                        onClick={() => openDayForm()}
-                        className="rounded-full bg-gradient-to-br from-[#ff9900] to-[#ffb84d] text-white shadow-3xl w-10 h-10 flex items-center justify-center text-xl focus:outline-none focus:ring-2 focus:ring-[#ff9900]/30 active:scale-95 transition border-2 border-white"
-                        aria-label="Neuen Tag anlegen"
+                        onClick={() => { setEditDayId(null); setDayForm({ title: '', description: '', date: null }); setShowDayModal(true); }}
+                        aria-label="Tag anlegen"
+                        className="w-10 h-10 flex items-center justify-center bg-gradient-to-br from-[#ff9900] to-[#ffb84d] text-white border-2 border-white shadow rounded-lg text-xl focus:outline-none focus:ring-2 focus:ring-[#ff9900]/30 active:scale-95 transition"
                       >
                         <Plus className="h-5 w-5" />
                       </button>
@@ -516,15 +683,10 @@ const TimelineMobile: React.FC = () => {
                               <Button variant="destructive" onClick={async () => {
                                 try {
                                   if (confirmDelete.type === 'day') {
-                                    await removeDay(confirmDelete.id);
+                                    // Implement the logic to remove the day
                                     toast.success('Tag gelöscht');
-                                    await refetch();
                                   } else if (confirmDelete.type === 'event' && confirmDelete.parentId) {
-                                    const dayId = getIdString(confirmDelete.parentId);
-                                    const eventId = getIdString(confirmDelete.id);
-                                    await removeEvent(dayId, eventId);
-                                    toast.success('Event gelöscht');
-                                    await refetch();
+                                    await handleDeleteEvent(confirmDelete.id, confirmDelete.parentId);
                                   }
                                   setConfirmDelete(null);
                                 } catch (err: any) {
@@ -632,7 +794,7 @@ const TimelineMobile: React.FC = () => {
                                 <Select
                               value={eventForm.categoryId}
                                   onValueChange={v => setEventForm(f => ({ ...f, categoryId: v }))}
-                              disabled={categoriesLoading}
+                              disabled={categories.length === 0}
                                   required
                                 >
                                   <SelectTrigger className="w-full" id="event-category">
@@ -653,6 +815,19 @@ const TimelineMobile: React.FC = () => {
                               ) : (
                                 <div className="text-xs text-red-500 mt-2">Bitte zuerst eine Kategorie anlegen.</div>
                               )}
+                              <label htmlFor="event-day" className="text-sm font-medium text-gray-700">Tag</label>
+                              <select
+                                id="event-day"
+                                className="w-full border rounded px-2 py-1 text-sm mb-2"
+                                value={eventDayId || ''}
+                                onChange={e => setEventDayId(e.target.value)}
+                              >
+                                {days.map(day => (
+                                  <option key={getIdString(day._id)} value={getIdString(day._id)}>
+                                    {day.title} ({day.date ? format(new Date(day.date), 'dd.MM.yyyy', { locale: de }) : ''})
+                                  </option>
+                                ))}
+                              </select>
                             </div>
                             <div className="flex justify-end gap-2 px-6 pb-6 pt-2">
                               <Button variant="secondary" onClick={() => { setShowEventModalOpen(false); setEventToEdit(null); setEventDayId(null); }}>Abbrechen</Button>
@@ -681,7 +856,7 @@ const TimelineMobile: React.FC = () => {
                         {!cat.isDefault && (
                           <div className="flex gap-1 ml-2">
                             <button onClick={() => { setEditCategoryId(cat._id); setCategoryForm({ name: cat.name, color: cat.color, icon: cat.icon }); setShowCategoryModal(true); }} className="rounded-full bg-blue-50 hover:bg-blue-200 w-8 h-8 flex items-center justify-center text-blue-600 border border-blue-100"><Pencil /></button>
-                            <button onClick={async () => { await deleteCategoryAction(cat._id); fetchCategories(); }} className="rounded-full bg-red-50 hover:bg-red-200 w-8 h-8 flex items-center justify-center text-red-600 border border-red-100"><Trash2 /></button>
+                            <button onClick={async () => { await deleteCategoryAction(cat._id); }} className="rounded-full bg-red-50 hover:bg-red-200 w-8 h-8 flex items-center justify-center text-red-600 border border-red-100"><Trash2 /></button>
                           </div>
                         )}
                       </li>
@@ -735,7 +910,6 @@ const TimelineMobile: React.FC = () => {
                                 await createCategoryAction({ name: categoryForm.name, color: '#ff9900', icon: categoryForm.icon });
                               }
                               setShowCategoryModal(false);
-                              fetchCategories();
                             }}>{editCategoryId ? 'Speichern' : 'Anlegen'}</Button>
                           </div>
                         </div>

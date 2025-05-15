@@ -1,13 +1,15 @@
 "use server";
-import type { TimelineData } from '../types/types';
-import { deleteEventFromDay, TimelineServiceError } from '../services/timelineService';
+
+import { deleteEvent } from '@/features/timeline/services/eventService';
 
 /**
- * Action: Lösche ein Event aus einem Tag
- * @param dayId - Die ID des Tags
- * @param eventId - Die ID des zu löschenden Events
- * @returns Die aktualisierte Timeline oder ein Fehlerobjekt
+ * Löschen eines Events (Admin).
  */
-export async function removeEvent(dayId: string, eventId: string): Promise<TimelineData | TimelineServiceError> {
-  return await deleteEventFromDay(dayId, eventId);
+export async function removeEvent(eventId: string): Promise<void> {
+  try {
+    await deleteEvent(eventId);
+  } catch (error) {
+    console.error('Fehler beim Löschen des Events:', error);
+    throw new Error('Event konnte nicht gelöscht werden.');
+  }
 } 

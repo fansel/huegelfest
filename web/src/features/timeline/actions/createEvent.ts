@@ -1,15 +1,13 @@
 "use server";
 
-import type { Event, TimelineData } from '../types/types';
-import { addEventToDay, TimelineServiceError } from '../services/timelineService';
+import { submitEvent } from '@/features/timeline/actions/submitEvent';
+import { EventSubmission } from '@/features/timeline/actions/submitEvent';
 
 /**
  * Action: Füge einem Tag ein Event hinzu
- * @param dayId - Die ID des Tags
  * @param event - Das neue Event
  * @returns Die aktualisierte Timeline oder ein Fehlerobjekt
  */
-export async function createEvent(dayId: string, event: Event): Promise<TimelineData | TimelineServiceError> {
-  console.log('[createEvent Action] Aufgerufen mit:', { dayId, event });
-  return await addEventToDay(dayId, event);
+export async function createEvent(event: Record<string, any>) {
+  return submitEvent(event);
 } 

@@ -1,7 +1,7 @@
 "use server";
 
-import type { TimelineData } from '../types/types';
-import { moveEventToAnotherDay, TimelineServiceError } from '../services/timelineService';
+import { updateEvent } from '@/features/timeline/services/eventService';
+import { Types } from 'mongoose';
 
 /**
  * Action: Verschiebe ein Event zu einem anderen Tag
@@ -10,6 +10,6 @@ import { moveEventToAnotherDay, TimelineServiceError } from '../services/timelin
  * @param eventId - Die ID des zu verschiebenden Events
  * @returns Die aktualisierte Timeline oder ein Fehlerobjekt
  */
-export async function moveEvent(fromDayId: string, toDayId: string, eventId: string): Promise<TimelineData | TimelineServiceError> {
-  return await moveEventToAnotherDay(fromDayId, toDayId, eventId);
+export async function moveEvent(eventId: string, toDayId: string) {
+  return updateEvent(eventId, { dayId: new Types.ObjectId(toDayId) });
 } 
