@@ -142,7 +142,7 @@
     } catch (e) {
       console.error('[PushScheduler] Fehler:', e);
     }
-  });
+  }, { timezone: 'Europe/Berlin' });
 
   console.log('[PushScheduler] Cron-Job läuft (jede Minute)...');
 })();
