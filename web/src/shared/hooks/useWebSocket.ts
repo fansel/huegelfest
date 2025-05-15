@@ -17,6 +17,10 @@ export interface UseWebSocketOptions {
   onClose?: () => void;
   onError?: (err: Event) => void;
   reconnectIntervalMs?: number;
+  /**
+   * Wird aufgerufen, wenn WebSocket dauerhaft nicht verfügbar ist (z.B. Verbindungsaufbau-Fehler)
+   */
+  onUnavailable?: (err: unknown) => void;
 }
 
 /**
@@ -33,11 +37,27 @@ export function useWebSocket(
 
   useEffect(() => {
     let isMounted = true;
+    let wsFailed = false;
 
     function connect() {
-      ws.current = new window.WebSocket(url);
+      try {
+        ws.current = new window.WebSocket(url);
+      } catch (err) {
+        wsFailed = true;
+        if (options.onUnavailable) options.onUnavailable(err);
+        // Kein Fehler ins UI loggen, nur still bleiben
+        // Reconnect nach Intervall versuchen
+        if (isMounted) {
+          reconnectTimeout.current = setTimeout(
+            connect,
+            options.reconnectIntervalMs ?? 5000
+          );
+        }
+        return;
+      }
 
       ws.current.onopen = () => {
+        wsFailed = false;
         if (options.onOpen) options.onOpen();
       };
 

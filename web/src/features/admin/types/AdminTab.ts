@@ -1,1 +1,1 @@
-export type AdminTab = 'announcements' | 'groups' | 'timeline' | 'music'; 
+export type AdminTab = 'announcements' | 'groups' | 'timeline' | 'music' | 'registrations' | 'admin-settings' | 'packlist'; 

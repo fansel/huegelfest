@@ -4,6 +4,12 @@ import { IAnnouncement } from '@/shared/types/types';
 import { Plus, Trash2, Pencil } from 'lucide-react';
 import { toast } from 'react-hot-toast';
 import { AnnouncementCard } from '@/features/announcements/components/AnnouncementCard';
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter, DialogClose } from '@/shared/components/ui/dialog';
+import { Input } from '@/shared/components/ui/input';
+import { Textarea } from '@/shared/components/ui/textarea';
+import { Button } from '@/shared/components/ui/button';
+import { Select, SelectTrigger, SelectContent, SelectItem, SelectValue } from '@/shared/components/ui/select';
+import { AlertDialog, AlertDialogContent, AlertDialogHeader, AlertDialogTitle, AlertDialogDescription, AlertDialogFooter, AlertDialogCancel, AlertDialogAction } from '@/shared/components/ui/alert-dialog';
 
 const AnnouncementsDesktop: React.FC = () => {
   const manager = useAnnouncementsManager();
@@ -12,12 +18,14 @@ const AnnouncementsDesktop: React.FC = () => {
   const [groupId, setGroupId] = useState('');
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [deletingId, setDeletingId] = useState<string | null>(null);
+  const [showDialog, setShowDialog] = useState(false);
+  const [deleteDialogId, setDeleteDialogId] = useState<string | null>(null);
 
-  // Sync form state when editing changes
   useEffect(() => {
     if (editing) {
       setContent(editing.content);
       setGroupId(editing.groupId);
+      setShowDialog(true);
     } else {
       setContent('');
       setGroupId('');
@@ -39,10 +47,10 @@ const AnnouncementsDesktop: React.FC = () => {
         id: editing?.id || '',
         content: content.trim(),
         groupId,
-        groupName: '', // Wird serverseitig gesetzt
-        groupColor: '', // Wird serverseitig gesetzt
+        groupName: '',
+        groupColor: '',
         important: editing?.important || false,
-        reactions: {}, // Wird serverseitig gesetzt
+        reactions: {},
         date: editing?.date || '',
         time: editing?.time || '',
         createdAt: editing?.createdAt || new Date().toISOString(),
@@ -56,6 +64,7 @@ const AnnouncementsDesktop: React.FC = () => {
         toast.success('Ankündigung wurde erstellt');
       }
       setEditing(undefined);
+      setShowDialog(false);
       setContent('');
       setGroupId('');
     } catch (error) {
@@ -74,6 +83,7 @@ const AnnouncementsDesktop: React.FC = () => {
       toast.error('Fehler beim Löschen');
     } finally {
       setDeletingId(null);
+      setDeleteDialogId(null);
     }
   };
 
@@ -83,73 +93,92 @@ const AnnouncementsDesktop: React.FC = () => {
 
   return (
     <div className="grid grid-cols-2 gap-6">
-      {/* Formular */}
-      <div className="bg-white p-6 rounded-lg shadow flex flex-col">
-        <h3 className="text-lg font-bold text-[#460b6c] mb-4">
-          {editing ? 'Ankündigung bearbeiten' : 'Neue Ankündigung'}
-        </h3>
-        <textarea
-          value={content}
-          onChange={e => setContent(e.target.value)}
-          placeholder="Gebe hier deine Ankündigung ein..."
-          className="w-full p-2 border border-gray-300 rounded text-sm bg-white text-gray-700 placeholder-gray-400 mb-3"
-          rows={3}
-        />
-        <select
-          value={groupId}
-          onChange={e => setGroupId(e.target.value)}
-          className="w-full p-2 border border-gray-300 rounded text-sm bg-white text-gray-700 mb-3"
-        >
-          <option value="">Wähle eine Gruppe</option>
-          {manager.groups.map(group => (
-            <option key={group.id} value={group.id}>
-              {group.name}
-            </option>
-          ))}
-        </select>
-        <div className="flex justify-end space-x-2 mt-auto">
-          {editing && (
-            <button
-              onClick={() => setEditing(undefined)}
-              className="px-4 py-2 text-sm font-medium text-gray-700 bg-white border border-gray-300 rounded hover:bg-gray-50"
-            >
-              Abbrechen
-            </button>
-          )}
-          <button
-            onClick={handleSave}
-            disabled={isSubmitting}
-            className="px-4 py-2 text-sm font-medium text-white bg-[#ff9900] rounded hover:bg-orange-600 disabled:opacity-50"
-          >
-            {isSubmitting ? 'Wird gespeichert...' : editing ? 'Aktualisieren' : 'Speichern'}
-          </button>
+      {/* Dialog-Modal für Formular */}
+      <Dialog open={showDialog} onOpenChange={open => { setShowDialog(open); if (!open) setEditing(undefined); }}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>{editing ? 'Ankündigung bearbeiten' : 'Neue Ankündigung'}</DialogTitle>
+          </DialogHeader>
+          <div className="flex flex-col gap-4 py-2">
+            <label htmlFor="announcement-content" className="text-sm font-medium text-gray-700">Inhalt</label>
+            <Textarea
+              id="announcement-content"
+              value={content}
+              onChange={e => setContent(e.target.value)}
+              placeholder="Gebe hier deine Ankündigung ein..."
+              rows={3}
+              className="w-full"
+              required
+            />
+            <label htmlFor="announcement-group" className="text-sm font-medium text-gray-700">Gruppe</label>
+            <Select value={groupId} onValueChange={setGroupId} required>
+              <SelectTrigger className="w-full" id="announcement-group">
+                <SelectValue>{manager.groups.find(g => g.id === groupId)?.name || 'Wähle eine Gruppe'}</SelectValue>
+              </SelectTrigger>
+              <SelectContent>
+                {manager.groups.map(group => (
+                  <SelectItem key={group.id} value={group.id}>{group.name}</SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+            <DialogFooter className="w-full flex-row justify-end gap-2 mt-4">
+              <DialogClose asChild>
+                <Button variant="secondary" onClick={() => { setShowDialog(false); setEditing(undefined); }}>Abbrechen</Button>
+              </DialogClose>
+              <Button className="bg-[#ff9900] hover:bg-orange-600" onClick={handleSave} disabled={isSubmitting}>
+                {isSubmitting ? 'Wird gespeichert...' : editing ? 'Aktualisieren' : 'Speichern'}
+              </Button>
+            </DialogFooter>
+          </div>
+        </DialogContent>
+      </Dialog>
+      {/* Plus-Button */}
+      <div className="flex flex-col">
+        <Button variant="default" size="icon" className="mb-4 self-end" onClick={() => { setEditing(undefined); setShowDialog(true); }} aria-label="Neue Ankündigung anlegen"><Plus /></Button>
+        <div className="bg-white p-6 rounded-lg shadow">
+          <h3 className="text-lg font-bold text-[#460b6c] mb-4">Aktuelle Ankündigungen</h3>
+          <div className="space-y-4">
+            {manager.announcements.length === 0 ? (
+              <p className="text-gray-400 text-center py-6 text-lg font-medium">Keine Ankündigungen vorhanden</p>
+            ) : (
+              [...manager.announcements]
+                .sort((a, b) => new Date(b.createdAt ?? '').getTime() - new Date(a.createdAt ?? '').getTime())
+                .map((announcement) => (
+                  <AnnouncementCard
+                    key={announcement.id}
+                    content={announcement.content}
+                    groupName={announcement.groupName ?? 'Gruppe'}
+                    groupColor={announcement.groupColor}
+                    important={announcement.important}
+                    createdAt={announcement.createdAt}
+                    onEdit={() => { setEditing(announcement); setShowDialog(true); }}
+                    onDelete={() => setDeleteDialogId(announcement.id)}
+                    isLoadingDelete={deletingId === announcement.id}
+                  />
+                ))
+            )}
+          </div>
         </div>
       </div>
-      {/* Liste */}
-      <div className="bg-white p-6 rounded-lg shadow">
-        <h3 className="text-lg font-bold text-[#460b6c] mb-4">Aktuelle Ankündigungen</h3>
-        <div className="space-y-4">
-          {manager.announcements.length === 0 ? (
-            <p className="text-gray-400 text-center py-6 text-lg font-medium">Keine Ankündigungen vorhanden</p>
-          ) : (
-            [...manager.announcements]
-              .sort((a, b) => new Date(b.createdAt ?? '').getTime() - new Date(a.createdAt ?? '').getTime())
-              .map((announcement) => (
-                <AnnouncementCard
-                  key={announcement.id}
-                  content={announcement.content}
-                  groupName={announcement.groupName ?? 'Gruppe'}
-                  groupColor={announcement.groupColor}
-                  important={announcement.important}
-                  createdAt={announcement.createdAt}
-                  onEdit={() => setEditing(announcement)}
-                  onDelete={() => handleDelete(announcement.id)}
-                  isLoadingDelete={deletingId === announcement.id}
-                />
-              ))
-          )}
-        </div>
-      </div>
+      {/* Delete Dialog */}
+      <AlertDialog open={!!deleteDialogId} onOpenChange={open => { if (!open) setDeleteDialogId(null); }}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Wirklich löschen?</AlertDialogTitle>
+            <AlertDialogDescription>
+              Diese Ankündigung wirklich löschen?
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel asChild>
+              <Button variant="secondary" onClick={() => setDeleteDialogId(null)}>Abbrechen</Button>
+            </AlertDialogCancel>
+            <AlertDialogAction asChild>
+              <Button variant="destructive" onClick={() => handleDelete(deleteDialogId!)}>Löschen</Button>
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   );
 };

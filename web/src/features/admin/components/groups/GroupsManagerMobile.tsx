@@ -1,7 +1,11 @@
 import React, { useEffect, useState } from 'react';
 import { getGroupsArrayAction, createGroupAction, deleteGroupAction, updateGroupAction } from '../../../groups/actions/getGroupColors';
 import { toast } from 'react-hot-toast';
-import { Trash2, Pencil, Plus, Check, X } from 'lucide-react';
+import { Plus, Pencil, Trash2, Check, X } from 'lucide-react';
+import { Sheet, SheetContent, SheetHeader, SheetTitle } from '@/shared/components/ui/sheet';
+import { Input } from '@/shared/components/ui/input';
+import { Button } from '@/shared/components/ui/button';
+import { AlertDialog, AlertDialogContent, AlertDialogHeader, AlertDialogTitle, AlertDialogDescription, AlertDialogFooter, AlertDialogCancel, AlertDialogAction } from '@/shared/components/ui/alert-dialog';
 
 interface Group {
   id: string;
@@ -25,6 +29,7 @@ const GroupsManagerMobile: React.FC = () => {
   const [editId, setEditId] = useState<string | null>(null);
   const [editName, setEditName] = useState('');
   const [editColor, setEditColor] = useState('');
+  const [deleteDialogId, setDeleteDialogId] = useState<string | null>(null);
 
   const fetchGroups = async () => {
     setLoading(true);
@@ -49,28 +54,32 @@ const GroupsManagerMobile: React.FC = () => {
   };
 
   const handleDelete = async (id: string) => {
-    await deleteGroupAction(id);
-    toast.success('Gruppe gelöscht');
-    fetchGroups();
+    setDeleteDialogId(id);
   };
 
-  const handleColorChange = async (group: Group, color: string) => {
-    await updateGroupAction(group.id, { color });
-    toast.success('Farbe geändert');
+  const confirmDelete = async () => {
+    if (!deleteDialogId) return;
+    await deleteGroupAction(deleteDialogId);
+    toast.success('Gruppe gelöscht');
+    setDeleteDialogId(null);
     fetchGroups();
   };
 
   const handleEdit = (group: Group) => {
     setEditId(group.id);
     setEditName(group.name);
+    setEditColor(group.color);
+    setShowAdd(true);
   };
 
   const handleUpdate = async () => {
     if (!editId) return;
-    await updateGroupAction(editId, { name: editName });
-    toast.success('Name geändert');
+    await updateGroupAction(editId, { name: editName, color: editColor });
+    toast.success('Name/Farbe geändert');
     setEditId(null);
     setEditName('');
+    setEditColor('');
+    setShowAdd(false);
     fetchGroups();
   };
 
@@ -91,21 +100,20 @@ const GroupsManagerMobile: React.FC = () => {
                   style={{ background: group.color }}
                   title="Farbe ändern"
                 >
-                  <input
+                  <Input
                     type="color"
                     value={group.color}
-                    onChange={e => handleColorChange(group, e.target.value)}
+                    onChange={e => updateGroupAction(group.id, { color: e.target.value }).then(fetchGroups)}
                     className="w-8 h-8 p-0 border-none bg-transparent opacity-0 absolute left-0 top-0 cursor-pointer"
                     style={{ minWidth: 32, minHeight: 32 }}
                   />
                 </span>
                 {editId === group.id ? (
-                  <input
+                  <Input
                     type="text"
                     value={editName}
                     onChange={e => setEditName(e.target.value)}
-                    className="border-b-2 border-[#ff9900] focus:outline-none px-1 py-0.5 text-base rounded bg-gray-50"
-                    style={{ minWidth: 80 }}
+                    className="border-b-2 border-[#ff9900] focus:outline-none px-1 py-0.5 text-base rounded bg-gray-50 min-w-[80px]"
                   />
                 ) : (
                   <span className="text-base font-medium text-gray-800">{group.name}</span>
@@ -114,37 +122,41 @@ const GroupsManagerMobile: React.FC = () => {
               <div className="flex gap-1 items-center">
                 {editId === group.id ? (
                   <>
-                    <button
+                    <Button
+                      variant="default"
+                      size="icon"
                       onClick={handleUpdate}
-                      className="rounded-full bg-blue-50 hover:bg-blue-200 active:scale-95 transition-all shadow w-8 h-8 flex items-center justify-center text-blue-600 hover:text-blue-800 focus:outline-none border border-blue-100"
                       aria-label="Speichern"
                     >
                       <Check className="h-4 w-4" />
-                    </button>
-                    <button
+                    </Button>
+                    <Button
+                      variant="secondary"
+                      size="icon"
                       onClick={() => setEditId(null)}
-                      className="rounded-full bg-gray-200 hover:bg-gray-300 active:scale-95 transition-all shadow w-8 h-8 flex items-center justify-center text-gray-600 hover:text-gray-800 focus:outline-none border border-gray-300"
                       aria-label="Abbrechen"
                     >
                       <X className="h-4 w-4" />
-                    </button>
+                    </Button>
                   </>
                 ) : (
                   <>
-                    <button
+                    <Button
+                      variant="secondary"
+                      size="icon"
                       onClick={() => handleEdit(group)}
-                      className="rounded-full bg-blue-50 hover:bg-blue-200 active:scale-95 transition-all shadow w-8 h-8 flex items-center justify-center text-blue-600 hover:text-blue-800 focus:outline-none border border-blue-100"
                       aria-label="Umbenennen"
                     >
                       <Pencil className="h-4 w-4" />
-                    </button>
-                    <button
+                    </Button>
+                    <Button
+                      variant="destructive"
+                      size="icon"
                       onClick={() => handleDelete(group.id)}
-                      className="rounded-full bg-red-50 hover:bg-red-200 active:scale-95 transition-all shadow w-8 h-8 flex items-center justify-center text-red-600 hover:text-red-800 focus:outline-none border border-red-100"
                       aria-label="Löschen"
                     >
                       <Trash2 className="h-4 w-4" />
-                    </button>
+                    </Button>
                   </>
                 )}
               </div>
@@ -152,74 +164,71 @@ const GroupsManagerMobile: React.FC = () => {
           ))}
         </ul>
       )}
-      {/* Add Sheet Trigger: Plus-Button mittig über der Liste */}
+      {/* Floating Action Button */}
       <div className="mt-6 flex justify-center mb-6">
-        <button
-          onClick={() => setShowAdd(true)}
-          className="rounded-full bg-gradient-to-br from-[#ff9900] to-[#ffb84d] text-white shadow-3xl w-10 h-10 flex items-center justify-center text-xl focus:outline-none focus:ring-2 focus:ring-[#ff9900]/30 active:scale-95 transition border-2 border-white"
+        <Button
+          variant="default"
+          size="icon"
+          onClick={() => { setShowAdd(true); setEditId(null); setNewName(''); setNewColor(randomColor()); }}
           aria-label="Neue Gruppe erstellen"
+          className="bg-gradient-to-br from-[#ff9900] to-[#ffb84d] text-white shadow-3xl border-2 border-white"
         >
           <Plus className="h-5 w-5" />
-        </button>
+        </Button>
       </div>
-      {/* Abstand zwischen Plus-Button und Liste */}
-      <div className="mt-4" />
-      {/* Add Sheet */}
-      {showAdd && (
-        <div className="fixed inset-0 z-50 bg-black/10 flex items-end justify-center">
-          <div className="w-full max-w-lg mx-auto rounded-t-3xl shadow-[0_8px_40px_0_rgba(70,11,108,0.18)] border border-white/30 bg-white/95 backdrop-blur-xl flex flex-col overflow-hidden animate-modern-sheet h-[60vh]">
-            {/* Drag Handle */}
-            <div className="flex justify-center pt-4 pb-2 bg-transparent rounded-t-3xl">
-              <div className="w-16 h-1.5 bg-gray-300/80 rounded-full shadow-sm" />
-            </div>
-            {/* Header */}
-            <div className="flex items-center justify-between px-8 py-4 bg-transparent">
-              <span className="text-xl font-bold text-[#460b6c] tracking-tight">
-                Neue Gruppe anlegen
-              </span>
-              <button
-                onClick={() => setShowAdd(false)}
-                className="w-10 h-10 flex items-center justify-center rounded-full bg-white/70 hover:bg-white/90 text-gray-500 hover:text-[#460b6c] text-2xl font-bold focus:outline-none shadow transition-colors"
-                aria-label="Schließen"
-              >
-                ×
-              </button>
-            </div>
-            {/* Content */}
-            <div className="flex-1 overflow-y-auto px-8 py-8 flex flex-col gap-6 items-center justify-center">
-              <input
-                type="text"
-                value={newName}
-                onChange={e => setNewName(e.target.value)}
+      {/* Add/Edit Sheet */}
+      <Sheet open={showAdd} onOpenChange={setShowAdd}>
+        <SheetContent side="bottom" className="max-w-lg mx-auto rounded-t-3xl h-[60vh]">
+          <SheetHeader>
+            <SheetTitle>{editId ? 'Gruppe bearbeiten' : 'Neue Gruppe anlegen'}</SheetTitle>
+          </SheetHeader>
+          <div className="flex flex-col gap-6 items-center justify-center py-8">
+            <div className="w-full max-w-md mx-auto flex flex-col gap-4 px-4">
+              <label htmlFor="group-name" className="text-sm font-medium text-gray-700">Name</label>
+              <Input
+                id="group-name"
                 placeholder="Gruppenname"
-                className="border-b-2 border-[#ff9900] focus:outline-none px-2 py-2 text-lg rounded w-full bg-gray-50"
+                value={editId ? editName : newName}
+                onChange={e => editId ? setEditName(e.target.value) : setNewName(e.target.value)}
+                required
+                className="w-full"
+                autoFocus
               />
-              <input
+              <label htmlFor="group-color" className="text-sm font-medium text-gray-700">Farbe</label>
+              <Input
+                id="group-color"
                 type="color"
-                value={newColor}
-                onChange={e => setNewColor(e.target.value)}
+                value={editId ? editColor : newColor}
+                onChange={e => editId ? setEditColor(e.target.value) : setNewColor(e.target.value)}
                 className="w-16 h-16 p-0 border-none bg-transparent"
               />
-              <button
-                onClick={handleAdd}
-                className="bg-[#ff9900] text-white px-6 py-2 rounded-full text-lg font-bold shadow hover:bg-orange-600 active:scale-95 transition"
-              >
-                Gruppe anlegen
-              </button>
+            </div>
+            <div className="flex justify-end gap-2 px-6 pb-6 pt-2 w-full">
+              <Button variant="secondary" onClick={() => { setShowAdd(false); setEditId(null); }}>Abbrechen</Button>
+              <Button className="bg-[#ff9900] hover:bg-orange-600" onClick={editId ? handleUpdate : handleAdd}>{editId ? 'Speichern' : 'Anlegen'}</Button>
             </div>
           </div>
-          <style jsx global>{`
-            @keyframes modern-sheet {
-              0% { transform: translateY(100%) scale(0.98); opacity: 0.7; }
-              80% { transform: translateY(-8px) scale(1.02); opacity: 1; }
-              100% { transform: translateY(0) scale(1); opacity: 1; }
-            }
-            .animate-modern-sheet {
-              animation: modern-sheet 0.32s cubic-bezier(0.22, 1, 0.36, 1);
-            }
-          `}</style>
-        </div>
-      )}
+        </SheetContent>
+      </Sheet>
+      {/* Delete Dialog */}
+      <AlertDialog open={!!deleteDialogId} onOpenChange={open => { if (!open) setDeleteDialogId(null); }}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Wirklich löschen?</AlertDialogTitle>
+            <AlertDialogDescription>
+              Diese Gruppe wirklich löschen?
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel asChild>
+              <Button variant="secondary" onClick={() => setDeleteDialogId(null)}>Abbrechen</Button>
+            </AlertDialogCancel>
+            <AlertDialogAction asChild>
+              <Button variant="destructive" onClick={confirmDelete}>Löschen</Button>
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   );
 };

@@ -19,6 +19,7 @@ import { AdminTab } from '@/features/admin/types/AdminTab';
 import MusicNote from '@/features/music/components/MusicNote';
 import SignupPhaseInfo from '@/features/pwa/SignupPhaseInfo';
 import { useGlobalState } from '@/contexts/GlobalStateContext';
+import Packlist from '@/features/packlist/Packlist';
 
 
 type View =
@@ -32,7 +33,8 @@ type View =
   | 'groups'
   | 'timeline'
   | 'admin-settings'
-  | 'signup';
+  | 'signup'
+  | 'packlist';
 
 const isDesktop = () => {
   if (typeof window === 'undefined') return false;
@@ -87,6 +89,9 @@ export default function PWAContainer({ children }: React.PropsWithChildren) {
       if (activeTab === 'settings') {
         return <Settings showStarfield={showStarfield} onToggleStarfield={() => setShowStarfield(!showStarfield)} />;
       }
+      if (activeTab === 'packlist') {
+        return <Packlist />;
+      }
       // Standard: Anmeldung
       return <SignupPhaseInfo />;
     }
@@ -105,6 +110,8 @@ export default function PWAContainer({ children }: React.PropsWithChildren) {
           return <FavoritesList />;
         case 'settings':
           return <Settings showStarfield={showStarfield} onToggleStarfield={() => setShowStarfield(!showStarfield)} />;
+        case 'packlist':
+          return <Packlist />;
         default:
           return null;
       }

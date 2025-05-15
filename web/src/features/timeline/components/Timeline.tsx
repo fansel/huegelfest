@@ -15,6 +15,7 @@ import { getCategoriesAction } from '../../categories/actions/getCategories';
 import { useFavorites } from '../../../features/favorites/hooks/useFavorites';
 import { FavoriteButton } from '../../../features/favorites/components/FavoriteButton';
 import { TimelineEventCard } from './TimelineEventCard';
+import { useTimelineWebSocket } from '../hooks/useTimelineWebSocket';
 
 // Typen ggf. aus features/timeline/types/types importieren
 // import { Event, Category, TimelineData, TimelineProps } from '../types/types';
@@ -104,6 +105,7 @@ export default function Timeline({ showFavoritesOnly = false, allowClipboard = f
   const [selectedCategories, setSelectedCategories] = useState<Set<string>>(new Set());
   const [lastUpdate, setLastUpdate] = useState<number>(Date.now());
   const { favorites, addFavorite, removeFavorite, isFavorite } = useFavorites();
+  const updateCount = useTimelineWebSocket();
 
   useEffect(() => {
     const loadData = async () => {
@@ -149,7 +151,7 @@ export default function Timeline({ showFavoritesOnly = false, allowClipboard = f
     const handleTimelineUpdate = () => { setLastUpdate(Date.now()); };
     window.addEventListener('timeline-update', handleTimelineUpdate);
     return () => { window.removeEventListener('timeline-update', handleTimelineUpdate); };
-  }, [lastUpdate, isFavorite]);
+  }, [lastUpdate, isFavorite, updateCount]);
 
   const toggleCategory = (category: string) => {
     const newCategories = new Set(selectedCategories);

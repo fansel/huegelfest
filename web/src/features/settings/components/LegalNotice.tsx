@@ -3,80 +3,8 @@
 import { useState, useRef } from 'react';
 import Link from "next/link";
 import { Gavel, Shield, ChevronDown } from 'lucide-react';
-
-function Sheet({ title, onClose, children }: { title: string, onClose: () => void, children: React.ReactNode }) {
-  const [touchStartY, setTouchStartY] = useState<number | null>(null);
-  const [touchDeltaY, setTouchDeltaY] = useState(0);
-  const [canSwipeToClose, setCanSwipeToClose] = useState(false);
-  const contentRef = useRef<HTMLDivElement>(null);
-
-  const handleTouchStart = (e: React.TouchEvent) => {
-    // Prüfe, ob der Content ganz oben ist
-    if (contentRef.current && contentRef.current.scrollTop === 0) {
-      setCanSwipeToClose(true);
-      setTouchStartY(e.touches[0].clientY);
-    } else {
-      setCanSwipeToClose(false);
-      setTouchStartY(null);
-    }
-  };
-
-  const handleTouchMove = (e: React.TouchEvent) => {
-    if (canSwipeToClose && touchStartY !== null) {
-      const deltaY = e.touches[0].clientY - touchStartY;
-      setTouchDeltaY(deltaY > 0 ? deltaY : 0);
-    }
-  };
-
-  const handleTouchEnd = () => {
-    if (canSwipeToClose && touchDeltaY > 60) {
-      onClose();
-    }
-    setTouchStartY(null);
-    setTouchDeltaY(0);
-    setCanSwipeToClose(false);
-  };
-
-  return (
-    <div className="fixed inset-0 z-50 flex items-end justify-center bg-black/40">
-      <div
-        className="relative w-full max-w-lg rounded-t-3xl bg-[#f9f9fa] shadow-2xl animate-slideUp max-h-[95vh] flex flex-col"
-        style={{
-          animation: 'slideUp 0.3s cubic-bezier(.4,0,.2,1)',
-          transform: touchDeltaY ? `translateY(${touchDeltaY}px)` : undefined,
-          transition: touchDeltaY ? 'none' : 'transform 0.2s',
-        }}
-        onTouchStart={handleTouchStart}
-        onTouchMove={handleTouchMove}
-        onTouchEnd={handleTouchEnd}
-      >
-        {/* Grabber */}
-        <div className="flex justify-center pt-3">
-          <div className="w-12 h-1.5 bg-gray-300 rounded-full mb-2" />
-        </div>
-        {/* Header */}
-        <div className="flex items-center justify-between px-6 pb-2">
-          <div className="font-bold text-lg text-[#460b6c] flex-1 text-center">{title}</div>
-          <button
-            onClick={onClose}
-            className="absolute right-4 top-4 text-2xl text-[#460b6c] hover:text-[#ff9900] focus:outline-none"
-            aria-label="Schließen"
-          >
-            <ChevronDown />
-          </button>
-        </div>
-        {/* Content */}
-        <div ref={contentRef} className="px-6 pb-6 pt-2 overflow-y-auto flex-1">{children}</div>
-      </div>
-      <style jsx global>{`
-        @keyframes slideUp {
-          from { transform: translateY(100%); }
-          to { transform: translateY(0); }
-        }
-      `}</style>
-    </div>
-  );
-}
+import { Button } from "@/shared/components/ui/button";
+import { Sheet, SheetContent, SheetHeader, SheetTitle } from "@/shared/components/ui/sheet";
 
 const DatenschutzContent = () => (
   <div className="max-w-lg mx-auto text-[#460b6c]">
@@ -153,40 +81,46 @@ export default function LegalNotice() {
     <div className="p-4 sm:p-6">
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
         <div className="flex flex-col space-y-1">
-          <span className="text-[#ff9900] font-medium">Rechtliches</span>
-          <span className="text-[#ff9900]/60 text-sm">
-            Wichtige rechtliche Hinweise und Informationen
-          </span>
+          <span className="text-[#ff9900] font-medium text-lg">Rechtliches</span>
+          <span className="text-[#ff9900]/60 text-sm">Wichtige rechtliche Hinweise und Informationen</span>
         </div>
         <div className="flex flex-col sm:flex-row gap-3">
-          <button
+          <Button
             type="button"
             onClick={() => setSheet('datenschutz')}
-            className="flex items-center gap-2 px-4 py-2 rounded-lg border border-gray-200 bg-white shadow hover:bg-gray-50 transition-colors text-[#460b6c] focus:outline-none focus:ring-2 focus:ring-[#ff9900]"
+            variant="outline"
+            className="flex items-center gap-2 border-[#ff9900] text-[#ff9900] hover:bg-[#ff9900]/10"
           >
             <Shield className="text-[#ff9900]" />
             <span>Datenschutz</span>
-          </button>
-          <button
+          </Button>
+          <Button
             type="button"
             onClick={() => setSheet('impressum')}
-            className="flex items-center gap-2 px-4 py-2 rounded-lg border border-gray-200 bg-white shadow hover:bg-gray-50 transition-colors text-[#460b6c] focus:outline-none focus:ring-2 focus:ring-[#ff9900]"
+            variant="outline"
+            className="flex items-center gap-2 border-[#ff9900] text-[#ff9900] hover:bg-[#ff9900]/10"
           >
             <Gavel className="text-[#ff9900]" />
             <span>Impressum</span>
-          </button>
+          </Button>
         </div>
       </div>
-      {sheet === 'datenschutz' && (
-        <Sheet title="Datenschutz" onClose={() => setSheet(null)}>
+      <Sheet open={sheet === 'datenschutz'} onOpenChange={open => setSheet(open ? 'datenschutz' : null)}>
+        <SheetContent side="bottom" className="max-w-2xl mx-auto max-h-[99vh] overflow-y-auto p-6 rounded-t-2xl">
+          <SheetHeader>
+            <SheetTitle className="text-[#460b6c]">Datenschutz</SheetTitle>
+          </SheetHeader>
           <DatenschutzContent />
-        </Sheet>
-      )}
-      {sheet === 'impressum' && (
-        <Sheet title="Impressum" onClose={() => setSheet(null)}>
+        </SheetContent>
+      </Sheet>
+      <Sheet open={sheet === 'impressum'} onOpenChange={open => setSheet(open ? 'impressum' : null)}>
+        <SheetContent side="bottom" className="max-w-2xl mx-auto max-h-[99vh] overflow-y-auto p-6 rounded-t-2xl">
+          <SheetHeader>
+            <SheetTitle className="text-[#460b6c]">Impressum</SheetTitle>
+          </SheetHeader>
           <ImpressumContent />
-        </Sheet>
-      )}
+        </SheetContent>
+      </Sheet>
     </div>
   );
 }

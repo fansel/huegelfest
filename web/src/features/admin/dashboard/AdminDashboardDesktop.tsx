@@ -2,14 +2,15 @@ import React, { useState } from 'react';
 import AnnouncementsDesktop from '../components/announcements/AnnouncementsDesktop';
 import GroupsManagerDesktop from '../components/groups/GroupsManagerDesktop';
 import TimelineManagerDesktop from '../components/timeline/TimelineDesktop';
-import MusicManager from '../components/music/MusicManager';
+import MusicManager from '../components/music/MusicManagerDesktop';
+import RegistrationManager from '../components/registration/RegistrationManager';
 import { toast } from 'react-hot-toast';
 import { useRouter } from 'next/navigation';
-import Settings from '@/features/settings/components/Settings';
+import Settings from '@/features/admin/components/settings/Settings';
 import { useTimeline } from '@/features/timeline/hooks/useTimeline';
 
 const AdminDashboardDesktop: React.FC = () => {
-  const [activeTab, setActiveTab] = useState<'announcements' | 'groups' | 'timeline' | 'music' | 'settings'>('announcements');
+  const [activeTab, setActiveTab] = useState<'announcements' | 'groups' | 'timeline' | 'music' | 'registrations' | 'settings'>('announcements');
   const [isLoggingOut, setIsLoggingOut] = useState(false);
   const router = useRouter();
 
@@ -109,6 +110,16 @@ const AdminDashboardDesktop: React.FC = () => {
                 Musik
               </button>
               <button
+                onClick={() => setActiveTab('registrations')}
+                className={`py-4 px-3 border-b-2 font-medium text-sm ${
+                  activeTab === 'registrations'
+                    ? 'border-[#ff9900] text-[#ff9900]'
+                    : 'border-transparent text-[#ff9900]/60 hover:text-[#ff9900] hover:border-[#ff9900]/40'
+                }`}
+              >
+                Anmeldungen
+              </button>
+              <button
                 onClick={() => setActiveTab('settings')}
                 className={`py-4 px-3 border-b-2 font-medium text-sm ${
                   activeTab === 'settings'
@@ -146,6 +157,9 @@ const AdminDashboardDesktop: React.FC = () => {
             )}
             {activeTab === 'music' && (
               <MusicManager />
+            )}
+            {activeTab === 'registrations' && (
+              <RegistrationManager />
             )}
             {activeTab === 'settings' && (
               <Settings showStarfield={false} onToggleStarfield={() => {}} />

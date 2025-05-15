@@ -19,26 +19,25 @@ import { Plus, Trash2, Pen, Check, X, Pencil, Lock, Loader2, Clock } from 'lucid
 import clsx from 'clsx';
 import toast from 'react-hot-toast';
 import { useTimeline } from '@/features/timeline/hooks/useTimeline';
-import Datepicker from 'react-tailwindcss-datepicker';
 import * as LucideIcons from 'lucide-react';
 import { createCategoryAction } from '@/features/categories/actions/createCategory';
 import { updateCategoryAction } from '@/features/categories/actions/updateCategory';
 import { deleteCategoryAction } from '@/features/categories/actions/deleteCategory'
 import tags from 'lucide-static/tags.json';
-import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetFooter } from '@/components/ui/sheet';
-import { Input } from '@/components/ui/input';
-import { Textarea } from '@/components/ui/textarea';
-import { Button } from '@/components/ui/button';
-import { Calendar } from '@/components/ui/calendar';
-import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
+import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetFooter } from '@/shared/components/ui/sheet';
+import { Input } from '@/shared/components/ui/input';
+import { Textarea } from '@/shared/components/ui/textarea';
+import { Button } from '@/shared/components/ui/button';
+import { Calendar } from '@/shared/components/ui/calendar';
+import { Popover, PopoverContent, PopoverTrigger } from '@/shared/components/ui/popover';
 import { format } from 'date-fns';
-import { Select, SelectTrigger, SelectContent, SelectItem, SelectValue } from '@/components/ui/select';
-import { Tabs, TabsList, TabsTrigger, TabsContent } from '@/components/ui/tabs';
-import { AlertDialog, AlertDialogTrigger, AlertDialogContent, AlertDialogHeader, AlertDialogTitle, AlertDialogDescription, AlertDialogFooter, AlertDialogCancel, AlertDialogAction } from '@/components/ui/alert-dialog';
+import { Select, SelectTrigger, SelectContent, SelectItem, SelectValue } from '@/shared/components/ui/select';
+import { Tabs, TabsList, TabsTrigger, TabsContent } from '@/shared/components/ui/tabs';
+import { AlertDialog, AlertDialogTrigger, AlertDialogContent, AlertDialogHeader, AlertDialogTitle, AlertDialogDescription, AlertDialogFooter, AlertDialogCancel, AlertDialogAction } from '@/shared/components/ui/alert-dialog';
 import { de } from 'date-fns/locale';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { Accordion, AccordionItem, AccordionTrigger, AccordionContent } from '@/components/ui/accordion';
-import { Badge } from '@/components/ui/badge';
+import { Card, CardContent, CardHeader, CardTitle } from '@/shared/components/ui/card';
+import { Accordion, AccordionItem, AccordionTrigger, AccordionContent } from '@/shared/components/ui/accordion';
+import { Badge } from '@/shared/components/ui/badge';
 
 console.log('TimelineMobile render');
 

@@ -13,7 +13,7 @@ interface AdminDashboardWrapperProps {
 const AdminDashboardWrapper: React.FC<AdminDashboardWrapperProps> = ({ activeAdminTab, setActiveAdminTab }) => {
   const isMobile = useIsMobile();
   // Defensive: Fallback auf 'announcements' falls Tab ungültig
-  const safeTab: AdminTab = ['announcements', 'groups', 'timeline', 'music'].includes(activeAdminTab) ? activeAdminTab : 'announcements';
+  const safeTab: AdminTab = ['announcements', 'groups', 'timeline', 'music', 'registrations', 'admin-settings', 'packlist'].includes(activeAdminTab) ? activeAdminTab : 'announcements';
   return isMobile ? <AdminDashboardMobile activeTab={safeTab} setActiveTab={setActiveAdminTab} /> : <AdminDashboardDesktop />;
 };
 

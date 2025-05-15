@@ -1,9 +1,15 @@
 import React, { useState, useEffect } from 'react';
 import { IAnnouncement } from '@/shared/types/types';
-import { Plus, Trash2, Pencil } from 'lucide-react';
+import { Plus } from 'lucide-react';
 import { useAnnouncementsManager } from '../../hooks/useAnnouncementsManager';
 import { toast } from 'react-hot-toast';
 import { AnnouncementCard } from '@/features/announcements/components/AnnouncementCard';
+import { Sheet, SheetContent, SheetHeader, SheetTitle } from '@/shared/components/ui/sheet';
+import { Input } from '@/shared/components/ui/input';
+import { Textarea } from '@/shared/components/ui/textarea';
+import { Button } from '@/shared/components/ui/button';
+import { Select, SelectTrigger, SelectContent, SelectItem, SelectValue } from '@/shared/components/ui/select';
+import { AlertDialog, AlertDialogContent, AlertDialogHeader, AlertDialogTitle, AlertDialogDescription, AlertDialogFooter, AlertDialogCancel, AlertDialogAction } from '@/shared/components/ui/alert-dialog';
 
 const dateFormatter = new Intl.DateTimeFormat('de-DE', {
   day: '2-digit', month: '2-digit', year: 'numeric', hour: '2-digit', minute: '2-digit',
@@ -16,18 +22,18 @@ const AnnouncementsMobile: React.FC = () => {
   const [content, setContent] = useState('');
   const [groupId, setGroupId] = useState('');
   const [isSubmitting, setIsSubmitting] = useState(false);
-  const [deletingId, setDeletingId] = useState<string | null>(null);
+  const [deleteDialogId, setDeleteDialogId] = useState<string | null>(null);
 
-  // Sync form state when editing changes
   useEffect(() => {
     if (editing) {
       setContent(editing.content ?? '');
       setGroupId(editing.groupId ?? '');
+      setFormOpen(true);
     } else {
       setContent('');
       setGroupId('');
     }
-  }, [editing, formOpen]);
+  }, [editing]);
 
   const handleEdit = (announcement?: IAnnouncement) => {
     setEditing(announcement);
@@ -57,10 +63,10 @@ const AnnouncementsMobile: React.FC = () => {
         await manager.createAnnouncement({
           content: content.trim(),
           groupId,
-          groupName: '', // Wird serverseitig gesetzt
-          groupColor: '', // Wird serverseitig gesetzt
+          groupName: '',
+          groupColor: '',
           important: editing?.important || false,
-          reactions: {}, // Wird serverseitig gesetzt
+          reactions: {},
           date: editing?.date || '',
           time: editing?.time || '',
         });
@@ -76,14 +82,18 @@ const AnnouncementsMobile: React.FC = () => {
   };
 
   const handleDelete = async (id: string) => {
-    setDeletingId(id);
+    setDeleteDialogId(id);
+  };
+
+  const confirmDelete = async () => {
+    if (!deleteDialogId) return;
     try {
-      await manager.deleteAnnouncement(id);
+      await manager.deleteAnnouncement(deleteDialogId);
       toast.success('Ankündigung gelöscht');
     } catch {
       toast.error('Fehler beim Löschen');
     } finally {
-      setDeletingId(null);
+      setDeleteDialogId(null);
     }
   };
 
@@ -91,13 +101,15 @@ const AnnouncementsMobile: React.FC = () => {
     <div className="relative min-h-[60vh] pb-24">
       {/* Plus-Button mittig über der Liste */}
       <div className="mt-6 flex justify-center mb-6">
-        <button
+        <Button
+          variant="default"
+          size="icon"
           onClick={() => handleEdit(undefined)}
-          className="rounded-full bg-gradient-to-br from-[#ff9900] to-[#ffb84d] text-white shadow-3xl w-10 h-10 flex items-center justify-center text-xl focus:outline-none focus:ring-2 focus:ring-[#ff9900]/30 active:scale-95 transition border-2 border-white"
           aria-label="Neue Ankündigung erstellen"
+          className="bg-gradient-to-br from-[#ff9900] to-[#ffb84d] text-white shadow-3xl border-2 border-white"
         >
           <Plus className="h-5 w-5" />
-        </button>
+        </Button>
       </div>
       {/* Liste */}
       <div className="space-y-5 px-2 sm:px-0">
@@ -116,83 +128,69 @@ const AnnouncementsMobile: React.FC = () => {
                 createdAt={announcement.createdAt}
                 onEdit={() => handleEdit(announcement)}
                 onDelete={() => handleDelete(announcement.id)}
-                isLoadingDelete={deletingId === announcement.id}
+                isLoadingDelete={deleteDialogId === announcement.id}
               />
             ))
         )}
       </div>
-
-      {/* Bottom Sheet Formular */}
-      {formOpen && (
-        <div className="fixed inset-0 z-50 bg-black/10 flex items-end justify-center">
-          <div className="w-full max-w-lg mx-auto rounded-t-3xl shadow-[0_8px_40px_0_rgba(70,11,108,0.18)] border border-white/30 bg-white/80 backdrop-blur-xl flex flex-col overflow-hidden animate-modern-sheet h-[85vh]">
-            {/* Drag Handle */}
-            <div className="flex justify-center pt-4 pb-2 bg-transparent rounded-t-3xl">
-              <div className="w-16 h-1.5 bg-gray-300/80 rounded-full shadow-sm" />
-            </div>
-            {/* Header */}
-            <div className="flex items-center justify-between px-8 py-4 bg-transparent">
-              <span className="text-xl font-bold text-[#460b6c] tracking-tight">
-                {editing?.id ? 'Ankündigung bearbeiten' : 'Neue Ankündigung'}
-              </span>
-              <button
-                onClick={() => { setFormOpen(false); setEditing(undefined); }}
-                className="w-10 h-10 flex items-center justify-center rounded-full bg-white/70 hover:bg-white/90 text-gray-500 hover:text-[#460b6c] text-2xl font-bold focus:outline-none shadow transition-colors"
-                aria-label="Schließen"
-              >
-                ×
-              </button>
-            </div>
-            {/* Content */}
-            <div className="flex-1 overflow-y-auto px-8 py-8">
-              <textarea
+      {/* Sheet für Formular */}
+      <Sheet open={formOpen} onOpenChange={open => { setFormOpen(open); if (!open) setEditing(undefined); }}>
+        <SheetContent side="bottom" className="max-w-lg mx-auto rounded-t-3xl h-[85vh]">
+          <SheetHeader>
+            <SheetTitle>{editing?.id ? 'Ankündigung bearbeiten' : 'Neue Ankündigung'}</SheetTitle>
+          </SheetHeader>
+          <div className="flex flex-col gap-6 items-center justify-center py-8">
+            <div className="w-full max-w-md mx-auto flex flex-col gap-4 px-4">
+              <label htmlFor="announcement-content" className="text-sm font-medium text-gray-700">Inhalt</label>
+              <Textarea
+                id="announcement-content"
                 value={content}
                 onChange={e => setContent(e.target.value)}
                 placeholder="Gebe hier deine Ankündigung ein..."
-                className="w-full p-2 border border-gray-300 rounded text-sm bg-white text-gray-700 placeholder-gray-400 mb-3"
                 rows={3}
+                className="w-full"
+                required
               />
-              <select
-                value={groupId}
-                onChange={e => setGroupId(e.target.value)}
-                className="w-full p-2 border border-gray-300 rounded text-sm bg-white text-gray-700 mb-3"
-              >
-                <option value="">Wähle eine Gruppe</option>
-                {manager.groups.map(group => (
-                  <option key={group.id} value={group.id}>
-                    {group.name}
-                  </option>
-                ))}
-              </select>
-              <div className="flex justify-end space-x-2 mt-4">
-                <button
-                  onClick={() => { setFormOpen(false); setEditing(undefined); }}
-                  className="px-4 py-2 text-sm font-medium text-gray-700 bg-white border border-gray-300 rounded hover:bg-gray-50"
-                >
-                  Abbrechen
-                </button>
-                <button
-                  onClick={handleSave}
-                  disabled={isSubmitting}
-                  className="px-4 py-2 text-sm font-medium text-white bg-[#ff9900] rounded hover:bg-orange-600 disabled:opacity-50"
-                >
-                  {isSubmitting ? 'Wird gespeichert...' : editing?.id ? 'Aktualisieren' : 'Speichern'}
-                </button>
-              </div>
+              <label htmlFor="announcement-group" className="text-sm font-medium text-gray-700">Gruppe</label>
+              <Select value={groupId} onValueChange={setGroupId} required>
+                <SelectTrigger className="w-full" id="announcement-group">
+                  <SelectValue>{manager.groups.find(g => g.id === groupId)?.name || 'Wähle eine Gruppe'}</SelectValue>
+                </SelectTrigger>
+                <SelectContent>
+                  {manager.groups.map(group => (
+                    <SelectItem key={group.id} value={group.id}>{group.name}</SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+            <div className="flex justify-end gap-2 px-6 pb-6 pt-2 w-full">
+              <Button variant="secondary" onClick={() => { setFormOpen(false); setEditing(undefined); }}>Abbrechen</Button>
+              <Button className="bg-[#ff9900] hover:bg-orange-600" onClick={handleSave} disabled={isSubmitting}>
+                {isSubmitting ? 'Wird gespeichert...' : editing?.id ? 'Aktualisieren' : 'Speichern'}
+              </Button>
             </div>
           </div>
-          <style jsx global>{`
-            @keyframes modern-sheet {
-              0% { transform: translateY(100%) scale(0.98); opacity: 0.7; }
-              80% { transform: translateY(-8px) scale(1.02); opacity: 1; }
-              100% { transform: translateY(0) scale(1); opacity: 1; }
-            }
-            .animate-modern-sheet {
-              animation: modern-sheet 0.32s cubic-bezier(0.22, 1, 0.36, 1);
-            }
-          `}</style>
-        </div>
-      )}
+        </SheetContent>
+      </Sheet>
+      {/* Delete Dialog */}
+      <AlertDialog open={!!deleteDialogId} onOpenChange={open => { if (!open) setDeleteDialogId(null); }}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Wirklich löschen?</AlertDialogTitle>
+            <AlertDialogDescription>
+              Diese Ankündigung wirklich löschen?
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel asChild>
+              <Button variant="secondary" onClick={() => setDeleteDialogId(null)}>Abbrechen</Button>
+            </AlertDialogCancel>
+            <AlertDialogAction asChild>
+              <Button variant="destructive" onClick={confirmDelete}>Löschen</Button>
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   );
 };

@@ -3,9 +3,6 @@
 const nextConfig = {
   output: 'standalone',
   productionBrowserSourceMaps: false,
-  server: {
-    https: true
-  },
   images: {
     remotePatterns: [
       {
