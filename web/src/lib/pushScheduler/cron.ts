@@ -1,3 +1,5 @@
+import { DateTime } from 'luxon';
+
 (async () => {
   const cron = (await import('node-cron')).default || (await import('node-cron'));
   const { connectDB } = await import('../../lib/db/connector.js');
@@ -38,29 +40,29 @@
   }
 
   // Hilfsfunktion: Prüfe, ob ein Pool heute aktiv ist
-  function isActiveToday(pool: any, today: Date): boolean {
-    const start = new Date(pool.startDate + 'T00:00:00Z');
-    const end = new Date(pool.endDate + 'T23:59:59Z');
+  function isActiveToday(pool: any, today: DateTime): boolean {
+    const start = DateTime.fromISO(pool.startDate, { zone: 'Europe/Berlin' }).startOf('day');
+    const end = DateTime.fromISO(pool.endDate, { zone: 'Europe/Berlin' }).endOf('day');
     if (today < start || today > end) return false;
     if (pool.repeat === 'once') {
-      return today.toISOString().slice(0, 10) === pool.startDate;
+      return today.toISODate() === pool.startDate;
     }
     if (pool.repeat === 'daily') {
       return true;
     }
     if (pool.repeat === 'custom' && Array.isArray(pool.weekdays)) {
-      return pool.weekdays.includes(today.getDay());
+      return pool.weekdays.includes(today.weekday % 7); // Luxon: 1=Mo, 7=So
     }
     return false;
   }
 
   async function sendAllScheduledPushes() {
-    console.log(`[PushScheduler] Starte Prüfung um ${new Date().toISOString()}`);
+    const now = DateTime.now().setZone('Europe/Berlin');
+    const todayStr = now.toISODate(); // YYYY-MM-DD
+    const today = now.startOf('day');
+    console.log(`[PushScheduler] Starte Prüfung um ${now.toISO()}`);
     await connectDB();
     await webPushService.initialize();
-    const now = new Date();
-    const todayStr = now.toISOString().slice(0, 10);
-    const today = new Date(todayStr + 'T00:00:00Z');
 
     // FunPushPools
     const pools = await getFunPushPools();
@@ -68,14 +70,24 @@
     for (const pool of pools) {
       if (!isActiveToday(pool, today)) continue;
       // Ziehe Zufallsminuten für heute
-      const randomTimes = getRandomMinutesForDay(pool.id, todayStr, pool.from, pool.to, pool.count);
+      const randomTimes = getRandomMinutesForDay(
+        pool.id ?? '',
+        todayStr ?? '',
+        pool.from ?? '',
+        pool.to ?? '',
+        pool.count ?? 0
+      );
       for (const randomTime of randomTimes) {
-        const [h, m] = randomTime.split(':');
+        const [h, m] = (randomTime ?? '').split(':');
         for (let delta = 0; delta <= 119; delta++) {
-          const check = new Date(now.getTime() - delta * 60000);
-          if (check.getHours() === Number(h) && check.getMinutes() === Number(m) && check.toISOString().slice(0, 10) === todayStr) {
+          const check = now.minus({ minutes: delta });
+          if (
+            check.hour === Number(h) &&
+            check.minute === Number(m) &&
+            check.toISODate() === todayStr
+          ) {
             const msg = pool.messages[Math.floor(Math.random() * pool.messages.length)];
-            const alreadySent = await wasSent(pool.id, todayStr, randomTime, msg.id);
+            const alreadySent = await wasSent(pool.id ?? '', todayStr ?? '', randomTime ?? '', msg.id ?? '');
             if (!alreadySent) {
               try {
                 console.log(`[PushScheduler] Sende FunPool-Push: ${msg.text} (${randomTime})`);
@@ -83,7 +95,7 @@
                   title: 'Fun Push',
                   body: msg.text,
                 });
-                await logSent(pool.id, todayStr, randomTime, msg.id);
+                await logSent(pool.id ?? '', todayStr ?? '', randomTime ?? '', msg.id ?? '');
                 console.log(`[PushScheduler] FunPool-Push gesendet: ${msg.text}`);
               } catch (err) {
                 console.error('[PushScheduler] Fehler beim Senden FunPool:', err);
@@ -99,20 +111,19 @@
     if (!singles.length) console.log('[PushScheduler] Keine ScheduledPushMessages gefunden.');
     for (const msg of singles) {
       for (const send of msg.sendTimes) {
-        const [h, m] = send.time.split(':');
-        // Prüfe die letzten 120 Minuten (robust gegen längere Aussetzer)
+        const [h, m] = (send.time ?? '').split(':');
         for (let delta = 0; delta <= 119; delta++) {
-          const check = new Date(now.getTime() - delta * 60000);
+          const check = now.minus({ minutes: delta });
           if (
-            now.getFullYear() === check.getFullYear() &&
-            now.getMonth() === check.getMonth() &&
-            now.getDate() === check.getDate() &&
-            now.getHours() === check.getHours() &&
-            now.getMinutes() === check.getMinutes()
+            now.year === check.year &&
+            now.month === check.month &&
+            now.day === check.day &&
+            check.hour === Number(h) &&
+            check.minute === Number(m)
           ) {
-            const dateStr = check.toISOString().slice(0, 10);
-            const timeStr = `${h.padStart(2, '0')}:${m.padStart(2, '0')}`;
-            const alreadySent = await wasSentScheduled(msg.id, dateStr, timeStr, msg.id);
+            const dateStr = check.toISODate() ?? '';
+            const timeStr = `${(h ?? '').padStart(2, '0')}:${(m ?? '').padStart(2, '0')}`;
+            const alreadySent = await wasSentScheduled(msg.id ?? '', dateStr, timeStr, msg.id ?? '');
             if (!alreadySent) {
               try {
                 console.log(`[PushScheduler] Sende Scheduled-Push: ${msg.text}`);
@@ -120,7 +131,7 @@
                   title: 'Geplante Push-Nachricht',
                   body: msg.text,
                 });
-                await logSentScheduled(msg.id, dateStr, timeStr, msg.id);
+                await logSentScheduled(msg.id ?? '', dateStr, timeStr, msg.id ?? '');
                 console.log(`[PushScheduler] Scheduled-Push gesendet: ${msg.text}`);
               } catch (err) {
                 console.error('[PushScheduler] Fehler beim Senden Scheduled:', err);
@@ -131,7 +142,7 @@
       }
       // TODO: Wiederholungen (repeat) prüfen
     }
-    console.log(`[PushScheduler] Prüfung abgeschlossen um ${new Date().toISOString()}`);
+    console.log(`[PushScheduler] Prüfung abgeschlossen um ${now.toISO()}`);
   }
 
   // Starte node-cron: jede Minute
@@ -142,7 +153,7 @@
     } catch (e) {
       console.error('[PushScheduler] Fehler:', e);
     }
-  });
+  }, { timezone: 'Europe/Berlin' });
 
   console.log('[PushScheduler] Cron-Job läuft (jede Minute)...');
 })();
