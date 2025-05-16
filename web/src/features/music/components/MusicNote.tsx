@@ -30,7 +30,7 @@ export default function MusicNote() {
   const [currentTrackIndex, setCurrentTrackIndex] = useState(0);
   const [isPlaying, setIsPlaying] = useState(false);
   const [isExpanded, setIsExpanded] = useState(false);
-  const audioRef = useRef<ReactPlayer>(null);
+  const audioRef = useRef<HTMLAudioElement>(null);
   const [coverError, setCoverError] = useState(false);
   const longPressTimeout = useRef<NodeJS.Timeout | null>(null);
 
@@ -75,6 +75,17 @@ export default function MusicNote() {
   useEffect(() => {
     setCoverError(false);
   }, [currentTrackIndex]);
+
+  // Play/Pause steuern
+  useEffect(() => {
+    const audio = audioRef.current;
+    if (!audio) return;
+    if (isPlaying) {
+      audio.play();
+    } else {
+      audio.pause();
+    }
+  }, [isPlaying, currentTrackIndex]);
 
   const playRandomTrack = () => {
     if (tracks.length > 1) {
@@ -197,13 +208,10 @@ export default function MusicNote() {
         </button>
       )}
       {hasTrack && (
-        <ReactPlayer
+        <audio
           ref={audioRef}
-          url={currentTrack!.url}
-          playing={isPlaying}
-          controls={false}
-          width="0"
-          height="0"
+          src={currentTrack!.url}
+          preload="none"
           onEnded={playRandomTrack}
           style={{ display: 'none' }}
         />

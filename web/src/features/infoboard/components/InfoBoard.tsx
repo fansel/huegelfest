@@ -1,113 +1,128 @@
 'use client';
 
-import { useState, useEffect, useRef, ReactNode } from 'react';
+import { useRef } from 'react';
 import { IAnnouncement, ReactionType, REACTION_EMOJIS } from '../../../shared/types/types';
-import { getAllAnnouncementsAction } from '../../announcements/actions/getAllAnnouncements';
-import { updateAnnouncementReactionsAction } from '../../announcements/actions/updateAnnouncementReactions';
-import { getAnnouncementReactionsAction } from '../../announcements/actions/getAnnouncementReactions';
 import { AnnouncementCard } from '@/features/announcements/components/AnnouncementCard';
 import { useWebSocket, WebSocketMessage } from '@/shared/hooks/useWebSocket';
 import { getWebSocketUrl } from '@/shared/utils/getWebSocketUrl';
+import { getAllAnnouncementsAction } from '../../announcements/actions/getAllAnnouncements';
+import { getAnnouncementByIdAction } from '../../announcements/actions/getAnnouncementByIdAction';
+import useSWR from 'swr';
+import { updateAnnouncementReactionsAction } from '@/features/announcements/actions/updateAnnouncementReactions';
+import { toast } from 'react-hot-toast';
 
 const REACTION_TYPES: ReactionType[] = ['thumbsUp', 'clap', 'laugh', 'surprised', 'heart'];
 
-interface InfoBoardProps {
-  isPWA?: boolean;
+function mapAnnouncement(a: any): IAnnouncement {
+  return {
+    ...a,
+    groupName: a.groupName ?? a.groupInfo?.name ?? '',
+    groupColor: a.groupColor ?? a.groupInfo?.color ?? '#cccccc',
+    reactions: a.reactions ?? {},
+  };
+}
+
+const fetcher = async () => {
+  const data = await getAllAnnouncementsAction();
+  return data.map(mapAnnouncement);
+};
+
+async function fetchAnnouncementById(id: string) {
+  const data = await getAnnouncementByIdAction(id);
+  return mapAnnouncement(data);
+}
+
+type InfoBoardProps = {
+  announcements: IAnnouncement[];
+  reactionsMap: Record<string, { counts: Record<ReactionType, number>; userReaction?: ReactionType }>;
   allowClipboard?: boolean;
-}
+  deviceId: string;
+};
 
-interface Reaction {
-  count: number;
-  deviceReactions: Record<string, {
-    type: ReactionType;
-    announcementId: string;
-  }>;
-}
-
-interface Reactions {
-  thumbsUp: Reaction;
-  clap: Reaction;
-  laugh: Reaction;
-  surprised: Reaction;
-  heart: Reaction;
-}
-
-function saveAnnouncementsToCache(data: IAnnouncement[]) {
-  try {
-    localStorage.setItem('infoboardAnnouncements', JSON.stringify(data));
-  } catch (e) {
-    console.error('Fehler beim Speichern der InfoBoard-Daten im Cache:', e);
-  }
-}
-
-function loadAnnouncementsFromCache(): IAnnouncement[] {
-  try {
-    const cached = localStorage.getItem('infoboardAnnouncements');
-    if (!cached) return [];
-    const parsed = JSON.parse(cached);
-    return Array.isArray(parsed) ? parsed : [];
-  } catch (e) {
-    console.error('Fehler beim Laden der InfoBoard-Daten aus dem Cache:', e);
-    return [];
-  }
-}
-
-export default function InfoBoard({ isPWA = false, allowClipboard = false }: InfoBoardProps) {
-  const [announcements, setAnnouncements] = useState<IAnnouncement[]>([]);
-  const [reactionsMap, setReactionsMap] = useState<Record<string, { counts: Record<ReactionType, number>; userReaction?: ReactionType }>>({});
+export default function InfoBoard({ announcements: initialAnnouncements, allowClipboard = false, deviceId }: InfoBoardProps) {
   const boardRef = useRef<HTMLDivElement>(null);
-  const [isVisible, setIsVisible] = useState(false);
-  const [deviceId, setDeviceId] = useState<string>('');
+  // SWR für Announcements
+  const { data: announcements, mutate } = useSWR('announcements', fetcher, {
+    fallbackData: initialAnnouncements,
+    refreshInterval: 0,
+  });
 
-  // WebSocket-Integration: Live-Updates für Announcements
-  useWebSocket(
-    getWebSocketUrl(),
-    {
-      onMessage: (msg: WebSocketMessage) => {
-        if (msg.topic === 'announcement') {
-          // Neue Ankündigung empfangen: Announcements neu laden
-          getAllAnnouncementsAction().then(loadedAnnouncements => {
-            const mapped = loadedAnnouncements.map((a: any) => ({
-              ...a,
-              groupName: a.groupName ?? a.groupInfo?.name ?? '',
-              groupColor: a.groupColor ?? a.groupInfo?.color ?? '#cccccc',
-            }));
-            setAnnouncements(mapped);
-            saveAnnouncementsToCache(mapped);
-          });
-        }
-        if (msg.topic === 'announcement-reaction') {
-          // Reaktions-Update empfangen: Announcements und Reactions neu laden
-          getAllAnnouncementsAction().then(async loadedAnnouncements => {
-            const mapped = loadedAnnouncements.map((a: any) => ({
-              ...a,
-              groupName: a.groupName ?? a.groupInfo?.name ?? '',
-              groupColor: a.groupColor ?? a.groupInfo?.color ?? '#cccccc',
-            }));
-            setAnnouncements(mapped);
-            saveAnnouncementsToCache(mapped);
-            // Reactions für alle Announcements neu laden
-            const reactionsObj: Record<string, { counts: Record<ReactionType, number>; userReaction?: ReactionType }> = {};
-            await Promise.all(mapped.map(async (a) => {
-              reactionsObj[a.id] = await getAnnouncementReactionsAction(a.id, deviceId);
-            }));
-            setReactionsMap(reactionsObj);
-          });
-        }
-      },
-      onError: (err) => {
-        console.error('[InfoBoard] WebSocket-Fehler:', err);
-      },
-      reconnectIntervalMs: 5000,
+  useWebSocket(getWebSocketUrl(), {
+    onMessage: async (msg: WebSocketMessage) => {
+      if (msg.topic === 'announcement-created') {
+        const newAnnouncement = await fetchAnnouncementById(msg.announcementId);
+        mutate((current: IAnnouncement[] = []) => [newAnnouncement, ...current], false);
+      } else if (msg.topic === 'announcement-updated') {
+        const updated = await fetchAnnouncementById(msg.announcementId);
+        mutate((current: IAnnouncement[] = []) =>
+          current.map(a => a.id === updated.id ? updated : a), false
+        );
+      } else if (msg.topic === 'announcement-deleted') {
+        mutate((current: IAnnouncement[] = []) =>
+          current.filter(a => a.id !== msg.announcementId), false
+        );
+      } else if (msg.topic === 'announcement-reaction') {
+        const updated = await fetchAnnouncementById(msg.announcementId);
+        mutate((current: IAnnouncement[] = []) =>
+          current.map(a => a.id === updated.id ? updated : a), false
+        );
+      }
+    },
+    onError: (err) => {
+      console.error('[InfoBoard] WebSocket-Fehler:', err);
+    },
+    reconnectIntervalMs: 5000,
+  });
+
+  // Optimistisches Update für Reaktionen
+  const handleReact = async (announcementId: string, type: ReactionType) => {
+    if (!announcements) return;
+    const prevAnnouncements = announcements;
+    const idx = prevAnnouncements.findIndex(a => a.id === announcementId);
+    if (idx === -1) return;
+    const prev = prevAnnouncements[idx];
+    const reactions = prev.reactions || { counts: {}, userReaction: undefined };
+    const userReaction = reactions.userReaction;
+    let newCounts = { ...reactions.counts };
+
+    // Optimistisch updaten: Toggle-Logik
+    if (userReaction === type) {
+      newCounts[type] = (newCounts[type] || 1) - 1;
+    } else {
+      if (userReaction) newCounts[userReaction] = (newCounts[userReaction] || 1) - 1;
+      newCounts[type] = (newCounts[type] || 0) + 1;
     }
-  );
+
+    const optimisticAnnouncements = [
+      ...prevAnnouncements.slice(0, idx),
+      {
+        ...prev,
+        reactions: {
+          ...reactions,
+          counts: newCounts,
+          userReaction: userReaction === type ? undefined : type,
+        },
+      },
+      ...prevAnnouncements.slice(idx + 1),
+    ];
+
+    // 3. Optimistisch mutieren
+    mutate(optimisticAnnouncements, false);
+
+    // 4. Server-Request
+    try {
+      await updateAnnouncementReactionsAction(announcementId, type, deviceId);
+      mutate(); // Synchronisiere mit Serverdaten
+    } catch (err) {
+      mutate(prevAnnouncements, false); // Rollback
+      toast.error('Reaktion konnte nicht gespeichert werden.');
+    }
+  };
 
   // Hilfsfunktion: Hex zu RGBA mit Validierung und Fallback
   const getBackgroundColor = (color: string, opacity: number): string => {
-    // Hex-Format prüfen: #RRGGBB
     const isValidHex = typeof color === 'string' && /^#[0-9A-Fa-f]{6}$/.test(color);
     if (!isValidHex) {
-      console.error(`[InfoBoard] Ungültiger Farbwert für getBackgroundColor: '${color}'. Fallback auf #cccccc.`);
       color = '#cccccc';
     }
     const r = parseInt(color.slice(1, 3), 16);
@@ -130,75 +145,12 @@ export default function InfoBoard({ isPWA = false, allowClipboard = false }: Inf
   // Hilfsfunktion: Emoji für Reaktion
   const getReactionEmoji = (type: ReactionType): string => REACTION_EMOJIS[type];
 
-  // Initiale Daten laden
-  useEffect(() => {
-    const loadData = async () => {
-      try {
-        const loadedAnnouncements = await getAllAnnouncementsAction();
-        const mapped = loadedAnnouncements.map((a: any) => ({
-          ...a,
-          groupName: a.groupName ?? a.groupInfo?.name ?? '',
-          groupColor: a.groupColor ?? a.groupInfo?.color ?? '#cccccc',
-        }));
-        setAnnouncements(mapped);
-        saveAnnouncementsToCache(mapped);
-        // Lade Reactions für alle Announcements
-        const reactionsObj: Record<string, { counts: Record<ReactionType, number>; userReaction?: ReactionType }> = {};
-        await Promise.all(mapped.map(async (a) => {
-          reactionsObj[a.id] = await getAnnouncementReactionsAction(a.id, deviceId);
-        }));
-        setReactionsMap(reactionsObj);
-      } catch (error) {
-        console.error('[InfoBoard] Fehler beim Laden der Daten:', error);
-        setAnnouncements(loadAnnouncementsFromCache());
-      }
-    };
-    loadData();
-  }, [deviceId]);
-
-  // deviceId aus localStorage laden/erzeugen
-  useEffect(() => {
-    const storedDeviceId = localStorage.getItem('deviceId');
-    if (storedDeviceId) {
-      setDeviceId(storedDeviceId);
-    } else {
-      const newDeviceId = Math.random().toString(36).substring(2) + Date.now().toString(36);
-      localStorage.setItem('deviceId', newDeviceId);
-      setDeviceId(newDeviceId);
-    }
-  }, []);
-
-  // Intersection Observer für Sichtbarkeit (optional für Effekte)
-  useEffect(() => {
-    const currentRef = boardRef.current;
-    if (!currentRef) return;
-    const observer = new window.IntersectionObserver(
-      ([entry]) => setIsVisible(entry.isIntersecting),
-      { threshold: 0.1 }
-    );
-    observer.observe(currentRef);
-    return () => observer.unobserve(currentRef);
-  }, []);
-
-  // Reaktion-Handler mit Optimistic Update und Fehlerbehandlung
-  const handleReaction = async (announcementId: string, type: ReactionType) => {
-    try {
-      if (!deviceId) return;
-      await updateAnnouncementReactionsAction(announcementId, type, deviceId);
-      // Nach Server-Update: Reactions für dieses Announcement neu laden
-      const newReactions = await getAnnouncementReactionsAction(announcementId, deviceId);
-      setReactionsMap((prev) => ({ ...prev, [announcementId]: newReactions }));
-    } catch (error) {
-      console.error('[InfoBoard] Fehler beim Verarbeiten der Reaktion:', error);
-    }
-  };
-
   // UI-Rendering
   return (
     <div className="relative min-h-screen w-full">
       <div ref={boardRef} className="relative z-10 w-full px-2 sm:px-6 mt-4 sm:mt-6 lg:mt-10">
         <div className="space-y-2 sm:space-y-4 w-full">
-          {announcements.length === 0 ? (
+          {!announcements || announcements.length === 0 ? (
             <p className="text-gray-400 text-center">Keine aktuellen Informationen</p>
           ) : (
             announcements.map((announcement) => (
@@ -209,8 +161,8 @@ export default function InfoBoard({ isPWA = false, allowClipboard = false }: Inf
                 groupColor={announcement.groupColor}
                 important={announcement.important}
                 createdAt={announcement.createdAt}
-                reactions={reactionsMap[announcement.id]}
-                onReact={(type) => handleReaction(announcement.id, type)}
+                reactions={announcement.reactions}
+                onReact={(type) => handleReact(announcement.id, type)}
               />
             ))
           )}

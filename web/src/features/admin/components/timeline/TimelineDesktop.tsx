@@ -146,7 +146,7 @@ const TimelineDesktop: React.FC = () => {
     }
   };
 
-  if (loading) return <div className="p-8 text-center text-[#ff9900]">Lade Timeline...</div>;
+  if (loading) return <div className="p-8 text-center text-[#ff9900]">Lade Timeline..</div>;
   if (error) return <div className="p-8 text-center text-red-500">{error}</div>;
 
   return (

@@ -1,29 +1,19 @@
 'use client';
 
 import React, { useEffect, useState } from 'react';
-import {
-  Music,
-  Utensils,
-  Gamepad2,
-  HelpCircle,
-  Heart,
-  List,
-} from 'lucide-react';
 import * as LucideIcons from 'lucide-react';
-import { fetchDays } from '../actions/fetchDays';
-import { getCategoriesAction } from '@/features/categories/actions/getCategories';
-import { useFavorites } from '../../../features/favorites/hooks/useFavorites';
-import { FavoriteButton } from '../../../features/favorites/components/FavoriteButton';
 import { TimelineEventCard } from './TimelineEventCard';
-import { useTimelineWebSocket } from '../hooks/useTimelineWebSocket';
 import { EventSubmissionSheet } from './EventSubmissionSheet';
 import type { Category, Event } from '../types/types';
 import { createEvent } from '../actions/createEvent';
-import type { IEvent } from '@/lib/db/models/Event';
-import { fetchApprovedEventsByDay } from '@/features/timeline/actions/fetchApprovedEventsByDay';
+import { List } from 'lucide-react';
+import useSWR from 'swr';
+import { useWebSocket } from '@/shared/hooks/useWebSocket';
+import { getDayByIdAction } from '../actions/getDayByIdAction';
+import { getEventByIdAction } from '../actions/getEventByIdAction';
+import { HelpCircle } from 'lucide-react';
+import { getWebSocketUrl } from '@/shared/utils/getWebSocketUrl';
 
-// Typen ggf. aus features/timeline/types/types importieren
-// import { Event, Category, TimelineData, TimelineProps } from '../types/types';
 
 interface TimelineDay {
   _id?: string;
@@ -42,6 +32,8 @@ interface TimelineData {
 interface TimelineProps {
   showFavoritesOnly?: boolean;
   allowClipboard?: boolean;
+  days: TimelineDay[];
+  categories: Category[];
 }
 
 // Dynamisches Icon-Mapping
@@ -68,24 +60,6 @@ const formatDate = (dateInput?: string | { $date: string }): string | null => {
   return `${day}.${month}.${year}`;
 };
 
-function saveTimelineToCache(data: any) {
-  try {
-    localStorage.setItem('timelineData', JSON.stringify(data));
-  } catch (e) {
-    console.error('Fehler beim Speichern der Timeline im Cache:', e);
-  }
-}
-
-function loadTimelineFromCache(): any | null {
-  try {
-    const cached = localStorage.getItem('timelineData');
-    return cached ? JSON.parse(cached) : null;
-  } catch (e) {
-    console.error('Fehler beim Laden der Timeline aus dem Cache:', e);
-    return null;
-  }
-}
-
 type EventSubmission = {
   dayId: string;
   time: string;
@@ -95,46 +69,71 @@ type EventSubmission = {
   offeredBy?: string;
 };
 
-export default function Timeline({ showFavoritesOnly = false, allowClipboard = false }: TimelineProps) {
-  const [days, setDays] = useState<TimelineDay[]>([]);
-  const [categories, setCategories] = useState<Category[]>([]);
+export default function Timeline({ showFavoritesOnly = false, allowClipboard = false, days: initialDays, categories: initialCategories }: TimelineProps) {
+  const { data, mutate } = useSWR('timeline', async () => ({ days: initialDays, categories: initialCategories }), {
+    fallbackData: { days: initialDays, categories: initialCategories },
+    refreshInterval: 0,
+  });
+
+  useWebSocket(getWebSocketUrl(), {
+    onMessage: async (msg: any) => {
+      if (msg.topic === 'day-updated') {
+        const updatedDay = await getDayByIdAction(msg.dayId);
+        mutate((current: any) => ({
+          ...current,
+          days: current.days.map((d: any) => d._id === updatedDay._id ? updatedDay : d)
+        }), false);
+      } else if (msg.topic === 'day-created') {
+        const newDay = await getDayByIdAction(msg.dayId);
+        mutate((current: any) => ({
+          ...current,
+          days: [...current.days, newDay]
+        }), false);
+      } else if (msg.topic === 'day-deleted') {
+        mutate((current: any) => ({
+          ...current,
+          days: current.days.filter((d: any) => d._id !== msg.dayId)
+        }), false);
+      } else if (msg.topic === 'event-updated') {
+        const updatedEvent = await getEventByIdAction(msg.eventId);
+        mutate((current: any) => ({
+          ...current,
+          days: current.days.map((day: any) =>
+            day._id === updatedEvent.dayId
+              ? { ...day, events: day.events.map((e: any) => e._id === updatedEvent._id ? updatedEvent : e) }
+              : day
+          )
+        }), false);
+      } else if (msg.topic === 'event-created') {
+        const newEvent = await getEventByIdAction(msg.eventId);
+        mutate((current: any) => ({
+          ...current,
+          days: current.days.map((day: any) =>
+            day._id === newEvent.dayId
+              ? { ...day, events: [...day.events, newEvent] }
+              : day
+          )
+        }), false);
+      } else if (msg.topic === 'event-deleted') {
+        mutate((current: any) => ({
+          ...current,
+          days: current.days.map((day: any) =>
+            day._id === msg.dayId
+              ? { ...day, events: day.events.filter((e: any) => e._id !== msg.eventId) }
+              : day
+          )
+        }), false);
+      }
+    }
+  });
+
+  const days = data?.days || [];
+  const categories = data?.categories || [];
+
   const [selectedDay, setSelectedDay] = useState(0);
   const [selectedCategories, setSelectedCategories] = useState<Set<string>>(new Set());
   const [showSubmissionSheet, setShowSubmissionSheet] = useState(false);
-  const { favorites, addFavorite, removeFavorite, isFavorite } = useFavorites();
-  const updateCount = useTimelineWebSocket();
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
   const [reload, setReload] = useState(0);
-
-  useEffect(() => {
-    const load = async () => {
-      setLoading(true);
-      try {
-        const daysRes = await fetchDays();
-        const cats = await getCategoriesAction();
-        // Für jeden Day die Events laden
-        const daysWithEvents: TimelineDay[] = [];
-        for (const day of daysRes) {
-          const events = await fetchApprovedEventsByDay(String(day._id));
-          daysWithEvents.push({
-            _id: String(day._id),
-            title: day.title,
-            description: day.description ?? '',
-            date: day.date ? String(day.date) : undefined,
-            events: events as Event[],
-          });
-        }
-        setDays(daysWithEvents);
-        setCategories(cats);
-      } catch (e: any) {
-        setError(e?.message || 'Fehler beim Laden der Timeline');
-      } finally {
-        setLoading(false);
-      }
-    };
-    load();
-  }, [reload]);
 
   const toggleCategory = (category: string) => {
     const newCategories = new Set(selectedCategories);
@@ -164,13 +163,6 @@ export default function Timeline({ showFavoritesOnly = false, allowClipboard = f
       alert('Fehler beim Einreichen des Events: ' + (err?.message || 'Unbekannter Fehler'));
     }
   };
-
-  if (loading) {
-    return <div className="flex justify-center items-center h-64 text-[#ff9900]">Lade Timeline...</div>;
-  }
-  if (error) {
-    return <div className="flex flex-col items-center justify-center h-64 text-[#ff9900]">{error}</div>;
-  }
 
   // Hinweis bei komplett leeren Tagen
   const noDays = days.length === 0;

@@ -651,7 +651,7 @@ const TimelineMobile: React.FC = () => {
                         })
                       ) : (
                         <div className="text-gray-400 italic p-8 w-full text-center">
-                          {loading ? 'Lade Timeline...' : 'Noch keine Tage vorhanden.'}
+                          {loading ? 'Lade Timeline..' : 'Noch keine Tage vorhanden.'}
                         </div>
                       )}
                     </Accordion>

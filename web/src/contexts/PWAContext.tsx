@@ -4,7 +4,6 @@ import React, { createContext, useContext, useEffect, useState } from 'react';
 
 export interface PWAContextType {
   isPWA: boolean;
-  isStandalone: boolean;
   isMobile: boolean;
 }
 
@@ -12,7 +11,6 @@ const PWAContext = createContext<PWAContextType | undefined>(undefined);
 
 export function PWAProvider({ children }: { children: React.ReactNode }) {
   const [isPWA, setIsPWA] = useState(false);
-  const [isStandalone, setIsStandalone] = useState(false);
   const [isMobile, setIsMobile] = useState(false);
 
   useEffect(() => {
@@ -23,20 +21,18 @@ export function PWAProvider({ children }: { children: React.ReactNode }) {
     // Mobile Erkennung
     const isMobileDevice = window.matchMedia('(max-width: 768px)').matches;
     setIsPWA(isStandaloneMode);
-    setIsStandalone(isStandaloneMode);
     setIsMobile(isMobileDevice);
     // Event Listener für Display Mode Änderungen
     const mediaQuery = window.matchMedia('(display-mode: standalone)');
     const handleChange = (e: MediaQueryListEvent) => {
       setIsPWA(e.matches);
-      setIsStandalone(e.matches);
     };
     mediaQuery.addEventListener('change', handleChange);
     return () => mediaQuery.removeEventListener('change', handleChange);
   }, []);
 
   return (
-    <PWAContext.Provider value={{ isPWA, isStandalone, isMobile }}>
+    <PWAContext.Provider value={{ isPWA, isMobile }}>
       {children}
     </PWAContext.Provider>
   );

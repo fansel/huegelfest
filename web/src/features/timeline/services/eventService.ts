@@ -1,9 +1,11 @@
 import { Event, IEvent } from '@/lib/db/models/Event';
 import { Types } from 'mongoose';
+import { broadcast } from '@/lib/websocket/broadcast';
 
 export async function createEvent(data: Record<string, any>) {
   const event = new Event(data);
   await event.save();
+  await broadcast('event-created', { eventId: event._id.toString(), dayId: event.dayId?.toString() });
   const plain = await Event.findById(event._id).lean();
   return plain;
 }
@@ -24,11 +26,23 @@ export async function getPendingEvents() {
 
 export async function updateEvent(eventId: string, data: Partial<IEvent>) {
   const updated = await Event.findByIdAndUpdate(eventId, data, { new: true }).lean();
+  if (updated) {
+    await broadcast('event-updated', { eventId: updated._id.toString(), dayId: updated.dayId?.toString() });
+  }
   return deepObjectIdToString(updated);
 }
 
 export async function deleteEvent(eventId: string) {
-  return Event.findByIdAndDelete(eventId);
+  const deleted = await Event.findByIdAndDelete(eventId);
+  if (deleted) {
+    await broadcast('event-deleted', { eventId, dayId: deleted.dayId?.toString() });
+  }
+  return deleted;
+}
+
+export async function getEventById(eventId: string) {
+  const event = await Event.findById(eventId).lean();
+  return deepObjectIdToString(event);
 }
 
 // Utility: Rekursive Serialisierung aller ObjectIds zu Strings

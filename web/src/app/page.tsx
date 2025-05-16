@@ -1,178 +1,9 @@
-'use client';
-import React, { useEffect, useState } from 'react';
+import React from 'react';
 import Image from 'next/image';
-import {
-  IAnnouncement as AnnouncementType,
-  GroupColors,
-  REACTION_EMOJIS,
-  ReactionType,
-} from '../shared/types/types';
-import { getAllAnnouncementsAction } from '../features/announcements/actions/getAllAnnouncements';
-import { getGroupColorsAction } from '../features/groups/actions/getGroupColors';
-import { Countdown } from '../shared/components/Countdown';
-import Timeline from '../features/timeline/components/Timeline';
-import { Starfield } from '../shared/components/Starfield';
-import InfoBoard from '../features/infoboard/components/InfoBoard';
-import { usePWA } from '../contexts/PWAContext';
-
-function InstallPrompt() {
-  const [isIOS, setIsIOS] = useState(false);
-  const [isStandalone, setIsStandalone] = useState(false);
-
-  useEffect(() => {
-    setIsIOS(
-      /iPad|iPhone|iPod/.test(navigator.userAgent) &&
-        !(window as Window & { MSStream?: unknown }).MSStream,
-    );
-
-    setIsStandalone(window.matchMedia('(display-mode: standalone)').matches);
-  }, []);
-
-  if (isStandalone) {
-    return null;
-  }
-
-  return (
-    <div>
-      <h3>Install App</h3>
-      <button>Add to Home Screen</button>
-      {isIOS && (
-        <p>
-          To install this app on your iOS device, tap the share button
-          <span role="img" aria-label="share icon">
-            {' '}
-            ⎋{' '}
-          </span>
-          and then &ldquo;Add to Home Screen&rdquo;
-          <span role="img" aria-label="plus icon">
-            {' '}
-            ➕{' '}
-          </span>
-          .
-        </p>
-      )}
-    </div>
-  );
-}
-
+import { Starfield } from '@/shared/components/Starfield';
+import { Countdown } from '@/shared/components/Countdown';
 export default function Home() {
-  const { isPWA } = usePWA();
-  const [announcements, setAnnouncements] = useState<AnnouncementType[]>([]);
-  const [groupColors, setGroupColors] = useState<GroupColors>({ default: '#460b6c' });
-  const [deviceId, setDeviceId] = useState<string>('');
-
-  useEffect(() => {
-    const loadData = async () => {
-      try {
-        const [loadedAnnouncements, loadedGroupColors] = await Promise.all([
-          getAllAnnouncementsAction(),
-          getGroupColorsAction(),
-        ]);
-        setAnnouncements(loadedAnnouncements);
-        setGroupColors(loadedGroupColors);
-        // Ankündigungen im LocalStorage speichern
-        localStorage.setItem('announcementsData', JSON.stringify(loadedAnnouncements));
-      } catch (error) {
-        // Fallback: Ankündigungen aus LocalStorage laden
-        const cached = localStorage.getItem('announcementsData');
-        if (cached) {
-          setAnnouncements(JSON.parse(cached));
-        }
-      }
-    };
-    loadData();
-
-    const interval = setInterval(loadData, 5000);
-    return () => clearInterval(interval);
-  }, []);
-
-  useEffect(() => {
-    const storedDeviceId = localStorage.getItem('deviceId');
-    if (storedDeviceId) {
-      setDeviceId(storedDeviceId);
-    } else {
-      const newDeviceId =
-        Math.random().toString(36).substring(2) + Date.now().toString(36);
-      localStorage.setItem('deviceId', newDeviceId);
-      setDeviceId(newDeviceId);
-    }
-  }, []);
-
-  const sortedAnnouncements = [...announcements].sort((a, b) => {
-    const dateA = new Date(`${a.date}T${a.time}`);
-    const dateB = new Date(`${b.date}T${b.time}`);
-    return dateB.getTime() - dateA.getTime();
-  });
-
-  const handleReaction = async (announcementId: string, reactionType: ReactionType) => {
-    if (!deviceId) return;
-
-    const updatedAnnouncements = announcements.map((announcement) => {
-      if (announcement.id === announcementId) {
-        const currentReactions = announcement.reactions || {};
-        const currentReaction = currentReactions[reactionType] || {
-          count: 0,
-          deviceReactions: {},
-        };
-
-        const hasReacted =
-          currentReaction.deviceReactions?.[deviceId]?.announcementId === announcementId;
-
-        if (hasReacted) {
-          const newReactions = { ...currentReactions };
-          if (currentReaction.count <= 1) {
-            delete newReactions[reactionType];
-          } else {
-            const updatedDeviceReactions = { ...currentReaction.deviceReactions };
-            delete updatedDeviceReactions[deviceId];
-            newReactions[reactionType] = {
-              count: currentReaction.count - 1,
-              deviceReactions: updatedDeviceReactions,
-            };
-          }
-          return {
-            ...announcement,
-            reactions: newReactions,
-          };
-        }
-
-        const cleanedReactions = { ...currentReactions };
-        Object.keys(cleanedReactions).forEach((type) => {
-          if (type !== reactionType) {
-            const deviceReactions = cleanedReactions[type].deviceReactions;
-            if (deviceId in deviceReactions) {
-              const updatedDeviceReactions = { ...deviceReactions };
-              delete updatedDeviceReactions[deviceId];
-              cleanedReactions[type] = {
-                count: Object.keys(updatedDeviceReactions).length,
-                deviceReactions: updatedDeviceReactions,
-              };
-            }
-          }
-        });
-
-        cleanedReactions[reactionType] = {
-          count: (currentReaction.count || 0) + 1,
-          deviceReactions: {
-            ...currentReaction.deviceReactions,
-            [deviceId]: {
-              type: reactionType,
-              announcementId: announcementId,
-            },
-          },
-        };
-
-        return {
-          ...announcement,
-          reactions: cleanedReactions,
-        };
-      }
-      return announcement;
-    });
-
-    setAnnouncements(updatedAnnouncements);
-  };
-
+ 
   return (
     <div className="relative w-full min-h-screen overflow-hidden bg-[#460b6c] text-[#ff9900] font-mono">
       <Starfield />
@@ -222,7 +53,6 @@ export default function Home() {
               <h2 className="text-xl sm:text-3xl font-bold mb-4 sm:mb-8 text-center">
                 Programm
               </h2>
-              <Timeline />
             </div>
           </section>
 
@@ -234,7 +64,6 @@ export default function Home() {
               <h2 className="text-xl sm:text-3xl font-bold mb-4 sm:mb-8 text-center">
                 InfoBoard
               </h2>
-              <InfoBoard isPWA={isPWA} />
             </div>
           </section>
         </div>

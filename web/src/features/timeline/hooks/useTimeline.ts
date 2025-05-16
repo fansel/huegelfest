@@ -5,9 +5,14 @@ import { getCategoriesAction } from '@/features/categories/actions/getCategories
 import type { Day } from '../types/types';
 import type { Category } from '../types/types';
 
-export function useTimeline() {
-  const [days, setDays] = useState<Day[]>([]);
-  const [categories, setCategories] = useState<Category[]>([]);
+interface UseTimelineOptions {
+  initialDays?: Day[];
+  initialCategories?: Category[];
+}
+
+export function useTimeline({ initialDays = [], initialCategories = [] }: UseTimelineOptions = {}) {
+  const [days, setDays] = useState<Day[]>(initialDays);
+  const [categories, setCategories] = useState<Category[]>(initialCategories);
   const [loading, setLoading] = useState<boolean>(false);
   const [error, setError] = useState<string | null>(null);
 
@@ -40,7 +45,9 @@ export function useTimeline() {
 
   return {
     days,
+    setDays,
     categories,
+    setCategories,
     loading,
     error,
     refetch,
