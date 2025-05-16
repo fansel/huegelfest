@@ -10,6 +10,7 @@ import { Switch } from "@/shared/components/ui/switch";
 import { Button } from "@/shared/components/ui/button";
 import { Alert, AlertTitle, AlertDescription } from "@/shared/components/ui/alert";
 import { Card, CardHeader, CardTitle, CardDescription, CardContent } from "@/shared/components/ui/card";
+import { useDeviceId } from '@/shared/hooks/useDeviceId';
 
 // VAPID-Schlüssel als Konstanten
 const VAPID_PUBLIC_KEY = env('NEXT_PUBLIC_VAPID_PUBLIC_KEY');
@@ -33,10 +34,10 @@ interface DebugInfo {
 
 interface PushNotificationSettingsProps {
   isSubscribed: boolean;
-  deviceId: string | null;
 }
 
-export default function PushNotificationSettings({ isSubscribed, deviceId }: PushNotificationSettingsProps) {
+export default function PushNotificationSettings({ isSubscribed }: PushNotificationSettingsProps) {
+  const deviceId = useDeviceId();
   const [isSupported, setIsSupported] = useState(false);
   const [permission, setPermission] = useState<NotificationPermission>('default');
   const [subscription, setSubscription] = useState<PushSubscriptionData | null>(null);
@@ -54,6 +55,7 @@ export default function PushNotificationSettings({ isSubscribed, deviceId }: Pus
   const isDeviceReady = !!deviceId;
 
   useEffect(() => {
+    if (!deviceId) return;
     const checkSupport = async () => {
       logger.info('Starte Push-Settings Check');
       const notificationsSupported = 'Notification' in window;
@@ -74,20 +76,25 @@ export default function PushNotificationSettings({ isSubscribed, deviceId }: Pus
           logger.info('Push Subscription:', pushSubscription);
           
           if (pushSubscription) {
-            const deviceId = localStorage.getItem('deviceId');
             logger.info('Gefundene deviceId:', deviceId);
             if (deviceId) {
               // Prüfe ob die Subscription in der Datenbank existiert
               const { exists } = await checkSubscription(deviceId);
               logger.info('Subscription in DB exists:', exists);
               if (exists) {
+                const p256dhKey = pushSubscription.getKey('p256dh');
+                const authKey = pushSubscription.getKey('auth');
+                const p256dh = p256dhKey
+                  ? btoa(String.fromCharCode.apply(null, Array.from(new Uint8Array(p256dhKey))))
+                  : '';
+                const auth = authKey
+                  ? btoa(String.fromCharCode.apply(null, Array.from(new Uint8Array(authKey))))
+                  : '';
                 const subscriptionData: PushSubscriptionData = {
                   endpoint: pushSubscription.endpoint,
                   keys: {
-                    p256dh: btoa(String.fromCharCode.apply(null, 
-                      Array.from(new Uint8Array(pushSubscription.getKey('p256dh') || new ArrayBuffer(0))))),
-                    auth: btoa(String.fromCharCode.apply(null, 
-                      Array.from(new Uint8Array(pushSubscription.getKey('auth') || new ArrayBuffer(0))))),
+                    p256dh,
+                    auth,
                   }
                 };
                 setSubscription(subscriptionData);
@@ -125,10 +132,10 @@ export default function PushNotificationSettings({ isSubscribed, deviceId }: Pus
       logger.info('Push-Settings Check abgeschlossen');
     };
     checkSupport();
-  }, []);
+  }, [deviceId]);
 
   const handleSubscribe = async () => {
-    if (isLoading || !isSupported || isEnabled) return;
+    if (isLoading || !isSupported || isEnabled || !deviceId) return;
 
     setIsLoading(true);
     setError(null);
@@ -140,16 +147,19 @@ export default function PushNotificationSettings({ isSubscribed, deviceId }: Pus
         applicationServerKey: VAPID_PUBLIC_KEY
       });
 
-      const deviceId = localStorage.getItem('deviceId') || crypto.randomUUID();
-      localStorage.setItem('deviceId', deviceId);
-
+      const p256dhKey = pushSubscription.getKey('p256dh');
+      const authKey = pushSubscription.getKey('auth');
+      const p256dh = p256dhKey
+        ? btoa(String.fromCharCode.apply(null, Array.from(new Uint8Array(p256dhKey))))
+        : '';
+      const auth = authKey
+        ? btoa(String.fromCharCode.apply(null, Array.from(new Uint8Array(authKey))))
+        : '';
       const subscriptionData: PushSubscriptionData = {
         endpoint: pushSubscription.endpoint,
         keys: {
-          p256dh: btoa(String.fromCharCode.apply(null, 
-            Array.from(new Uint8Array(pushSubscription.getKey('p256dh') || new ArrayBuffer(0))))),
-          auth: btoa(String.fromCharCode.apply(null, 
-            Array.from(new Uint8Array(pushSubscription.getKey('auth') || new ArrayBuffer(0))))),
+          p256dh,
+          auth,
         }
       };
 

@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useState, useRef } from 'react';
 import { fetchDays } from '@/features/timeline/actions/fetchDays';
 import { fetchEventsByDayAdmin } from '@/features/timeline/actions/fetchEventsByDayAdmin';
 import { moderateEvent } from '@/features/timeline/actions/moderateEvent';
@@ -6,7 +6,7 @@ import { removeEvent } from '@/features/timeline/actions/removeEvent';
 import { getCategoriesAction } from '@/features/categories/actions/getCategories';
 import { format } from 'date-fns';
 import { de } from 'date-fns/locale';
-import { Plus, Trash2, Pencil, Lock } from 'lucide-react';
+import { Plus, Trash2, Pencil, Lock, Loader2 } from 'lucide-react';
 import toast from 'react-hot-toast';
 import * as LucideIcons from 'lucide-react';
 import { Badge } from '@/shared/components/ui/badge';
@@ -32,8 +32,9 @@ const TimelineDesktop: React.FC = () => {
   const [error, setError] = useState<string | null>(null);
   const [confirmDelete, setConfirmDelete] = useState<{ type: 'day' | 'event'; id: string; parentId?: string } | null>(null);
   const [showDayModal, setShowDayModal] = useState(false);
-  const [dayForm, setDayForm] = useState({ title: '', description: '', date: null });
+  const [dayForm, setDayForm] = useState<{ title: string; description: string; date: Date | null }>({ title: '', description: '', date: null });
   const [editDayId, setEditDayId] = useState<string | null>(null);
+  const isSavingDayRef = useRef(false);
 
   // Initialdaten laden
   useEffect(() => {
@@ -97,10 +98,13 @@ const TimelineDesktop: React.FC = () => {
   };
 
   const handleSaveDay = async () => {
+    if (isSavingDayRef.current) return;
     if (!dayForm.title || !dayForm.date) {
       toast.error('Titel und Datum sind erforderlich');
       return;
     }
+    isSavingDayRef.current = true;
+    setLoading(true);
     try {
       if (editDayId) {
         const result = await updateDayAction(editDayId, {
@@ -109,7 +113,7 @@ const TimelineDesktop: React.FC = () => {
           date: dayForm.date,
         });
         if (result?.success) {
-        toast.success('Tag aktualisiert');
+          toast.success('Tag aktualisiert');
         } else {
           toast.error(result?.error || 'Fehler beim Aktualisieren des Tages');
         }
@@ -121,7 +125,7 @@ const TimelineDesktop: React.FC = () => {
           date: dayForm.date,
         });
         if (result?.success) {
-        toast.success('Tag angelegt');
+          toast.success('Tag angelegt');
         } else {
           toast.error(result?.error || 'Fehler beim Anlegen des Tages');
         }
@@ -132,6 +136,9 @@ const TimelineDesktop: React.FC = () => {
       setDays(daysRes);
     } catch (err) {
       toast.error('Fehler beim Speichern des Tages');
+    } finally {
+      setLoading(false);
+      isSavingDayRef.current = false;
     }
   };
 
@@ -231,26 +238,6 @@ const TimelineDesktop: React.FC = () => {
                 </AlertDialogFooter>
               </AlertDialogContent>
             </AlertDialog>
-      {/* Füge einen Button hinzu, der das Modal öffnet */}
-      <div className="flex justify-end mb-4 gap-2">
-        <button
-          onClick={() => { setEditDayId(dayId); setDayForm({ title: day.title, description: day.description, date: day.date ? new Date(day.date) : null }); setShowDayModal(true); }}
-          className="rounded-full bg-blue-50 hover:bg-blue-200 w-8 h-8 flex items-center justify-center text-blue-600 border border-blue-100"
-          title="Tag bearbeiten"
-          aria-label="Tag bearbeiten"
-        >
-          <Pencil className="h-4 w-4" />
-        </button>
-        <button
-          onClick={async () => { if (window.confirm('Diesen Tag wirklich löschen?')) { await handleDeleteDay(dayId); } }}
-          className="rounded-full bg-red-50 hover:bg-red-200 w-8 h-8 flex items-center justify-center text-red-600 border border-red-100"
-          title="Tag löschen"
-          aria-label="Tag löschen"
-        >
-          <Trash2 className="h-4 w-4" />
-        </button>
-        <Button onClick={() => setShowDayModal(true)} className="bg-[#ff9900] hover:bg-orange-600">+ Tag anlegen</Button>
-      </div>
       {/* Modal für Tag anlegen */}
       {showDayModal && (
         <div className="fixed inset-0 flex items-center justify-center bg-black/40 z-50">
@@ -275,8 +262,10 @@ const TimelineDesktop: React.FC = () => {
               onChange={e => setDayForm(f => ({ ...f, date: e.target.value ? new Date(e.target.value) : null }))}
             />
             <div className="flex justify-end gap-2">
-              <Button variant="secondary" onClick={() => setShowDayModal(false)}>Abbrechen</Button>
-              <Button className="bg-[#ff9900] hover:bg-orange-600" onClick={handleSaveDay}>Anlegen</Button>
+              <Button variant="secondary" onClick={() => setShowDayModal(false)} disabled={loading}>Abbrechen</Button>
+              <Button className="bg-[#ff9900] hover:bg-orange-600" onClick={handleSaveDay} disabled={loading}>
+                {loading ? <Loader2 className="animate-spin w-4 h-4" /> : 'Anlegen'}
+              </Button>
             </div>
           </div>
         </div>

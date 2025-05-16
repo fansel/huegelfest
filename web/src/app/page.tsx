@@ -1,12 +1,10 @@
 import React from 'react';
 import Image from 'next/image';
-import { Starfield } from '@/shared/components/Starfield';
 import { Countdown } from '@/shared/components/Countdown';
 export default function Home() {
  
   return (
     <div className="relative w-full min-h-screen overflow-hidden bg-[#460b6c] text-[#ff9900] font-mono">
-      <Starfield />
 
       <div className="relative z-20 flex flex-col items-center justify-start min-h-screen px-2 sm:px-6 py-0 sm:py-12 text-center">
         <nav className="absolute top-0 left-0 right-0 z-40 flex justify-center space-x-1 sm:space-x-8 p-1 sm:p-0 rounded-full mx-1 sm:mx-0 pt-[env(safe-area-inset-top)]">

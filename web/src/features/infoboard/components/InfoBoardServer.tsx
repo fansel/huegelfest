@@ -3,20 +3,38 @@ import { getAnnouncementReactionsAction } from '../../announcements/actions/getA
 import InfoBoard from './InfoBoard';
 import { IAnnouncement, ReactionType } from '../../../shared/types/types';
 
-export async function getInfoBoardData(deviceId: string = '') {
-  const announcements: IAnnouncement[] = await getAllAnnouncementsAction();
+export async function getInfoBoardData() {
+  const announcementsRaw: any[] = await getAllAnnouncementsAction();
   // Reactions für alle Announcements laden
   const reactionsMap: Record<string, { counts: Record<ReactionType, number>; userReaction?: ReactionType }> = {};
   await Promise.all(
-    announcements.map(async (a) => {
-      reactionsMap[a.id] = await getAnnouncementReactionsAction(a.id, deviceId);
+    announcementsRaw.map(async (a) => {
+      reactionsMap[a.id] = await getAnnouncementReactionsAction(a.id);
     })
   );
-  return { announcements, reactionsMap, deviceId };
+  // Mapping auf vollständige IAnnouncement-Objekte
+  const announcements: IAnnouncement[] = announcementsRaw.map((a) => ({
+    id: a.id,
+    content: a.content,
+    date: a.date,
+    time: a.time,
+    groupId: a.groupId,
+    groupName: a.groupInfo?.name || '',
+    groupColor: a.groupInfo?.color || '#cccccc',
+    important: a.important,
+    reactions: reactionsMap[a.id] || {},
+    createdAt: a.createdAt,
+    updatedAt: a.updatedAt,
+  }));
+  return { announcements, reactionsMap };
 }
 
 // Optional: SSR-Komponente für klassische SSR/SSG-Seiten
 export default async function InfoBoardServer() {
-  const { announcements, reactionsMap, deviceId } = await getInfoBoardData();
-  return <InfoBoard announcements={announcements} reactionsMap={reactionsMap} deviceId={deviceId} onReact={() => {}} />;
+  try {
+    const { announcements, reactionsMap } = await getInfoBoardData();
+    return <InfoBoard announcements={announcements} reactionsMap={reactionsMap} />;
+  } catch (error: any) {
+    return <div className="text-red-500">Fehler beim Laden des Infoboards: {error?.message || String(error)}</div>;
+  }
 } 

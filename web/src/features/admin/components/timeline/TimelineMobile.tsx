@@ -232,12 +232,18 @@ const TimelineMobile: React.FC = () => {
     setShowDayModal(true);
   };
 
+  const isSavingDayRef = useRef(false);
+  const isSavingEventRef = useRef(false);
+
   // Tag speichern
   const handleSaveDay = async () => {
+    if (isSavingDayRef.current) return;
     if (!dayForm.title || !dayForm.date) {
       toast.error('Titel und Datum sind erforderlich');
       return;
     }
+    isSavingDayRef.current = true;
+    setLoading(true);
     try {
       if (editDayId) {
         const result = await updateDayAction(editDayId, {
@@ -270,15 +276,21 @@ const TimelineMobile: React.FC = () => {
       setDays(daysRes);
     } catch (err) {
       toast.error('Fehler beim Speichern des Tages');
+    } finally {
+      setLoading(false);
+      isSavingDayRef.current = false;
     }
   };
 
   // Event speichern
   const handleSaveEvent = async () => {
+    if (isSavingEventRef.current) return;
     if (!eventForm.title || !eventForm.time || !eventForm.categoryId) {
       toast.error('Titel, Zeit und Kategorie sind erforderlich');
       return;
     }
+    isSavingEventRef.current = true;
+    setLoading(true);
     try {
       if (eventToEdit && eventDayId) {
         const eventId = typeof eventToEdit._id === 'string'
@@ -326,6 +338,9 @@ const TimelineMobile: React.FC = () => {
     } catch (err: any) {
       console.error('[TimelineMobile] Fehler beim Speichern des Events:', err);
       toast.error('Fehler beim Speichern des Events: ' + (err?.message || err));
+    } finally {
+      setLoading(false);
+      isSavingEventRef.current = false;
     }
   };
 
@@ -744,8 +759,10 @@ const TimelineMobile: React.FC = () => {
                               </Popover>
                             </div>
                             <div className="flex justify-end gap-2 px-6 pb-6 pt-2">
-                              <Button variant="secondary" onClick={() => { setShowDayModal(false); setEditDayId(null); }}>Abbrechen</Button>
-                              <Button className="bg-[#ff9900] hover:bg-orange-600" onClick={handleSaveDay}>{editDayId ? 'Speichern' : 'Anlegen'}</Button>
+                              <Button variant="secondary" onClick={() => { setShowDayModal(false); setEditDayId(null); }} disabled={loading}>Abbrechen</Button>
+                              <Button className="bg-[#ff9900] hover:bg-orange-600" onClick={handleSaveDay} disabled={loading}>
+                                {loading ? <Loader2 className="animate-spin w-4 h-4" /> : (editDayId ? 'Speichern' : 'Anlegen')}
+                              </Button>
                             </div>
                           </div>
                         </SheetContent>
@@ -830,8 +847,10 @@ const TimelineMobile: React.FC = () => {
                               </select>
                             </div>
                             <div className="flex justify-end gap-2 px-6 pb-6 pt-2">
-                              <Button variant="secondary" onClick={() => { setShowEventModalOpen(false); setEventToEdit(null); setEventDayId(null); }}>Abbrechen</Button>
-                              <Button className="bg-[#ff9900] hover:bg-orange-600" onClick={handleSaveEvent}>Speichern</Button>
+                              <Button variant="secondary" onClick={() => { setShowEventModalOpen(false); setEventToEdit(null); setEventDayId(null); }} disabled={loading}>Abbrechen</Button>
+                              <Button className="bg-[#ff9900] hover:bg-orange-600" onClick={handleSaveEvent} disabled={loading}>
+                                {loading ? <Loader2 className="animate-spin w-4 h-4" /> : 'Speichern'}
+                              </Button>
                             </div>
                           </div>
                         </SheetContent>

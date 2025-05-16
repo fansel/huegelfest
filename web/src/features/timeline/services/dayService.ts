@@ -40,5 +40,17 @@ export async function getDayById(dayId: string) {
   if (!day) return null;
   // Events für diesen Tag laden
   const events = await import('../services/eventService').then(m => m.getEventsByDay(dayId, 'approved'));
-  return { ...day, events };
+  // IDs in Strings umwandeln
+  const plainDay = {
+    ...day,
+    _id: typeof day._id === 'string' ? day._id : (day._id?.toString?.() ?? ''),
+    events: Array.isArray(events)
+      ? events.map((event: any) => ({
+          ...event,
+          _id: typeof event._id === 'string' ? event._id : (event._id?.toString?.() ?? ''),
+          dayId: typeof event.dayId === 'string' ? event.dayId : (event.dayId?.toString?.() ?? ''),
+        }))
+      : [],
+  };
+  return plainDay;
 } 

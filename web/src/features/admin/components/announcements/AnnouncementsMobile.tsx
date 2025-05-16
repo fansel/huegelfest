@@ -15,6 +15,9 @@ const dateFormatter = new Intl.DateTimeFormat('de-DE', {
   day: '2-digit', month: '2-digit', year: 'numeric', hour: '2-digit', minute: '2-digit',
 });
 
+const MAX_LENGTH = 300;
+const MAX_LINES = 14;
+
 const AnnouncementsMobile: React.FC = () => {
   const manager = useAnnouncementsManager();
   const [formOpen, setFormOpen] = useState(false);
@@ -145,12 +148,21 @@ const AnnouncementsMobile: React.FC = () => {
               <Textarea
                 id="announcement-content"
                 value={content}
-                onChange={e => setContent(e.target.value)}
+                onChange={e => {
+                  let value = e.target.value.slice(0, MAX_LENGTH);
+                  const lines = value.split('\n');
+                  if (lines.length > MAX_LINES) {
+                    value = lines.slice(0, MAX_LINES).join('\n');
+                  }
+                  setContent(value);
+                }}
                 placeholder="Gebe hier deine Ankündigung ein..."
                 rows={3}
                 className="w-full"
                 required
+                maxLength={MAX_LENGTH}
               />
+              <div className={`text-right text-xs mt-1 ${content.length >= MAX_LENGTH || content.split('\n').length >= MAX_LINES ? 'text-red-500 font-semibold' : 'text-gray-400'}`}>{content.length}/{MAX_LENGTH} Zeichen, {content.split('\n').length}/{MAX_LINES} Zeilen</div>
               <label htmlFor="announcement-group" className="text-sm font-medium text-gray-700">Gruppe</label>
               <Select value={groupId} onValueChange={setGroupId} required>
                 <SelectTrigger className="w-full" id="announcement-group">
@@ -165,7 +177,7 @@ const AnnouncementsMobile: React.FC = () => {
             </div>
             <div className="flex justify-end gap-2 px-6 pb-6 pt-2 w-full">
               <Button variant="secondary" onClick={() => { setFormOpen(false); setEditing(undefined); }}>Abbrechen</Button>
-              <Button className="bg-[#ff9900] hover:bg-orange-600" onClick={handleSave} disabled={isSubmitting}>
+              <Button className="bg-[#ff9900] hover:bg-orange-600" onClick={handleSave} disabled={isSubmitting || content.length > MAX_LENGTH || content.split('\n').length > MAX_LINES}>
                 {isSubmitting ? 'Wird gespeichert...' : editing?.id ? 'Aktualisieren' : 'Speichern'}
               </Button>
             </div>

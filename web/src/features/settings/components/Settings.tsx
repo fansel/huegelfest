@@ -5,7 +5,7 @@ import StarfieldSettings from './StarfieldSettings';
 import AdminSettings from './AdminSettings';
 import LegalNotice from './LegalNotice';
 import dynamic from 'next/dynamic';
-import { useEffect, useState } from 'react';
+import { useDeviceId } from '@/shared/hooks/useDeviceId';
 
 interface SettingsProps {
   showStarfield: boolean;
@@ -16,23 +16,7 @@ export default function Settings({
   showStarfield,
   onToggleStarfield,
 }: SettingsProps) {
-  const [deviceId, setDeviceId] = useState<string | null>(null);
-
-  useEffect(() => {
-    try {
-      let id = localStorage.getItem('deviceId');
-      if (!id) {
-        id = btoa(`${navigator.userAgent}-${Date.now()}-${Math.random()}`);
-        localStorage.setItem('deviceId', id);
-        console.log('Neue deviceId generiert:', id);
-      } else {
-        console.log('deviceId aus localStorage:', id);
-      }
-      setDeviceId(id);
-    } catch (e) {
-      console.error('Fehler beim Setzen der deviceId:', e);
-    }
-  }, []);
+  const deviceId = useDeviceId();
 
   return (
     <div className="bg-[#460b6c]/30 rounded-lg overflow-hidden">

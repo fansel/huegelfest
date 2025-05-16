@@ -77,52 +77,128 @@ export default function Timeline({ showFavoritesOnly = false, allowClipboard = f
 
   useWebSocket(getWebSocketUrl(), {
     onMessage: async (msg: any) => {
+      console.log('[WebSocket] Nachricht empfangen (global):', msg);
       if (msg.topic === 'day-updated') {
-        const updatedDay = await getDayByIdAction(msg.dayId);
-        mutate((current: any) => ({
-          ...current,
-          days: current.days.map((d: any) => d._id === updatedDay._id ? updatedDay : d)
-        }), false);
+        const updatedDay = await getDayByIdAction(msg.payload.dayId);
+        if (!updatedDay) {
+          console.warn('[WebSocket] day-updated: Tag nicht gefunden', msg.payload.dayId);
+          return;
+        }
+        mutate((current: any) => {
+          console.log('[mutate:day-updated] current:', current);
+          console.log('[mutate:day-updated] current.days:', current?.days);
+          if (!current || !Array.isArray(current.days)) return current;
+          return {
+            ...current,
+            days: current.days.map((d: any) => d && d._id === updatedDay._id ? updatedDay : d)
+          };
+        }, false);
       } else if (msg.topic === 'day-created') {
-        const newDay = await getDayByIdAction(msg.dayId);
-        mutate((current: any) => ({
-          ...current,
-          days: [...current.days, newDay]
-        }), false);
+        const newDay = await getDayByIdAction(msg.payload.dayId);
+        if (!newDay) {
+          console.warn('[WebSocket] day-created: Tag nicht gefunden', msg.payload.dayId);
+          return;
+        }
+        mutate((current: any) => {
+          console.log('[mutate:day-created] current:', current);
+          console.log('[mutate:day-created] current.days:', current?.days);
+          if (!current || !Array.isArray(current.days)) return current;
+          return {
+            ...current,
+            days: [...current.days, newDay]
+          };
+        }, false);
       } else if (msg.topic === 'day-deleted') {
-        mutate((current: any) => ({
-          ...current,
-          days: current.days.filter((d: any) => d._id !== msg.dayId)
-        }), false);
+        mutate((current: any) => {
+          console.log('[mutate:day-deleted] current:', current);
+          console.log('[mutate:day-deleted] current.days:', current?.days);
+          if (!current || !Array.isArray(current.days)) return current;
+          return {
+            ...current,
+            days: current.days.filter((d: any) => d && d._id !== msg.payload.dayId)
+          };
+        }, false);
       } else if (msg.topic === 'event-updated') {
-        const updatedEvent = await getEventByIdAction(msg.eventId);
-        mutate((current: any) => ({
-          ...current,
-          days: current.days.map((day: any) =>
-            day._id === updatedEvent.dayId
-              ? { ...day, events: day.events.map((e: any) => e._id === updatedEvent._id ? updatedEvent : e) }
-              : day
-          )
-        }), false);
+        console.log('[WebSocket] event-updated: msg.payload.eventId =', msg.payload.eventId);
+        let updatedEvent;
+        try {
+          console.log('[WebSocket] event-updated: Starte getEventByIdAction');
+          updatedEvent = await getEventByIdAction(msg.payload.eventId);
+          console.log('[WebSocket] event-updated: Ergebnis von getEventByIdAction:', updatedEvent);
+        } catch (err) {
+          console.error('[WebSocket] Fehler beim Laden des Events:', err, msg.payload.eventId);
+          return;
+        }
+        if (!updatedEvent) {
+          console.warn('[WebSocket] event-updated: Event nicht gefunden', msg.payload.eventId, updatedEvent);
+          return;
+        }
+        if (!('dayId' in updatedEvent)) {
+          console.warn('[WebSocket] event-updated: Event hat kein dayId-Feld:', updatedEvent);
+          return;
+        }
+        if (updatedEvent.dayId == null) {
+          console.warn('[WebSocket] event-updated: Event.dayId ist null/undefined:', updatedEvent);
+          return;
+        }
+        mutate((current: any) => {
+          console.log('[mutate:event-updated] current:', current);
+          console.log('[mutate:event-updated] current.days:', current?.days);
+          if (!current || !Array.isArray(current.days)) return current;
+          const tag = current.days.find((day: any) => day && day._id === updatedEvent.dayId);
+          if (!tag) {
+            console.warn('[WebSocket] event-updated: Tag für Event nicht mehr vorhanden', updatedEvent.dayId);
+            return current;
+          }
+          return {
+            ...current,
+            days: current.days.map((day: any) =>
+              day && day._id === updatedEvent.dayId
+                ? { ...day, events: Array.isArray(day.events) ? day.events.map((e: any) => e && e._id === updatedEvent._id ? updatedEvent : e) : day.events }
+                : day
+            )
+          };
+        }, false);
       } else if (msg.topic === 'event-created') {
-        const newEvent = await getEventByIdAction(msg.eventId);
-        mutate((current: any) => ({
-          ...current,
-          days: current.days.map((day: any) =>
-            day._id === newEvent.dayId
-              ? { ...day, events: [...day.events, newEvent] }
-              : day
-          )
-        }), false);
+        const newEvent = await getEventByIdAction(msg.payload.eventId);
+        if (!newEvent) {
+          console.warn('[WebSocket] event-created: Event nicht gefunden', msg.payload.eventId);
+          return;
+        }
+        mutate((current: any) => {
+          console.log('[mutate:event-created] current:', current);
+          console.log('[mutate:event-created] current.days:', current?.days);
+          if (!current || !Array.isArray(current.days)) return current;
+          return {
+            ...current,
+            days: current.days.map((day: any) =>
+              day && day._id === newEvent.dayId
+                ? {
+                    ...day,
+                    events: Array.isArray(day.events)
+                      ? day.events.some((e: any) => e._id === newEvent._id)
+                        ? day.events
+                        : [...day.events, newEvent]
+                      : [newEvent]
+                  }
+                : day
+            )
+          };
+        }, false);
       } else if (msg.topic === 'event-deleted') {
-        mutate((current: any) => ({
-          ...current,
-          days: current.days.map((day: any) =>
-            day._id === msg.dayId
-              ? { ...day, events: day.events.filter((e: any) => e._id !== msg.eventId) }
-              : day
-          )
-        }), false);
+        mutate((current: any) => {
+          console.log('[mutate:event-deleted] current:', current);
+          console.log('[mutate:event-deleted] current.days:', current?.days);
+          if (!current || !Array.isArray(current.days)) return current;
+          return {
+            ...current,
+            days: current.days.map((day: any) =>
+              day && day._id === msg.payload.dayId
+                ? { ...day, events: Array.isArray(day.events) ? day.events.filter((e: any) => e && e._id !== msg.payload.eventId) : day.events }
+                : day
+            )
+          };
+        }, false);
       }
     }
   });

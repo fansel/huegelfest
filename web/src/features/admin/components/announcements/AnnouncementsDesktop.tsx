@@ -20,6 +20,8 @@ const AnnouncementsDesktop: React.FC = () => {
   const [deletingId, setDeletingId] = useState<string | null>(null);
   const [showDialog, setShowDialog] = useState(false);
   const [deleteDialogId, setDeleteDialogId] = useState<string | null>(null);
+  const MAX_LENGTH = 300;
+  const MAX_LINES = 14;
 
   useEffect(() => {
     if (editing) {
@@ -104,12 +106,21 @@ const AnnouncementsDesktop: React.FC = () => {
             <Textarea
               id="announcement-content"
               value={content}
-              onChange={e => setContent(e.target.value)}
+              onChange={e => {
+                let value = e.target.value.slice(0, MAX_LENGTH);
+                const lines = value.split('\n');
+                if (lines.length > MAX_LINES) {
+                  value = lines.slice(0, MAX_LINES).join('\n');
+                }
+                setContent(value);
+              }}
               placeholder="Gebe hier deine Ankündigung ein..."
               rows={3}
               className="w-full"
               required
+              maxLength={MAX_LENGTH}
             />
+            <div className={`text-right text-xs mt-1 ${content.length >= MAX_LENGTH || content.split('\n').length >= MAX_LINES ? 'text-red-500 font-semibold' : 'text-gray-400'}`}>{content.length}/{MAX_LENGTH} Zeichen, {content.split('\n').length}/{MAX_LINES} Zeilen</div>
             <label htmlFor="announcement-group" className="text-sm font-medium text-gray-700">Gruppe</label>
             <Select value={groupId} onValueChange={setGroupId} required>
               <SelectTrigger className="w-full" id="announcement-group">
@@ -125,7 +136,7 @@ const AnnouncementsDesktop: React.FC = () => {
               <DialogClose asChild>
                 <Button variant="secondary" onClick={() => { setShowDialog(false); setEditing(undefined); }}>Abbrechen</Button>
               </DialogClose>
-              <Button className="bg-[#ff9900] hover:bg-orange-600" onClick={handleSave} disabled={isSubmitting}>
+              <Button className="bg-[#ff9900] hover:bg-orange-600" onClick={handleSave} disabled={isSubmitting || content.length > MAX_LENGTH || content.split('\n').length > MAX_LINES}>
                 {isSubmitting ? 'Wird gespeichert...' : editing ? 'Aktualisieren' : 'Speichern'}
               </Button>
             </DialogFooter>

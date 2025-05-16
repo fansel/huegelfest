@@ -24,7 +24,6 @@ interface MainContentProps {
   infoBoardData: {
     announcements: any[];
     reactionsMap: Record<string, any>;
-    deviceId: string;
   };
 }
 
@@ -57,7 +56,7 @@ const MainContent: React.FC<MainContentProps> = ({ mode, activeTab, adminActiveT
       case 'anreise':
         return <Anreise />;
       case 'infoboard':
-        return <InfoBoard announcements={infoBoardData.announcements} reactionsMap={infoBoardData.reactionsMap} deviceId={infoBoardData.deviceId} onReact={() => {}} />;
+        return <InfoBoard announcements={infoBoardData.announcements} reactionsMap={infoBoardData.reactionsMap} />;
       case 'favorites':
         return <FavoritesList />;
       case 'settings':
