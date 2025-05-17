@@ -1,7 +1,4 @@
 .musicNote {
-  position: fixed;
-  top: 1rem;
-  right: 1rem;
   border: none;
   border-radius: 50%;
   width: 64px;
@@ -11,7 +8,6 @@
   justify-content: center;
   cursor: pointer;
   transition: all 0.3s ease;
-  z-index: 9999;
   backdrop-filter: blur(8px);
   box-shadow: 0 2px 8px rgba(255, 153, 0, 0.2);
   background: #ff9900;
@@ -252,9 +248,9 @@
 
 @media (min-width: 768px) {
   .musicNote {
-    position: fixed;
-    top: 1rem;
-    right: 1rem;
+    /* position: fixed; */
+    /* top: 1rem; */
+    /* right: 1rem; */
   }
 
   .musicNote::after {

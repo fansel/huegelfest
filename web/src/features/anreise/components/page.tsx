@@ -3,14 +3,14 @@
 import Link from 'next/link';
 import Content from './content/page';
 import styles from "./page.module.css";
-import { usePWA } from '../../../contexts/PWAContext';
+import { useDeviceType } from '@/shared/contexts/DeviceTypeContext';
 
 interface AnreiseProps {
   allowClipboard?: boolean;
 }
 
 export default function Anreise({ allowClipboard = false }: AnreiseProps) {
-  const { isPWA } = usePWA();
+  const { isPWA } = useDeviceType();
 
   return (
     <>

@@ -3,13 +3,15 @@ import TimelineServer from '@/features/timeline/components/TimelineServer';
 import InfoBoard from '@/features/infoboard/components/InfoBoard';
 import Anreise from '@/features/anreise/components/page';
 import Settings from '@/features/settings/components/Settings';
-import AdminDashboardWrapper from '@/features/admin/dashboard/AdminDashboardWrapper';
+import AdminDashboard from '@/features/admin/dashboard/AdminDashboard';
+import type { AdminTab } from '@/features/admin/types/AdminTab';
 import { FavoritesList } from '@/features/favorites/components/FavoritesList';
 import SignupPhaseInfo from '@/features/pwa/SignupPhaseInfo';
 import Packlist from '@/features/packlist/Packlist';
-import { AdminTab, ADMIN_TABS } from '@/features/admin/types/AdminTab';
 import { useGlobalState } from '@/contexts/GlobalStateContext';
 import TimelineClient from '@/features/timeline/components/TimelineClient';
+import { useUISettings } from '@/shared/contexts/UISettingsContext';
+import { ADMIN_TABS } from '@/features/admin/types/AdminTab';
 
 
 interface MainContentProps {
@@ -33,12 +35,12 @@ function isValidAdminTab(tab: string): tab is AdminTab {
 
 const MainContent: React.FC<MainContentProps> = ({ mode, activeTab, adminActiveTab, handleTabChange, timelineData, infoBoardData }) => {
   const { signupOpen } = useGlobalState();
-  const [showStarfield, setShowStarfield] = React.useState(true);
+  const { showStarfield, setShowStarfield } = useUISettings();
 
   // Content je nach Modus und Tab
   if (signupOpen && mode !== 'admin') {
     if (activeTab === 'settings') {
-      return <Settings showStarfield={showStarfield} onToggleStarfield={() => setShowStarfield(!showStarfield)} />;
+      return <Settings showStarfield={showStarfield} onToggleStarfield={setShowStarfield} />;
     }
     if (activeTab === 'packlist') {
       return <Packlist />;
@@ -48,7 +50,7 @@ const MainContent: React.FC<MainContentProps> = ({ mode, activeTab, adminActiveT
   }
   if (mode === 'admin') {
     const safeTab: AdminTab = isValidAdminTab(adminActiveTab) ? adminActiveTab : 'announcements';
-    return <AdminDashboardWrapper activeAdminTab={safeTab} setActiveAdminTab={tab => handleTabChange(tab)} />;
+    return <AdminDashboard activeTab={safeTab} setActiveTab={(tab: AdminTab) => handleTabChange(tab)} />;
   } else {
     switch (activeTab) {
       case 'home':
@@ -60,7 +62,7 @@ const MainContent: React.FC<MainContentProps> = ({ mode, activeTab, adminActiveT
       case 'favorites':
         return <FavoritesList />;
       case 'settings':
-        return <Settings showStarfield={showStarfield} onToggleStarfield={() => setShowStarfield(!showStarfield)} />;
+        return <Settings showStarfield={showStarfield} onToggleStarfield={setShowStarfield} />;
       case 'packlist':
         return <Packlist />;
       default:

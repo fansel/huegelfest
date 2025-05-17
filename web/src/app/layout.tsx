@@ -2,12 +2,15 @@ import type { Metadata, Viewport } from "next";
 import { GeistMono } from 'geist/font/mono';
 import { PublicEnvScript } from 'next-runtime-env';
 import "@/app/global.css";
-import { PWAProvider } from "@/contexts/PWAContext";
 import { Toaster } from 'react-hot-toast';
 import { PWARegister } from "@/shared/components/PWARegister";
-import AppLayout from "@/shared/components/AppLayout";
 import { AuthProvider } from '@/features/auth/AuthContext';
 import { GlobalStateProvider } from '@/contexts/GlobalStateContext';
+import React from 'react';
+import { headers } from 'next/headers';
+import { userAgent } from "next/server";
+import { DeviceTypeProviderClient } from '@/shared/contexts/DeviceTypeContext';
+import { UISettingsProvider } from '@/shared/contexts/UISettingsContext';
 
 export const metadata: Metadata = {
   title: 'Hügelfest',
@@ -23,7 +26,11 @@ export const viewport: Viewport = {
   themeColor: '#460b6c',
 };
 
-export default function RootLayout({ children }: { children: React.ReactNode }) {
+export default async function RootLayout({ children }: { children: React.ReactNode }) {
+  const headersList = await headers();
+  const { device } = userAgent({ headers: headersList });
+  const deviceType = device?.type === "mobile" ? "mobile" : "desktop";
+
   return (
     <html lang="de" className={GeistMono.className}>
       <head>
@@ -33,16 +40,18 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
         <link rel="apple-touch-icon" href="/apple-touch-icon.png" />
         <link rel="manifest" href="/manifest.json" />
       </head>
-      <body className="antialiased min-h-screen flex flex-col">
+      <body className={`antialiased min-h-screen flex flex-col ${deviceType}`}>
         <PWARegister />
-        <PWAProvider>
-          <AuthProvider>
-            <GlobalStateProvider>
-              <AppLayout>{children}</AppLayout>
-              <Toaster position="top-right" />
-            </GlobalStateProvider>
-          </AuthProvider>
-        </PWAProvider>
+        <DeviceTypeProviderClient deviceType={deviceType}>
+            <AuthProvider>
+              <GlobalStateProvider>
+                <UISettingsProvider>
+                  {children}
+                  <Toaster position="top-right" />
+                </UISettingsProvider>
+              </GlobalStateProvider>
+            </AuthProvider>
+        </DeviceTypeProviderClient>
       </body>
     </html>
   );

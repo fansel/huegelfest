@@ -1,12 +1,15 @@
 'use client';
 
 import MainContent from './MainContent';
-import BottomBar from '@/features/pwa/BottomBar';
+import BottomBar from '@/features/pwa/Naviagation';
 import OfflineBanner from './OfflineBanner';
 import { Starfield } from './Starfield';
 import MusicNote from '@/features/music/components/MusicNote';
 import { useNavigation } from '@/shared/hooks/useNavigation';
 import Image from 'next/image';
+import { useUISettings } from '@/shared/contexts/UISettingsContext';
+import { useDeviceType } from '@/shared/contexts/DeviceTypeContext';
+import { useWindowWidth } from '@/shared/hooks/useWindowWidth';
 
 interface PWAContainerClientProps {
   isAdmin: boolean;
@@ -23,14 +26,26 @@ interface PWAContainerClientProps {
 
 export default function PWAContainerClient({ isAdmin, timelineData, infoBoardData }: PWAContainerClientProps) {
   const { mode, activeTab, adminActiveTab, handleAdminToggle, handleTabChange } = useNavigation(isAdmin);
+  const { showStarfield } = useUISettings();
+  const { deviceType } = useDeviceType();
+  const windowWidth = useWindowWidth();
+  const isMobileLayout = deviceType === 'mobile' || windowWidth < 1024;
 
   return (
     <div className="relative min-h-screen bg-[#460b6c] text-[#ff9900] flex flex-col">
       <OfflineBanner />
-      <Starfield />
-      <div className="absolute top-4 right-4 z-50">
-        <MusicNote />
-      </div>
+      {showStarfield && <Starfield />}
+      {isMobileLayout && (
+        <div className="absolute top-1 right-1 z-50">
+          <MusicNote />
+        </div>
+      )}
+      {!isMobileLayout && (
+        <div className="absolute bottom-1 right-1 z-50">
+          <MusicNote />
+        </div>
+      )}
+
       <div className="flex flex-col items-center justify-center gap-2 pt-4">
         <div className="flex items-center justify-center w-full">
           <Image src="/android-chrome-192x192.png" alt="Hügelfest Logo" width={48} height={48} />
