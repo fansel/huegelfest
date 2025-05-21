@@ -6,14 +6,21 @@ import { Dialog, DialogTrigger, DialogContent, DialogTitle, DialogDescription } 
 import { Input } from "@/shared/components/ui/input";
 import { Button } from "@/shared/components/ui/button";
 import { useAuth } from '@/features/auth/AuthContext';
+import UserSettingsCard from './UserSettingsCard';
+import { Shield } from 'lucide-react';
 
-export default function AdminSettings() {
+interface AdminSettingsProps {
+  variant?: 'row' | 'tile';
+}
+
+export default function AdminSettings({ variant = 'row' }: AdminSettingsProps) {
   const [username, setUsername] = useState('');
   const [password, setPassword] = useState('');
   const [showLoginForm, setShowLoginForm] = useState(false);
   const { isAuthenticated, isAdmin, login, logout, error, loading } = useAuth();
 
   const handleToggle = (value: boolean) => {
+    console.log('Switch toggled:', value, isAuthenticated);
     if (value && !isAuthenticated) {
       setShowLoginForm(true);
     } else if (!value && isAuthenticated) {
@@ -36,12 +43,17 @@ export default function AdminSettings() {
   };
 
   return (
-    <div className="p-4 sm:p-6">
-      <div className="flex flex-row items-center justify-between gap-4">
-        <span className="text-[#ff9900] font-medium text-lg">Admin</span>
-        <Switch checked={isAuthenticated} onCheckedChange={handleToggle} />
-      </div>
-      <p className="text-[#ff9900]/60 text-sm mt-1">Admin-Modus</p>
+    <UserSettingsCard
+      icon={<Shield className="w-5 h-5 text-[#ff9900]" />}
+      title="Admin-Modus"
+      switchElement={
+        <div className="flex items-center gap-1">
+          <Switch checked={isAuthenticated} onCheckedChange={handleToggle} />
+        </div>
+      }
+      info="Schalte spezielle Admin-Optionen frei (Login erforderlich)."
+      variant={variant}
+    >
       <Dialog open={showLoginForm && !isAuthenticated} onOpenChange={setShowLoginForm}>
         <DialogContent>
           <DialogTitle className="text-[#ff9900]">Admin-Login</DialogTitle>
@@ -83,6 +95,6 @@ export default function AdminSettings() {
           )}
         </DialogContent>
       </Dialog>
-    </div>
+    </UserSettingsCard>
   );
 }

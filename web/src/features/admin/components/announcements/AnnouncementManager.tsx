@@ -10,7 +10,7 @@ import { Textarea } from '@/shared/components/ui/textarea';
 import { Button } from '@/shared/components/ui/button';
 import { Select, SelectTrigger, SelectContent, SelectItem, SelectValue } from '@/shared/components/ui/select';
 import { AlertDialog, AlertDialogContent, AlertDialogHeader, AlertDialogTitle, AlertDialogDescription, AlertDialogFooter, AlertDialogCancel, AlertDialogAction } from '@/shared/components/ui/alert-dialog';
-import { useDeviceType } from '@/shared/contexts/DeviceTypeContext';
+import { useDeviceContext, useDeviceType } from '@/shared/contexts/DeviceContext';
 import { useWindowWidth } from '@/shared/hooks/useWindowWidth';
 
 const dateFormatter = new Intl.DateTimeFormat('de-DE', {
@@ -33,9 +33,8 @@ const AnnouncementsManager: React.FC = () => {
   const [groupId, setGroupId] = useState('');
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [deleteDialogId, setDeleteDialogId] = useState<string | null>(null);
-  const { deviceType } = useDeviceType();
-  const windowWidth = useWindowWidth();
-  const isMobile = deviceType === 'mobile' || windowWidth < 1024;
+  const { deviceType } = useDeviceContext();
+  const isMobile = deviceType === 'mobile';
 
   useEffect(() => {
     if (editing) {

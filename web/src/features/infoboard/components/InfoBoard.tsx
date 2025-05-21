@@ -5,7 +5,7 @@ import { IAnnouncement, ReactionType, REACTION_EMOJIS } from '../../../shared/ty
 import { getAllAnnouncementsAction } from '../../announcements/actions/getAllAnnouncements';
 import { updateAnnouncementReactionsAction } from '../../announcements/actions/updateAnnouncementReactions';
 import { getAnnouncementReactionsAction } from '../../announcements/actions/getAnnouncementReactions';
-import { AnnouncementCard } from '@/features/announcements/components/AnnouncementCard';
+import AnnouncementEventCard from './AnnouncementEventCard';
 import { useWebSocket, WebSocketMessage } from '@/shared/hooks/useWebSocket';
 import { getWebSocketUrl } from '@/shared/utils/getWebSocketUrl';
 import useSWR from 'swr';
@@ -138,7 +138,7 @@ export default function InfoBoard({ isPWA = false, allowClipboard = false, annou
             <p className="text-gray-400 text-center">Keine aktuellen Informationen</p>
           ) : (
             announcements.map((announcement) => (
-              <AnnouncementCard
+              <AnnouncementEventCard
                 key={announcement.id}
                 content={announcement.content}
                 groupName={announcement.groupName ?? 'Gruppe'}

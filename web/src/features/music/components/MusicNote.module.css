@@ -11,7 +11,7 @@
   backdrop-filter: blur(8px);
   box-shadow: 0 2px 8px rgba(255, 153, 0, 0.2);
   background: #ff9900;
-  color: #fff;
+  color: #ff9900;
 }
 
 .musicNote::after {

@@ -9,8 +9,7 @@ import { Sheet, SheetContent, SheetHeader, SheetTitle } from '@/shared/component
 import { Input } from '@/shared/components/ui/input';
 import { Button } from '@/shared/components/ui/button';
 import { AlertDialog, AlertDialogContent, AlertDialogHeader, AlertDialogTitle, AlertDialogDescription, AlertDialogFooter, AlertDialogCancel, AlertDialogAction } from '@/shared/components/ui/alert-dialog';
-import { useWindowWidth } from '@/shared/hooks/useWindowWidth';
-import { useDeviceType } from '@/shared/contexts/DeviceTypeContext';
+import { useDeviceContext } from '@/shared/contexts/DeviceContext';
 
 const MusicManager: React.FC = () => {
   const [tracks, setTracks] = useState<MusicEntry[]>([]);
@@ -19,9 +18,9 @@ const MusicManager: React.FC = () => {
   const [newUrl, setNewUrl] = useState('');
   const [addLoading, setAddLoading] = useState(false);
   const [deleteDialogId, setDeleteDialogId] = useState<string | null>(null);
-  const windowWidth = useWindowWidth();
-  const { deviceType } = useDeviceType();
-  const isMobile = deviceType === 'mobile' || windowWidth < 1024;
+  const { deviceType } = useDeviceContext();
+  const isMobile = deviceType === 'mobile';
+
 
   const fetchTracks = async () => {
     setLoading(true);

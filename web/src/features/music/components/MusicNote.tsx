@@ -33,8 +33,11 @@ export default function MusicNote() {
   const audioRef = useRef<HTMLAudioElement>(null);
   const [coverError, setCoverError] = useState(false);
   const longPressTimeout = useRef<NodeJS.Timeout | null>(null);
-
-  useEffect(() => {
+  const mountRef = useRef<HTMLDivElement>(null);
+  
+  useEffect(() => {   
+    const mount = mountRef.current;
+    if (!mount) return;
     const fetchTracks = async () => {
       setLoading(true);
       setError(null);
@@ -101,7 +104,7 @@ export default function MusicNote() {
   const togglePlay = () => {
     setIsPlaying((prev) => !prev);
   };
-
+  
   const hasTrack = tracks.length > 0;
   const currentTrack = hasTrack ? tracks[currentTrackIndex] : undefined;
 
@@ -116,6 +119,7 @@ export default function MusicNote() {
 
   return (
     <div
+      ref={mountRef}
       className={`${styles.musicNote} ${isExpanded ? styles.expanded : ''} text-white rounded-full shadow-lg flex items-center p-2 cursor-pointer select-none`}
       style={{ minWidth: 64 }}
       onMouseDown={handlePressStart}

@@ -7,7 +7,7 @@ import { Input } from '@/shared/components/ui/input';
 import { Button } from '@/shared/components/ui/button';
 import { AlertDialog, AlertDialogContent, AlertDialogHeader, AlertDialogTitle, AlertDialogDescription, AlertDialogFooter, AlertDialogCancel, AlertDialogAction } from '@/shared/components/ui/alert-dialog';
 import { useWindowWidth } from '@/shared/hooks/useWindowWidth';
-import { useDeviceType } from '@/shared/contexts/DeviceTypeContext';
+import { useDeviceContext, useDeviceType } from '@/shared/contexts/DeviceContext';
 
 interface Group {
   id: string;
@@ -43,9 +43,8 @@ const GroupsManager: React.FC = () => {
   const [editColor, setEditColor] = useState('');
   const [deleteDialogId, setDeleteDialogId] = useState<string | null>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
-  const windowWidth = useWindowWidth();
-  const { deviceType } = useDeviceType();
-  const isMobile = deviceType === 'mobile' || windowWidth < 1024;
+  const { deviceType } = useDeviceContext();
+  const isMobile = deviceType === 'mobile';
   const formRef = React.useRef<HTMLDivElement>(null);
 
   const fetchGroups = async () => {

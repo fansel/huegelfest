@@ -5,12 +5,12 @@ export interface IRegistration extends Document {
   days: number[];
   priceOption: 'full' | 'reduced' | 'free';
   isMedic: boolean;
-  hasCar: boolean;
+  travelType: 'zug' | 'auto' | 'fahrrad' | 'andere';
   equipment: string;
   concerns: string;
-  wantsToContribute: boolean;
   wantsToOfferWorkshop: string;
   sleepingPreference: 'bed' | 'tent' | 'car';
+  lineupContribution: string;
   createdAt: Date;
   paid: boolean;
   checkedIn: boolean;
@@ -21,12 +21,12 @@ const RegistrationSchema = new Schema<IRegistration>({
   days: { type: [Number], required: true },
   priceOption: { type: String, enum: ['full', 'reduced', 'free'], required: true },
   isMedic: { type: Boolean, required: true },
-  hasCar: { type: Boolean, required: true },
+  travelType: { type: String, enum: ['zug', 'auto', 'fahrrad', 'andere'], required: true },
   equipment: { type: String, default: '' },
   concerns: { type: String, default: '' },
-  wantsToContribute: { type: Boolean, required: true },
   wantsToOfferWorkshop: { type: String, default: '' },
   sleepingPreference: { type: String, enum: ['bed', 'tent', 'car'], required: true },
+  lineupContribution: { type: String, default: '' },
   createdAt: { type: Date, default: Date.now },
   paid: { type: Boolean, default: false },
   checkedIn: { type: Boolean, default: false },

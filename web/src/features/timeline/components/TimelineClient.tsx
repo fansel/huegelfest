@@ -13,6 +13,9 @@ import { getDayByIdAction } from '../actions/getDayByIdAction';
 import { getEventByIdAction } from '../actions/getEventByIdAction';
 import { HelpCircle } from 'lucide-react';
 import { getWebSocketUrl } from '@/shared/utils/getWebSocketUrl';
+import { useFavorites } from '@/features/favorites/hooks/useFavorites';
+import { fetchTimeline } from '../actions/fetchTimeline';
+import toast from 'react-hot-toast';
 
 
 interface TimelineDay {
@@ -35,6 +38,8 @@ interface TimelineProps {
   days: TimelineDay[];
   categories: Category[];
 }
+
+
 
 // Dynamisches Icon-Mapping
 const getIconComponent = (iconName: string) => {
@@ -70,10 +75,17 @@ type EventSubmission = {
 };
 
 export default function Timeline({ showFavoritesOnly = false, allowClipboard = false, days: initialDays, categories: initialCategories }: TimelineProps) {
-  const { data, mutate } = useSWR('timeline', async () => ({ days: initialDays, categories: initialCategories }), {
-    fallbackData: { days: initialDays, categories: initialCategories },
-    refreshInterval: 0,
-  });
+  // SWR holt jetzt die aktuellen Daten über die Server Action (direkter Import, Next.js 15+)
+  const { data, mutate } = useSWR<TimelineData>(
+    'timeline',
+    fetchTimeline,
+    {
+      fallbackData: { days: initialDays, categories: initialCategories },
+      revalidateOnFocus: true,
+    }
+  );
+
+  const { isFavorite } = useFavorites();
 
   useWebSocket(getWebSocketUrl(), {
     onMessage: async (msg: any) => {
@@ -199,6 +211,12 @@ export default function Timeline({ showFavoritesOnly = false, allowClipboard = f
             )
           };
         }, false);
+      } else if (
+        msg.topic === 'category-created' ||
+        msg.topic === 'category-updated' ||
+        msg.topic === 'category-deleted'
+      ) {
+        mutate();
       }
     }
   });
@@ -235,6 +253,7 @@ export default function Timeline({ showFavoritesOnly = false, allowClipboard = f
       await createEvent(eventData);
       setShowSubmissionSheet(false);
       setReload(r => r + 1); // Timeline neu laden
+      toast.success('Event wurde eingereicht und wird geprüft.');
     } catch (err: any) {
       alert('Fehler beim Einreichen des Events: ' + (err?.message || 'Unbekannter Fehler'));
     }
@@ -247,6 +266,8 @@ export default function Timeline({ showFavoritesOnly = false, allowClipboard = f
   const currentDay = days[selectedDay];
   const filteredEvents = currentDay?.events?.filter(
     (event) => {
+      // Nur bestätigte Events anzeigen
+      if (event.status !== 'approved') return false;
       if (selectedCategories.size === 0) return true;
       const category = categories.find(c => c._id === event.categoryId);
       return category && selectedCategories.has(category._id);

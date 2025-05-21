@@ -35,12 +35,19 @@ function isValidAdminTab(tab: string): tab is AdminTab {
 
 const MainContent: React.FC<MainContentProps> = ({ mode, activeTab, adminActiveTab, handleTabChange, timelineData, infoBoardData }) => {
   const { signupOpen } = useGlobalState();
-  const { showStarfield, setShowStarfield } = useUISettings();
-
+  const { showStarfield, setShowStarfield, showMusicNote, setShowMusicNote } = useUISettings();
+  
   // Content je nach Modus und Tab
   if (signupOpen && mode !== 'admin') {
     if (activeTab === 'settings') {
-      return <Settings showStarfield={showStarfield} onToggleStarfield={setShowStarfield} />;
+      return (
+        <Settings 
+          showStarfield={showStarfield} 
+          onToggleStarfield={setShowStarfield}
+          showMusicNote={showMusicNote}
+          onToggleMusicNote={setShowMusicNote}
+        />
+      );
     }
     if (activeTab === 'packlist') {
       return <Packlist />;
@@ -62,7 +69,14 @@ const MainContent: React.FC<MainContentProps> = ({ mode, activeTab, adminActiveT
       case 'favorites':
         return <FavoritesList />;
       case 'settings':
-        return <Settings showStarfield={showStarfield} onToggleStarfield={setShowStarfield} />;
+        return (
+          <Settings 
+            showStarfield={showStarfield} 
+            onToggleStarfield={setShowStarfield}
+            showMusicNote={showMusicNote}
+            onToggleMusicNote={setShowMusicNote}
+          />
+        );
       case 'packlist':
         return <Packlist />;
       default:

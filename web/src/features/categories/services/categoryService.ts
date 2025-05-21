@@ -2,6 +2,9 @@ import { connectDB } from '@/lib/db/connector';
 import { Category } from '@/lib/db/models/Category';
 import { logger } from '@/lib/logger';
 import { ensureDefaultCategories } from '@/lib/db/initDefaults';
+import { broadcast } from '@/lib/websocket/broadcast';
+import { Event } from '@/lib/db/models/Event';
+import { Types } from 'mongoose';
 
 export async function getCategories() {
   await connectDB();
@@ -25,6 +28,7 @@ export async function createCategory(data: any) {
   const category = new Category(categoryData);
   await category.save();
   const plain = category.toObject ? category.toObject() : category;
+  await broadcast('category-created', { categoryId: plain._id });
   return {
     ...plain,
     _id: typeof plain._id === 'string' ? plain._id : (plain._id?.toString?.() ?? ''),
@@ -46,6 +50,7 @@ export async function updateCategory(id: string, updateData: any) {
     throw new Error('Kategorie nicht gefunden');
   }
   const plain = category.toObject ? category.toObject() : category;
+  await broadcast('category-updated', { categoryId: plain._id });
   return {
     ...plain,
     _id: typeof plain._id === 'string' ? plain._id : (plain._id?.toString?.() ?? ''),
@@ -56,9 +61,18 @@ export async function deleteCategory(id: string) {
   if (!id) {
     throw new Error('ID ist erforderlich');
   }
+  const otherCategory = await Category.findOne({ value: 'other' });
+  if (!otherCategory) {
+    throw new Error('Kategorie "Sonstiges" (other) nicht gefunden. Cascade-Abbruch.');
+  }
+  await Event.updateMany(
+    { categoryId: new Types.ObjectId(id) },
+    { $set: { categoryId: otherCategory._id } }
+  );
   const category = await Category.findByIdAndDelete(id);
   if (!category) {
     throw new Error('Kategorie nicht gefunden');
   }
+  await broadcast('category-deleted', { categoryId: id });
   return { message: 'Kategorie erfolgreich gelöscht' };
 } 

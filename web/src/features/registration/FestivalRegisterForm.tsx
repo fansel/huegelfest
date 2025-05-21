@@ -1,13 +1,36 @@
 "use client";
-import React, { useState } from "react";
+import React, { useState, useRef, useEffect } from "react";
 import { Button } from "@/shared/components/ui/button";
-import { Input } from "@/shared/components/ui/input";
-import { Textarea } from "@/shared/components/ui/textarea";
-import { Switch } from "@/shared/components/ui/switch";
 import { toast } from "react-hot-toast";
-import { Bed, Tent, Car as CarIcon, Stethoscope, Hammer, Wrench, MessageCircle, Music, ChevronLeft, ChevronRight, MoreHorizontal, User, Euro } from 'lucide-react';
-import { Popover, PopoverTrigger, PopoverContent } from '@/shared/components/ui/popover';
+import { useSwipeable } from "react-swipeable";
+import {
+  Bed,
+  Tent,
+  Car as CarIcon,
+  Stethoscope,
+  Hammer,
+  Wrench,
+  HelpCircle,
+  MessageCircle,
+  Music,
+  ChevronLeft,
+  ChevronRight,
+  MailCheck,
+  Train,
+  Bike,
+  User,
+  Euro,
+  ArrowLeft,
+  ArrowRight,
+  SwatchBook,
+  Check,
+} from 'lucide-react';
 import { registerFestival } from './actions/register';
+import { useDeviceContext } from "@/shared/contexts/DeviceContext";
+import Cookies from 'js-cookie';
+
+// Maximale Zeichenanzahl für Textareas
+const MAX_TEXTAREA = 200;
 
 // Festivaldaten
 const FESTIVAL_DAYS = [
@@ -17,17 +40,102 @@ const FESTIVAL_DAYS = [
   "03.08."
 ];
 
+// 1. Neue Anreise-Optionen
+const TRAVEL_OPTIONS = [
+  { value: 'zug', label: 'Zug' },
+  { value: 'auto', label: 'Auto' },
+  { value: 'fahrrad', label: 'Fahrrad' },
+];
+
+// Custom hook für Keyboard Detection
+function useKeyboardVisible() {
+  const [isKeyboardVisible, setIsKeyboardVisible] = useState(false);
+  const initialViewportHeight = useRef<number | null>(null);
+
+  useEffect(() => {
+    // iOS Safari specific detection
+    const visualViewport = window.visualViewport;
+    
+    if (visualViewport) {
+      // Store initial height for comparison
+      initialViewportHeight.current = visualViewport.height;
+      
+      const handleResize = () => {
+        if (!initialViewportHeight.current) return;
+        
+        // Keyboard is likely open if viewport height is significantly less than initial height
+        // Usually keyboards take at least 30% of the screen
+        const heightDifference = initialViewportHeight.current - visualViewport.height;
+        const heightRatio = visualViewport.height / initialViewportHeight.current;
+        setIsKeyboardVisible(heightRatio < 0.7 || heightDifference > 150);
+      };
+      
+      visualViewport.addEventListener('resize', handleResize);
+      return () => visualViewport.removeEventListener('resize', handleResize);
+    } else {
+      // Fallback detection based on window size
+      initialViewportHeight.current = window.innerHeight;
+      
+      const handleResize = () => {
+        if (!initialViewportHeight.current) return;
+        const heightRatio = window.innerHeight / initialViewportHeight.current;
+        setIsKeyboardVisible(heightRatio < 0.7);
+      };
+      
+      window.addEventListener('resize', handleResize);
+      return () => window.removeEventListener('resize', handleResize);
+    }
+  }, []);
+
+  return isKeyboardVisible;
+}
+
+// Hook für auto-scroll zum fokussierten Element
+function useAutoScrollOnFocus(containerRef: React.RefObject<HTMLElement>, isKeyboardVisible: boolean) {
+  useEffect(() => {
+    const container = containerRef.current;
+    if (!container) return;
+
+    const handleFocus = (e: FocusEvent) => {
+      if (!isKeyboardVisible) return;
+      
+      const target = e.target as HTMLElement;
+      if (target.tagName === 'INPUT' || target.tagName === 'TEXTAREA' || target.tagName === 'SELECT') {
+        // Warte kurz, bis die Tastatur vollständig geöffnet ist
+        setTimeout(() => {
+          const targetRect = target.getBoundingClientRect();
+          const containerRect = container.getBoundingClientRect();
+          
+          // Berechne, wie weit wir scrollen müssen
+          const targetCenter = targetRect.top + targetRect.height/2;
+          const containerCenter = containerRect.top + containerRect.height/2;
+          const scrollOffset = targetCenter - containerCenter;
+          
+          container.scrollBy({
+            top: scrollOffset,
+            behavior: 'smooth'
+          });
+        }, 300);
+      }
+    };
+
+    document.addEventListener('focus', handleFocus, true);
+    return () => document.removeEventListener('focus', handleFocus, true);
+  }, [containerRef, isKeyboardVisible]);
+}
+
 export interface FestivalRegisterData {
   name: string;
   days: number[]; // Indizes der gewählten Tage
   priceOption: "full" | "reduced" | "free";
   isMedic: boolean;
-  hasCar: boolean;
+  travelType: "zug" | "auto" | "fahrrad" | "andere";
   equipment: string;
   concerns: string;
   wantsToContribute: boolean;
   wantsToOfferWorkshop: string;
   sleepingPreference: "bed" | "tent" | "car";
+  lineupContribution: string;
 }
 
 const defaultData: FestivalRegisterData = {
@@ -35,405 +143,642 @@ const defaultData: FestivalRegisterData = {
   days: [0, 1, 2, 3],
   priceOption: "full",
   isMedic: false,
-  hasCar: false,
+  travelType: "zug",
   equipment: "",
   concerns: "",
   wantsToContribute: false,
   wantsToOfferWorkshop: "",
   sleepingPreference: "tent",
+  lineupContribution: "",
 };
 
-// --- Lokale UI-Komponenten ---
+// --- Eigene Feld-Komponenten für einheitliches Design ---
 
-// Minimaler Range-Slider für Bereichsauswahl (Instagram-Style)
-interface RangeSliderProps {
-  min: number;
-  max: number;
-  value: [number, number];
-  onChange: (range: [number, number]) => void;
-}
-function RangeSlider({ min, max, value, onChange }: RangeSliderProps) {
-  // Zwei Daumen: links und rechts
-  return (
-    <div className="relative w-full flex items-center h-8">
-      <input
-        type="range"
-        min={min}
-        max={max}
-        value={value[0]}
-        onChange={e => {
-          const v = Math.min(Number(e.target.value), value[1] - 1);
-          onChange([v, value[1]]);
-        }}
-        className="absolute w-full pointer-events-auto accent-[#ff9900]"
-        style={{ zIndex: 2 }}
-      />
-      <input
-        type="range"
-        min={min}
-        max={max}
-        value={value[1]}
-        onChange={e => {
-          const v = Math.max(Number(e.target.value), value[0] + 1);
-          onChange([value[0], v]);
-        }}
-        className="absolute w-full pointer-events-auto accent-[#ff9900]"
-        style={{ zIndex: 1 }}
-      />
-      <div className="absolute left-0 right-0 h-2 bg-gray-200 rounded-full" style={{ zIndex: 0 }} />
-      <div
-        className="absolute h-2 bg-[#ff9900] rounded-full"
-        style={{ left: `${(value[0] / (max - min)) * 100}%`, right: `${100 - (value[1] / (max - min)) * 100}%`, zIndex: 1 }}
-      />
-    </div>
-  );
-}
-
-// Minimalistische Checkbox
-interface MyCheckboxProps {
-  checked: boolean;
-  onChange: (checked: boolean) => void;
+interface InputFieldProps {
   label: React.ReactNode;
+  icon?: React.ReactNode;
+  id: string;
+  value: string;
+  onChange: (v: string) => void;
+  type?: string;
+  required?: boolean;
+  autoFocus?: boolean;
 }
-function MyCheckbox({ checked, onChange, label }: MyCheckboxProps) {
+function InputField({ label, icon, id, value, onChange, type = "text", required, autoFocus }: InputFieldProps) {
   return (
-    <label className="flex items-center gap-2 cursor-pointer select-none">
+    <div className="flex flex-col gap-1 w-full">
+      <label htmlFor={id} className="block font-medium text-[#460b6c] text-lg flex items-center gap-2">
+        {icon}
+        {label}
+      </label>
       <input
-        type="checkbox"
-        checked={checked}
-        onChange={e => onChange(e.target.checked)}
-        className="accent-[#ff9900] w-5 h-5 rounded border-gray-300"
+        id={id}
+        type={type}
+        value={value}
+        onChange={e => onChange(e.target.value)}
+        required={required}
+        autoFocus={autoFocus}
+        className="w-full rounded-lg border border-gray-300 py-4 px-7 min-h-[48px] text-lg focus:outline-none focus:border-[#ff9900] focus:border-2 border-2"
       />
-      <span>{label}</span>
-    </label>
-  );
-}
-
-// Minimalistische RadioGroup
-interface MyRadioGroupProps<T extends string> {
-  value: T;
-  onChange: (value: T) => void;
-  options: { value: T; label: React.ReactNode }[];
-}
-function MyRadioGroup<T extends string>({ value, onChange, options }: MyRadioGroupProps<T>) {
-  return (
-    <div className="flex flex-col gap-2">
-      {options.map(opt => (
-        <label key={opt.value} className="flex items-center gap-2 cursor-pointer select-none">
-          <input
-            type="radio"
-            checked={value === opt.value}
-            onChange={() => onChange(opt.value)}
-            className="accent-[#ff9900] w-5 h-5"
-          />
-          <span>{opt.label}</span>
-        </label>
-      ))}
     </div>
   );
 }
 
-// --- Formular-UI ---
+interface TextareaFieldProps {
+  label: React.ReactNode;
+  icon?: React.ReactNode;
+  id: string;
+  value: string;
+  onChange: (v: string) => void;
+  maxLength: number;
+  placeholder?: string;
+}
+function TextareaField({ label, icon, id, value, onChange, maxLength, placeholder }: TextareaFieldProps) {
+  const ref = useRef<HTMLTextAreaElement>(null);
+  useEffect(() => {
+    if (ref.current) {
+      ref.current.style.height = 'auto';
+      ref.current.style.height = Math.min(ref.current.scrollHeight, 160) + 'px';
+    }
+  }, [value]);
+  return (
+    <div className="flex flex-col gap-1 w-full px-3 py-0 text-sm">
+      <label htmlFor={id} className="block font-medium text-[#460b6c] text-lg flex items-center gap-2">
+        {icon}
+        {label}
+      </label>
+      <textarea
+        ref={ref}
+        id={id}
+        value={value}
+        onChange={e => {
+          if (e.target.value.length <= maxLength) onChange(e.target.value);
+        }}
+        maxLength={maxLength}
+        placeholder={placeholder}
+        className="w-full rounded-lg border border-gray-300 min-h-[48px] resize-none max-h-40 focus:outline-none focus:border-[#ff9900] focus:border-2 border-2 px-3 py-2 text-sm"
+      />
+      <div className="text-right text-xs text-gray-500">{value.length}/{maxLength} Zeichen</div>
+    </div>
+  );
+}
+
+interface CheckboxFieldProps {
+  label: React.ReactNode;
+  icon?: React.ReactNode;
+  checked: boolean;
+  onChange: (v: boolean) => void;
+  id: string;
+}
+function CheckboxField({ label, icon, checked, onChange, id }: CheckboxFieldProps) {
+  return (
+    <div className="flex flex-col w-full items-center gap-2">
+      {/* Card-Style für Checkbox */}
+      <div
+        className={`flex items-center justify-center gap-2 w-full px-4 py-3 rounded-lg border transition-all cursor-pointer select-none
+          ${checked ? 'border-[#ff9900] bg-[#ff9900]/10 shadow-sm' : 'border-gray-300 bg-white'}`}
+        style={{ minWidth: 120, maxWidth: 320 }}
+        onClick={() => onChange(!checked)}
+      >
+        <input
+          id={id}
+          type="checkbox"
+          checked={checked}
+          onChange={e => onChange(e.target.checked)}
+          className="accent-[#ff9900] w-5 h-5"
+        />
+        {icon && <span className="inline-block align-middle">{icon}</span>}
+        <span className="text-lg font-medium">{label}</span>
+      </div>
+    </div>
+  );
+}
+
+interface RadioGroupFieldProps {
+  label: React.ReactNode;
+  icon?: React.ReactNode;
+  value: string;
+  options: { value: string; label: React.ReactNode; icon?: React.ReactNode }[];
+  onChange: (v: string) => void;
+  id: string;
+}
+function RadioGroupField({ label, icon, value, options, onChange, id }: RadioGroupFieldProps) {
+  return (
+    <div className="flex flex-col gap-2 w-full items-center">
+      <label className="block font-medium text-[#460b6c] text-lg w-full text-center flex items-center justify-center gap-2">
+        {icon}
+        {label}
+      </label>
+      <div className="w-full flex flex-col gap-3 justify-center pb-2">
+        {options.map(opt => (
+          <label
+            key={opt.value}
+            className={`flex flex-col items-center gap-1 cursor-pointer select-none text-lg px-3 py-2 rounded-lg border transition-all
+              ${value === opt.value ? 'border-[#ff9900] bg-[#ff9900]/10 shadow-sm' : 'border-gray-300 bg-white'}`}
+            style={{ width: '100%' }}
+          >
+            <div className="flex items-center gap-2 w-full">
+              <input
+                type="radio"
+                checked={value === opt.value}
+                onChange={() => onChange(opt.value)}
+                className="accent-[#ff9900] w-5 h-5 focus:outline-none focus:ring-2 focus:ring-[#ff9900]"
+              />
+              {opt.icon}
+              <span className="whitespace-nowrap font-medium">{typeof opt.label === 'string' ? opt.label.split('||')[0] : opt.label}</span>
+            </div>
+            {/* Zusatzinfo unter dem Hauptlabel, falls vorhanden */}
+            {typeof opt.label === 'string' && opt.label.includes('||') && (
+              <span className="text-xs text-gray-500 mt-0.5">{opt.label.split('||')[1]}</span>
+            )}
+          </label>
+        ))}
+      </div>
+    </div>
+  );
+}
+
+// Wrapper für jeden Step
+function FormStep({ children }: { children: React.ReactNode }) {
+  return (
+    <div className="w-full flex flex-col justify-center gap-4 px-2">
+      {children}
+    </div>
+  );
+}
 
 export interface FestivalRegisterFormProps {
   onRegister?: (data: FestivalRegisterData) => void;
+  setCookies?: boolean;
 }
 
-export default function FestivalRegisterForm({ onRegister }: FestivalRegisterFormProps) {
+const LOCAL_STORAGE_KEY = 'festival_register_form';
+
+export default function FestivalRegisterForm({ onRegister, setCookies = true }: FestivalRegisterFormProps) {
+  const { deviceType } = useDeviceContext();
+  const isMobile = deviceType === "mobile";
   const [form, setForm] = useState<FestivalRegisterData>(defaultData);
   const [loading, setLoading] = useState(false);
-  // Multi-Step State
   const [step, setStep] = useState(0);
-  // Zeitraum-Stepper
   const [fromDay, setFromDay] = useState(0);
   const [toDay, setToDay] = useState(FESTIVAL_DAYS.length - 1);
+  const formRef = useRef<HTMLFormElement>(null);
+  const [hasCookie, setHasCookie] = useState(false);
+  const contentRef = useRef<HTMLDivElement>(null);
+  const isKeyboardVisible = useKeyboardVisible();
+  const [isLoaded, setIsLoaded] = useState(false);
+  
+  // Verwende den Auto-Scroll-Hook
+  useAutoScrollOnFocus(contentRef, isKeyboardVisible);
+  
+  // Disable scrolling on body
+  useEffect(() => {
+    if (isMobile) {
+      document.body.style.overflow = 'hidden';
+      document.documentElement.style.overflow = 'hidden';
+      document.body.style.position = 'fixed';
+      document.body.style.width = '100%';
+      document.body.style.height = '100%';
+      
+      return () => {
+        document.body.style.overflow = '';
+        document.documentElement.style.overflow = '';
+        document.body.style.position = '';
+        document.body.style.width = '';
+        document.body.style.height = '';
+      };
+    }
+  }, [isMobile]);
+
+  // LocalStorage: Beim Mount versuchen, gespeicherte Daten zu laden
+  useEffect(() => {
+    try {
+      const saved = localStorage.getItem(LOCAL_STORAGE_KEY);
+      if (saved) {
+        const parsed = JSON.parse(saved);
+        if (parsed && typeof parsed === 'object') {
+          setForm({ ...defaultData, ...parsed });
+        }
+      }
+    } catch (e) {
+      // ignore
+    }
+    setIsLoaded(true);
+  }, []);
+
+  // NEU: Cookie beim Mount prüfen
+  useEffect(() => {
+    if (Cookies.get('festival_registered')) {
+      setHasCookie(true);
+      setStep(steps.length - 1); // Direkt auf Bestätigungsseite
+    }
+  }, []);
+
+  // LocalStorage: Nach erfolgreichem Absenden NICHT mehr löschen!
+  // LocalStorage wird erst beim Klick auf "Neue Anmeldung" gelöscht
+  const handleNewRegistration = () => {
+    setForm(defaultData);
+    setStep(0);
+    setFromDay(0);
+    setToDay(FESTIVAL_DAYS.length - 1);
+    if (setCookies) Cookies.remove('festival_registered');
+    setHasCookie(false);
+    try { localStorage.removeItem(LOCAL_STORAGE_KEY); } catch (e) { /* ignore */ }
+  };
+
+  // Wenn Cookie gesetzt ist und Name leer, lade Daten aus LocalStorage für Zusammenfassung (robust, auch mobil)
+  useEffect(() => {
+    if (hasCookie && !form.name.trim()) {
+      try {
+        const saved = localStorage.getItem(LOCAL_STORAGE_KEY);
+        if (saved) {
+          const parsed = JSON.parse(saved);
+          if (parsed && typeof parsed === 'object') {
+            setForm({ ...defaultData, ...parsed });
+            // Debug: Logge das Laden aus dem LocalStorage
+            if (typeof window !== 'undefined') {
+              console.log('[FestivalRegisterForm] LocalStorage geladen für Zusammenfassung:', parsed);
+            }
+          }
+        }
+      } catch (e) { /* ignore */ }
+    }
+  }, [hasCookie, form.name]);
 
   // Steps-Definition
   const steps = [
     {
+      label: 'Einführung',
+      content: (
+        <FormStep>
+          <div className="flex flex-col items-center gap-4">
+            <h1 className="text-2xl font-semibold text-[#460b6c] text-center flex items-center gap-2">
+              <SwatchBook className="inline-block w-8 h-8 text-[#ff9900]" />
+              Festival-Anmeldung
+            </h1>
+            <p className="text-lg text-center text-[#460b6c]/80">
+              Willkommen! Diese Anmeldung hilft uns, alles für das Festival zu organisieren und dir den bestmöglichen Aufenthalt zu bieten.
+            </p>
+            <div className="flex flex-col items-center gap-2 mt-4">
+              <span className="text-sm text-[#460b6c]/70 text-center flex items-center gap-1">
+                <ChevronRight className="inline-block w-4 h-4 text-[#ff9900]" />
+                Nutze den Button rechts, um zu starten
+              </span>
+            </div>
+          </div>
+        </FormStep>
+      ),
+      isValid: true,
+    },
+    {
       label: 'Name',
       content: (
-        <div className="flex flex-col gap-4">
-          <label className="block font-medium mb-1 text-[#460b6c]" htmlFor="name">Name</label>
-          <Input
+        <FormStep>
+          <div className="flex flex-col gap-2 w-full items-center mb-2">
+            <User className="inline-block w-7 h-7 text-[#ff9900]" />
+            <span className="text-sm text-[#460b6c]/80 text-center">Bitte gib deinen Namen ein.</span>
+          </div>
+          <InputField
+            label="Name"
             id="name"
-            type="text"
-            placeholder="Dein Name"
             value={form.name}
-            onChange={e => setForm(f => ({ ...f, name: e.target.value }))}
+            onChange={v => setForm(f => ({ ...f, name: v }))}
             required
-            className="w-full rounded border border-gray-300 p-2 min-h-[40px]"
             autoFocus
           />
-        </div>
+        </FormStep>
       ),
       isValid: !!form.name.trim(),
     },
     {
       label: 'Zeitraum',
       content: (
-        <div className="flex flex-col gap-4">
-          <label className="block font-medium mb-2 text-[#460b6c]">Wann bist du da?</label>
-          <div className="flex gap-4 items-center justify-center">
-            <div className="flex flex-col items-center">
-              <span className="text-xs mb-1">Von</span>
-              <div className="flex items-center gap-1">
-                <button type="button" disabled={fromDay === 0} onClick={() => setFromDay(d => Math.max(0, d - 1))} className="p-1"><ChevronLeft /></button>
-                <select value={fromDay} onChange={e => setFromDay(Number(e.target.value))} className="rounded border px-2 py-1">
-                  {FESTIVAL_DAYS.map((d, i) => i <= toDay && <option key={d} value={i}>{d}</option>)}
-                </select>
-                <button type="button" disabled={fromDay === toDay} onClick={() => setFromDay(d => Math.min(toDay, d + 1))} className="p-1"><ChevronRight /></button>
+        <FormStep>
+          <div className="flex flex-col gap-2 w-full items-center mb-2">
+            <SwatchBook className="inline-block w-7 h-7 text-[#ff9900]" />
+            <span className="text-sm text-[#460b6c]/80 text-center">Von wann bis wann bist du da?</span>
+          </div>
+          <div className="flex flex-col gap-4">
+            <div className="flex gap-4 items-center justify-center">
+              <div className="flex flex-col items-center">
+                <span className="text-xs mb-1">Von</span>
+                <div className="flex items-center gap-1">
+                  <button type="button" disabled={fromDay === 0} onClick={() => setFromDay(d => Math.max(0, d - 1))} className="p-1"><ChevronLeft /></button>
+                  <select value={fromDay} onChange={e => setFromDay(Number(e.target.value))} className="rounded border px-2 py-1">
+                    {FESTIVAL_DAYS.map((d, i) => i <= toDay && <option key={d} value={i}>{d}</option>)}
+                  </select>
+                  <button type="button" disabled={fromDay === toDay} onClick={() => setFromDay(d => Math.min(toDay, d + 1))} className="p-1"><ChevronRight /></button>
+                </div>
               </div>
-            </div>
-            <div className="flex flex-col items-center">
-              <span className="text-xs mb-1">Bis</span>
-              <div className="flex items-center gap-1">
-                <button type="button" disabled={toDay === fromDay} onClick={() => setToDay(d => Math.max(fromDay, d - 1))} className="p-1"><ChevronLeft /></button>
-                <select value={toDay} onChange={e => setToDay(Number(e.target.value))} className="rounded border px-2 py-1">
-                  {FESTIVAL_DAYS.map((d, i) => i >= fromDay && <option key={d} value={i}>{d}</option>)}
-                </select>
-                <button type="button" disabled={toDay === FESTIVAL_DAYS.length - 1} onClick={() => setToDay(d => Math.min(FESTIVAL_DAYS.length - 1, d + 1))} className="p-1"><ChevronRight /></button>
+              <div className="flex flex-col items-center">
+                <span className="text-xs mb-1">Bis</span>
+                <div className="flex items-center gap-1">
+                  <button type="button" disabled={toDay === fromDay} onClick={() => setToDay(d => Math.max(fromDay, d - 1))} className="p-1"><ChevronLeft /></button>
+                  <select value={toDay} onChange={e => setToDay(Number(e.target.value))} className="rounded border px-2 py-1">
+                    {FESTIVAL_DAYS.map((d, i) => i >= fromDay && <option key={d} value={i}>{d}</option>)}
+                  </select>
+                  <button type="button" disabled={toDay === FESTIVAL_DAYS.length - 1} onClick={() => setToDay(d => Math.min(FESTIVAL_DAYS.length - 1, d + 1))} className="p-1"><ChevronRight /></button>
+                </div>
               </div>
             </div>
           </div>
-        </div>
+        </FormStep>
       ),
       isValid: fromDay <= toDay,
       onNext: () => setForm(f => ({ ...f, days: Array.from({ length: toDay - fromDay + 1 }, (_, i) => i + fromDay) })),
     },
     {
-      label: 'Preisoption',
+      label: 'Finanzkonzept',
       content: (
-        <div className="flex flex-col gap-4">
-          <label className="block font-medium mb-2 text-[#460b6c]">Finanzkonzept</label>
-          <MyRadioGroup
-            value={form.priceOption}
-            onChange={v => setForm(f => ({ ...f, priceOption: v }))}
-            options={[
-              { value: "full", label: "Voller Preis" },
-              { value: "reduced", label: "Reduziert" },
-              { value: "free", label: "Kostenlos" },
-            ]}
-          />
-        </div>
-      ),
-      isValid: !!form.priceOption,
-    },
-    {
-      label: 'Sanitätsausbildung',
-      content: (
-        <div className="flex flex-col gap-4">
-          <MyCheckbox
-            checked={form.isMedic}
-            onChange={v => setForm(f => ({ ...f, isMedic: v }))}
-            label={<span className="flex items-center gap-2"><Stethoscope className="inline-block w-5 h-5 text-[#ff9900]" />Ich habe eine Sanitätsausbildung</span>}
-          />
-        </div>
+        <FormStep>
+          <div className="flex flex-col gap-2 w-full items-center mb-2">
+            <Euro className="inline-block w-7 h-7 text-[#ff9900]" />
+            <span className="text-sm text-[#460b6c]/80 text-center">So funktioniert die Finanzierung des Festivals.</span>
+          </div>
+          <div className="flex flex-col gap-4 w-full items-center">
+            <h3 className="text-lg font-semibold text-[#460b6c] mb-2 text-center">Wie funktioniert das Finanzkonzept?</h3>
+            <div className="bg-[#460b6c]/10 border border-[#ff9900]/30 rounded-xl px-3 py-2 text-[#460b6c] w-full flex flex-col gap-1 mx-auto text-sm">
+              <p>
+                Das Festival wird gemeinschaftlich und solidarisch finanziert. Wir möchten allen ermöglichen, teilzunehmen – unabhängig von den eigenen finanziellen Möglichkeiten. Deshalb gibt es verschiedene Preisoptionen:
+              </p>
+              <ul className="list-disc pl-5">
+                <li><b>Solipreis</b>: Empfohlener Beitrag, der hilft, alle Kosten zu decken und das Festival langfristig zu sichern.</li>
+                <li><b>Reduziert</b>: Für alle, die sich den vollen Beitrag nicht leisten können.</li>
+                <li><b>Kostenlos</b>: Nach Absprache, falls du gerade gar nichts zahlen kannst – sprich uns einfach an!</li>
+              </ul>
+              <p>
+                Alle Beiträge fließen direkt in die Organisation, Infrastruktur und das Programm. Transparenz ist uns wichtig – bei Fragen sprich uns gerne an!
+              </p>
+            </div>
+          </div>
+        </FormStep>
       ),
       isValid: true,
     },
     {
-      label: 'Auto',
+      label: 'Preisoption',
       content: (
-        <div className="flex flex-col gap-4">
-          <MyCheckbox
-            checked={form.hasCar}
-            onChange={v => setForm(f => ({ ...f, hasCar: v }))}
-            label={<span className="flex items-center gap-2"><CarIcon className="inline-block w-5 h-5 text-[#ff9900]" />Ich habe ein Auto und kann nach Truchtlaching fahren</span>}
+        <FormStep>
+          <div className="flex flex-col gap-2 w-full items-center mb-2">
+            <Euro className="inline-block w-7 h-7 text-[#ff9900]" />
+            <span className="text-sm text-[#460b6c]/80 text-center">Wie viel möchtest du zahlen?</span>
+          </div>
+          <RadioGroupField
+            label="Finanzkonzept"
+            value={form.priceOption}
+            onChange={v => setForm(f => ({ ...f, priceOption: v as "full" | "reduced" | "free" }))}
+            options={[
+              { value: "full", label: 'Solipreis||Empfohlen' },
+              { value: "reduced", label: 'Reduziert||' },
+              { value: "free", label: 'Kostenlos||mit Absprache' },
+            ]}
+            id="priceOption"
           />
-        </div>
+        </FormStep>
+      ),
+      isValid: !!form.priceOption,
+    },
+    {
+      label: 'Anreise',
+      content: (
+        <FormStep>
+          <div className="flex flex-col gap-2 w-full items-center mb-2">
+            <Train className="inline-block w-7 h-7 text-[#ff9900]" />
+            <span className="text-sm text-[#460b6c]/80 text-center">Wie reist du an?</span>
+          </div>
+          <RadioGroupField
+            label="Ich reise an mit:"
+            value={form.travelType}
+            onChange={v => setForm(f => ({ ...f, travelType: v as "zug" | "auto" | "fahrrad" | "andere" }))}
+            options={[
+              { value: "zug", label: "Zug", icon: <Train className="inline-block w-5 h-5 text-[#ff9900]" /> },
+              { value: "auto", label: "Auto", icon: <CarIcon className="inline-block w-5 h-5 text-[#ff9900]" /> },
+              { value: "fahrrad", label: "Fahrrad", icon: <Bike className="inline-block w-5 h-5 text-[#ff9900]" /> },
+              { value: "andere", label: "Unklar", icon: <HelpCircle className="inline-block w-5 h-5 text-[#ff9900]" /> },
+            ]}
+            id="travelType"
+          />
+        </FormStep>
+      ),
+      isValid: !!form.travelType,
+    },
+    {
+      label: 'Sanitäter:in',
+      content: (
+        <FormStep>
+          <div className="flex flex-col gap-2 w-full items-center mb-2">
+            <Stethoscope className="inline-block w-7 h-7 text-[#ff9900]" />
+            <span className="text-sm text-[#460b6c]/80 text-center">Hast du eine Sanitätsausbildung?</span>
+          </div>
+          <CheckboxField
+            id="isMedic"
+            checked={form.isMedic}
+            onChange={(v: boolean) => setForm(f => ({ ...f, isMedic: v }))}
+            label="Ich bin Sanitäter:in"
+          />
+        </FormStep>
       ),
       isValid: true,
     },
     {
       label: 'Equipment',
       content: (
-        <div className="flex flex-col gap-4">
-          <label className="block font-medium mb-1 text-[#460b6c] flex items-center gap-2"><Wrench className="inline-block w-5 h-5 text-[#ff9900]" />Ich habe folgendes Equipment, das ich zur Verfügung stellen kann</label>
-          <Textarea
-            placeholder="z.B. Musikanlage, Pavillon, Werkzeug ..."
+        <FormStep>
+          <div className="flex flex-col gap-2 w-full items-center mb-2">
+            <Wrench className="inline-block w-7 h-7 text-[#ff9900]" />
+            <span className="text-sm text-[#460b6c]/80 text-center">Hast du Equipment, das du teilen möchtest?</span>
+          </div>
+          <TextareaField
+            label="Equipment"
+            id="equipment"
+            icon={<Wrench className="inline-block w-5 h-5 text-[#ff9900]" />}
             value={form.equipment}
-            onChange={e => setForm(f => ({ ...f, equipment: e.target.value }))}
-            className="w-full rounded border border-gray-300 p-2 min-h-[48px]"
+            onChange={v => {
+              if (v.length <= MAX_TEXTAREA) setForm(f => ({ ...f, equipment: v }));
+            }}
+            maxLength={MAX_TEXTAREA}
+            placeholder="z.B. Musikanlage, Pavillon, Werkzeug ..."
           />
-        </div>
-      ),
-      isValid: true,
-    },
-    {
-      label: 'Anliegen',
-      content: (
-        <div className="flex flex-col gap-4">
-          <label className="block font-medium mb-1 text-[#460b6c] flex items-center gap-2"><MessageCircle className="inline-block w-5 h-5 text-[#ff9900]" />Ich habe folgendes Anliegen</label>
-          <Textarea
-            placeholder="Dein Anliegen ..."
-            value={form.concerns}
-            onChange={e => setForm(f => ({ ...f, concerns: e.target.value }))}
-            className="w-full rounded border border-gray-300 p-2 min-h-[48px]"
-          />
-        </div>
+        </FormStep>
       ),
       isValid: true,
     },
     {
       label: 'Line-Up',
       content: (
-        <div className="flex flex-col gap-4">
-          <MyCheckbox
-            checked={form.wantsToContribute}
-            onChange={v => setForm(f => ({ ...f, wantsToContribute: v }))}
-            label={<span className="flex items-center gap-2"><Music className="inline-block w-5 h-5 text-[#ff9900]" />Ich habe Lust zum Line-Up beizutragen</span>}
+        <FormStep>
+          <div className="flex flex-col gap-2 w-full items-center mb-2">
+            <Music className="inline-block w-7 h-7 text-[#ff9900]" />
+            <span className="text-sm text-[#460b6c]/80 text-center">Möchtest du etwas zum Line-Up beitragen?</span>
+          </div>
+          <TextareaField
+            label="Line-Up"
+            id="lineupContribution"
+            icon={<Music className="inline-block w-5 h-5 text-[#ff9900]" />}
+            value={form.lineupContribution}
+            onChange={v => setForm(f => ({ ...f, lineupContribution: v }))}
+            maxLength={MAX_TEXTAREA}
+            placeholder="Beschreibe deinen Beitrag (optional)…"
           />
-        </div>
+        </FormStep>
       ),
       isValid: true,
     },
     {
       label: 'Workshop',
       content: (
-        <div className="flex flex-col gap-4">
-          <label className="block font-medium mb-1 text-[#460b6c] flex items-center gap-2"><Hammer className="inline-block w-5 h-5 text-[#ff9900]" />Ich habe Lust, einen Workshop anzubieten</label>
-          <Textarea
-            placeholder="Workshop-Idee ..."
+        <FormStep>
+          <div className="flex flex-col gap-2 w-full items-center mb-2">
+            <Hammer className="inline-block w-7 h-7 text-[#ff9900]" />
+            <span className="text-sm text-[#460b6c]/80 text-center">Hast du Lust, einen Workshop anzubieten?</span>
+          </div>
+          <TextareaField
+            label="Workshop-Idee"
+            id="workshop"
+            icon={<Hammer className="inline-block w-5 h-5 text-[#ff9900]" />}
             value={form.wantsToOfferWorkshop}
-            onChange={e => setForm(f => ({ ...f, wantsToOfferWorkshop: e.target.value }))}
-            className="w-full rounded border border-gray-300 p-2 min-h-[48px]"
+            onChange={v => {
+              if (v.length <= MAX_TEXTAREA) setForm(f => ({ ...f, wantsToOfferWorkshop: v }));
+            }}
+            maxLength={MAX_TEXTAREA}
+            placeholder="Workshop-Idee ..."
           />
-        </div>
+        </FormStep>
       ),
       isValid: true,
     },
     {
       label: 'Schlafpräferenz',
       content: (
-        <div className="flex flex-col gap-4">
-          <label className="block font-medium mb-2 text-[#460b6c]">Schlafpräferenz</label>
-          <MyRadioGroup
+        <FormStep>
+          <div className="flex flex-col gap-2 w-full items-center mb-2">
+            <Bed className="inline-block w-7 h-7 text-[#ff9900]" />
+            <span className="text-sm text-[#460b6c]/80 text-center">Wie möchtest du übernachten?</span>
+          </div>
+          <RadioGroupField
+            label="Schlafpräferenz"
             value={form.sleepingPreference}
-            onChange={v => setForm(f => ({ ...f, sleepingPreference: v }))}
+            onChange={v => setForm(f => ({ ...f, sleepingPreference: v as "bed" | "tent" | "car" }))}
             options={[
-              { value: "bed", label: <span className="flex items-center gap-2"><Bed className="inline-block w-5 h-5 text-[#ff9900]" /> Bett (5€ pro Nacht mehr)</span> },
-              { value: "tent", label: <span className="flex items-center gap-2"><Tent className="inline-block w-5 h-5 text-[#ff9900]" /> Zelt</span> },
-              { value: "car", label: <span className="flex items-center gap-2"><CarIcon className="inline-block w-5 h-5 text-[#ff9900]" /> Auto</span> },
-            ]}
+              { value: "bed", label: <span className="flex items-center gap-2"><Bed className="inline-block w-5 h-5 text-[#ff9900]" /> Bett</span>, icon: null },
+              { value: "tent", label: <span className="flex items-center gap-2"><Tent className="inline-block w-5 h-5 text-[#ff9900]" /> Zelt</span>, icon: null },
+              { value: "car", label: <span className="flex items-center gap-2"><CarIcon className="inline-block w-5 h-5 text-[#ff9900]" /> Auto</span>, icon: null },
+            ].map(opt => opt.value === 'bed' ? { ...opt, label: 'Bett||+5€ pro Nacht', icon: <Bed className="inline-block w-5 h-5 text-[#ff9900]" /> } : opt)}
+            id="sleepingPreference"
           />
-        </div>
+        </FormStep>
       ),
       isValid: !!form.sleepingPreference,
     },
     {
+      label: 'Anliegen',
+      content: (
+        <FormStep>
+          <div className="flex flex-col gap-2 w-full items-center mb-2">
+            <MessageCircle className="inline-block w-7 h-7 text-[#ff9900]" />
+            <span className="text-sm text-[#460b6c]/80 text-center">Gibt es etwas, das du uns mitteilen möchtest?</span>
+          </div>
+          <TextareaField
+            label="Anliegen"
+            id="concerns"
+            value={form.concerns}
+            onChange={v => {
+              if (v.length <= MAX_TEXTAREA) setForm(f => ({ ...f, concerns: v }));
+            }}
+            maxLength={MAX_TEXTAREA}
+            placeholder="Dein Anliegen ..."
+          />
+        </FormStep>
+      ),
+      isValid: true,
+    },
+    {
       label: 'Zusammenfassung',
       content: (
-        <div className="flex flex-col gap-4">
-          <h3 className="text-lg font-bold text-[#460b6c] mb-2">Zusammenfassung</h3>
-          <div className="bg-[#460b6c]/10 border border-[#ff9900]/30 rounded-xl p-4 text-[#460b6c] max-w-md mx-auto flex flex-col gap-3">
-            <div className="flex items-center gap-2 font-semibold text-lg mb-2">
-              <span className="text-[#ff9900]"><User className="w-5 h-5" /></span>
-              {form.name}
-            </div>
-            <div className="flex items-center gap-2">
-              <Bed className="w-4 h-4 text-[#ff9900]" />
-              <span className="font-medium">Schlafplatz:</span>
-              <span>{form.sleepingPreference === 'bed' ? 'Bett' : form.sleepingPreference === 'tent' ? 'Zelt' : 'Auto'}</span>
-            </div>
-            <div className="flex items-center gap-2">
-              <Stethoscope className="w-4 h-4 text-[#ff9900]" />
-              <span className="font-medium">Sani:</span>
-              <span>{form.isMedic ? 'Ja' : 'Nein'}</span>
-            </div>
-            <div className="flex items-center gap-2">
-              <CarIcon className="w-4 h-4 text-[#ff9900]" />
-              <span className="font-medium">Auto:</span>
-              <span>{form.hasCar ? 'Ja' : 'Nein'}</span>
-            </div>
-            <div className="flex items-center gap-2">
-              <Hammer className="w-4 h-4 text-[#ff9900]" />
-              <span className="font-medium">Workshop:</span>
-              {form.wantsToOfferWorkshop ? (
-                <>
-                  <span>Vorhanden</span>
-                  <Popover>
-                    <PopoverTrigger asChild>
-                      <button type="button" className="ml-1 p-1 rounded hover:bg-[#ff9900]/10"><MoreHorizontal className="w-4 h-4" /></button>
-                    </PopoverTrigger>
-                    <PopoverContent className="max-w-xs text-sm">{form.wantsToOfferWorkshop}</PopoverContent>
-                  </Popover>
-                </>
-              ) : <span>—</span>}
-            </div>
-            <div className="flex items-center gap-2">
-              <Music className="w-4 h-4 text-[#ff9900]" />
-              <span className="font-medium">Line-Up:</span>
-              <span>{form.wantsToContribute ? 'Ja' : 'Nein'}</span>
-            </div>
-            <div className="flex items-center gap-2">
-              <Wrench className="w-4 h-4 text-[#ff9900]" />
-              <span className="font-medium">Equipment:</span>
-              {form.equipment ? (
-                <>
-                  <span>Vorhanden</span>
-                  <Popover>
-                    <PopoverTrigger asChild>
-                      <button type="button" className="ml-1 p-1 rounded hover:bg-[#ff9900]/10"><MoreHorizontal className="w-4 h-4" /></button>
-                    </PopoverTrigger>
-                    <PopoverContent className="max-w-xs text-sm">{form.equipment}</PopoverContent>
-                  </Popover>
-                </>
-              ) : <span>—</span>}
-            </div>
-            <div className="flex items-center gap-2">
-              <MessageCircle className="w-4 h-4 text-[#ff9900]" />
-              <span className="font-medium">Anliegen:</span>
-              {form.concerns ? (
-                <>
-                  <span>Vorhanden</span>
-                  <Popover>
-                    <PopoverTrigger asChild>
-                      <button type="button" className="ml-1 p-1 rounded hover:bg-[#ff9900]/10"><MoreHorizontal className="w-4 h-4" /></button>
-                    </PopoverTrigger>
-                    <PopoverContent className="max-w-xs text-sm">{form.concerns}</PopoverContent>
-                  </Popover>
-                </>
-              ) : <span>—</span>}
-            </div>
-            <div className="flex items-center gap-2">
-              <Bed className="w-4 h-4 text-[#ff9900]" />
-              <span className="font-medium">Tage:</span>
-              <span>{FESTIVAL_DAYS[form.days[0]]} – {FESTIVAL_DAYS[form.days[form.days.length - 1]]}</span>
-            </div>
-            <div className="flex items-center gap-2">
-              <Euro className="w-4 h-4 text-[#ff9900]" />
-              <span className="font-medium">Preisoption:</span>
-              <span>{form.priceOption === 'full' ? 'Voller Preis' : form.priceOption === 'reduced' ? 'Reduziert' : 'Kostenlos'}</span>
+        <FormStep>
+           <div className="flex flex-col gap-1 w-full px-3 py-0 text-sm">
+            <span className="block text-xs text-[#460b6c]/70 mb-1 text-center">Zusammenfassung</span>
+            <div className="bg-[#460b6c]/10 border border-[#ff9900]/30 rounded-xl px-3 py-2 text-[#460b6c] w-full flex flex-col gap-1 mx-auto text-sm">
+              <div className="flex items-center gap-2"><User className="w-4 h-4 text-[#ff9900]" /><span className="font-medium">Name:</span> <span className="truncate">{form.name.trim()}</span></div>
+              <div className="flex items-center gap-2"><Euro className="w-4 h-4 text-[#ff9900]" /><span className="font-medium">Preis:</span> <span>{form.priceOption === 'full' ? 'Solipreis' : form.priceOption === 'reduced' ? 'Reduziert' : 'Kostenlos'}</span></div>
+              <div className="flex items-center gap-2"><Bed className="w-4 h-4 text-[#ff9900]" /><span className="font-medium">Schlafplatz:</span> <span>{form.sleepingPreference === 'bed' ? 'Bett' : form.sleepingPreference === 'tent' ? 'Zelt' : 'Auto'}</span></div>
+              <div className="flex items-center gap-2"><Stethoscope className="w-4 h-4 text-[#ff9900]" /><span className="font-medium">Sanitäter:in:</span> <span>{form.isMedic ? 'Ja' : 'Nein'}</span></div>
+              <div className="flex items-center gap-2"><CarIcon className="w-4 h-4 text-[#ff9900]" /><span className="font-medium">Anreise:</span> <span>{form.travelType === 'zug' ? 'Zug' : form.travelType === 'auto' ? 'Auto' : form.travelType === 'fahrrad' ? 'Fahrrad' : 'Unklar'}</span></div>
+              <div className="flex items-center gap-2"><Bed className="w-4 h-4 text-[#ff9900]" /><span className="font-medium">Zeitraum:</span> <span>{FESTIVAL_DAYS[form.days[0]]} – {FESTIVAL_DAYS[form.days[form.days.length - 1]]}</span></div>
+              {form.lineupContribution.trim() ? (
+                <div className="flex items-center gap-2"><Music className="w-4 h-4 text-[#ff9900]" /><span className="font-medium">Line-Up:</span> <span className="truncate max-w-[220px]">{form.lineupContribution.length > 60 ? form.lineupContribution.slice(0, 60) + '…' : form.lineupContribution}</span></div>
+              ) : null}
+              {form.wantsToOfferWorkshop.trim() ? (
+                <div className="flex items-center gap-2"><Hammer className="w-4 h-4 text-[#ff9900]" /><span className="font-medium">Workshop:</span> <span className="truncate max-w-[220px]">{form.wantsToOfferWorkshop.length > 60 ? form.wantsToOfferWorkshop.slice(0, 60) + '…' : form.wantsToOfferWorkshop}</span></div>
+              ) : null}
+              {form.equipment.trim() ? (
+                <div className="flex items-center gap-2"><Wrench className="w-4 h-4 text-[#ff9900]" /><span className="font-medium">Equipment:</span> <span className="truncate max-w-[220px]">{form.equipment.length > 60 ? form.equipment.slice(0, 60) + '…' : form.equipment}</span></div>
+              ) : null}
+              {form.concerns.trim() ? (
+                <div className="flex items-center gap-2"><MessageCircle className="w-4 h-4 text-[#ff9900]" /><span className="font-medium">Anliegen:</span> <span className="truncate max-w-[220px]">{form.concerns.length > 60 ? form.concerns.slice(0, 60) + '…' : form.concerns}</span></div>
+              ) : null}
             </div>
           </div>
-        </div>
+        </FormStep>
+      ),
+      isValid: true,
+    },
+    {
+      label: 'Bestätigung',
+      content: (
+        <FormStep>
+          <div className="flex flex-col items-center justify-center w-full">
+            <MailCheck className="w-16 h-16 text-[#ff9900] mx-auto mb-4" />
+            <h2 className="font-semibold text-2xl text-[#460b6c] mb-2">Du bist angemeldet!</h2>
+            <p className="text-[#460b6c] text-lg mb-6">Wir freuen uns auf dich beim Festival 🎉</p>
+          </div>
+        </FormStep>
       ),
       isValid: true,
     },
   ];
 
-  // Slide-Animation (einfach, ohne externe Lib)
-  const slideClass = "transition-transform duration-300 ease-in-out";
-
   const handleNext = () => {
     if (steps[step].onNext) steps[step].onNext();
     setStep(s => Math.min(steps.length - 1, s + 1));
+    
+    // Keyboard schließen bei Weiter
+    if (document.activeElement instanceof HTMLElement) {
+      document.activeElement.blur();
+    }
+    
+    // Nach oben scrollen
+    contentRef.current?.scrollTo({ top: 0, behavior: 'smooth' });
   };
-  const handlePrev = () => setStep(s => Math.max(0, s - 1));
+  
+  const handlePrev = () => {
+    setStep(s => Math.max(0, s - 1));
 
-  const handleFinalSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
+    // Keyboard schließen bei Zurück
+    if (document.activeElement instanceof HTMLElement) {
+      document.activeElement.blur();
+    }
+    
+    // Nach oben scrollen
+    contentRef.current?.scrollTo({ top: 0, behavior: 'smooth' });
+  };
+
+  const handleFinalSubmit = async (e: React.FormEvent | React.MouseEvent) => {
+    if (e) e.preventDefault();
+    if (!form.name.trim()) {
+      toast.error("Bitte gib einen gültigen Namen ein.");
+      return;
+    }
     setLoading(true);
     try {
       const result = await registerFestival(form);
       if (result.success) {
         toast.success("Anmeldung erfolgreich gespeichert!");
         if (onRegister) onRegister(form);
-        setForm(defaultData);
-        setStep(0);
-        setFromDay(0);
-        setToDay(FESTIVAL_DAYS.length - 1);
+        if (setCookies) Cookies.set('festival_registered', 'true', { expires: 365 });
+        setStep(steps.length - 1);
+        setHasCookie(true);
+        try { localStorage.setItem(LOCAL_STORAGE_KEY, JSON.stringify(form)); } catch (e) { /* ignore */ }
       } else {
         toast.error(result.error || "Fehler beim Speichern der Anmeldung.");
       }
@@ -444,30 +789,223 @@ export default function FestivalRegisterForm({ onRegister }: FestivalRegisterFor
     }
   };
 
+  const handleFormKeyDown = (e: React.KeyboardEvent<HTMLFormElement>) => {
+    if (e.key === 'Enter') {
+      const target = e.target as HTMLElement;
+      if (target.tagName === 'TEXTAREA') return;
+      if (step < steps.length - 1) {
+        e.preventDefault();
+        if (steps[step].isValid) handleNext();
+      }
+    }
+  };
+  
+  // Swipe Handler für Weiter/Zurück
+  const swipeHandlers = useSwipeable({
+    onSwipedLeft: () => {
+      if (step < steps.length - 1 && steps[step].isValid && step !== steps.length - 2) {
+        handleNext();
+      }
+    },
+    onSwipedRight: () => {
+      if (step > 0 && step !== steps.length - 1) {
+        handlePrev();
+      }
+    },
+    trackMouse: false,
+    preventScrollOnSwipe: true,
+    delta: 50,
+  });
+
+  // Tabbar ausblenden, wenn auf Bestätigungsseite
+  useEffect(() => {
+    const tabbar = document.getElementById('tabbar');
+    if (step === steps.length - 1 && tabbar) {
+      tabbar.style.display = 'none';
+    } else if (tabbar) {
+      tabbar.style.display = '';
+    }
+    return () => {
+      if (tabbar) tabbar.style.display = '';
+    };
+  }, [step, steps.length]);
+
+  // Bestimmung, ob wir auf der Zusammenfassungsseite sind
+  const isSummaryStep = step === steps.length - 2;
+  const isConfirmationStep = step === steps.length - 1;
+
   return (
-    <form onSubmit={handleFinalSubmit} className="max-w-xl mx-auto bg-white/90 rounded-2xl shadow-lg p-6 flex flex-col gap-6 mt-8">
-      <h2 className="text-2xl font-bold text-[#460b6c] mb-2 text-center">Festival Anmeldung</h2>
-      {/* Fortschrittsanzeige */}
-      <div className="flex justify-center gap-2 mb-4">
-        {steps.map((s, i) => (
-          <span key={s.label} className={`w-3 h-3 rounded-full ${i === step ? 'bg-[#ff9900]' : 'bg-gray-300'} transition-colors`} />
-        ))}
-      </div>
-      {/* Slide-Content */}
-      <div className={`relative min-h-[120px] flex items-center justify-center ${slideClass}`}>
-        {steps[step].content}
-      </div>
-      {/* Navigation */}
-      <div className="flex w-full gap-2 mt-10">
-        <Button type="button" onClick={handlePrev} disabled={step === 0} variant="outline" className="flex-1">Zurück</Button>
-        {step < steps.length - 1 ? (
-          <Button type="button" onClick={handleNext} disabled={!steps[step].isValid} className="flex-1 bg-[#ff9900] text-white">Weiter</Button>
-        ) : (
-          <div className="flex flex-col items-end gap-2 flex-1">
-            <Button type="submit" disabled={loading} className="bg-[#ff9900] text-white w-full">{loading ? "Wird gespeichert ..." : "Bestätigen & Absenden"}</Button>
+    <div 
+      className={`fixed left-0 right-0 bottom-0 ${!isMobile ? 'top-16' : 'top-0'} flex flex-col bg-white overflow-hidden`}
+      {...(isConfirmationStep ? {} : swipeHandlers)}
+    >
+      {/* Header mit Progressbar & Label - nur anzeigen, wenn nicht auf der Bestätigungsseite */}
+      {!isConfirmationStep && (
+        <div className="p-4 border-b bg-white sticky top-0 z-10 shadow-sm">
+          <div className="w-full max-w-xs mx-auto">
+            {/* Progressbar */}
+            <div className="flex justify-between w-full gap-1 mb-2">
+              {steps.map((s, i) => (
+                <div
+                  key={s.label}
+                  className={`h-1 rounded-full flex-1 transition-colors ${i <= step ? 'bg-[#ff9900]' : 'bg-gray-300'}`} 
+                />
+              ))}
+            </div>
+            {/* Step Label */}
+            <h2 className="font-semibold text-center text-lg text-[#460b6c]">{steps[step].label}</h2>
+            {/* Swipe-Hinweis */}
+            {step > 0 && step < steps.length - 2 && !isKeyboardVisible && (
+              <div className="flex items-center justify-center mt-2 text-xs text-gray-400 gap-1">
+                <ArrowLeft size={12} /> Wischen zum Navigieren <ArrowRight size={12} />
+              </div>
+            )}
           </div>
-        )}
+        </div>
+      )}
+      
+      {/* Seitliche Navigation Buttons - nur auf mobilen Geräten und nicht auf Bestätigung/Zusammenfassung */}
+      {isMobile && !isConfirmationStep && (
+        <>
+          <div className="fixed left-0 top-0 bottom-0 z-30 pointer-events-none flex items-center">
+            {step > 0 && (
+              <Button
+                type="button"
+                onClick={handlePrev}
+                size="sm"
+                className="h-14 w-10 rounded-r-full flex items-center justify-center p-0 ml-1 text-white bg-[#ff9900] shadow-md hover:bg-[#ff9900]/90 pointer-events-auto"
+              >
+                <ChevronLeft size={24} />
+              </Button>
+            )}
+          </div>
+          {!isSummaryStep && (
+          <div className="fixed right-0 top-0 bottom-0 z-30 pointer-events-none flex items-center">
+            {steps[step].isValid && (
+              <Button
+                type="button"
+                onClick={handleNext}
+                size="sm"
+                className="h-14 w-10 rounded-l-full flex items-center justify-center p-0 mr-1 text-white bg-[#ff9900] shadow-md hover:bg-[#ff9900]/90 pointer-events-auto"
+              >
+                <ChevronRight size={24} />
+              </Button>
+            )}
+          </div>
+          )}
+        </>
+      )}
+      
+      {/* Scroll-Container für den Formular-Inhalt */}
+      <div 
+        ref={contentRef}
+        className={`flex-1 overflow-auto flex items-center justify-center px-4 py-6 ${!isConfirmationStep ? 'pb-56' : 'pb-6'} ${!isMobile ? 'pt-8' : ''}`}
+      >
+        <div className="w-full max-w-md mx-auto flex flex-col items-center justify-center">
+          {isConfirmationStep ? (
+            // Final screen - keine Form mehr nötig
+            <div className="flex flex-col items-center justify-center w-full">
+              <MailCheck className="w-16 h-16 text-[#ff9900] mx-auto mb-4" />
+              <h2 className="font-semibold text-2xl text-[#460b6c] mb-2">Du bist angemeldet!</h2>
+              <p className="text-[#460b6c] text-lg mb-6">Wir freuen uns auf dich beim Festival 🎉</p>
+              {/* Zusammenfassung auch auf der Bestätigungsseite anzeigen */}
+              <div className="flex flex-col gap-1 w-full px-3 py-0 text-sm mb-6">
+                <span className="block text-xs text-[#460b6c]/70 mb-1 text-center">Deine Angaben</span>
+                <div className="bg-[#460b6c]/10 border border-[#ff9900]/30 rounded-xl px-3 py-2 text-[#460b6c] w-full flex flex-col gap-1 mx-auto text-sm">
+                  <div className="flex items-center gap-2"><User className="w-4 h-4 text-[#ff9900]" /><span className="font-medium">Name:</span> <span className="truncate">{form.name.trim()}</span></div>
+                  <div className="flex items-center gap-2"><Euro className="w-4 h-4 text-[#ff9900]" /><span className="font-medium">Preis:</span> <span>{form.priceOption === 'full' ? 'Solipreis' : form.priceOption === 'reduced' ? 'Reduziert' : 'Kostenlos'}</span></div>
+                  <div className="flex items-center gap-2"><Bed className="w-4 h-4 text-[#ff9900]" /><span className="font-medium">Schlafplatz:</span> <span>{form.sleepingPreference === 'bed' ? 'Bett' : form.sleepingPreference === 'tent' ? 'Zelt' : 'Auto'}</span></div>
+                  <div className="flex items-center gap-2"><Stethoscope className="w-4 h-4 text-[#ff9900]" /><span className="font-medium">Sanitäter:in:</span> <span>{form.isMedic ? 'Ja' : 'Nein'}</span></div>
+                  <div className="flex items-center gap-2"><CarIcon className="w-4 h-4 text-[#ff9900]" /><span className="font-medium">Anreise:</span> <span>{form.travelType === 'zug' ? 'Zug' : form.travelType === 'auto' ? 'Auto' : form.travelType === 'fahrrad' ? 'Fahrrad' : 'Unklar'}</span></div>
+                  <div className="flex items-center gap-2"><Bed className="w-4 h-4 text-[#ff9900]" /><span className="font-medium">Zeitraum:</span> <span>{FESTIVAL_DAYS[form.days[0]]} – {FESTIVAL_DAYS[form.days[form.days.length - 1]]}</span></div>
+                  {form.lineupContribution.trim() ? (
+                    <div className="flex items-center gap-2"><Music className="w-4 h-4 text-[#ff9900]" /><span className="font-medium">Line-Up:</span> <span className="truncate max-w-[220px]">{form.lineupContribution.length > 60 ? form.lineupContribution.slice(0, 60) + '…' : form.lineupContribution}</span></div>
+                  ) : null}
+                  {form.wantsToOfferWorkshop.trim() ? (
+                    <div className="flex items-center gap-2"><Hammer className="w-4 h-4 text-[#ff9900]" /><span className="font-medium">Workshop:</span> <span className="truncate max-w-[220px]">{form.wantsToOfferWorkshop.length > 60 ? form.wantsToOfferWorkshop.slice(0, 60) + '…' : form.wantsToOfferWorkshop}</span></div>
+                  ) : null}
+                  {form.equipment.trim() ? (
+                    <div className="flex items-center gap-2"><Wrench className="w-4 h-4 text-[#ff9900]" /><span className="font-medium">Equipment:</span> <span className="truncate max-w-[220px]">{form.equipment.length > 60 ? form.equipment.slice(0, 60) + '…' : form.equipment}</span></div>
+                  ) : null}
+                  {form.concerns.trim() ? (
+                    <div className="flex items-center gap-2"><MessageCircle className="w-4 h-4 text-[#ff9900]" /><span className="font-medium">Anliegen:</span> <span className="truncate max-w-[220px]">{form.concerns.length > 60 ? form.concerns.slice(0, 60) + '…' : form.concerns}</span></div>
+                  ) : null}
+                </div>
+              </div>
+            </div>
+          ) : (
+            <form 
+              ref={formRef} 
+              onSubmit={handleFinalSubmit}
+              onKeyDown={handleFormKeyDown}
+            >
+              {steps[step].content}
+              
+              {/* Bestätigungsknopf auf der Zusammenfassungsseite - Grün und mit Checkmark */}
+              {isSummaryStep && isMobile && (
+                <div className="mt-6 mb-10">
+                  <Button
+                    type="button"
+                    onClick={handleFinalSubmit}
+                    disabled={loading}
+                    className="w-full bg-green-600 hover:bg-green-700 text-white rounded-lg h-12 font-medium text-base mt-6 flex items-center justify-center gap-2"
+                  >
+                    {loading ? "Wird gespeichert..." : (
+                      <>
+                        <Check size={20} />
+                        Bestätigen
+                      </>
+                    )}
+                  </Button>
+                </div>
+              )}
+            </form>
+          )}
+        </div>
       </div>
-    </form>
+      
+      {/* Footer mit Navigation - Desktop only */}
+      {!isMobile && !isConfirmationStep && (
+        <div className="p-2 border-t bg-white z-10 fixed bottom-0 left-0 right-0 shadow-[0_-2px_5px_rgba(0,0,0,0.05)]">
+           <div className="w-full max-w-sm mx-auto flex gap-3">
+            <Button
+              type="button"
+              onClick={handlePrev}
+              disabled={step === 0}
+              variant="outline"
+              className={`flex-1 rounded-lg font-medium h-12 text-[#ff9900] border-[#ff9900]`}
+            >
+              Zurück
+            </Button>
+            
+            {/* Wenn auf Zusammenfassungsseite, dann grüner Bestätigungs-Button mit Checkmark */}
+            {isSummaryStep ? (
+              <Button
+                type="button"
+                onClick={handleFinalSubmit}
+                disabled={loading}
+                className="flex-1 bg-green-600 hover:bg-green-700 text-white rounded-lg h-12 font-medium flex items-center justify-center gap-2"
+              >
+                {loading ? "Wird gespeichert..." : (
+                  <>
+                    <Check size={20} />
+                    Bestätigen
+                  </>
+                )}
+              </Button>
+            ) : (
+              <Button
+                type="button"
+                onClick={handleNext}
+                disabled={!steps[step].isValid}
+                className={`flex-1 bg-[#ff9900] text-white rounded-lg font-medium h-12`}
+              >
+                Weiter
+              </Button>
+            )}
+          </div>
+        </div>
+      )}
+    </div>
   );
-} 
+}

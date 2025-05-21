@@ -3,8 +3,7 @@ import React, { useRef, useEffect, useState } from 'react';
 import { Calendar, MapPin, Megaphone, Settings as SettingsIcon, Heart, Shield, Users, Clock, SlidersHorizontal, Music, ClipboardList } from 'lucide-react';
 import { useNetworkStatus } from '@/shared/hooks/useNetworkStatus';
 import { useGlobalState } from '@/contexts/GlobalStateContext';
-import { useDeviceType } from '@/shared/contexts/DeviceTypeContext';
-import { useWindowWidth } from '@/shared/hooks/useWindowWidth';
+import { useDeviceContext } from '@/shared/contexts/DeviceContext';
 
 interface Tab {
   id: string;
@@ -47,9 +46,8 @@ const signupPhaseTabs: Tab[] = [
 const BottomBar: React.FC<BottomBarProps> = ({ mode, activeTab, onTabChange, isAdminActive, onAdminToggle, showAdminButton }) => {
   const { signupOpen } = useGlobalState();
   const isOnline = useNetworkStatus();
-  const { deviceType } = useDeviceType();
-  const windowWidth = useWindowWidth();
-  const isMobileLayout = deviceType === 'mobile' || windowWidth < 1024;
+  const { deviceType } = useDeviceContext();
+  const isMobileLayout = deviceType === 'mobile';
 
   // Während der Anmeldephase: Admins sehen alle Admin-Tabs + User-Settings, User sehen Anmeldung + Einstellungen
   let tabs: Tab[];

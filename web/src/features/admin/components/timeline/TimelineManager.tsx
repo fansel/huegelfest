@@ -29,7 +29,6 @@ import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetFooter } from '@/sha
 import { Input } from '@/shared/components/ui/input';
 import { Textarea } from '@/shared/components/ui/textarea';
 import { Button } from '@/shared/components/ui/button';
-import { Calendar } from '@/shared/components/ui/calendar';
 import { Popover, PopoverContent, PopoverTrigger } from '@/shared/components/ui/popover';
 import { format } from 'date-fns';
 import { Select, SelectTrigger, SelectContent, SelectItem, SelectValue } from '@/shared/components/ui/select';
@@ -50,10 +49,11 @@ import { removeDayAction } from '@/features/timeline/actions/removeDay';
 import { createEvent } from '@/features/timeline/actions/createEvent';
 import { updateEvent } from '@/features/timeline/actions/updateEvent';
 import { Popover as HeadlessPopover } from '@headlessui/react';
-import { useWindowWidth } from '@/shared/hooks/useWindowWidth';
-import { useDeviceType } from '@/shared/contexts/DeviceTypeContext';
+import { useDeviceContext } from '@/shared/contexts/DeviceContext';
 import AdminTimelineTab from './AdminTimelineTab';
 import AdminCategoriesTab from './AdminCategoriesTab';
+import type { Event as TimelineEvent } from '@/features/timeline/types/types';
+import { getPendingEventsAction } from '@/features/timeline/actions/getPendingEventsAction';
 
 
 // Typ für neuen Tag (ohne Mongoose-Methoden)
@@ -180,7 +180,7 @@ const TimelineManager: React.FC = () => {
   const sensors = useSensors(useSensor(PointerSensor));
 
   // 1. State für Tab-Bar
-  const [activeTab, setActiveTab] = useState<'timeline' | 'categories'>('timeline');
+  const [activeTab, setActiveTab] = useState<'timeline' | 'categories' | 'pending'>('timeline');
   const [showCategoryModal, setShowCategoryModal] = useState(false);
   const [categoryForm, setCategoryForm] = useState<{ name: string; color: string; icon: string }>({ name: '', color: '#ff9900', icon: '' });
   const [editCategoryId, setEditCategoryId] = useState<string | null>(null);
@@ -509,9 +509,8 @@ const TimelineManager: React.FC = () => {
     }
   };
 
-  const windowWidth = useWindowWidth();
-  const { deviceType } = useDeviceType();
-  const isMobile = deviceType === 'mobile' || windowWidth < 1024;
+  const { deviceType } = useDeviceContext();
+  const isMobile = deviceType === 'mobile';
   const [formType, setFormType] = useState<'day' | 'event'>('event');
 
   const [confirmDeleteCategory, setConfirmDeleteCategory] = useState<{ id: string; name: string } | null>(null);
@@ -545,39 +544,81 @@ const TimelineManager: React.FC = () => {
     }
   }, [showMobileSheet]);
 
-                              return (
-      <div className="w-full px-2 sm:px-0 relative min-h-[60vh] pb-24">
-        <Tabs value={activeTab} onValueChange={(v: string) => setActiveTab(v as 'timeline' | 'categories')} className="mb-4 mt-2">
-          <TabsList className="flex justify-center gap-2">
-            <TabsTrigger value="timeline">Timeline</TabsTrigger>
-            <TabsTrigger value="categories">Kategorien</TabsTrigger>
-          </TabsList>
-          <TabsContent value="timeline">
-            {activeTab === 'timeline' && (
-              <AdminTimelineTab
-                days={days}
-                setDays={setDays}
-                eventsByDay={eventsByDay}
-                setEventsByDay={setEventsByDay}
-                categories={categories}
-                loading={loading}
-                error={error}
-              />
-            )}
-          </TabsContent>
-          <TabsContent value="categories">
-            {activeTab === 'categories' && (
-              <AdminCategoriesTab
-                categories={categories}
-                setCategories={setCategories}
-                loading={loading}
-                error={error}
-              />
-                  )}
-              </TabsContent>
-            </Tabs>
-          </div>
-      );
+  const [loadingPending, setLoadingPending] = useState(false);
+  const [pendingEvents, setPendingEvents] = useState<TimelineEvent[]>([]);
+
+  const loadPendingEvents = async () => {
+    setLoadingPending(true);
+    try {
+      const eventsRaw = await getPendingEventsAction();
+      const events: TimelineEvent[] = Array.isArray(eventsRaw)
+        ? eventsRaw.map(e => ({
+            ...e,
+            _id: typeof e._id === 'object' && e._id?.toString ? e._id.toString() : e._id,
+            dayId: typeof e.dayId === 'object' && e.dayId?.toString ? e.dayId.toString() : e.dayId,
+            categoryId: typeof e.categoryId === 'object' && e.categoryId?.toString ? e.categoryId.toString() : e.categoryId,
+          }))
+        : [];
+      setPendingEvents(events);
+    } catch (e: any) {
+      toast.error(e?.message || 'Fehler beim Laden der Vorschläge');
+    } finally {
+      setLoadingPending(false);
+    }
+  };
+
+  useEffect(() => {
+    if (activeTab === 'pending') {
+      loadPendingEvents();
+    }
+  }, [activeTab]);
+
+  const handleModeratePending = async (eventId: string, status: 'approved' | 'rejected') => {
+    setLoadingPending(true);
+    try {
+      await moderateEvent(eventId, status);
+      toast.success(status === 'approved' ? 'Event freigegeben' : 'Event abgelehnt');
+      await loadPendingEvents();
+    } catch (e: any) {
+      toast.error(e?.message || 'Fehler bei Moderation');
+    } finally {
+      setLoadingPending(false);
+    }
+  };
+
+  return (
+    <div className="w-full px-2 sm:px-0 relative min-h-[60vh] pb-24">
+      <Tabs value={activeTab} onValueChange={(v: string) => setActiveTab(v as 'timeline' | 'categories' | 'pending')} className="mb-4 mt-2">
+        <TabsList className="flex justify-center gap-2">
+          <TabsTrigger value="timeline">Timeline</TabsTrigger>
+          <TabsTrigger value="categories">Kategorien</TabsTrigger>
+        </TabsList>
+        <TabsContent value="timeline">
+          {activeTab === 'timeline' && (
+            <AdminTimelineTab
+              days={days}
+              setDays={setDays}
+              eventsByDay={eventsByDay}
+              setEventsByDay={setEventsByDay}
+              categories={categories}
+              loading={loading}
+              error={error}
+            />
+          )}
+        </TabsContent>
+        <TabsContent value="categories">
+          {activeTab === 'categories' && (
+            <AdminCategoriesTab
+              categories={categories}
+              setCategories={setCategories}
+              loading={loading}
+              error={error}
+            />
+          )}
+        </TabsContent>
+      </Tabs>
+    </div>
+  );
 }
 
-export default TimelineManager; 
+export default TimelineManager;

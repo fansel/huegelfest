@@ -1,9 +1,8 @@
 "use client";
 import React, { useEffect, useState, useMemo } from "react";
 import { getRegistrations } from "../../../registration/actions/getRegistrations";
-import { FestivalRegisterData } from "../../../registration/FestivalRegisterForm";
 import { Button } from "@/shared/components/ui/button";
-import { FileText, FileDown, Search, ChevronLeft, ChevronRight, Info, Euro, Percent, Gift, Stethoscope, Car as CarIcon, Bed, Tent, Music, Hammer, Wrench, Calendar } from "lucide-react";
+import { FileText, FileDown, Search, ChevronLeft, ChevronRight, Info, Euro, Percent, Gift, Stethoscope, Car as CarIcon, Bed, Tent, Music, Hammer, Wrench, Calendar, BikeIcon, TrainIcon, LucideBike, HelpCircle } from "lucide-react";
 import jsPDF from "jspdf";
 import Papa from "papaparse";
 import { Sheet, SheetContent, SheetHeader, SheetTitle } from "@/shared/components/ui/sheet";
@@ -25,10 +24,22 @@ import { Tooltip } from '@/shared/components/ui/tooltip';
 import { deleteRegistration } from '../../../registration/actions/deleteRegistration';
 import { toast } from 'react-hot-toast';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '@/shared/components/ui/dialog';
+import { useDeviceContext } from '@/shared/contexts/DeviceContext';
+import { Bike } from "lucide-static";
 
-interface RegistrationWithId extends FestivalRegisterData {
+interface RegistrationWithId {
   _id: string;
   createdAt: string;
+  name: string;
+  days: number[];
+  priceOption: 'full' | 'reduced' | 'free';
+  isMedic: boolean;
+  travelType: 'zug' | 'auto' | 'fahrrad' | 'andere';
+  equipment: string;
+  concerns: string;
+  wantsToOfferWorkshop: string;
+  sleepingPreference: 'bed' | 'tent' | 'car';
+  lineupContribution: string;
   paid: boolean;
   checkedIn: boolean;
 }
@@ -36,11 +47,13 @@ interface RegistrationWithId extends FestivalRegisterData {
 const FESTIVAL_DAYS = ["31.07.", "01.08.", "02.08.", "03.08."];
 
 export default function RegistrationManager() {
+  const { deviceType } = useDeviceContext();
   const [registrations, setRegistrations] = useState<RegistrationWithId[]>([]);
   const [loading, setLoading] = useState(true);
   const [selected, setSelected] = useState<RegistrationWithId | null>(null);
   const [globalFilter, setGlobalFilter] = useState('');
   const [deleteId, setDeleteId] = useState<string | null>(null);
+  const [rowsPerPage, setRowsPerPage] = useState(30);
 
   useEffect(() => {
     getRegistrations().then((data) => {
@@ -116,18 +129,21 @@ export default function RegistrationManager() {
         ) : null,
         filterFn: (row, columnId, filterValue) => !filterValue || row.getValue(columnId) === true,
       }),
-      columnHelper.accessor('hasCar', {
+      columnHelper.accessor('travelType', {
         header: () => (
-          <Tooltip content="Auto">
+          <Tooltip content="Anreise">
             <CarIcon className="w-5 h-5" />
           </Tooltip>
         ),
-        cell: info => info.getValue() ? (
-          <Tooltip content="Auto">
-            <CarIcon className="w-5 h-5" />
-          </Tooltip>
-        ) : null,
-        filterFn: (row, columnId, filterValue) => !filterValue || row.getValue(columnId) === true,
+        cell: info => {
+          const type = info.getValue();
+          if (type === 'auto') return <Tooltip content="Auto"><CarIcon className="w-5 h-5 text-[#ff9900]" /></Tooltip>;
+          if (type === 'zug') return <Tooltip content="Zug"><TrainIcon className="w-5 h-5 text-[#ff9900]" /></Tooltip>;
+          if (type === 'fahrrad') return <Tooltip content="Fahrrad"><BikeIcon className="w-5 h-5 text-[#ff9900]" /></Tooltip>;
+          if (type === 'andere') return <Tooltip content="Andere"><HelpCircle className="w-5 h-5 text-[#ff9900]" /></Tooltip>;
+
+        },
+        filterFn: (row, columnId, filterValue) => filterValue === '' || row.getValue(columnId) === filterValue,
       }),
       columnHelper.accessor('sleepingPreference', {
         header: () => (
@@ -165,6 +181,50 @@ export default function RegistrationManager() {
         cell: info => (
           <div className="text-center">{info.getValue()}</div>
         ),
+      }),
+      columnHelper.accessor('paid', {
+        header: () => (
+          <Tooltip content="Bezahlstatus">
+            <Euro className="w-5 h-5" />
+          </Tooltip>
+        ),
+        cell: info => info.getValue() ? (
+          <Tooltip content="Bezahlt">
+            <Euro className="w-5 h-5 text-green-500" />
+          </Tooltip>
+        ) : (
+          <Tooltip content="Unbezahlt">
+            <Euro className="w-5 h-5 text-red-500" />
+          </Tooltip>
+        ),
+        filterFn: (row, columnId, filterValue) => {
+          if (!filterValue) return true;
+          if (filterValue === 'paid') return row.getValue(columnId) === true;
+          if (filterValue === 'unpaid') return row.getValue(columnId) === false;
+          return true;
+        },
+      }),
+      columnHelper.accessor('checkedIn', {
+        header: () => (
+          <Tooltip content="Anmeldestatus">
+            <Info className="w-5 h-5" />
+          </Tooltip>
+        ),
+        cell: info => info.getValue() ? (
+          <Tooltip content="Angemeldet">
+            <Info className="w-5 h-5 text-green-500" />
+          </Tooltip>
+        ) : (
+          <Tooltip content="Nicht angemeldet">
+            <Info className="w-5 h-5 text-red-500" />
+          </Tooltip>
+        ),
+        filterFn: (row, columnId, filterValue) => {
+          if (!filterValue) return true;
+          if (filterValue === 'checkedIn') return row.getValue(columnId) === true;
+          if (filterValue === 'notCheckedIn') return row.getValue(columnId) === false;
+          return true;
+        },
       }),
     ];
     // Löschen-Spalte hinzufügen
@@ -210,7 +270,7 @@ export default function RegistrationManager() {
     debugTable: false,
     initialState: {
       pagination: {
-        pageSize: 10,
+        pageSize: rowsPerPage,
       },
     },
   });
@@ -218,8 +278,15 @@ export default function RegistrationManager() {
   // --- Filter Popover State ---
   const [priceFilter, setPriceFilter] = useState('');
   const [sleepFilter, setSleepFilter] = useState('');
+  const [travelFilter, setTravelFilter] = useState('');
   const [medicFilter, setMedicFilter] = useState(false);
-  const [carFilter, setCarFilter] = useState(false);
+  const [paidFilter, setPaidFilter] = useState(''); // '', 'paid', 'unpaid'
+  const [checkedInFilter, setCheckedInFilter] = useState(''); // '', 'checkedIn', 'notCheckedIn'
+
+  // Dynamische Filteroptionen aus den Daten
+  const priceOptions = useMemo(() => Array.from(new Set(registrations.map(r => r.priceOption))), [registrations]);
+  const sleepOptions = useMemo(() => Array.from(new Set(registrations.map(r => r.sleepingPreference))), [registrations]);
+  const travelOptions = useMemo(() => Array.from(new Set(registrations.map(r => r.travelType))), [registrations]);
 
   // Filter-Handler
   useEffect(() => {
@@ -229,11 +296,42 @@ export default function RegistrationManager() {
     table.getColumn('sleepingPreference')?.setFilterValue(sleepFilter);
   }, [sleepFilter]);
   useEffect(() => {
+    table.getColumn('travelType')?.setFilterValue(travelFilter);
+  }, [travelFilter]);
+  useEffect(() => {
     table.getColumn('isMedic')?.setFilterValue(medicFilter);
   }, [medicFilter]);
   useEffect(() => {
-    table.getColumn('hasCar')?.setFilterValue(carFilter);
-  }, [carFilter]);
+    table.getColumn('paid')?.setFilterValue(paidFilter);
+  }, [paidFilter]);
+  useEffect(() => {
+    table.getColumn('checkedIn')?.setFilterValue(checkedInFilter);
+  }, [checkedInFilter]);
+
+  // Calculate optimal number of rows based on available screen height
+  const calculateRowsPerPage = () => {
+    if (typeof window === 'undefined') return;
+    // Debug-optimiert: rowHeight 36, Offset 40
+    const rowHeight = 36;
+    const tableHeight = window.innerHeight * 0.7 - 40; // 70% der Bildschirmhöhe abzüglich kleiner Offset
+    const fittingRows = Math.floor(tableHeight / rowHeight);
+    const calculatedRows = Math.max(10, Math.min(fittingRows, 100));
+    console.log('[RegistrationManager] window.innerHeight:', window.innerHeight, 'tableHeight:', tableHeight, 'rowHeight:', rowHeight, 'fittingRows:', fittingRows, 'rowsPerPage:', calculatedRows);
+    setRowsPerPage(calculatedRows);
+  };
+  useEffect(() => {
+    calculateRowsPerPage();
+    window.addEventListener('resize', calculateRowsPerPage);
+    return () => {
+      window.removeEventListener('resize', calculateRowsPerPage);
+    };
+  }, []);
+
+  // Update table pagination when rowsPerPage changes
+  useEffect(() => {
+    table.setPageSize(rowsPerPage);
+    table.setPageIndex(0);
+  }, [rowsPerPage, table]);
 
   // PDF Export
   const exportPDF = () => {
@@ -244,14 +342,14 @@ export default function RegistrationManager() {
     let y = 24;
     registrations.forEach((reg, idx) => {
       doc.text(
-        `${idx + 1}. ${reg.name} | Tage: ${reg.days.map(i => FESTIVAL_DAYS[i]).join(", ")} | Preis: ${reg.priceOption} | Sanitäter: ${reg.isMedic ? "Ja" : "Nein"} | Auto: ${reg.hasCar ? "Ja" : "Nein"} | Schlaf: ${reg.sleepingPreference}`,
+        `${idx + 1}. ${reg.name} | Tage: ${reg.days.map(i => FESTIVAL_DAYS[i]).join(", ")} | Preis: ${reg.priceOption} | Sanitäter: ${reg.isMedic ? "Ja" : "Nein"} | Anreise: ${reg.travelType} | Schlaf: ${reg.sleepingPreference}`,
         10,
         y
       );
       y += 8;
       if (reg.equipment) { doc.text(`Equipment: ${reg.equipment}`, 14, y); y += 6; }
       if (reg.concerns) { doc.text(`Anliegen: ${reg.concerns}`, 14, y); y += 6; }
-      if (reg.wantsToContribute) { doc.text(`Line-Up: Ja`, 14, y); y += 6; }
+      if (reg.lineupContribution && reg.lineupContribution.trim()) { doc.text(`Line-Up: ${reg.lineupContribution}`, 14, y); y += 6; }
       if (reg.wantsToOfferWorkshop) { doc.text(`Workshop: ${reg.wantsToOfferWorkshop}`, 14, y); y += 6; }
       y += 2;
       if (y > 270) { doc.addPage(); y = 14; }
@@ -266,10 +364,10 @@ export default function RegistrationManager() {
       Tage: reg.days.map(i => FESTIVAL_DAYS[i]).join(", "),
       Preis: reg.priceOption,
       Sanitäter: reg.isMedic ? "Ja" : "Nein",
-      Auto: reg.hasCar ? "Ja" : "Nein",
+      Anreise: reg.travelType,
       Equipment: reg.equipment,
       Anliegen: reg.concerns,
-      "Line-Up": reg.wantsToContribute ? "Ja" : "Nein",
+      "Line-Up": reg.lineupContribution,
       Workshop: reg.wantsToOfferWorkshop,
       Schlaf: reg.sleepingPreference,
       Zeit: new Date(reg.createdAt).toLocaleString(),
@@ -297,14 +395,180 @@ export default function RegistrationManager() {
     }
   };
 
-  // Debug-Logs für Select-Filter
-  useEffect(() => {
-    console.log('filterStatus', priceFilter);
-    console.log('filterSleep', sleepFilter);
-  }, [priceFilter, sleepFilter]);
+  // Render function for registration details - used by both mobile and desktop
+  const renderRegistrationDetails = () => {
+    if (!selected) return null;
+    
+    return (
+      <div className="flex flex-col gap-6 text-[#460b6c] overflow-y-auto">
+        {/* Badges for status */}
+        <div className="flex flex-wrap gap-2 justify-center mb-2">
+          {selected.isMedic && (
+            <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded bg-blue-100 text-blue-700 text-xs font-semibold">
+              <Stethoscope className="w-4 h-4" /> Sani
+            </span>
+          )}
+          {!selected.paid && (
+            <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded bg-red-100 text-red-700 text-xs font-semibold">
+              <Euro className="w-4 h-4" /> Unbezahlt
+            </span>
+          )}
+          {selected.paid && (
+            <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded bg-green-100 text-green-700 text-xs font-semibold">
+              <Euro className="w-4 h-4" /> Bezahlt
+            </span>
+          )}
+          {!selected.checkedIn && (
+            <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded bg-red-100 text-red-700 text-xs font-semibold">
+              <Info className="w-4 h-4" /> Unangemeldet
+            </span>
+          )}
+          {selected.checkedIn && (
+            <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded bg-orange-100 text-orange-700 text-xs font-semibold">
+              <Info className="w-4 h-4" /> Angemeldet
+            </span>
+          )}
+        </div>
+        
+        {/* Festival-Infos */}
+        <div>
+          <div className="text-xs font-semibold text-[#ff9900] mb-1 uppercase tracking-wider">Festival</div>
+          <div className="flex flex-col gap-3">
+            <div className="flex items-center gap-2">
+              <Calendar className="w-4 h-4 text-[#ff9900]" />
+              <span className="font-medium">Tage:</span>
+              <span>{selected.days.length}</span>
+            </div>
+            <div className="flex items-center gap-2">
+              <Euro className="w-4 h-4 text-[#ff9900]" />
+              <span className="font-medium">Preis:</span>
+              <span>{selected.priceOption === 'full' ? 'Voll' : selected.priceOption === 'reduced' ? 'Reduziert' : 'Kostenlos'}</span>
+            </div>
+            <div className="flex items-center gap-2">
+              <Bed className="w-4 h-4 text-[#ff9900]" />
+              <span className="font-medium">Schlafplatz:</span>
+              <span>{selected.sleepingPreference === 'bed' ? 'Bett' : selected.sleepingPreference === 'tent' ? 'Zelt' : 'Auto'}</span>
+            </div>
+            <div className="flex items-center gap-2">
+              <CarIcon className="w-4 h-4 text-[#ff9900]" />
+              <span className="font-medium">Anreise:</span>
+              <span>{selected.travelType === 'auto' ? 'Auto' : selected.travelType === 'zug' ? 'Zug' : selected.travelType === 'fahrrad' ? 'Fahrrad' : 'Unklar'}</span>
+            </div>
+            <div className="flex items-center gap-2">
+              <Calendar className="w-4 h-4 text-[#ff9900]" />
+              <span className="font-medium">Zeitraum:</span>
+              <span className="whitespace-nowrap overflow-hidden text-ellipsis block">
+                {FESTIVAL_DAYS[selected.days[0]]} – {FESTIVAL_DAYS[selected.days[selected.days.length - 1]]}
+              </span>
+            </div>
+          </div>
+        </div>
+        
+        {/* Persönliches */}
+        <div>
+          <div className="text-xs font-semibold text-[#ff9900] mb-1 uppercase tracking-wider">Persönliches</div>
+          <div className="flex flex-col gap-3">
+            <div className="flex items-center gap-2">
+              <Stethoscope className="w-4 h-4 text-[#ff9900]" />
+              <span className="font-medium">Sani:</span>
+              <span>{selected.isMedic ? 'Ja' : 'Nein'}</span>
+            </div>
+            <div className="flex items-center gap-2">
+              <Music className="w-4 h-4 text-[#ff9900]" />
+              <span className="font-medium">Line-Up:</span>
+              <span>{selected.lineupContribution && selected.lineupContribution.trim() ? selected.lineupContribution : '—'}</span>
+            </div>
+            <div className="flex items-center gap-2">
+              <Hammer className="w-4 h-4 text-[#ff9900]" />
+              <span className="font-medium">Workshop:</span>
+              {selected.wantsToOfferWorkshop ? (
+                <button
+                  type="button"
+                  className="ml-1 p-1 rounded hover:bg-[#ff9900]/10"
+                  onClick={() => toast((t) => (
+                    <div className="max-w-xs break-words">
+                      <div className="font-semibold mb-1">Workshop</div>
+                      <div className="mb-2 whitespace-pre-line">{selected.wantsToOfferWorkshop}</div>
+                      <button onClick={() => toast.dismiss(t.id)} className="text-xs text-[#ff9900] underline">Schließen</button>
+                    </div>
+                  ), { duration: 8000 })}
+                >
+                  <span className="max-w-[80px] truncate inline-block align-bottom">{selected.wantsToOfferWorkshop}</span> <span className="text-[#ff9900]">...</span>
+                </button>
+              ) : <span>—</span>}
+            </div>
+            <div className="flex items-center gap-2">
+              <Wrench className="w-4 h-4 text-[#ff9900]" />
+              <span className="font-medium">Equipment:</span>
+              {selected.equipment ? (
+                <button
+                  type="button"
+                  className="ml-1 p-1 rounded hover:bg-[#ff9900]/10"
+                  onClick={() => toast((t) => (
+                    <div className="max-w-xs break-words">
+                      <div className="font-semibold mb-1">Equipment</div>
+                      <div className="mb-2 whitespace-pre-line">{selected.equipment}</div>
+                      <button onClick={() => toast.dismiss(t.id)} className="text-xs text-[#ff9900] underline">Schließen</button>
+                    </div>
+                  ), { duration: 8000 })}
+                >
+                  <span className="max-w-[80px] truncate inline-block align-bottom">{selected.equipment}</span> <span className="text-[#ff9900]">...</span>
+                </button>
+              ) : <span>—</span>}
+            </div>
+            <div className="flex items-center gap-2">
+              <Info className="w-4 h-4 text-[#ff9900]" />
+              <span className="font-medium">Anliegen:</span>
+              {selected.concerns ? (
+                <button
+                  type="button"
+                  className="ml-1 p-1 rounded hover:bg-[#ff9900]/10"
+                  onClick={() => toast((t) => (
+                    <div className="max-w-xs break-words">
+                      <div className="font-semibold mb-1">Anliegen</div>
+                      <div className="mb-2 whitespace-pre-line">{selected.concerns}</div>
+                      <button onClick={() => toast.dismiss(t.id)} className="text-xs text-[#ff9900] underline">Schließen</button>
+                    </div>
+                  ), { duration: 8000 })}
+                >
+                  <span className="max-w-[80px] truncate inline-block align-bottom">{selected.concerns}</span> <span className="text-[#ff9900]">...</span>
+                </button>
+              ) : <span>—</span>}
+            </div>
+          </div>
+        </div>
+        
+        {/* Status */}
+        <div className="text-center">
+          <div className="text-xs font-semibold text-[#ff9900] mb-1 uppercase tracking-wider">Status ändern</div>
+          <div className="flex gap-4 items-center mt-2 justify-center">
+            <button
+              className={`inline-flex items-center gap-1 px-3 py-1 rounded-full text-xs font-semibold transition-colors border focus:outline-none focus:ring-2 ${selected.paid ? 'bg-green-100 text-green-700 border-green-200 hover:bg-green-200 focus:ring-green-400' : 'bg-red-100 text-red-700 border-red-200 hover:bg-red-200 focus:ring-red-400'}`}
+              onClick={() => handleStatusChange('paid', !selected.paid)}
+              type="button"
+            >
+              <Euro className="w-4 h-4" /> {selected.paid ? 'Bezahlt' : 'Unbezahlt'}
+            </button>
+            <button
+              className={`inline-flex items-center gap-1 px-3 py-1 rounded-full text-xs font-semibold transition-colors border focus:outline-none focus:ring-2 ${selected.checkedIn ? 'bg-orange-100 text-orange-700 border-orange-200 hover:bg-orange-200 focus:ring-orange-400' : 'bg-red-100 text-red-700 border-red-200 hover:bg-red-200 focus:ring-red-400'}`}
+              onClick={() => handleStatusChange('checkedIn', !selected.checkedIn)}
+              type="button"
+            >
+              <Info className="w-4 h-4" /> {selected.checkedIn ? 'Angemeldet' : 'Unangemeldet'}
+            </button>
+          </div>
+          <div className="text-xs text-gray-400 mt-4">Erstellt: {new Date(selected.createdAt).toLocaleString()}</div>
+        </div>
+      </div>
+    );
+  };
+
+  // Stil-Klassen für feste Container-Höhe und kein Scrollen im Container
+  const containerStyle = "h-[calc(100vh-180px)] max-h-[1000px] flex flex-col overflow-hidden";
+  const tableContainerStyle = "flex-1 overflow-hidden rounded-xl shadow border border-[#ff9900]/20 bg-white/90";
 
   return (
-    <div className="max-w-4xl mx-auto p-4">
+    <div className={`max-w-4xl mx-auto p-4 ${containerStyle}`}>
       {/* Filter Toolbar */}
       <div className="flex flex-wrap gap-3 mb-4 items-end">
         <Input
@@ -322,27 +586,45 @@ export default function RegistrationManager() {
               <label className="text-xs font-semibold text-[#460b6c]">Preis</label>
               <select value={priceFilter} onChange={e => setPriceFilter(e.target.value)} className="border rounded px-2 py-1">
                 <option value="">Alle</option>
-                <option value="full">Voll</option>
-            <option value="reduced">Reduziert</option>
-            <option value="free">Kostenlos</option>
-          </select>
+                {priceOptions.map(opt => (
+                  <option key={opt} value={opt}>{opt === 'full' ? 'Voll' : opt === 'reduced' ? 'Reduziert' : 'Kostenlos'}</option>
+                ))}
+              </select>
               <label className="text-xs font-semibold text-[#460b6c]">Schlaf</label>
               <select value={sleepFilter} onChange={e => setSleepFilter(e.target.value)} className="border rounded px-2 py-1">
                 <option value="">Alle</option>
-                <option value="bed">Bett</option>
-                <option value="tent">Zelt</option>
-                <option value="car">Auto</option>
+                {sleepOptions.map(opt => (
+                  <option key={opt} value={opt}>{opt === 'bed' ? 'Bett' : opt === 'tent' ? 'Zelt' : 'Auto'}</option>
+                ))}
+              </select>
+              <label className="text-xs font-semibold text-[#460b6c]">Anreise</label>
+              <select value={travelFilter} onChange={e => setTravelFilter(e.target.value)} className="border rounded px-2 py-1">
+                <option value="">Alle</option>
+                {travelOptions.map(opt => (
+                  <option key={opt} value={opt}>{opt === 'auto' ? 'Auto' : opt === 'zug' ? 'Zug' : opt === 'fahrrad' ? 'Fahrrad' : 'Andere'}</option>
+                ))}
               </select>
               <label className="text-xs font-semibold text-[#460b6c]">Sanitäter</label>
               <input type="checkbox" checked={medicFilter} onChange={e => setMedicFilter(e.target.checked)} />
-              <label className="text-xs font-semibold text-[#460b6c]">Auto</label>
-              <input type="checkbox" checked={carFilter} onChange={e => setCarFilter(e.target.checked)} />
-        </div>
+              <label className="text-xs font-semibold text-[#460b6c]">Bezahlstatus</label>
+              <select value={paidFilter} onChange={e => setPaidFilter(e.target.value)} className="border rounded px-2 py-1">
+                <option value="">Alle</option>
+                <option value="paid">Bezahlt</option>
+                <option value="unpaid">Unbezahlt</option>
+              </select>
+              <label className="text-xs font-semibold text-[#460b6c]">Anmeldestatus</label>
+              <select value={checkedInFilter} onChange={e => setCheckedInFilter(e.target.value)} className="border rounded px-2 py-1">
+                <option value="">Alle</option>
+                <option value="checkedIn">Angemeldet</option>
+                <option value="notCheckedIn">Nicht angemeldet</option>
+              </select>
+            </div>
           </PopoverContent>
         </Popover>
       </div>
+      
       {/* DataTable */}
-      <div className="rounded-xl shadow border border-[#ff9900]/20 bg-white/90">
+      <div className={tableContainerStyle}>
         <table className="w-full text-sm text-[#460b6c] table-fixed">
           <thead>
             {table.getHeaderGroups().map(headerGroup => (
@@ -363,10 +645,11 @@ export default function RegistrationManager() {
             ))}
             </thead>
             <tbody>
+            {/* Render echte Zeilen */}
             {table.getRowModel().rows.map(row => (
               <tr
                 key={row.id}
-                className="border-b last:border-b-0 hover:bg-[#ff9900]/10 cursor-pointer"
+                className="border-b border-gray-200 last:border-b-0 hover:bg-[#ff9900]/10 cursor-pointer"
                 onClick={() => setSelected(row.original)}
                 tabIndex={0}
                 onKeyDown={e => { if (e.key === 'Enter' || e.key === ' ') setSelected(row.original); }}
@@ -391,189 +674,81 @@ export default function RegistrationManager() {
                     </td>
                   );
                 })}
-                </tr>
-              ))}
+              </tr>
+            ))}
+            {/* Platzhalter-Zeilen, damit die Tabelle immer voll ist */}
+            {Array.from({ length: Math.max(0, rowsPerPage - table.getRowModel().rows.length) }).map((_, idx) => (
+              <tr key={`placeholder-${idx}`} className="border-b border-gray-200 last:border-b-0">
+                {table.getAllLeafColumns().map(col => (
+                  <td key={col.id} className={
+                    col.id === 'actions'
+                      ? 'w-[48px] min-w-[48px] max-w-[48px] p-0 text-center'
+                      : (col.id === 'tage'
+                          ? 'p-1.5 text-center'
+                          : (col.id === 'name'
+                              ? 'p-1.5 max-w-[96px] whitespace-nowrap overflow-hidden text-ellipsis'
+                              : 'p-1.5'))
+                  }>
+                    {/* leer */}
+                  </td>
+                ))}
+              </tr>
+            ))}
             </tbody>
           </table>
       </div>
           {/* Pagination */}
           <div className="flex justify-between items-center p-2 bg-[#ff9900]/5">
-        <Button size="icon" variant="ghost" disabled={!table.getCanPreviousPage()} onClick={() => table.previousPage()}>&lt;</Button>
-        <span className="text-xs">Seite {table.getState().pagination.pageIndex + 1} / {table.getPageCount()}</span>
-        <Button size="icon" variant="ghost" disabled={!table.getCanNextPage()} onClick={() => table.nextPage()}>&gt;</Button>
+        <Button size="icon" variant="ghost" disabled={!table.getCanPreviousPage()} onClick={() => table.previousPage()}>
+          <ChevronLeft className="w-4 h-4" />
+        </Button>
+        <span className="text-xs">
+          Seite {table.getState().pagination.pageIndex + 1} / {table.getPageCount()} 
+          <span className="ml-2 text-gray-500">
+            ({table.getFilteredRowModel().rows.length} Anmeldungen)
+          </span>
+        </span>
+        <Button size="icon" variant="ghost" disabled={!table.getCanNextPage()} onClick={() => table.nextPage()}>
+          <ChevronRight className="w-4 h-4" />
+        </Button>
         </div>
-      {/* Detail-Drawer */}
-      <Sheet open={!!selected} onOpenChange={open => !open && closeDrawer()}>
-        <SheetContent side="right" className="max-w-md w-full flex flex-col px-6">
-          <SheetHeader>
-            <SheetTitle>
-              <div className="flex flex-col items-center mb-2">
+      
+      {/* Detail View - Conditional Rendering based on device type */}
+      {deviceType === "mobile" ? (
+        // Mobile: Sheet from the side 
+        <Sheet open={!!selected} onOpenChange={open => !open && closeDrawer()}>
+          <SheetContent side="right" className="max-w-md w-full flex flex-col px-6">
+            <SheetHeader>
+              <SheetTitle>
+                <div className="flex flex-col items-center mb-2">
+                  {selected && (
+                    <span className="text-2xl font-bold text-[#460b6c] text-center tracking-wider" style={{ textTransform: 'uppercase' }}>{selected.name}</span>
+                  )}
+                </div>
+              </SheetTitle>
+            </SheetHeader>
+            {renderRegistrationDetails()}
+          </SheetContent>
+        </Sheet>
+      ) : (
+        // Desktop: Dialog in the center
+        <Dialog open={!!selected} onOpenChange={open => !open && closeDrawer()}>
+          <DialogContent className="max-w-[800px] w-[90vw] p-6 flex flex-col max-h-[80vh]">
+            <DialogHeader>
+              <DialogTitle className="text-center">
                 {selected && (
-                  <span className="text-2xl font-bold text-[#460b6c] text-center tracking-wider" style={{ textTransform: 'uppercase' }}>{selected.name}</span>
+                  <span className="text-2xl font-bold text-[#460b6c] text-center tracking-wider" style={{ textTransform: 'uppercase' }}>{selected?.name}</span>
                 )}
-                <div className="flex flex-wrap gap-2 mt-2 justify-center">
-                  {selected?.isMedic && (
-                    <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded bg-blue-100 text-blue-700 text-xs font-semibold">
-                      <Stethoscope className="w-4 h-4" /> Sani
-                    </span>
-                  )}
-                  {selected && !selected.paid && (
-                    <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded bg-red-100 text-red-700 text-xs font-semibold">
-                      <Euro className="w-4 h-4" /> Unbezahlt
-                    </span>
-                  )}
-                  {selected?.paid && (
-                    <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded bg-green-100 text-green-700 text-xs font-semibold">
-                      <Euro className="w-4 h-4" /> Bezahlt
-                    </span>
-                  )}
-                  {selected && !selected.checkedIn && (
-                    <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded bg-red-100 text-red-700 text-xs font-semibold">
-                      <Info className="w-4 h-4" /> Unangemeldet
-                    </span>
-                  )}
-                  {selected?.checkedIn && (
-                    <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded bg-orange-100 text-orange-700 text-xs font-semibold">
-                      <Info className="w-4 h-4" /> Angemeldet
-                    </span>
-                  )}
-                </div>
-              </div>
-            </SheetTitle>
-          </SheetHeader>
-          {selected && (
-            <div className="flex flex-col gap-6 mt-4 text-[#460b6c] flex-1 overflow-y-auto">
-              {/* Festival-Infos */}
-              <div>
-                <div className="text-xs font-semibold text-[#ff9900] mb-1 uppercase tracking-wider">Festival</div>
-                <div className="flex flex-col gap-3">
-                  <div className="flex items-center gap-2">
-                    <Calendar className="w-4 h-4 text-[#ff9900]" />
-                    <span className="font-medium">Tage:</span>
-                    <span>{selected.days.length}</span>
-                  </div>
-                  <div className="flex items-center gap-2">
-                    <Euro className="w-4 h-4 text-[#ff9900]" />
-                    <span className="font-medium">Preis:</span>
-                    <span>{selected.priceOption === 'full' ? 'Voll' : selected.priceOption === 'reduced' ? 'Reduziert' : 'Kostenlos'}</span>
-                  </div>
-                  <div className="flex items-center gap-2">
-                    <Bed className="w-4 h-4 text-[#ff9900]" />
-                    <span className="font-medium">Schlafplatz:</span>
-                    <span>{selected.sleepingPreference === 'bed' ? 'Bett' : selected.sleepingPreference === 'tent' ? 'Zelt' : 'Auto'}</span>
-                  </div>
-                  <div className="flex items-center gap-2">
-                    <CarIcon className="w-4 h-4 text-[#ff9900]" />
-                    <span className="font-medium">Auto:</span>
-                    <span>{selected.hasCar ? 'Ja' : 'Nein'}</span>
-                  </div>
-                  <div className="flex items-center gap-2">
-                    <Calendar className="w-4 h-4 text-[#ff9900]" />
-                    <span className="font-medium">Zeitraum:</span>
-                    <span className="whitespace-nowrap overflow-hidden text-ellipsis block">
-                      {FESTIVAL_DAYS[selected.days[0]]} – {FESTIVAL_DAYS[selected.days[selected.days.length - 1]]}
-                    </span>
-                  </div>
-                </div>
-              </div>
-              {/* Persönliches */}
-              <div>
-                <div className="text-xs font-semibold text-[#ff9900] mb-1 uppercase tracking-wider">Persönliches</div>
-                <div className="flex flex-col gap-3">
-                  <div className="flex items-center gap-2">
-                    <Stethoscope className="w-4 h-4 text-[#ff9900]" />
-                    <span className="font-medium">Sani:</span>
-                    <span>{selected.isMedic ? 'Ja' : 'Nein'}</span>
-                  </div>
-                  <div className="flex items-center gap-2">
-                    <Music className="w-4 h-4 text-[#ff9900]" />
-                    <span className="font-medium">Line-Up:</span>
-                    <span>{selected.wantsToContribute ? 'Ja' : 'Nein'}</span>
-                  </div>
-                  <div className="flex items-center gap-2">
-                    <Hammer className="w-4 h-4 text-[#ff9900]" />
-                    <span className="font-medium">Workshop:</span>
-                    {selected.wantsToOfferWorkshop ? (
-                      <button
-                        type="button"
-                        className="ml-1 p-1 rounded hover:bg-[#ff9900]/10"
-                        onClick={() => toast((t) => (
-                          <div className="max-w-xs break-words">
-                            <div className="font-semibold mb-1">Workshop</div>
-                            <div className="mb-2 whitespace-pre-line">{selected.wantsToOfferWorkshop}</div>
-                            <button onClick={() => toast.dismiss(t.id)} className="text-xs text-[#ff9900] underline">Schließen</button>
-                          </div>
-                        ), { duration: 8000 })}
-                      >
-                        <span className="max-w-[80px] truncate inline-block align-bottom">{selected.wantsToOfferWorkshop}</span> <span className="text-[#ff9900]">...</span>
-                      </button>
-                    ) : <span>—</span>}
-                  </div>
-                  <div className="flex items-center gap-2">
-                    <Wrench className="w-4 h-4 text-[#ff9900]" />
-                    <span className="font-medium">Equipment:</span>
-                    {selected.equipment ? (
-                      <button
-                        type="button"
-                        className="ml-1 p-1 rounded hover:bg-[#ff9900]/10"
-                        onClick={() => toast((t) => (
-                          <div className="max-w-xs break-words">
-                            <div className="font-semibold mb-1">Equipment</div>
-                            <div className="mb-2 whitespace-pre-line">{selected.equipment}</div>
-                            <button onClick={() => toast.dismiss(t.id)} className="text-xs text-[#ff9900] underline">Schließen</button>
-                          </div>
-                        ), { duration: 8000 })}
-                      >
-                        <span className="max-w-[80px] truncate inline-block align-bottom">{selected.equipment}</span> <span className="text-[#ff9900]">...</span>
-                      </button>
-                    ) : <span>—</span>}
-                  </div>
-                  <div className="flex items-center gap-2">
-                    <Info className="w-4 h-4 text-[#ff9900]" />
-                    <span className="font-medium">Anliegen:</span>
-                    {selected.concerns ? (
-                      <button
-                        type="button"
-                        className="ml-1 p-1 rounded hover:bg-[#ff9900]/10"
-                        onClick={() => toast((t) => (
-                          <div className="max-w-xs break-words">
-                            <div className="font-semibold mb-1">Anliegen</div>
-                            <div className="mb-2 whitespace-pre-line">{selected.concerns}</div>
-                            <button onClick={() => toast.dismiss(t.id)} className="text-xs text-[#ff9900] underline">Schließen</button>
-                          </div>
-                        ), { duration: 8000 })}
-                      >
-                        <span className="max-w-[80px] truncate inline-block align-bottom">{selected.concerns}</span> <span className="text-[#ff9900]">...</span>
-                      </button>
-                    ) : <span>—</span>}
-                  </div>
-                </div>
-              </div>
-              {/* Status */}
-              <div className="text-center">
-                <div className="text-xs font-semibold text-[#ff9900] mb-1 uppercase tracking-wider">Status ändern</div>
-                <div className="flex gap-4 items-center mt-2 justify-center">
-                  <button
-                    className={`inline-flex items-center gap-1 px-3 py-1 rounded-full text-xs font-semibold transition-colors border focus:outline-none focus:ring-2 ${selected.paid ? 'bg-green-100 text-green-700 border-green-200 hover:bg-green-200 focus:ring-green-400' : 'bg-red-100 text-red-700 border-red-200 hover:bg-red-200 focus:ring-red-400'}`}
-                    onClick={() => handleStatusChange('paid', !selected.paid)}
-                    type="button"
-                  >
-                    <Euro className="w-4 h-4" /> {selected.paid ? 'Bezahlt' : 'Unbezahlt'}
-                  </button>
-                  <button
-                    className={`inline-flex items-center gap-1 px-3 py-1 rounded-full text-xs font-semibold transition-colors border focus:outline-none focus:ring-2 ${selected.checkedIn ? 'bg-orange-100 text-orange-700 border-orange-200 hover:bg-orange-200 focus:ring-orange-400' : 'bg-red-100 text-red-700 border-red-200 hover:bg-red-200 focus:ring-red-400'}`}
-                    onClick={() => handleStatusChange('checkedIn', !selected.checkedIn)}
-                    type="button"
-                  >
-                    <Info className="w-4 h-4" /> {selected.checkedIn ? 'Angemeldet' : 'Unangemeldet'}
-                  </button>
-                </div>
-                <div className="text-xs text-gray-400 mt-4">Erstellt: {new Date(selected.createdAt).toLocaleString()}</div>
-              </div>
+              </DialogTitle>
+            </DialogHeader>
+            <div className="overflow-y-auto pr-2">
+              {renderRegistrationDetails()}
             </div>
-          )}
-        </SheetContent>
-      </Sheet>
+          </DialogContent>
+        </Dialog>
+      )}
+        
+      {/* Delete Confirmation Dialog */}
       <Dialog open={!!deleteId} onOpenChange={open => !open && setDeleteId(null)}>
         <DialogContent>
           <DialogHeader>

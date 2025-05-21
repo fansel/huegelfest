@@ -3,32 +3,56 @@
 import PushNotificationSettings from './PushNotificationSettings';
 import StarfieldSettings from './StarfieldSettings';
 import AdminSettings from './AdminSettings';
-import LegalNotice from './LegalNotice';
-import dynamic from 'next/dynamic';
-import { useDeviceId } from '@/shared/hooks/useDeviceId';
+import ImpressumSettings from './ImpressumSettings';
+import DatenschutzSettings from './DatenschutzSettings';
+import ResetAppDataSettings from './ResetAppDataSettings';
+import MusicNoteSettings from './MusicNoteSettings';
+import { useDeviceContext } from '@/shared/contexts/DeviceContext';
+
 
 interface SettingsProps {
   showStarfield: boolean;
   onToggleStarfield: (value: boolean) => void;
+  showMusicNote: boolean;
+  onToggleMusicNote: (value: boolean) => void;
 }
 
 export default function Settings({
   showStarfield,
   onToggleStarfield,
+  showMusicNote,
+  onToggleMusicNote,
 }: SettingsProps) {
-  const deviceId = useDeviceId();
+  const { deviceType } = useDeviceContext();
+  const isMobile = deviceType === 'mobile'
 
-  return (
-    <div className="bg-[#460b6c]/30 rounded-lg overflow-hidden">
-      <div className="p-4 sm:p-6 border-b border-[#460b6c]/20">
-        <h2 className="text-[#ff9900] font-semibold text-xl">Einstellungen</h2>
-        <p className="text-[#ff9900]/60 text-sm mt-1">Passe deine App-Einstellungen an</p>
+  if (isMobile) {
+    return (
+      <div className="w-full max-w-lg mx-auto py-8 flex flex-col gap-3">
+        <h2 className="text-xl font-bold text-[#ff9900] mb-6 text-center">Einstellungen</h2>
+        <PushNotificationSettings isSubscribed={false} variant="row" />
+        <StarfieldSettings showStarfield={showStarfield} onToggle={onToggleStarfield} variant="row" />
+        <MusicNoteSettings showMusicNote={showMusicNote} onToggle={onToggleMusicNote} variant="row" />
+        <AdminSettings variant="row" />
+        <DatenschutzSettings variant="row" />
+        <ImpressumSettings variant="row" />
+        <ResetAppDataSettings variant="row" />
       </div>
-      <div className="divide-y divide-[#460b6c]/20">
-        <PushNotificationSettings isSubscribed={false} deviceId={deviceId} />
-        <StarfieldSettings showStarfield={showStarfield} onToggle={onToggleStarfield} />
-        <AdminSettings />
-        <LegalNotice />
+    );
+  }
+
+  // Desktop: Grid mit 3 Spalten, Kachel-Design
+  return (
+    <div className="w-full max-w-5xl mx-auto py-12">
+      <h2 className="text-2xl font-bold text-[#ff9900] mb-10 text-center">Einstellungen</h2>
+      <div className="grid grid-cols-3 gap-8">
+        <PushNotificationSettings isSubscribed={false} variant="tile" />
+        <StarfieldSettings showStarfield={showStarfield} onToggle={onToggleStarfield} variant="tile" />
+        <MusicNoteSettings showMusicNote={showMusicNote} onToggle={onToggleMusicNote} variant="tile" />
+        <AdminSettings variant="tile" />
+        <DatenschutzSettings variant="tile" />
+        <ImpressumSettings variant="tile" />
+        <ResetAppDataSettings variant="tile" />
       </div>
     </div>
   );

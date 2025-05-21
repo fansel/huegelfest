@@ -8,7 +8,7 @@ import { format } from 'date-fns';
 import { de } from 'date-fns/locale';
 import { AlertDialog, AlertDialogContent, AlertDialogHeader, AlertDialogTitle, AlertDialogDescription, AlertDialogFooter, AlertDialogCancel, AlertDialogAction } from '@/shared/components/ui/alert-dialog';
 import { useWindowWidth } from '@/shared/hooks/useWindowWidth';
-import { useDeviceType } from '@/shared/contexts/DeviceTypeContext';
+import { useDeviceContext, useDeviceType } from '@/shared/contexts/DeviceContext';
 import toast from 'react-hot-toast';
 import { Tabs, TabsList, TabsTrigger, TabsContent } from '@/shared/components/ui/tabs';
 import { DatePicker } from '@/shared/components/ui/date-picker';
@@ -18,6 +18,8 @@ import { removeDayAction } from '@/features/timeline/actions/removeDay';
 import { createEvent } from '@/features/timeline/actions/createEvent';
 import { updateEvent } from '@/features/timeline/actions/updateEvent';
 import { removeEvent } from '@/features/timeline/actions/removeEvent';
+import clsx from 'clsx';
+import * as LucideIcons from 'lucide-react';
 
 // Props-Interface ggf. anpassen
 interface AdminTimelineTabProps {
@@ -40,6 +42,12 @@ function sortEvents(events: any[]) {
   return [...events].sort((a, b) => a.time?.localeCompare?.(b.time) || 0);
 }
 
+// Hilfsfunktion für dynamisches Icon
+const getIconComponent = (iconName: string) => {
+  const IconComponent = (LucideIcons as any)[iconName];
+  return IconComponent || LucideIcons.HelpCircle;
+};
+
 const AdminTimelineTab: React.FC<AdminTimelineTabProps> = ({ days, setDays, eventsByDay, setEventsByDay, categories, loading, error }) => {
   // --- State ---
   const [showDayModal, setShowDayModal] = useState(false);
@@ -52,9 +60,8 @@ const AdminTimelineTab: React.FC<AdminTimelineTabProps> = ({ days, setDays, even
   const [confirmDelete, setConfirmDelete] = useState<{ type: 'day' | 'event'; id: string; parentId?: string } | null>(null);
   const [openDay, setOpenDay] = useState<string | null>(null);
   const [formType, setFormType] = useState<'day' | 'event'>('event');
-  const windowWidth = useWindowWidth();
-  const { deviceType } = useDeviceType();
-  const isMobile = deviceType === 'mobile' || windowWidth < 1024;
+  const { deviceType } = useDeviceContext();
+  const isMobile = deviceType === 'mobile';
   const dayTitleRef = useRef<HTMLInputElement>(null);
   const eventTitleRef = useRef<HTMLInputElement>(null);
   const [isDatePickerOpen, setIsDatePickerOpen] = useState(false);
@@ -254,21 +261,48 @@ const AdminTimelineTab: React.FC<AdminTimelineTabProps> = ({ days, setDays, even
     }
   };
 
+  // --- Event bestätigen (pending -> approved) ---
+  const handleApproveEvent = async (eventId: string, dayId: string) => {
+    const prevEvents = eventsByDay[dayId] || [];
+    setEventsByDay({
+      ...eventsByDay,
+      [dayId]: prevEvents.map(ev => ev._id === eventId ? { ...ev, status: 'approved' } : ev)
+    });
+    try {
+      await updateEvent(eventId, { status: 'approved' });
+      toast.success('Event bestätigt');
+    } catch (err: any) {
+      setEventsByDay({ ...eventsByDay, [dayId]: prevEvents });
+      toast.error('Fehler beim Bestätigen');
+    }
+  };
+
   // ... UI-Rendering (mobil & desktop) ...
   if (isMobile) {
     return (
       <div className="max-w-lg mx-auto w-full">
         <div className="flex justify-between items-center mb-4">
-          <h3 className="text-xl font-bold text-[#460b6c]">Timeline</h3>
+          <h3 className="text-xl font-bold text-[#460b6c] flex items-center gap-2">
+            Timeline
+            {/* Gelber Punkt, wenn mind. ein Tag ein pending Event hat */}
+            {days.some(day => (eventsByDay[day._id] || []).some(ev => ev.status === 'pending' && !ev.submittedByAdmin)) && (
+              <span className="ml-2 w-2 h-2 rounded-full bg-yellow-400 inline-block" title="Unbestätigte Events"></span>
+            )}
+          </h3>
           <Button variant="default" size="icon" onClick={() => setShowDayModal(true)} aria-label="Neuer Tag" className="ml-2"><Plus /></Button>
         </div>
         {/* Liste der Tage und Events */}
         <ul className="space-y-4">
-          {sortDays(days).map(day => (
+          {sortDays(days).map(day => {
+            const hasPending = (eventsByDay[day._id] || []).some(ev => ev.status === 'pending' && !ev.submittedByAdmin);
+            return (
             <li key={day._id} className="bg-white shadow rounded-xl px-4 py-3">
               <div className="flex items-center justify-between">
                 <div className="flex flex-col">
-                  <span className="font-semibold text-lg text-gray-900">{day.title}</span>
+                    <span className="font-semibold text-lg text-gray-900 flex items-center gap-2">
+                      {day.title}
+                      {hasPending && <span className="w-2 h-2 rounded-full bg-yellow-400 inline-block" title="Unbestätigte Events"></span>}
+                    </span>
                   <span className="text-xs text-gray-500">{day.date ? format(new Date(day.date), 'PPP', { locale: de }) : ''}</span>
                 </div>
                 <div className="flex gap-1">
@@ -278,38 +312,36 @@ const AdminTimelineTab: React.FC<AdminTimelineTabProps> = ({ days, setDays, even
               </div>
               {/* Events */}
               <ul className="mt-2 space-y-2">
-                {(eventsByDay[day._id] || []).map(event => (
-                  <li key={event._id} className="flex items-center justify-between bg-gray-50 rounded px-3 py-2">
-                    <div className="flex flex-col">
-                      <span className="font-medium text-gray-800">{event.title}</span>
-                      <span className="text-xs text-gray-500 flex items-center gap-1"><Clock className="inline h-3 w-3" />{event.time}</span>
-                    </div>
-                    <div className="flex gap-1">
-                      <Button variant="secondary" size="icon" onClick={() => handleEditEvent(event, day._id)} aria-label="Bearbeiten"><Pencil className="h-4 w-4" /></Button>
-                      <Button variant="destructive" size="icon" onClick={() => setConfirmDelete({ type: 'event', id: event._id, parentId: day._id })} aria-label="Löschen"><Trash2 className="h-4 w-4" /></Button>
-                    </div>
-                  </li>
-                ))}
-                <li className="flex justify-center mt-2">
-                  <Button
-                    variant="default"
-                    size="icon"
-                    onClick={() => {
-                      setEventDayId(day._id);
-                      setEventToEdit(null);
-                      setEventForm({ time: '', title: '', description: '', categoryId: categories[0]?._id ?? '' });
-                      if (!isMobile) setDesktopFormTab('event');
-                      else setShowEventModal(true);
-                    }}
-                    aria-label="Neues Event anlegen"
-                    className="bg-gradient-to-br from-[#ff9900] to-[#ffb84d] text-white shadow-3xl border-2 border-white"
-                  >
-                    <Plus className="h-5 w-5" />
-                  </Button>
-                </li>
+                {(eventsByDay[day._id] || []).map(event => {
+                  const category = categories.find((cat) => cat._id === event.categoryId);
+                  const IconComponent = category ? getIconComponent(category.icon) : LucideIcons.HelpCircle;
+                  return (
+                    <li key={event._id} className={clsx("flex items-center justify-between bg-gray-50 rounded-xl px-4 py-3 shadow-sm", event.status === 'pending' && !event.submittedByAdmin && 'border-l-4 border-yellow-400')}>
+                      <div className="flex items-center gap-4">
+                        <div className="bg-[#ff9900]/20 rounded-full p-3 flex items-center justify-center">
+                          <IconComponent className="text-[#ff9900] text-4xl" />
+                        </div>
+                        <div>
+                          <div className="font-semibold text-lg text-gray-900">{event.title}</div>
+                          <div className="text-xs text-gray-500 flex items-center gap-1">
+                            <Clock className="inline h-4 w-4" />{event.time}
+                          </div>
+                        </div>
+                      </div>
+                      <div className="flex gap-1 items-center">
+                        {event.status === 'pending' && !event.submittedByAdmin && (
+                          <Button variant="ghost" size="icon" onClick={() => handleApproveEvent(event._id, day._id)} aria-label="Bestätigen" title="Event bestätigen">
+                            <Check className="h-4 w-4 text-yellow-500" />
+                          </Button>
+                        )}
+                        <Button variant="secondary" size="icon" onClick={() => handleEditEvent(event, day._id)} aria-label="Bearbeiten"><Pencil className="h-4 w-4" /></Button>
+                        <Button variant="destructive" size="icon" onClick={() => setConfirmDelete({ type: 'event', id: event._id, parentId: day._id })} aria-label="Löschen"><Trash2 className="h-4 w-4" /></Button>
+                      </div>
+                    </li>
+                  );})}
               </ul>
             </li>
-          ))}
+          );})}
         </ul>
         {/* Floating-Button für neuen Tag */}
         <div className="mt-6 flex justify-center mb-6">
@@ -498,9 +530,6 @@ const AdminTimelineTab: React.FC<AdminTimelineTabProps> = ({ days, setDays, even
                       className="w-full"
                       rows={2}
                     />
-                    <Button variant="default" onClick={handleDayFormSubmit} disabled={loading} className="bg-gradient-to-br from-[#ff9900] to-[#ffb84d] text-white shadow-3xl border-2 border-white">
-                      {loading ? <Loader2 className="animate-spin" /> : (editDayId ? 'Speichern' : 'Anlegen')}
-                    </Button>
                   </div>
                 </TabsContent>
                 <TabsContent value="event">
@@ -548,12 +577,6 @@ const AdminTimelineTab: React.FC<AdminTimelineTabProps> = ({ days, setDays, even
                       className="w-full"
                       rows={2}
                     />
-                    <div className="flex gap-2">
-                      <Button variant="secondary" onClick={handleCancelEventForm}>Abbrechen</Button>
-                      <Button variant="default" onClick={handleEventFormSubmit} disabled={loading} className="bg-gradient-to-br from-[#ff9900] to-[#ffb84d] text-white shadow-3xl border-2 border-white">
-                        {loading ? <Loader2 className="animate-spin" /> : (eventToEdit ? 'Speichern' : 'Anlegen')}
-                      </Button>
-                    </div>
                   </div>
                 </TabsContent>
               </Tabs>
@@ -562,11 +585,16 @@ const AdminTimelineTab: React.FC<AdminTimelineTabProps> = ({ days, setDays, even
           {/* Rechte Spalte: Liste der Tage und Events */}
           <div className="flex-1">
             <ul className="space-y-4">
-              {sortDays(days).map(day => (
+              {sortDays(days).map(day => {
+                const hasPending = (eventsByDay[day._id] || []).some(ev => ev.status === 'pending' && !ev.submittedByAdmin);
+                return (
                 <li key={day._id} className="bg-white shadow rounded-xl px-4 py-3">
                   <div className="flex items-center justify-between">
                     <div className="flex flex-col">
-                      <span className="font-semibold text-lg text-gray-900">{day.title}</span>
+                        <span className="font-semibold text-lg text-gray-900 flex items-center gap-2">
+                          {day.title}
+                          {hasPending && <span className="w-2 h-2 rounded-full bg-yellow-400 inline-block" title="Unbestätigte Events"></span>}
+                        </span>
                       <span className="text-xs text-gray-500">{day.date ? format(new Date(day.date), 'PPP', { locale: de }) : ''}</span>
                     </div>
                     <div className="flex gap-1">
@@ -576,38 +604,36 @@ const AdminTimelineTab: React.FC<AdminTimelineTabProps> = ({ days, setDays, even
                   </div>
                   {/* Events */}
                   <ul className="mt-2 space-y-2">
-                    {(eventsByDay[day._id] || []).map(event => (
-                      <li key={event._id} className="flex items-center justify-between bg-gray-50 rounded px-3 py-2">
-                        <div className="flex flex-col">
-                          <span className="font-medium text-gray-800">{event.title}</span>
-                          <span className="text-xs text-gray-500 flex items-center gap-1"><Clock className="inline h-3 w-3" />{event.time}</span>
-                        </div>
-                        <div className="flex gap-1">
-                          <Button variant="secondary" size="icon" onClick={() => handleEditEvent(event, day._id)} aria-label="Bearbeiten"><Pencil className="h-4 w-4" /></Button>
-                          <Button variant="destructive" size="icon" onClick={() => setConfirmDelete({ type: 'event', id: event._id, parentId: day._id })} aria-label="Löschen"><Trash2 className="h-4 w-4" /></Button>
-                        </div>
-                      </li>
-                    ))}
-                    <li className="flex justify-center mt-2">
-                      <Button
-                        variant="default"
-                        size="icon"
-                        onClick={() => {
-                          setEventDayId(day._id);
-                          setEventToEdit(null);
-                          setEventForm({ time: '', title: '', description: '', categoryId: categories[0]?._id ?? '' });
-                          if (!isMobile) setDesktopFormTab('event');
-                          else setShowEventModal(true);
-                        }}
-                        aria-label="Neues Event anlegen"
-                        className="bg-gradient-to-br from-[#ff9900] to-[#ffb84d] text-white shadow-3xl border-2 border-white"
-                      >
-                        <Plus className="h-5 w-5" />
-                      </Button>
-                    </li>
+                    {(eventsByDay[day._id] || []).map(event => {
+                      const category = categories.find((cat) => cat._id === event.categoryId);
+                      const IconComponent = category ? getIconComponent(category.icon) : LucideIcons.HelpCircle;
+                      return (
+                        <li key={event._id} className={clsx("flex items-center justify-between bg-gray-50 rounded-xl px-4 py-3 shadow-sm", event.status === 'pending' && !event.submittedByAdmin && 'border-l-4 border-yellow-400')}>
+                          <div className="flex items-center gap-4">
+                            <div className="bg-[#ff9900]/20 rounded-full p-3 flex items-center justify-center">
+                              <IconComponent className="text-[#ff9900] text-4xl" />
+                            </div>
+                            <div>
+                              <div className="font-semibold text-lg text-gray-900">{event.title}</div>
+                              <div className="text-xs text-gray-500 flex items-center gap-1">
+                                <Clock className="inline h-4 w-4" />{event.time}
+                              </div>
+                            </div>
+                          </div>
+                          <div className="flex gap-1 items-center">
+                            {event.status === 'pending' && !event.submittedByAdmin && (
+                              <Button variant="ghost" size="icon" onClick={() => handleApproveEvent(event._id, day._id)} aria-label="Bestätigen" title="Event bestätigen">
+                                <Check className="h-4 w-4 text-yellow-500" />
+                              </Button>
+                            )}
+                            <Button variant="secondary" size="icon" onClick={() => handleEditEvent(event, day._id)} aria-label="Bearbeiten"><Pencil className="h-4 w-4" /></Button>
+                            <Button variant="destructive" size="icon" onClick={() => setConfirmDelete({ type: 'event', id: event._id, parentId: day._id })} aria-label="Löschen"><Trash2 className="h-4 w-4" /></Button>
+                          </div>
+                        </li>
+                      );})}
                   </ul>
                 </li>
-              ))}
+              );})}
             </ul>
           </div>
         </div>

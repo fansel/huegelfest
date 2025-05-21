@@ -7,9 +7,7 @@ import { PWARegister } from "@/shared/components/PWARegister";
 import { AuthProvider } from '@/features/auth/AuthContext';
 import { GlobalStateProvider } from '@/contexts/GlobalStateContext';
 import React from 'react';
-import { headers } from 'next/headers';
-import { userAgent } from "next/server";
-import { DeviceTypeProviderClient } from '@/shared/contexts/DeviceTypeContext';
+import { DeviceProvider } from "@/shared/contexts/DeviceContext";
 import { UISettingsProvider } from '@/shared/contexts/UISettingsContext';
 
 export const metadata: Metadata = {
@@ -27,9 +25,6 @@ export const viewport: Viewport = {
 };
 
 export default async function RootLayout({ children }: { children: React.ReactNode }) {
-  const headersList = await headers();
-  const { device } = userAgent({ headers: headersList });
-  const deviceType = device?.type === "mobile" ? "mobile" : "desktop";
 
   return (
     <html lang="de" className={GeistMono.className}>
@@ -40,9 +35,9 @@ export default async function RootLayout({ children }: { children: React.ReactNo
         <link rel="apple-touch-icon" href="/apple-touch-icon.png" />
         <link rel="manifest" href="/manifest.json" />
       </head>
-      <body className={`antialiased min-h-screen flex flex-col ${deviceType}`}>
+      <body className={`antialiased min-h-screen flex flex-col`}>
         <PWARegister />
-        <DeviceTypeProviderClient deviceType={deviceType}>
+        <DeviceProvider>
             <AuthProvider>
               <GlobalStateProvider>
                 <UISettingsProvider>
@@ -51,7 +46,7 @@ export default async function RootLayout({ children }: { children: React.ReactNo
                 </UISettingsProvider>
               </GlobalStateProvider>
             </AuthProvider>
-        </DeviceTypeProviderClient>
+        </DeviceProvider>
       </body>
     </html>
   );

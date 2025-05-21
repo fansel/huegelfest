@@ -10,8 +10,7 @@ import toast from 'react-hot-toast';
 import { createCategoryAction } from '@/features/categories/actions/createCategory';
 import { updateCategoryAction } from '@/features/categories/actions/updateCategory';
 import { deleteCategoryAction } from '@/features/categories/actions/deleteCategory';
-import { useWindowWidth } from '@/shared/hooks/useWindowWidth';
-import { useDeviceType } from '@/shared/contexts/DeviceTypeContext';
+import { useDeviceContext } from '@/shared/contexts/DeviceContext';
 
 // Props-Interface ggf. anpassen
 interface AdminCategoriesTabProps {
@@ -55,9 +54,8 @@ const AdminCategoriesTab: React.FC<AdminCategoriesTabProps> = ({ categories, set
   const pageCount = Math.ceil(filteredIcons.length / ICONS_PER_PAGE);
   const pagedIcons = filteredIcons.slice(iconPage * ICONS_PER_PAGE, (iconPage + 1) * ICONS_PER_PAGE);
 
-  const windowWidth = useWindowWidth();
-  const { deviceType } = useDeviceType();
-  const isMobile = deviceType === 'mobile' || windowWidth < 1024;
+  const { deviceType } = useDeviceContext();
+  const isMobile = deviceType === 'mobile';
 
   // Reset beim Schließen
   useEffect(() => {

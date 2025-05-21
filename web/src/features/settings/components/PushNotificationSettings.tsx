@@ -11,6 +11,8 @@ import { Button } from "@/shared/components/ui/button";
 import { Alert, AlertTitle, AlertDescription } from "@/shared/components/ui/alert";
 import { Card, CardHeader, CardTitle, CardDescription, CardContent } from "@/shared/components/ui/card";
 import { useDeviceId } from '@/shared/hooks/useDeviceId';
+import UserSettingsCard from './UserSettingsCard';
+import { Bell } from 'lucide-react';
 
 // VAPID-Schlüssel als Konstanten
 const VAPID_PUBLIC_KEY = env('NEXT_PUBLIC_VAPID_PUBLIC_KEY');
@@ -34,9 +36,10 @@ interface DebugInfo {
 
 interface PushNotificationSettingsProps {
   isSubscribed: boolean;
+  variant?: 'row' | 'tile';
 }
 
-export default function PushNotificationSettings({ isSubscribed }: PushNotificationSettingsProps) {
+export default function PushNotificationSettings({ isSubscribed, variant = 'row' }: PushNotificationSettingsProps) {
   const deviceId = useDeviceId();
   const [isSupported, setIsSupported] = useState(false);
   const [permission, setPermission] = useState<NotificationPermission>('default');
@@ -228,88 +231,20 @@ export default function PushNotificationSettings({ isSubscribed }: PushNotificat
   };
 
   return (
-    <div className="p-4 sm:p-6">
-      <div className="flex flex-row items-center justify-between gap-4">
-        <span className="text-[#ff9900] font-medium text-lg">Push</span>
-        <Switch
-          checked={isEnabled}
-          onCheckedChange={isEnabled ? handleUnsubscribe : handleSubscribe}
-          disabled={isLoading || !isSupported || !isDeviceReady}
-        />
-      </div>
-      <p className="text-[#ff9900]/60 text-sm mt-1">Benachrichtigungen</p>
-      {!isSupported && (
-        <Alert variant="destructive" className="mt-4">
-          <AlertTitle>Nicht unterstützt</AlertTitle>
-          <AlertDescription>
-            Push-Benachrichtigungen werden von deinem Browser nicht unterstützt.
-          </AlertDescription>
-        </Alert>
-      )}
-      {error && (
-        <Alert variant="destructive" className="mt-4">
-          <AlertTitle>Fehler</AlertTitle>
-          <AlertDescription>{error}</AlertDescription>
-        </Alert>
-      )}
-      {showDebug && (
-        <div className="mt-4">
-          <div className="flex items-center justify-between mb-4">
-            <h3 className="text-[#ff9900] font-medium">Debug-Informationen</h3>
-            <div className="flex gap-1">
-              <div className={`w-2 h-2 rounded-full ${debugInfo.notificationsSupported ? 'bg-green-500' : 'bg-red-500'}`} title="Notifications API" />
-              <div className={`w-2 h-2 rounded-full ${debugInfo.serviceWorkerSupported ? 'bg-green-500' : 'bg-red-500'}`} title="Service Worker" />
-              <div className={`w-2 h-2 rounded-full ${debugInfo.pushManagerSupported ? 'bg-green-500' : 'bg-red-500'}`} title="Push Manager" />
-              <div className={`w-2 h-2 rounded-full ${debugInfo.subscription ? 'bg-green-500' : 'bg-yellow-500'}`} title="Subscription" />
-            </div>
-          </div>
-
-          <div className="overflow-x-auto">
-            <table className="w-full text-sm font-mono">
-              <thead>
-                <tr className="border-b border-[#460b6c]/20">
-                  <th className="text-left py-2 px-2 sm:px-4 text-[#ff9900]/60">Eigenschaft</th>
-                  <th className="text-left py-2 px-2 sm:px-4 text-[#ff9900]/60">Status</th>
-                </tr>
-              </thead>
-              <tbody>
-                <tr className="border-b border-[#460b6c]/10">
-                  <td className="py-2 px-2 sm:px-4 text-[#ff9900]/60">Notifications API</td>
-                  <td className="py-2 px-2 sm:px-4">
-                    <div className={`w-3 h-3 rounded-full ${debugInfo.notificationsSupported ? 'bg-green-500' : 'bg-red-500'}`} />
-                  </td>
-                </tr>
-                <tr className="border-b border-[#460b6c]/10">
-                  <td className="py-2 px-2 sm:px-4 text-[#ff9900]/60">Service Worker</td>
-                  <td className="py-2 px-2 sm:px-4">
-                    <div className={`w-3 h-3 rounded-full ${debugInfo.serviceWorkerSupported ? 'bg-green-500' : 'bg-red-500'}`} />
-                  </td>
-                </tr>
-                <tr className="border-b border-[#460b6c]/10">
-                  <td className="py-2 px-2 sm:px-4 text-[#ff9900]/60">Push Manager</td>
-                  <td className="py-2 px-2 sm:px-4">
-                    <div className={`w-3 h-3 rounded-full ${debugInfo.pushManagerSupported ? 'bg-green-500' : 'bg-red-500'}`} />
-                  </td>
-                </tr>
-                <tr className="border-b border-[#460b6c]/10">
-                  <td className="py-2 px-2 sm:px-4 text-[#ff9900]/60">Service Worker Status</td>
-                  <td className="py-2 px-2 sm:px-4">{debugInfo.serviceWorkerState || 'Nicht verfügbar'}</td>
-                </tr>
-                <tr className="border-b border-[#460b6c]/10">
-                  <td className="py-2 px-2 sm:px-4 text-[#ff9900]/60">VAPID Key</td>
-                  <td className="py-2 px-2 sm:px-4 truncate max-w-[200px] sm:max-w-xs">{debugInfo.vapidKey}</td>
-                </tr>
-                <tr>
-                  <td className="py-2 px-2 sm:px-4 text-[#ff9900]/60">Subscription</td>
-                  <td className="py-2 px-2 sm:px-4">
-                    <div className={`w-3 h-3 rounded-full ${debugInfo.subscription ? 'bg-green-500' : 'bg-yellow-500'}`} />
-                  </td>
-                </tr>
-              </tbody>
-            </table>
-          </div>
+    <UserSettingsCard
+      icon={<Bell className="w-5 h-5 text-[#ff9900]" />}
+      title="Push-Benachrichtigungen"
+      switchElement={
+        <div className="flex items-center gap-1">
+          <Switch
+            checked={isEnabled}
+            onCheckedChange={isEnabled ? handleUnsubscribe : handleSubscribe}
+            disabled={isLoading || !isSupported || !isDeviceReady}
+          />
         </div>
-      )}
-    </div>
+      }
+      info="Erhalte wichtige Festival-Infos direkt aufs Gerät. Aktiviere Push, um keine Updates zu verpassen."
+      variant={variant}
+    />
   );
 }

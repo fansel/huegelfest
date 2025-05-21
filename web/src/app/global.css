@@ -218,3 +218,12 @@ input, textarea {
   }
 }
 
+@media (max-width: 640px) {
+  html.no-scroll, body.no-scroll {
+    overflow: hidden !important;
+    height: 100dvh !important;
+    position: fixed;
+    width: 100vw;
+  }
+}
+
