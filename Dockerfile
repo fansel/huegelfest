@@ -21,7 +21,7 @@ COPY web/fix-import-extensions.js ./
 ENV NEXT_TELEMETRY_DISABLED=1
 
 # Build the application
-RUN npm run build:server
+RUN npm run build
 
 
 # Production image, copy all the files and run next
