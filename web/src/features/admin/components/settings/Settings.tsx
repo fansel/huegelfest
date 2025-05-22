@@ -1,9 +1,8 @@
 import React, { useState } from 'react';
 import FestivalSignupPhaseToggle from './FestivalSignupPhaseToggle';
 import PacklistSheet from './PacklistSheet';
-import PushSchedulerSettings from '../pushScheduler/PushSchedulerSettings';
 import { useDeviceContext } from '@/shared/contexts/DeviceContext';
-import { ClipboardList, Bell, Settings as SettingsIcon } from 'lucide-react';
+import { ClipboardList, Settings as SettingsIcon } from 'lucide-react';
 
 /**
  * Admin-Settings: Responsive, modernes Card-Grid für Desktop, einspaltig für Mobile.
@@ -37,21 +36,7 @@ const Settings: React.FC = () => {
           Packliste verwalten
         </button>
       ),
-    },
-    {
-      icon: <Bell className="w-8 h-8 text-[#ff9900]" />,
-      title: 'Push & Scheduler',
-      description: 'Plane und verwalte Fun Push-Nachrichten für das Festival.',
-      content: null,
-      action: (
-        <button
-          onClick={() => setPushOpen(true)}
-          className="bg-gradient-to-r from-[#ff9900] to-[#ffb347] text-white px-4 py-2 rounded-lg font-semibold shadow hover:scale-105 hover:from-[#ff9900]/90 hover:to-[#ffb347]/90 transition-all"
-        >
-          Fun Local Push & Scheduler
-        </button>
-      ),
-    },
+    }
   ];
 
   return (
@@ -67,12 +52,6 @@ const Settings: React.FC = () => {
             className="bg-gradient-to-r from-[#ff9900] to-[#ffb347] text-white px-4 py-2 rounded-lg font-semibold shadow hover:scale-105 hover:from-[#ff9900]/90 hover:to-[#ffb347]/90 transition-all w-full"
           >
             Packliste verwalten
-          </button>
-          <button
-            onClick={() => setPushOpen(true)}
-            className="bg-gradient-to-r from-[#ff9900] to-[#ffb347] text-white px-4 py-2 rounded-lg font-semibold shadow hover:scale-105 hover:from-[#ff9900]/90 hover:to-[#ffb347]/90 transition-all w-full"
-          >
-            Fun Local Push & Scheduler
           </button>
         </>
       ) : (
@@ -93,7 +72,6 @@ const Settings: React.FC = () => {
       )}
       {/* Sheets für Details */}
       <PacklistSheet open={open} setOpen={setOpen} />
-      <PushSchedulerSettings open={pushOpen} setOpen={setPushOpen} />
     </div>
   );
 };

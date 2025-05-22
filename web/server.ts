@@ -1,4 +1,4 @@
-import './src/lib/pushScheduler/cron.js';
+import './src/lib/pushScheduler/agenda.js';
 import { createServer } from 'http';
 import { parse } from 'url';
 import next from 'next';

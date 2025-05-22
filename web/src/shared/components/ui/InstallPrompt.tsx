@@ -21,6 +21,7 @@ export const InstallPrompt: React.FC<InstallPromptProps> = () => {
   const [show, setShow] = useState(false);
   const [dontShowAgain, setDontShowAgain] = useState(false);
   const [platform, setPlatform] = useState<"ios" | "android" | "unknown" | null>(null);
+  const [isClient, setIsClient] = useState(false);
 
   useEffect(() => {
     if (deviceType !== "mobile" || displayMode === "standalone") {
@@ -37,6 +38,8 @@ export const InstallPrompt: React.FC<InstallPromptProps> = () => {
     setShow(true);
   }, [deviceType, displayMode]);
 
+  useEffect(() => { setIsClient(true); }, []);
+
   const handleClose = () => {
     if (dontShowAgain) {
       localStorage.setItem(LOCAL_STORAGE_KEY, "1");
@@ -44,7 +47,7 @@ export const InstallPrompt: React.FC<InstallPromptProps> = () => {
     setShow(false);
   };
 
-  if (!show || platform === null) return null;
+  if (!isClient || !show || platform === null) return null;
 
   // Warn-Design: gelber Rahmen, Warn-Icon, freundlicher Text
   return (

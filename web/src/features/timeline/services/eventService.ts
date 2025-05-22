@@ -1,12 +1,36 @@
 import { Event, IEvent } from '@/lib/db/models/Event';
 import { Types } from 'mongoose';
 import { broadcast } from '@/lib/websocket/broadcast';
+import { createScheduledPushEvent } from '@/features/pushScheduler/scheduledPushEventService';
+import { Day } from '@/lib/db/models/Day';
 
 export async function createEvent(data: Record<string, any>) {
   const event = new Event(data);
   await event.save();
   await broadcast('event-created', { eventId: event._id.toString(), dayId: event.dayId?.toString() });
   const plain = await Event.findById(event._id).lean();
+
+  // --- Push-Event automatisch anlegen ---
+  // Hole das Datum des Tages
+  const day = await Day.findById(event.dayId);
+  if (day) {
+    // Kombiniere Datum und Uhrzeit zu einem Date-Objekt
+    const [hour, minute] = event.time.split(':').map(Number);
+    const eventDate = new Date(day.date);
+    eventDate.setHours(hour, minute, 0, 0);
+
+    // Erstelle den Push-Event
+    await createScheduledPushEvent({
+      title: event.title,
+      body: `Programmpunkt "${event.title}" startet jetzt!`,
+      repeat: 'once',
+      schedule: eventDate,
+      active: true,
+      sendToAll: true,
+    });
+  }
+  // --- Ende Push-Event-Logik ---
+
   return plain;
 }
 

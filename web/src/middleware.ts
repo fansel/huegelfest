@@ -5,6 +5,12 @@ import { jwtVerify } from 'jose'; // jose ist Edge-kompatibel
 const JWT_SECRET = new TextEncoder().encode(process.env.JWT_SECRET);
 
 export async function middleware(request: NextRequest) {
+  if (request.nextUrl.pathname.startsWith('/api/internal/')) {
+    if (request.headers.get('host') !== 'localhost:3000') {
+      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+    }
+  }
+
   const token = request.cookies.get('authToken')?.value;
   if (!token) {
     return NextResponse.redirect(new URL('/login', request.url));
