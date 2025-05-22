@@ -1,12 +1,11 @@
 import Agenda, { Job } from 'agenda';
 import mongoose from 'mongoose';
+import { connectDB } from '../db/connector';
 import { logger } from '../logger';
 import { webPushService } from '../webpush/webPushService';
 import ScheduledPushEvent from '../db/models/ScheduledPushEvent';
 import { Subscriber } from '../db/models/Subscriber';
-import { getMongoUri } from '../db/connector';
-
-const mongoConnectionString = getMongoUri();
+const mongoConnectionString = `mongodb://${process.env.MONGO_HOST}:${process.env.MONGO_PORT}/${process.env.MONGO_DB}`;
 
 export const agenda = new Agenda({
   db: { address: mongoConnectionString, collection: 'agendaJobs' },
