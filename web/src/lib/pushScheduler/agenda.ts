@@ -5,7 +5,8 @@ import { logger } from '../logger';
 import { webPushService } from '../webpush/webPushService';
 import ScheduledPushEvent from '../db/models/ScheduledPushEvent';
 import { Subscriber } from '../db/models/Subscriber';
-const mongoConnectionString = `mongodb://${process.env.MONGO_HOST}:${process.env.MONGO_PORT}/${process.env.MONGO_DB}`;
+
+const mongoConnectionString = `mongodb://${process.env.MONGO_HOST || 'localhost'}:${process.env.MONGO_PORT || '27017'}/${process.env.MONGO_DB || 'huegelfest'}`;
 
 export const agenda = new Agenda({
   db: { address: mongoConnectionString, collection: 'agendaJobs' },
