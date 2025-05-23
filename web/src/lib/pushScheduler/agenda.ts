@@ -77,7 +77,14 @@ agenda.on('error', (err) => {
   console.error('[Agenda] Scheduler error:', err);
 });
 
-startAgenda();
+const isEdgeRuntime = () =>
+  typeof process !== 'undefined' && process.env.NEXT_RUNTIME === 'edge';
+
+if (!isEdgeRuntime()) {
+  startAgenda();
+} else {
+  console.log('[Agenda] Läuft in Edge Runtime – Scheduler wird NICHT gestartet.');
+}
 
 
 

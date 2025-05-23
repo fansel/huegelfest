@@ -16,8 +16,7 @@ export async function createEvent(data: Record<string, any>) {
   if (day) {
     // Kombiniere Datum und Uhrzeit zu einem Date-Objekt
     const [hour, minute] = event.time.split(':').map(Number);
-    const eventDate = new Date(day.date);
-    eventDate.setHours(hour, minute, 0, 0);
+    const eventDate = new Date(Date.UTC(day.date.getFullYear(), day.date.getMonth(), day.date.getDate(), hour, minute, 0, 0));
 
     // Erstelle den Push-Event
     await createScheduledPushEvent({
