@@ -1,91 +1,72 @@
 import Agenda, { Job } from 'agenda';
-import mongoose from 'mongoose';
 import { connectDB } from '../db/connector';
 import { logger } from '../logger';
 import { webPushService } from '../webpush/webPushService';
 import ScheduledPushEvent from '../db/models/ScheduledPushEvent';
 import { Subscriber } from '../db/models/Subscriber';
 
-const mongoConnectionString = `mongodb://${process.env.MONGO_HOST || 'localhost'}:${process.env.MONGO_PORT || '27017'}/${process.env.MONGO_DB || 'huegelfest'}`;
+interface SendPushEventData { eventId: string; }
 
-export const agenda = new Agenda({
-  db: { address: mongoConnectionString, collection: 'agendaJobs' },
+const mongoUri = `mongodb://${process.env.MONGO_HOST || 'localhost'}:${process.env.MONGO_PORT || '27017'}/${process.env.MONGO_DB || 'huegelfest'}`;
+
+connectDB()
+  .then(() => logger.info('[Agenda] Mongoose verbunden'))
+  .catch(err => { logger.error('[Agenda] Verbindungsfehler:', err); process.exit(1); });
+
+const agenda = new Agenda({
+  db: { address: mongoUri, collection: 'agendaJobs' },
   processEvery: '30 seconds',
   defaultConcurrency: 5,
   maxConcurrency: 20,
+  defaultLockLifetime: 600000
 });
 
-// Beispiel-Job-Definition: Push-Event senden
-agenda.define('sendPushEvent', async (job: Job) => {
-  console.log('[Agenda] sendPushEvent Job gestartet');
-  const { eventId } = job.attrs.data as { eventId: string };
-  console.log('[Agenda] Event ID', eventId);
-  if (!eventId) return;
-
-  // Event aus DB holen
-  const event = await ScheduledPushEvent.findById(eventId);
-  console.log('[Agenda] Event aus DB holen', event);
-  if (!event || !event.active) return;
-
-  let subscribers;
-  if (event.sendToAll) {
-    subscribers = await Subscriber.find({});
-    console.log('[Agenda] Subscriber finden', subscribers);
-  } else {
-    subscribers = await Subscriber.find({ _id: { $in: event.subscribers } });
-    console.log('[Agenda] Subscriber finden', subscribers);
-  }
-
-  for (const subscriber of subscribers) {
-    if (!subscriber.endpoint) continue;
-    console.log('[Agenda] Subscriber', subscriber);
-    try {
-      await webPushService.sendNotification(subscriber, { title: event.title, body: event.body });
-
-      console.log(`[Agenda] Push-Event: ${event.title} mit ID ${eventId} und body ${event.body} an ${subscriber.id} gesendet`);
-    } catch (err) {
-      console.error(`[Agenda] Fehler beim Senden von Push-Event an ${subscriber.id}: ${err}`);
-    }
-  }
-});
-
-// Agenda-Initialisierung (z.B. beim Server-Start)
-export const startAgenda = async () => {
-  console.log('[Agenda] startAgenda() wird aufgerufen');
-  await connectDB();
-  // Sicherstellen, dass die DB-Connection existiert
-  console.log('[Agenda] Mongoose-DB-Connection', mongoose.connection.db);
-  if (!mongoose.connection.db) {
-    throw new Error('[Agenda] Mongoose-DB-Connection nicht verfügbar!');
-  }
-  // @ts-expect-error Typen sind inkompatibel, aber zur Laufzeit funktioniert es
-  agenda.mongo(mongoose.connection.db, 'agendaJobs');
+agenda.define<SendPushEventData>('sendPushEvent', { lockLifetime: 300000, concurrency: 5 }, async (job: Job) => {
+  const { eventId } = job.attrs.data;
+  logger.info(`[Agenda] Executing sendPushEvent for event: ${eventId}`);
   try {
-    console.log('[Agenda] Starte agenda.start()');
-    const startPromise = agenda.start();
-    setTimeout(() => {
-      console.log('[Agenda] agenda.start() läuft immer noch nach 10 Sekunden');
-    }, 10000);
-    await startPromise;
-    console.log('[Agenda] Scheduler gestartet');
+    const event = await ScheduledPushEvent.findById(eventId);
+    if (!event?.active) {
+      logger.warn(`[Agenda] Event invalid or inactive: ${eventId}`);
+      return;
+    }
+    const subs = event.sendToAll
+      ? await Subscriber.find()
+      : await Subscriber.find({ _id: { $in: event.subscribers } });
+    for (const sub of subs) {
+      if (!sub.endpoint) continue;
+      await webPushService.sendNotification(sub, { title: event.title, body: event.body });
+      logger.info(`[Agenda] Notification sent to subscriber ${sub.id}`);
+    }
   } catch (err) {
-    console.error('[Agenda] Fehler beim Starten:', err);
+    logger.error(`[Agenda] Error in sendPushEvent job for ${eventId}:`, err);
   }
-};
-
-agenda.on('error', (err) => {
-  console.error('[Agenda] Scheduler error:', err);
 });
 
-const isEdgeRuntime = () =>
-  typeof process !== 'undefined' && process.env.NEXT_RUNTIME === 'edge';
+agenda
+  .on('ready', () => logger.info('[Agenda] Connected & ready'))
+  .on('start', job => logger.info(`[Agenda] Job started: ${job.attrs.name}`))
+  .on('complete', job => logger.info(`[Agenda] Job completed: ${job.attrs.name}`))
+  .on('success', job => logger.info(`[Agenda] Job succeeded: ${job.attrs.name}`))
+  .on('fail', (err, job) => logger.error(`[Agenda] Job failed: ${job?.attrs.name}`, err))
+  .on('error', err => logger.error('[Agenda] Scheduler error:', err));
 
-if (!isEdgeRuntime()) {
-  startAgenda();
-} else {
-  console.log('[Agenda] Läuft in Edge Runtime – Scheduler wird NICHT gestartet.');
-}
+(async () => {
+  try {
+    await agenda.start();
+    logger.info('[Agenda] Scheduler is running');
+  } catch (err) {
+    logger.error('[Agenda] Failed to start scheduler:', err);
+    process.exit(1);
+  }
+})();
 
+setInterval(async () => {
+  logger.info('[Agenda] Polling for jobs...');
+  const totalJobs = await agenda.jobs({ name: 'sendPushEvent' });
+  logger.info(`[Agenda] Total 'sendPushEvent' jobs: ${totalJobs.length}`);
+  const openJobs = await agenda.jobs({ name: 'sendPushEvent', nextRunAt: { $ne: null } });
+  logger.info(`[Agenda] Open 'sendPushEvent' jobs: ${openJobs.length}`);
+}, 30000);
 
-
-
+export default agenda;

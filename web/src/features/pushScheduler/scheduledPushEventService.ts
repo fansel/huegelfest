@@ -1,5 +1,5 @@
 import ScheduledPushEvent from '../../lib/db/models/ScheduledPushEvent';
-import { agenda } from '../../lib/pushScheduler/agenda';
+import agenda from '../../lib/pushScheduler/agenda';
 import { IScheduledPushEvent } from '../../lib/db/models/ScheduledPushEvent';
 
 export async function createScheduledPushEvent(data: Partial<IScheduledPushEvent>) {
