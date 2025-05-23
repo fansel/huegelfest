@@ -23,7 +23,35 @@ export function DatePicker({
   onChange: (date: Date | undefined) => void
   // ...weitere Props falls nötig
 }) {
-  // Kein eigener State!
+  // Erkennung von mobilen Geräten
+  const [isMobile, setIsMobile] = React.useState(false);
+  
+  React.useEffect(() => {
+    const checkIsMobile = () => {
+      setIsMobile(window.innerWidth < 768 || 'ontouchstart' in window);
+    };
+    checkIsMobile();
+    window.addEventListener('resize', checkIsMobile);
+    return () => window.removeEventListener('resize', checkIsMobile);
+  }, []);
+
+  // Mobile: Native HTML date input
+  if (isMobile) {
+    return (
+      <input
+        type="date"
+        value={value ? value.toISOString().split('T')[0] : ''}
+        onChange={(e) => {
+          const dateValue = e.target.value;
+          onChange(dateValue ? new Date(dateValue) : undefined);
+        }}
+        className="w-full border border-gray-300 rounded-md px-3 py-2 text-base focus:outline-none focus:ring-2 focus:ring-[#ff9900] focus:border-transparent"
+        {...props}
+      />
+    );
+  }
+
+  // Desktop: Popover mit Calendar
   return (
     <Popover>
       <PopoverTrigger asChild>

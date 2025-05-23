@@ -589,7 +589,7 @@ const TimelineManager: React.FC = () => {
   return (
     <div className="w-full px-2 sm:px-0 relative min-h-[60vh] pb-24">
       <Tabs value={activeTab} onValueChange={(v: string) => setActiveTab(v as 'timeline' | 'categories' | 'pending')} className="mb-4 mt-2">
-        <TabsList className="flex justify-center gap-2">
+        <TabsList className="flex justify-center gap-2 mx-4 sm:mx-0">
           <TabsTrigger value="timeline">Timeline</TabsTrigger>
           <TabsTrigger value="categories">Kategorien</TabsTrigger>
         </TabsList>

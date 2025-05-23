@@ -133,10 +133,10 @@ const AdminCategoriesTab: React.FC<AdminCategoriesTabProps> = ({ categories, set
   if (isMobile) {
     return (
       <div className="max-w-lg mx-auto w-full">
-        <div className="flex justify-between items-center mb-4">
+        <div className="flex justify-between items-center mb-4 px-4">
           <h3 className="text-xl font-bold text-[#460b6c]">Kategorien</h3>
         </div>
-        <ul className="space-y-3">
+        <ul className="space-y-3 px-4">
           {categories.map(cat => (
             <li key={cat._id} className="bg-white shadow rounded-xl px-4 py-3 flex items-center justify-between">
               <div className="flex items-center gap-3 flex-1 min-w-0">
@@ -168,7 +168,7 @@ const AdminCategoriesTab: React.FC<AdminCategoriesTabProps> = ({ categories, set
           ))}
         </ul>
         {/* Floating-Button unten zum Kategorie anlegen */}
-        <div className="mt-6 flex justify-center mb-6">
+        <div className="mt-6 flex justify-center mb-6 px-4">
           <button
             onClick={() => { setShowCategoryModal(true); setEditCategoryId(null); setCategoryForm({ name: '', color: '#ff9900', icon: '' }); }}
             className="rounded-full bg-gradient-to-br from-[#ff9900] to-[#ffb84d] text-white shadow-3xl w-10 h-10 flex items-center justify-center text-xl focus:outline-none focus:ring-2 focus:ring-[#ff9900]/30 active:scale-95 transition border-2 border-white"
