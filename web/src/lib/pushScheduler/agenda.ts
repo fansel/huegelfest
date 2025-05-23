@@ -12,11 +12,6 @@ const mongoUri = `mongodb://${process.env.MONGO_HOST || 'localhost'}:${process.e
 connectDB()
   .then(() => logger.info('[Agenda] Mongoose verbunden'))
   .catch(err => { logger.error('[Agenda] Verbindungsfehler:', err);
-    if (typeof window !== 'undefined') {
-      logger.info('[Agenda] Skip connection to MongoDB in browser');
-    } else {
-      process.exit(1);
-    }
   });
 
 const agenda = new Agenda({
