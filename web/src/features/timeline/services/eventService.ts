@@ -3,6 +3,8 @@ import { Types } from 'mongoose';
 import { broadcast } from '@/lib/websocket/broadcast';
 import { createScheduledPushEvent } from '@/features/pushScheduler/scheduledPushEventService';
 import { Day } from '@/lib/db/models/Day';
+import { fromZonedTime, toZonedTime } from 'date-fns-tz';
+import { format } from 'date-fns';
 
 export async function createEvent(data: Record<string, any>) {
   const event = new Event(data);
@@ -14,9 +16,16 @@ export async function createEvent(data: Record<string, any>) {
   // Hole das Datum des Tages
   const day = await Day.findById(event.dayId);
   if (day) {
-    // Kombiniere Datum und Uhrzeit zu einem Date-Objekt
-    const [hour, minute] = event.time.split(':').map(Number);
-    const eventDate = new Date(Date.UTC(day.date.getFullYear(), day.date.getMonth(), day.date.getDate(), hour, minute, 0, 0));
+    // 1. UTC-Datum aus DB holen
+    const utcDate = day.date;
+    // 2. In lokale Zeit (Europe/Berlin) umwandeln
+    const berlinDate = toZonedTime(utcDate, 'Europe/Berlin');
+    // 3. Lokales Datum als String im Format 'yyyy-MM-dd'
+    const datePart = format(berlinDate, 'yyyy-MM-dd', { timeZone: 'Europe/Berlin' });
+    // 4. Mit Uhrzeit kombinieren
+    const localDateTime = `${datePart}T${event.time}:00`;
+    // 5. Wieder in UTC umwandeln
+    const eventDate = fromZonedTime(localDateTime, 'Europe/Berlin');
 
     // Erstelle den Push-Event
     await createScheduledPushEvent({

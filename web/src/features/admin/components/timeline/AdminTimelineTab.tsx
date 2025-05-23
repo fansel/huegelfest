@@ -20,6 +20,7 @@ import { updateEvent } from '@/features/timeline/actions/updateEvent';
 import { removeEvent } from '@/features/timeline/actions/removeEvent';
 import clsx from 'clsx';
 import * as LucideIcons from 'lucide-react';
+import { formatDateBerlin } from '@/shared/utils/formatDateBerlin';
 
 // Props-Interface ggf. anpassen
 interface AdminTimelineTabProps {
@@ -303,7 +304,7 @@ const AdminTimelineTab: React.FC<AdminTimelineTabProps> = ({ days, setDays, even
                       {day.title}
                       {hasPending && <span className="w-2 h-2 rounded-full bg-yellow-400 inline-block" title="Unbestätigte Events"></span>}
                     </span>
-                  <span className="text-xs text-gray-500">{day.date ? format(new Date(day.date), 'PPP', { locale: de }) : ''}</span>
+                  <span className="text-xs text-gray-500">{day.date ? formatDateBerlin(day.date, { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' }) : ''}</span>
                 </div>
                 <div className="flex gap-1">
                   <Button variant="secondary" size="icon" onClick={() => handleEditDay(day)} aria-label="Bearbeiten"><Pencil className="h-4 w-4" /></Button>
@@ -595,7 +596,7 @@ const AdminTimelineTab: React.FC<AdminTimelineTabProps> = ({ days, setDays, even
                           {day.title}
                           {hasPending && <span className="w-2 h-2 rounded-full bg-yellow-400 inline-block" title="Unbestätigte Events"></span>}
                         </span>
-                      <span className="text-xs text-gray-500">{day.date ? format(new Date(day.date), 'PPP', { locale: de }) : ''}</span>
+                      <span className="text-xs text-gray-500">{day.date ? formatDateBerlin(day.date, { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' }) : ''}</span>
                     </div>
                     <div className="flex gap-1">
                       <Button variant="secondary" size="icon" onClick={() => { setEditDayId(day._id); setDayForm({ title: day.title, description: day.description || '', date: day.date ? new Date(day.date) : null }); setDesktopFormTab('day'); }} aria-label="Bearbeiten"><Pencil className="h-4 w-4" /></Button>

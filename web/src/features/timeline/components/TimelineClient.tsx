@@ -16,6 +16,7 @@ import { getWebSocketUrl } from '@/shared/utils/getWebSocketUrl';
 import { useFavorites } from '@/features/favorites/hooks/useFavorites';
 import { fetchTimeline } from '../actions/fetchTimeline';
 import toast from 'react-hot-toast';
+import { formatDateBerlin } from '@/shared/utils/formatDateBerlin';
 
 
 interface TimelineDay {

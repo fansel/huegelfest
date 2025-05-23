@@ -1,5 +1,6 @@
 import React from 'react';
 import { ReactionType, REACTION_EMOJIS } from '@/shared/types/types';
+import { formatDateBerlin } from '@/shared/utils/formatDateBerlin';
 
 interface AnnouncementEventCardReactions {
   counts: Record<ReactionType, number>;
@@ -16,10 +17,6 @@ interface AnnouncementEventCardProps {
   onReact?: (type: ReactionType) => void;
   className?: string;
 }
-
-const dateFormatter = new Intl.DateTimeFormat('de-DE', {
-  day: '2-digit', month: '2-digit', year: 'numeric', hour: '2-digit', minute: '2-digit',
-});
 
 // Hilfsfunktion für kontrastreiche Textfarbe
 function getContrastTextColor(bgColor: string): string {
@@ -65,7 +62,7 @@ export const AnnouncementEventCard: React.FC<AnnouncementEventCardProps> = ({
         </div>
         <span className="text-xs text-white/60 font-medium">
           {createdAt && !isNaN(new Date(createdAt).getTime())
-            ? dateFormatter.format(new Date(createdAt))
+            ? formatDateBerlin(createdAt, { day: '2-digit', month: '2-digit', year: 'numeric', hour: '2-digit', minute: '2-digit' })
             : ''}
         </span>
       </div>

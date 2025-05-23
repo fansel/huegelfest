@@ -2,6 +2,7 @@ import React from 'react';
 import { Pencil, Trash2 } from 'lucide-react';
 import { ReactionType, REACTION_EMOJIS } from '@/shared/types/types';
 import { Button } from '@/shared/components/ui/button';
+import { formatDateBerlin } from '@/shared/utils/formatDateBerlin';
 
 interface AnnouncementCardReactions {
   counts: Record<ReactionType, number>;
@@ -22,10 +23,6 @@ interface AnnouncementCardProps {
   deviceId?: string;
   className?: string;
 }
-
-const dateFormatter = new Intl.DateTimeFormat('de-DE', {
-  day: '2-digit', month: '2-digit', year: 'numeric', hour: '2-digit', minute: '2-digit',
-});
 
 export const AnnouncementCard: React.FC<AnnouncementCardProps> = ({
   content,
@@ -48,7 +45,7 @@ export const AnnouncementCard: React.FC<AnnouncementCardProps> = ({
     <div className="flex justify-between items-center mb-1">
       <span className="text-xs text-gray-500 font-medium">
         {createdAt && !isNaN(new Date(createdAt).getTime())
-          ? dateFormatter.format(new Date(createdAt))
+          ? formatDateBerlin(createdAt, { day: '2-digit', month: '2-digit', year: 'numeric', hour: '2-digit', minute: '2-digit' })
           : ''}
       </span>
       {(onEdit || onDelete) && (

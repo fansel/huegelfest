@@ -12,10 +12,7 @@ import { Select, SelectTrigger, SelectContent, SelectItem, SelectValue } from '@
 import { AlertDialog, AlertDialogContent, AlertDialogHeader, AlertDialogTitle, AlertDialogDescription, AlertDialogFooter, AlertDialogCancel, AlertDialogAction } from '@/shared/components/ui/alert-dialog';
 import { useDeviceContext, useDeviceType } from '@/shared/contexts/DeviceContext';
 import { useWindowWidth } from '@/shared/hooks/useWindowWidth';
-
-const dateFormatter = new Intl.DateTimeFormat('de-DE', {
-  day: '2-digit', month: '2-digit', year: 'numeric', hour: '2-digit', minute: '2-digit',
-});
+import { formatDateBerlin } from '@/shared/utils/formatDateBerlin';
 
 const MAX_LENGTH = 300;
 const MAX_LINES = 14;
@@ -180,7 +177,7 @@ const AnnouncementsManager: React.FC = () => {
                       groupName={announcement.groupName ?? 'Gruppe'}
                       groupColor={announcement.groupColor}
                       important={announcement.important}
-                      createdAt={announcement.createdAt}
+                      createdAt={announcement.createdAt ? formatDateBerlin(announcement.createdAt, { day: '2-digit', month: '2-digit', year: 'numeric', hour: '2-digit', minute: '2-digit' }) : ''}
                       onEdit={() => handleEdit(announcement)}
                       onDelete={() => handleDelete(announcement.id)}
                       isLoadingDelete={deleteDialogId === announcement.id}
@@ -239,7 +236,7 @@ const AnnouncementsManager: React.FC = () => {
                   groupName={announcement.groupName ?? 'Gruppe'}
                   groupColor={announcement.groupColor}
                   important={announcement.important}
-                  createdAt={announcement.createdAt}
+                  createdAt={announcement.createdAt ? formatDateBerlin(announcement.createdAt, { day: '2-digit', month: '2-digit', year: 'numeric', hour: '2-digit', minute: '2-digit' }) : ''}
                   onEdit={() => handleEdit(announcement)}
                   onDelete={() => handleDelete(announcement.id)}
                   isLoadingDelete={deleteDialogId === announcement.id}

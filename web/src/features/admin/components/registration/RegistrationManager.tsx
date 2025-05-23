@@ -26,6 +26,7 @@ import { toast } from 'react-hot-toast';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '@/shared/components/ui/dialog';
 import { useDeviceContext } from '@/shared/contexts/DeviceContext';
 import { Bike } from "lucide-static";
+import { formatDateBerlin } from '@/shared/utils/formatDateBerlin';
 
 interface RegistrationWithId {
   _id: string;
@@ -370,7 +371,7 @@ export default function RegistrationManager() {
       "Line-Up": reg.lineupContribution,
       Workshop: reg.wantsToOfferWorkshop,
       Schlaf: reg.sleepingPreference,
-      Zeit: new Date(reg.createdAt).toLocaleString(),
+      Zeit: formatDateBerlin(reg.createdAt),
     })));
     const blob = new Blob([csv], { type: "text/csv;charset=utf-8;" });
     const url = URL.createObjectURL(blob);
@@ -557,7 +558,7 @@ export default function RegistrationManager() {
               <Info className="w-4 h-4" /> {selected.checkedIn ? 'Angemeldet' : 'Unangemeldet'}
             </button>
           </div>
-          <div className="text-xs text-gray-400 mt-4">Erstellt: {new Date(selected.createdAt).toLocaleString()}</div>
+          <div className="text-xs text-gray-400 mt-4">Erstellt: {formatDateBerlin(selected.createdAt)}</div>
         </div>
       </div>
     );
