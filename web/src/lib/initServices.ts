@@ -1,8 +1,8 @@
 import { connectDB } from './db/connector';
-import { webPushService } from './webpush/webPushService';
 import { logger } from './logger';
 import { ensureDefaultCategories, ensureDefaultGroup } from './db/initDefaults';
-
+import { initWebpush } from './initWebpush';
+import { webPushService } from './webpush/webPushService';
 export interface InitStatus {
   db: boolean;
   webPush: boolean;
@@ -38,7 +38,7 @@ export async function initServices(): Promise<InitStatus> {
     logger.error('[Init] Fehler bei der DB-Initialisierung:', err);
   }
   try {
-    await webPushService.initialize();
+    await initWebpush();
     status.webPush = webPushService.isInitialized();
     if (status.webPush) {
       logger.info('[Init] WebPush erfolgreich initialisiert.');

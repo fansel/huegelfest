@@ -4,7 +4,7 @@ import { logger } from '../logger';
 import { webPushService } from '../webpush/webPushService';
 import ScheduledPushEvent from '../db/models/ScheduledPushEvent';
 import { Subscriber } from '../db/models/Subscriber';
-
+import { initWebpush } from '../initWebpush';
 interface SendPushEventData { eventId: string; }
 
 const mongoUri = `mongodb://${process.env.MONGO_HOST || 'localhost'}:${process.env.MONGO_PORT || '27017'}/${process.env.MONGO_DB || 'huegelfest'}`;
@@ -36,8 +36,11 @@ agenda.define<SendPushEventData>('sendPushEvent', { lockLifetime: 300000, concur
       : await Subscriber.find({ _id: { $in: event.subscribers } });
     for (const sub of subs) {
       if (!sub.endpoint) continue;
-      await webPushService.sendNotification(sub, { title: event.title, body: event.body });
-      logger.info(`[Agenda] Notification sent to subscriber ${sub.id}`);
+      await initWebpush();
+      if (webPushService.isInitialized()) {
+        await webPushService.sendNotification(sub, { title: event.title, body: event.body });
+        logger.info(`[Agenda] Notification sent to subscriber ${sub.id}`);
+      }
     }
   } catch (err) {
     logger.error(`[Agenda] Error in sendPushEvent job for ${eventId}:`, err);
