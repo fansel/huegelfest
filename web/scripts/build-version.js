@@ -20,10 +20,10 @@ const buildTime = Date.now();
 const buildId = crypto.randomBytes(8).toString('hex');
 const version = packageJson.version;
 
-console.log('Generiere Build-Versionierung...');
-console.log(`Version: ${version}`);
-console.log(`Build-Zeit: ${new Date(buildTime).toISOString()}`);
-console.log(`Build-ID: ${buildId}`);
+console.log('🔧 Generiere Build-Versionierung...');
+console.log(`📦 Version: ${version}`);
+console.log(`🕒 Build-Zeit: ${new Date(buildTime).toISOString()}`);
+console.log(`🆔 Build-ID: ${buildId}`);
 
 // 1. Service Worker aktualisieren
 const swPath = path.join(__dirname, '../public/sw.js');
@@ -41,9 +41,9 @@ if (fs.existsSync(swPath)) {
   );
   
   fs.writeFileSync(swPath, swContent);
-  console.log('Service Worker aktualisiert');
+  console.log('✅ Service Worker aktualisiert');
 } else {
-  console.warn('Service Worker nicht gefunden');
+  console.warn('⚠️  Service Worker nicht gefunden');
 }
 
 // 2. App-Version-Datei aktualisieren
@@ -51,24 +51,24 @@ const appVersionPath = path.join(__dirname, '../src/lib/config/appVersion.ts');
 if (fs.existsSync(appVersionPath)) {
   let appVersionContent = fs.readFileSync(appVersionPath, 'utf8');
   
-  // Version und Build-Informationen ersetzen
+  // Version, buildTime und buildId ersetzen
   appVersionContent = appVersionContent.replace(
     /version: '[^']*'/,
     `version: '${version}'`
   );
   appVersionContent = appVersionContent.replace(
-    /buildTime: process\.env\.BUILD_TIME \|\| '[^']*'/,
+    /buildTime: '[^']*'/,
     `buildTime: '${buildTime}'`
   );
   appVersionContent = appVersionContent.replace(
-    /buildId: process\.env\.BUILD_ID \|\| '[^']*'/,
+    /buildId: '[^']*'/,
     `buildId: '${buildId}'`
   );
   
   fs.writeFileSync(appVersionPath, appVersionContent);
-  console.log('App-Version-Datei aktualisiert');
+  console.log('✅ App-Version-Datei aktualisiert');
 } else {
-  console.warn('App-Version-Datei nicht gefunden');
+  console.warn('⚠️  App-Version-Datei nicht gefunden');
 }
 
 // 3. Manifest.json mit Build-Info erweitern (optional)
@@ -82,7 +82,7 @@ if (fs.existsSync(manifestPath)) {
   manifest.build_time = buildTime;
   
   fs.writeFileSync(manifestPath, JSON.stringify(manifest, null, 2));
-  console.log('Manifest aktualisiert');
+  console.log('✅ Manifest aktualisiert');
 }
 
 // 4. Build-Info-Datei für Debugging erstellen
@@ -97,7 +97,7 @@ const buildInfo = {
 };
 
 fs.writeFileSync(buildInfoPath, JSON.stringify(buildInfo, null, 2));
-console.log('Build-Info-Datei erstellt');
+console.log('✅ Build-Info-Datei erstellt');
 
-console.log('Build-Versionierung abgeschlossen!');
-console.log(`Cache-Name wird sein: huegelfest-cache-v${version}-${buildId}`); 
+console.log('🎉 Build-Versionierung abgeschlossen!');
+console.log(`📄 Cache-Name wird sein: huegelfest-cache-v${version}-${buildId}`); 
