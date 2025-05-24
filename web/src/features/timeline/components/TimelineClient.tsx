@@ -17,7 +17,7 @@ import { useFavorites } from '@/features/favorites/hooks/useFavorites';
 import { fetchTimeline } from '../actions/fetchTimeline';
 import toast from 'react-hot-toast';
 import { formatDateBerlin } from '@/shared/utils/formatDateBerlin';
-import { createServerActionFetcher } from '@/lib/swrFetcher';
+
 
 interface TimelineDay {
   _id?: string;
@@ -76,14 +76,13 @@ type EventSubmission = {
 };
 
 export default function Timeline({ showFavoritesOnly = false, allowClipboard = false, days: initialDays, categories: initialCategories }: TimelineProps) {
-  // SWR mit Offline-sicherem Fetcher
+  // SWR holt jetzt die aktuellen Daten über die Server Action (direkter Import, Next.js 15+)
   const { data, mutate } = useSWR<TimelineData>(
     'timeline',
-    createServerActionFetcher(fetchTimeline),
+    fetchTimeline,
     {
       fallbackData: { days: initialDays, categories: initialCategories },
-      revalidateOnFocus: false, // Globale Konfiguration überschreiben für weniger Calls
-      revalidateOnReconnect: true,
+      revalidateOnFocus: true,
     }
   );
 

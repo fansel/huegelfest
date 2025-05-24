@@ -6,7 +6,6 @@ import useSWR from 'swr';
 import { fetchTimeline } from '@/features/timeline/actions/fetchTimeline';
 import { useWebSocket } from '@/shared/hooks/useWebSocket';
 import { getWebSocketUrl } from '@/shared/utils/getWebSocketUrl';
-import { createServerActionFetcher } from '@/lib/swrFetcher';
 
 interface UseFavoritesResult {
   favorites: FavoriteItem[];
@@ -21,10 +20,10 @@ interface UseFavoritesResult {
 export const useFavorites = (): UseFavoritesResult => {
   const [favorites, setFavorites] = useState<FavoriteItem[]>([]);
 
-  // SWR mit Offline-sicherem Fetcher
+  // SWR für Timeline-Daten (konsistent mit TimelineClient)
   const { data: timelineData, isLoading, mutate } = useSWR(
     'timeline',
-    createServerActionFetcher(fetchTimeline),
+    fetchTimeline,
     {
       revalidateOnFocus: false,
       revalidateOnReconnect: true,

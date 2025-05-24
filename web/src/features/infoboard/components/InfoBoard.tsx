@@ -10,7 +10,6 @@ import { useWebSocket, WebSocketMessage } from '@/shared/hooks/useWebSocket';
 import { getWebSocketUrl } from '@/shared/utils/getWebSocketUrl';
 import useSWR from 'swr';
 import { useDeviceId } from '@/shared/hooks/useDeviceId';
-import { createServerActionFetcher } from '@/lib/swrFetcher';
 
 const REACTION_TYPES: ReactionType[] = ['thumbsUp', 'clap', 'laugh', 'surprised', 'heart'];
 
@@ -35,10 +34,10 @@ export default function InfoBoard({ isPWA = false, allowClipboard = false, annou
   const boardRef = useRef<HTMLDivElement>(null);
   const [isVisible, setIsVisible] = useState(false);
 
-  // SWR mit Offline-sicherem Fetcher
+  // SWR für Announcements + Reactions
   const { data, mutate } = useSWR(
     ['infoboard', deviceId],
-    createServerActionFetcher(async () => {
+    async () => {
       if (!deviceId) return { announcements: initialAnnouncements, reactionsMap: initialReactionsMap };
       const loadedAnnouncements = await getAllAnnouncementsAction();
       const mapped = loadedAnnouncements.map((a: any) => ({
@@ -51,7 +50,7 @@ export default function InfoBoard({ isPWA = false, allowClipboard = false, annou
         reactionsObj[a.id] = await getAnnouncementReactionsAction(a.id, deviceId);
       }));
       return { announcements: mapped, reactionsMap: reactionsObj };
-    }),
+    },
     {
       fallbackData: { announcements: initialAnnouncements, reactionsMap: initialReactionsMap },
       revalidateOnFocus: false,

@@ -58,7 +58,6 @@ export interface Day {
 export interface TimelineData {
   _id?: { $oid: string };
   days: Day[];
-  categories: Category[];
   createdAt?: Date;
   updatedAt?: Date;
 }
