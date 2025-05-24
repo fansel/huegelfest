@@ -3,7 +3,7 @@ import React from 'react';
 import { useNetworkStatus } from '../hooks/useNetworkStatus';
 
 /**
- * Zeigt einen Minibanner an, wenn der User offline ist.
+ * Zeigt einen dezenten Banner über der Bottom Bar an, wenn der User offline ist.
  * Wird am besten im Layout oder PWAContainer eingebunden.
  */
 export const OfflineBanner: React.FC = () => {
@@ -15,24 +15,24 @@ export const OfflineBanner: React.FC = () => {
     <div
       style={{
         position: 'fixed',
-        top: 0,
+        bottom: '72px', // Höhe der BottomBar + Abstand
         left: 0,
         right: 0,
-        background: '#ff3333',
-        color: '#fff',
+        background: '#460b6c',
+        color: '#ff9900',
         textAlign: 'center',
-        zIndex: 9999,
+        zIndex: 9998, // Unter der BottomBar
         padding: '4px 0',
-        fontSize: '0.9rem',
-        fontWeight: 600,
-        letterSpacing: '0.05em',
+        fontSize: '0.75rem',
+        opacity: 0.9,
+        borderTop: '1px solid rgba(255,153,0,0.2)',
       }}
       role="status"
       aria-live="polite"
     >
-      Du bist offline – Daten ggf. nicht aktuell
+      Du bist offline
     </div>
   );
 };
 
-export default OfflineBanner; 
+export default OfflineBanner;

@@ -2,8 +2,8 @@
 export const APP_VERSION = {
   // Version aus package.json + Build-Zeit
   version: '0.1.0',
-  buildTime: '1748075020168',
-  buildId: '6e3021dba5256c3b',
+  buildTime: '1748102523701',
+  buildId: '10fed0d3d6cfe0bb',
   
   // Cache-Namen mit automatischer Versionierung
   getCacheName: () => `huegelfest-cache-v${APP_VERSION.version}-${APP_VERSION.buildId}`,

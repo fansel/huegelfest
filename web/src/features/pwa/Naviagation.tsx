@@ -1,6 +1,6 @@
 'use client';
 import React, { useRef, useEffect, useState } from 'react';
-import { Calendar, MapPin, Megaphone, Settings as SettingsIcon, Heart, Shield, Users, Clock, SlidersHorizontal, Music, ClipboardList } from 'lucide-react';
+import { Calendar, MapPin, Megaphone, Settings as SettingsIcon, Heart, Shield, Users, Clock, SlidersHorizontal, Music, ClipboardList, Car } from 'lucide-react';
 import { useNetworkStatus } from '@/shared/hooks/useNetworkStatus';
 import { useGlobalState } from '@/contexts/GlobalStateContext';
 import { useDeviceContext } from '@/shared/contexts/DeviceContext';
@@ -23,6 +23,7 @@ interface BottomBarProps {
 const userTabs: Tab[] = [
   { id: 'home', icon: <Calendar size={24} />, label: 'Timeline' },
   { id: 'anreise', icon: <MapPin size={24} />, label: 'Anreise' },
+  { id: 'carpool', icon: <Car size={24} />, label: 'Mitfahren' },
   { id: 'infoboard', icon: <Megaphone size={24} />, label: 'News' },
   { id: 'favorites', icon: <Heart size={24} />, label: 'Favoriten' },
   { id: 'settings', icon: <SettingsIcon size={24} />, label: 'Einstellungen' },
@@ -39,6 +40,7 @@ const adminTabs: Tab[] = [
 
 const signupPhaseTabs: Tab[] = [
   { id: 'signup', icon: <Users size={24} />, label: 'Anmeldung' },
+  { id: 'carpool', icon: <Car size={24} />, label: 'Mitfahren' },
   { id: 'packlist', icon: <ClipboardList size={24} />, label: 'Packliste' },
   { id: 'settings', icon: <SettingsIcon size={24} />, label: 'Einstellungen' },
 ];

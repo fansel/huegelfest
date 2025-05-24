@@ -8,6 +8,7 @@ import type { AdminTab } from '@/features/admin/types/AdminTab';
 import { FavoritesList } from '@/features/favorites/components/FavoritesList';
 import SignupPhaseInfo from '@/features/pwa/SignupPhaseInfo';
 import Packlist from '@/features/packlist/Packlist';
+import CarpoolManager from '@/features/registration/components/CarpoolManager';
 import { useGlobalState } from '@/contexts/GlobalStateContext';
 import TimelineClient from '@/features/timeline/components/TimelineClient';
 import { useUISettings } from '@/shared/contexts/UISettingsContext';
@@ -52,6 +53,9 @@ const MainContent: React.FC<MainContentProps> = ({ mode, activeTab, adminActiveT
     if (activeTab === 'packlist') {
       return <Packlist />;
     }
+    if (activeTab === 'carpool') {
+      return <CarpoolManager />;
+    }
     // Standard: Anmeldung
     return <SignupPhaseInfo />;
   }
@@ -64,6 +68,8 @@ const MainContent: React.FC<MainContentProps> = ({ mode, activeTab, adminActiveT
         return<TimelineClient days={timelineData.days} categories={timelineData.categories} />;
       case 'anreise':
         return <Anreise />;
+      case 'carpool':
+        return <CarpoolManager />;
       case 'infoboard':
         return <InfoBoard announcements={infoBoardData.announcements} reactionsMap={infoBoardData.reactionsMap} />;
       case 'favorites':

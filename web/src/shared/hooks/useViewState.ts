@@ -4,6 +4,7 @@ import { AdminTab } from '@/features/admin/types/AdminTab';
 type View =
   | 'home'
   | 'anreise'
+  | 'carpool'
   | 'infoboard'
   | 'settings'
   | 'admin'

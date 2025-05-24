@@ -1,6 +1,7 @@
 export type View =
   | 'home'
   | 'anreise'
+  | 'carpool'
   | 'infoboard'
   | 'settings'
   | 'admin'
