@@ -10,7 +10,7 @@ import { Textarea } from '@/shared/components/ui/textarea';
 import { Button } from '@/shared/components/ui/button';
 import { Select, SelectTrigger, SelectContent, SelectItem, SelectValue } from '@/shared/components/ui/select';
 import { AlertDialog, AlertDialogContent, AlertDialogHeader, AlertDialogTitle, AlertDialogDescription, AlertDialogFooter, AlertDialogCancel, AlertDialogAction } from '@/shared/components/ui/alert-dialog';
-import { useDeviceContext, useDeviceType } from '@/shared/contexts/DeviceContext';
+import { useDeviceContext } from '@/shared/contexts/DeviceContext';
 import { useWindowWidth } from '@/shared/hooks/useWindowWidth';
 import { formatDateBerlin } from '@/shared/utils/formatDateBerlin';
 

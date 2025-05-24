@@ -9,6 +9,7 @@ import { GlobalStateProvider } from '@/contexts/GlobalStateContext';
 import React from 'react';
 import { DeviceProvider } from "@/shared/contexts/DeviceContext";
 import { UISettingsProvider } from '@/shared/contexts/UISettingsContext';
+import { SWRProvider } from '@/contexts/SWRProvider';
 
 export const metadata: Metadata = {
   title: 'Hügelfest',
@@ -38,6 +39,7 @@ export default async function RootLayout({ children }: { children: React.ReactNo
       <body className={`antialiased min-h-screen flex flex-col`}>
         <PWARegister />
         <DeviceProvider>
+          <SWRProvider>
             <AuthProvider>
               <GlobalStateProvider>
                 <UISettingsProvider>
@@ -46,6 +48,7 @@ export default async function RootLayout({ children }: { children: React.ReactNo
                 </UISettingsProvider>
               </GlobalStateProvider>
             </AuthProvider>
+          </SWRProvider>
         </DeviceProvider>
       </body>
     </html>

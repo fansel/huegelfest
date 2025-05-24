@@ -7,7 +7,7 @@ import { Input } from '@/shared/components/ui/input';
 import { Button } from '@/shared/components/ui/button';
 import { AlertDialog, AlertDialogContent, AlertDialogHeader, AlertDialogTitle, AlertDialogDescription, AlertDialogFooter, AlertDialogCancel, AlertDialogAction } from '@/shared/components/ui/alert-dialog';
 import { useWindowWidth } from '@/shared/hooks/useWindowWidth';
-import { useDeviceContext, useDeviceType } from '@/shared/contexts/DeviceContext';
+import { useDeviceContext } from '@/shared/contexts/DeviceContext';
 
 interface Group {
   id: string;
