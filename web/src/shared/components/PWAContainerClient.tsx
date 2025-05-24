@@ -9,10 +9,10 @@ import Image from 'next/image';
 import { useUISettings } from '@/shared/contexts/UISettingsContext';
 import { useDeviceContext } from '@/shared/contexts/DeviceContext';
 import React, { useState, useEffect } from 'react';
-import { InstallPrompt } from "@/shared/components/ui/InstallPrompt";
 
 const Starfield = dynamic(() => import('./Starfield'), { ssr: false });
 const OfflineBanner = dynamic(() => import('./OfflineBanner'), { ssr: false });
+const InstallPrompt = dynamic(() => import("@/shared/components/ui/InstallPrompt").then(mod => ({ default: mod.InstallPrompt })), { ssr: false });
 
 interface PWAContainerClientProps {
   isAdmin: boolean;

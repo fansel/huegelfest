@@ -3,7 +3,6 @@
 import React, { useState } from 'react';
 import type { Category, Event, Day } from '../types/types';
 import { Sheet, SheetContent, SheetHeader, SheetTitle } from '@/shared/components/ui/sheet';
-
 export interface EventSubmissionSheetProps {
   open: boolean;
   onClose: () => void;
@@ -47,8 +46,8 @@ export const EventSubmissionSheet: React.FC<EventSubmissionSheetProps> = ({ open
       setError('Bitte gib einen Titel an.');
       return;
     }
-    if (!time.match(/^\d{2}:\d{2}$/)) {
-      setError('Bitte gib eine gültige Uhrzeit im Format HH:MM an.');
+    if (!time) {
+      setError('Bitte gib eine Uhrzeit an.');
       return;
     }
     if (!categoryId) {
@@ -117,14 +116,11 @@ export const EventSubmissionSheet: React.FC<EventSubmissionSheetProps> = ({ open
             </select>
             <label className="text-sm font-medium text-gray-700">Uhrzeit* (HH:MM)</label>
             <input
-              type="text"
-              className="mt-1 block w-full border border-gray-300 rounded-md p-2"
+              type="time"
+              className="mt-1 block w-full border border-gray-300 rounded-md p-2 text-base focus:outline-none focus:ring-2 focus:ring-[#ff9900] focus:border-transparent"
               value={time}
               onChange={e => setTime(e.target.value)}
-              placeholder="z.B. 18:30"
               required
-              pattern="^\d{2}:\d{2}$"
-              maxLength={5}
             />
             <label className="text-sm font-medium text-gray-700">Kategorie*</label>
             <select

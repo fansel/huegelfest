@@ -19,7 +19,6 @@ import { CSS } from '@dnd-kit/utilities';
 import { Plus, Trash2, Pen, Check, X, Pencil, Lock, Loader2, Clock, ArrowRight } from 'lucide-react';
 import clsx from 'clsx';
 import toast from 'react-hot-toast';
-import { useTimeline } from '@/features/timeline/hooks/useTimeline';
 import * as LucideIcons from 'lucide-react';
 import { createCategoryAction } from '@/features/categories/actions/createCategory';
 import { updateCategoryAction } from '@/features/categories/actions/updateCategory';

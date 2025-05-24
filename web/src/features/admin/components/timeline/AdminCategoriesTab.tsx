@@ -169,13 +169,15 @@ const AdminCategoriesTab: React.FC<AdminCategoriesTabProps> = ({ categories, set
         </ul>
         {/* Floating-Button unten zum Kategorie anlegen */}
         <div className="mt-6 flex justify-center mb-6 px-4">
-          <button
+          <Button
+            variant="default"
+            size="icon"
             onClick={() => { setShowCategoryModal(true); setEditCategoryId(null); setCategoryForm({ name: '', color: '#ff9900', icon: '' }); }}
-            className="rounded-full bg-gradient-to-br from-[#ff9900] to-[#ffb84d] text-white shadow-3xl w-10 h-10 flex items-center justify-center text-xl focus:outline-none focus:ring-2 focus:ring-[#ff9900]/30 active:scale-95 transition border-2 border-white"
             aria-label="Neue Kategorie anlegen"
+            className="bg-gradient-to-br from-[#ff9900] to-[#ffb84d] text-white shadow-3xl border-2 border-white"
           >
-            <Plus className="h-5 w-5" />
-          </button>
+            <Plus className="h-6 w-6" />
+          </Button>
         </div>
         {/* Modal für Kategorie anlegen/bearbeiten */}
         {showCategoryModal && (

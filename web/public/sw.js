@@ -1,7 +1,11 @@
-// Perfekter Service Worker für Next.js PWA: Offline-First, Stale-While-Revalidate, App Shell
+// Service Worker für App-Updates und statische Assets - SWR macht das Daten-Caching
 console.log('Service Worker wird geladen...');
 
-const CACHE_NAME = 'huegelfest-cache-v3';
+// Dynamische Cache-Versionierung - wird bei Build-Zeit ersetzt
+const CACHE_VERSION = 'v0.1.0';
+const BUILD_ID = '0217f84605a1f6e6';
+const CACHE_NAME = `huegelfest-cache-${CACHE_VERSION}-${BUILD_ID}`;
+
 const APP_SHELL = [
   '/',
   '/android-chrome-192x192.png',
@@ -9,21 +13,48 @@ const APP_SHELL = [
   // ggf. weitere statische Dateien aus /public
 ];
 
-// Funktion zum Benachrichtigen aller Clients über den Netzwerkstatus
-const notifyClients = (isOnline) => {
+// Funktion zum Benachrichtigen aller Clients über Updates
+const notifyClients = (message) => {
   self.clients.matchAll().then(clients => {
     clients.forEach(client => {
-      client.postMessage({
-        type: 'NETWORK_STATUS',
-        isOnline
-      });
+      client.postMessage(message);
     });
   });
 };
 
+// Hilfsfunktion: Prüfung ob es sich um ein statisches Asset handelt
+const isStaticAsset = (pathname) => {
+  return pathname.startsWith('/_next/static/') ||
+         /\.(png|jpg|jpeg|webp|svg|ico|css|js|woff2|woff|ttf)$/.test(pathname);
+};
+
+// Message-Handler für Client-Kommunikation
+self.addEventListener('message', (event) => {
+  if (event.data && event.data.type === 'SKIP_WAITING') {
+    self.skipWaiting();
+  }
+  if (event.data && event.data.type === 'GET_VERSION') {
+    event.ports[0].postMessage({
+      type: 'VERSION_INFO',
+      version: CACHE_VERSION,
+      buildId: BUILD_ID,
+      cacheName: CACHE_NAME
+    });
+  }
+  if (event.data && event.data.type === 'APP_UPDATE_INVALIDATE') {
+    // Bei App-Updates: Alle Caches löschen (außer aktueller)
+    caches.keys().then(cacheNames => {
+      const oldCaches = cacheNames.filter(name => name !== CACHE_NAME);
+      return Promise.all(oldCaches.map(name => caches.delete(name)));
+    }).then(() => {
+      console.log('[SW] Alte Caches nach App-Update gelöscht');
+    });
+  }
+});
+
 // Installations-Event: App Shell und Assets cachen
 self.addEventListener('install', (event) => {
-  console.log('Service Worker: Installation gestartet');
+  console.log('Service Worker: Installation gestartet für', CACHE_NAME);
   event.waitUntil(
     caches.open(CACHE_NAME).then((cache) => {
       return Promise.all(APP_SHELL.map((url) =>
@@ -36,69 +67,53 @@ self.addEventListener('install', (event) => {
             console.error('Failed to cache', url, err);
           })
       ));
-    }).then(() => self.skipWaiting())
+    }).then(() => {
+      console.log('Service Worker: Installation abgeschlossen');
+      // Clients über neue Version informieren
+      notifyClients({
+        type: 'SW_INSTALLED',
+        version: CACHE_VERSION,
+        buildId: BUILD_ID
+      });
+      self.skipWaiting();
+    })
   );
 });
 
 // Aktivierungs-Event: Alte Caches löschen
 self.addEventListener('activate', (event) => {
-  console.log('Service Worker: Aktivierung gestartet');
+  console.log('Service Worker: Aktivierung gestartet für', CACHE_NAME);
   event.waitUntil(
     caches.keys().then(cacheNames => {
       return Promise.all(
         cacheNames.map(cacheName => {
-          if (cacheName !== CACHE_NAME) {
+          if (cacheName.startsWith('huegelfest-cache-') && cacheName !== CACHE_NAME) {
             console.log('Alter Cache wird gelöscht:', cacheName);
             return caches.delete(cacheName);
           }
         })
       );
-    }).then(() => self.clients.claim())
+    }).then(() => {
+      console.log('Service Worker: Aktivierung abgeschlossen');
+      // Clients über Aktivierung informieren
+      notifyClients({
+        type: 'SW_ACTIVATED',
+        version: CACHE_VERSION,
+        buildId: BUILD_ID
+      });
+      return self.clients.claim();
+    })
   );
 });
 
-// Fetch-Event: Stale-While-Revalidate für Navigations-Requests, Cache-First für Assets
+// Fetch-Event: Nur statische Assets cachen
 self.addEventListener('fetch', (event) => {
   // Nur GET-Anfragen behandeln
   if (event.request.method !== 'GET') return;
   const url = new URL(event.request.url);
 
-  // Navigations-Requests (z.B. Seitenaufrufe): Stale-While-Revalidate
-  if (event.request.mode === 'navigate') {
-    event.respondWith(
-      caches.open(CACHE_NAME).then(async (cache) => {
-        try {
-          const networkResponse = await fetch(event.request);
-          cache.put(event.request, networkResponse.clone());
-          return networkResponse;
-        } catch (error) {
-          const cachedResponse = await cache.match(event.request);
-          if (cachedResponse) {
-            return cachedResponse;
-          }
-          // Fallback: App Shell
-          return caches.match('/') || Response.error();
-        }
-      })
-    );
-    return;
-  }
-
   // Statische Assets: Cache First
-  if (
-    url.pathname.startsWith('/_next/static/') ||
-    url.pathname.endsWith('.png') ||
-    url.pathname.endsWith('.jpg') ||
-    url.pathname.endsWith('.jpeg') ||
-    url.pathname.endsWith('.webp') ||
-    url.pathname.endsWith('.svg') ||
-    url.pathname.endsWith('.ico') ||
-    url.pathname.endsWith('.css') ||
-    url.pathname.endsWith('.js') ||
-    url.pathname.endsWith('.woff2') ||
-    url.pathname.endsWith('.woff') ||
-    url.pathname.endsWith('.ttf')
-  ) {
+  if (isStaticAsset(url.pathname)) {
     event.respondWith(
       caches.match(event.request).then((cachedResponse) => {
         if (cachedResponse) {
@@ -106,7 +121,9 @@ self.addEventListener('fetch', (event) => {
         }
         return fetch(event.request).then((response) => {
           return caches.open(CACHE_NAME).then((cache) => {
-            cache.put(event.request, response.clone());
+            if (response.ok) {
+              cache.put(event.request, response.clone());
+            }
             return response;
           });
         });
@@ -115,25 +132,26 @@ self.addEventListener('fetch', (event) => {
     return;
   }
 
-  // API-Anfragen und andere spezielle Pfade nicht cachen
+  // App Shell für Navigation (Offline-Fallback)
+  if (event.request.mode === 'navigate') {
+    event.respondWith(
+      fetch(event.request).catch(() => {
+        return caches.match('/') || Response.error();
+      })
+    );
+    return;
+  }
+
+  // Service Worker und Manifest nicht cachen
   if (
-    url.pathname.startsWith('/api/') ||
     url.pathname === '/sw.js' ||
     url.pathname === '/manifest'
   ) {
     return;
   }
 
-  // Fallback: Network First, dann Cache
-  event.respondWith(
-    fetch(event.request)
-      .then((response) => {
-        return response;
-      })
-      .catch(() => {
-        return caches.match(event.request);
-      })
-  );
+  // Alle anderen Requests: Network Only (SWR macht das Caching)
+  // Kein Cache-Eingriff für API-Calls oder Seiten-Requests
 });
 
 // Push-Event
@@ -175,5 +193,4 @@ self.addEventListener('notificationclick', function(event) {
   );
 });
 
-// Hinweis: Bei Änderungen an APP_SHELL oder Caching-Strategie muss die Cache-Version (CACHE_NAME) erhöht werden.
-// Die App ist jetzt maximal offlinefähig: App Shell, Seiten und Assets werden optimal gecacht. 
+// Fokus: Nur App-Updates und statische Assets - SWR + WebSockets machen das Daten-Caching 

@@ -10,7 +10,7 @@ interface TimelineEventCardProps {
   favoriteButtonProps?: {
     item: {
       id: string;
-      type: string;
+      type: 'timeline' | 'group' | 'announcement';
       data: any;
     };
   };
@@ -24,6 +24,17 @@ export const TimelineEventCard: React.FC<TimelineEventCardProps> = ({
   favoriteButtonProps,
 }) => {
   const IconComponent = category ? getIconComponent(category.icon) : HelpCircle;
+  
+  // Stabile ID-Generierung: Event-ID bevorzugen, Fallback auf composite ID für Kompatibilität
+  const getFavoriteId = () => {
+    // Wenn Event eine echte ID hat, diese verwenden
+    if (event._id || event.id) {
+      return event._id || event.id;
+    }
+    // Fallback auf alte Methode für Events ohne ID
+    return `${dayTitle}-${event.time}-${event.title}`;
+  };
+
   return (
     <div className="bg-[#460b6c]/50 backdrop-blur-sm border border-[#ff9900]/20 rounded-lg p-4">
       <div className="flex items-start justify-between">
@@ -41,13 +52,16 @@ export const TimelineEventCard: React.FC<TimelineEventCardProps> = ({
         <div className="flex items-center space-x-2">
           <div className="text-[#ff9900] text-sm">{event.time}</div>
           <FavoriteButton
-            {...(favoriteButtonProps ?? {
-              item: {
-                id: `${dayTitle}-${event.time}-${event.title}`,
-                type: 'timeline',
-                data: { ...event, dayTitle },
+            item={favoriteButtonProps?.item ?? {
+              id: getFavoriteId(),
+              type: 'timeline' as const,
+              data: { 
+                ...event, 
+                dayTitle,
+                // Für Fallback-Matching speichern wir zusätzliche Identifiers
+                compositeId: `${dayTitle}-${event.time}-${event.title}`,
               },
-            })}
+            }}
           />
         </div>
       </div>

@@ -1,0 +1,25 @@
+// Automatische App-Versionierung für Cache-Invalidierung
+export const APP_VERSION = {
+  // Version aus package.json + Build-Zeit
+  version: '0.1.0',
+  buildTime: process.env.BUILD_TIME || Date.now().toString(),
+  buildId: process.env.BUILD_ID || Math.random().toString(36).substring(7),
+  
+  // Cache-Namen mit automatischer Versionierung
+  getCacheName: () => `huegelfest-cache-v${APP_VERSION.version}-${APP_VERSION.buildId}`,
+  
+  // Vollständiger App-Identifier
+  getAppIdentifier: () => `${APP_VERSION.version}-${APP_VERSION.buildTime}`,
+  
+  // Check ob neue Version verfügbar
+  isNewerThan: (storedVersion: string) => {
+    return APP_VERSION.getAppIdentifier() !== storedVersion;
+  }
+};
+
+// LocalStorage Keys für Version-Tracking
+export const VERSION_STORAGE_KEYS = {
+  APP_VERSION: 'huegelfest_app_version',
+  LAST_UPDATE_CHECK: 'huegelfest_last_update_check',
+  UPDATE_AVAILABLE: 'huegelfest_update_available'
+}; 

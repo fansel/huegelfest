@@ -34,6 +34,14 @@ interface AdminTimelineTabProps {
   // ... weitere Props nach Bedarf ...
 }
 
+// Hilfsfunktion: ObjectId zu String konvertieren
+function getIdString(id: any) {
+  if (!id) return '';
+  if (typeof id === 'string') return id;
+  if (typeof id === 'object' && ('$oid' in id)) return id.$oid;
+  return String(id);
+}
+
 // Hilfsfunktion: Tage alphabetisch sortieren
 function sortDays(days: any[]) {
   return [...days].sort((a, b) => a.title.localeCompare(b.title, 'de', { sensitivity: 'base' }));
@@ -120,7 +128,7 @@ const AdminTimelineTab: React.FC<AdminTimelineTabProps> = ({ days, setDays, even
     setShowDayModal(false);
   };
   const handleEditDay = (day: any) => {
-    setEditDayId(day._id);
+    setEditDayId(getIdString(day._id));
     setDayForm({ title: day.title, description: day.description || '', date: day.date ? new Date(day.date) : null });
     setShowDayModal(true);
   };
@@ -143,7 +151,7 @@ const AdminTimelineTab: React.FC<AdminTimelineTabProps> = ({ days, setDays, even
       return;
     }
     if (eventToEdit && eventDayId) {
-      await handleUpdateEvent(eventToEdit._id, { ...eventForm }, eventDayId);
+      await handleUpdateEvent(getIdString(eventToEdit._id), { ...eventForm }, eventDayId);
     } else if (eventDayId) {
       await handleCreateEvent({ ...eventForm }, eventDayId);
     }
@@ -160,7 +168,7 @@ const AdminTimelineTab: React.FC<AdminTimelineTabProps> = ({ days, setDays, even
   // Kategorie-Auswahl im Event-Formular initialisieren, falls leer und Kategorien vorhanden
   useEffect(() => {
     if (showEventModal && categories.length > 0 && !eventForm.categoryId) {
-      setEventForm(f => ({ ...f, categoryId: categories[0]._id }));
+      setEventForm(f => ({ ...f, categoryId: getIdString(categories[0]._id) }));
     }
   }, [showEventModal, categories, eventForm.categoryId]);
 
@@ -187,11 +195,11 @@ const AdminTimelineTab: React.FC<AdminTimelineTabProps> = ({ days, setDays, even
   // Optimistisches Bearbeiten eines Tages
   const handleUpdateDay = async (id: string, update: any) => {
     const prevDays = [...days];
-    setDays(sortDays(days.map(day => day._id === id ? { ...day, ...update } : day)));
+    setDays(sortDays(days.map(day => getIdString(day._id) === id ? { ...day, ...update } : day)));
     try {
       const result = await updateDayAction(id, update);
       if (result && result.success && result.day) {
-        setDays(sortDays(days.map(day => day._id === id ? result.day : day)));
+        setDays(sortDays(days.map(day => getIdString(day._id) === id ? result.day : day)));
         toast.success('Tag aktualisiert');
       } else {
         setDays(prevDays);
@@ -206,15 +214,10 @@ const AdminTimelineTab: React.FC<AdminTimelineTabProps> = ({ days, setDays, even
   // Optimistisches Löschen eines Tages
   const handleDeleteDay = async (id: string) => {
     const prevDays = [...days];
-    setDays(sortDays(days.filter(day => day._id !== id)));
+    setDays(sortDays(days.filter(day => getIdString(day._id) !== id)));
     try {
-      const result = await removeDayAction(id);
-      if (result && result.success) {
-        toast.success('Tag gelöscht');
-      } else {
-        setDays(prevDays);
-        toast.error(result?.error || 'Fehler beim Löschen des Tages');
-      }
+      await removeDayAction(id);
+      toast.success('Tag gelöscht');
     } catch (err: any) {
       setDays(prevDays);
       toast.error(err?.message || 'Fehler beim Löschen des Tages');
@@ -241,14 +244,14 @@ const AdminTimelineTab: React.FC<AdminTimelineTabProps> = ({ days, setDays, even
     }
   };
 
-  // Optimistisches Bearbeiten eines Events
+  // Optimistisches Bearbeiten eines Events - FIXED mit getIdString
   const handleUpdateEvent = async (eventId: string, update: any, dayId: string) => {
     const prevEvents = eventsByDay[dayId] || [];
-    setEventsByDay({ ...eventsByDay, [dayId]: sortEvents(prevEvents.map(ev => ev._id === eventId ? { ...ev, ...update } : ev)) });
+    setEventsByDay({ ...eventsByDay, [dayId]: sortEvents(prevEvents.map(ev => getIdString(ev._id) === eventId ? { ...ev, ...update } : ev)) });
     try {
       const result = await updateEvent(eventId, update);
       if (result && result._id) {
-        setEventsByDay({ ...eventsByDay, [dayId]: sortEvents(prevEvents.map(ev => ev._id === eventId ? result : ev)) });
+        setEventsByDay({ ...eventsByDay, [dayId]: sortEvents(prevEvents.map(ev => getIdString(ev._id) === eventId ? result : ev)) });
         toast.success('Event aktualisiert');
       } else {
         setEventsByDay({ ...eventsByDay, [dayId]: prevEvents });
@@ -260,10 +263,10 @@ const AdminTimelineTab: React.FC<AdminTimelineTabProps> = ({ days, setDays, even
     }
   };
 
-  // Optimistisches Löschen eines Events
+  // Optimistisches Löschen eines Events - FIXED mit getIdString
   const handleDeleteEvent = async (eventId: string, dayId: string) => {
     const prevEvents = eventsByDay[dayId] || [];
-    setEventsByDay({ ...eventsByDay, [dayId]: sortEvents(prevEvents.filter(ev => ev._id !== eventId)) });
+    setEventsByDay({ ...eventsByDay, [dayId]: sortEvents(prevEvents.filter(ev => getIdString(ev._id) !== eventId)) });
     try {
       await removeEvent(eventId);
       toast.success('Event gelöscht');
@@ -273,12 +276,12 @@ const AdminTimelineTab: React.FC<AdminTimelineTabProps> = ({ days, setDays, even
     }
   };
 
-  // --- Event bestätigen (pending -> approved) ---
+  // --- Event bestätigen (pending -> approved) --- FIXED mit getIdString
   const handleApproveEvent = async (eventId: string, dayId: string) => {
     const prevEvents = eventsByDay[dayId] || [];
     setEventsByDay({
       ...eventsByDay,
-      [dayId]: prevEvents.map(ev => ev._id === eventId ? { ...ev, status: 'approved' } : ev)
+      [dayId]: prevEvents.map(ev => getIdString(ev._id) === eventId ? { ...ev, status: 'approved' } : ev)
     });
     try {
       await updateEvent(eventId, { status: 'approved' });
@@ -319,13 +322,14 @@ const AdminTimelineTab: React.FC<AdminTimelineTabProps> = ({ days, setDays, even
         {/* Liste der Tage und Events */}
         <ul className="space-y-4 px-4">
           {sortDays(days).map(day => {
-            const hasPending = (eventsByDay[day._id] || []).some(ev => ev.status === 'pending' && !ev.submittedByAdmin);
-            const isCollapsed = collapsedDays.has(day._id);
+            const dayId = getIdString(day._id);
+            const hasPending = (eventsByDay[dayId] || []).some(ev => ev.status === 'pending' && !ev.submittedByAdmin);
+            const isCollapsed = collapsedDays.has(dayId);
             return (
-            <li key={day._id} className="bg-white shadow rounded-xl px-4 py-3">
+            <li key={dayId} className="bg-white shadow rounded-xl px-4 py-3">
               <div 
                 className="flex items-center justify-between cursor-pointer"
-                onClick={() => toggleDayCollapse(day._id)}
+                onClick={() => toggleDayCollapse(dayId)}
               >
                 <div className="flex items-center gap-3 flex-1">
                   <div className="flex items-center gap-2">
@@ -345,18 +349,19 @@ const AdminTimelineTab: React.FC<AdminTimelineTabProps> = ({ days, setDays, even
                 </div>
                 <div className="flex gap-1" onClick={(e) => e.stopPropagation()}>
                   <Button variant="secondary" size="icon" onClick={() => handleEditDay(day)} aria-label="Bearbeiten"><Pencil className="h-4 w-4" /></Button>
-                  <Button variant="destructive" size="icon" onClick={() => setConfirmDelete({ type: 'day', id: day._id })} aria-label="Löschen"><Trash2 className="h-4 w-4" /></Button>
+                  <Button variant="destructive" size="icon" onClick={() => setConfirmDelete({ type: 'day', id: dayId })} aria-label="Löschen"><Trash2 className="h-4 w-4" /></Button>
                 </div>
               </div>
               {/* Events - nur anzeigen wenn nicht eingeklappt */}
               {!isCollapsed && (
                 <>
                   <ul className="mt-2 space-y-2">
-                    {(eventsByDay[day._id] || []).map(event => {
-                      const category = categories.find((cat) => cat._id === event.categoryId);
+                    {(eventsByDay[dayId] || []).map(event => {
+                      const eventId = getIdString(event._id);
+                      const category = categories.find((cat) => getIdString(cat._id) === event.categoryId);
                       const IconComponent = category ? getIconComponent(category.icon) : LucideIcons.HelpCircle;
                       return (
-                        <li key={event._id} className={clsx("flex items-center justify-between bg-gray-50 rounded-xl px-4 py-3 shadow-sm", event.status === 'pending' && !event.submittedByAdmin && 'border-l-4 border-yellow-400')}>
+                        <li key={eventId} className={clsx("flex items-center justify-between bg-gray-50 rounded-xl px-4 py-3 shadow-sm", event.status === 'pending' && !event.submittedByAdmin && 'border-l-4 border-yellow-400')}>
                           <div className="flex items-center gap-4">
                             <div className="bg-[#ff9900]/20 rounded-full p-3 flex items-center justify-center">
                               <IconComponent className="text-[#ff9900] text-4xl" />
@@ -370,12 +375,12 @@ const AdminTimelineTab: React.FC<AdminTimelineTabProps> = ({ days, setDays, even
                           </div>
                           <div className="flex gap-1 items-center">
                             {event.status === 'pending' && !event.submittedByAdmin && (
-                              <Button variant="ghost" size="icon" onClick={() => handleApproveEvent(event._id, day._id)} aria-label="Bestätigen" title="Event bestätigen">
+                              <Button variant="ghost" size="icon" onClick={() => handleApproveEvent(eventId, dayId)} aria-label="Bestätigen" title="Event bestätigen">
                                 <Check className="h-4 w-4 text-yellow-500" />
                               </Button>
                             )}
-                            <Button variant="secondary" size="icon" onClick={() => handleEditEvent(event, day._id)} aria-label="Bearbeiten"><Pencil className="h-4 w-4" /></Button>
-                            <Button variant="destructive" size="icon" onClick={() => setConfirmDelete({ type: 'event', id: event._id, parentId: day._id })} aria-label="Löschen"><Trash2 className="h-4 w-4" /></Button>
+                            <Button variant="secondary" size="icon" onClick={() => handleEditEvent(event, dayId)} aria-label="Bearbeiten"><Pencil className="h-4 w-4" /></Button>
+                            <Button variant="destructive" size="icon" onClick={() => setConfirmDelete({ type: 'event', id: eventId, parentId: dayId })} aria-label="Löschen"><Trash2 className="h-4 w-4" /></Button>
                           </div>
                         </li>
                       );})}
@@ -386,8 +391,8 @@ const AdminTimelineTab: React.FC<AdminTimelineTabProps> = ({ days, setDays, even
                       variant="default"
                       size="icon"
                       onClick={() => {
-                        setEventDayId(day._id);
-                        setEventForm({ time: '', title: '', description: '', categoryId: categories[0]?._id || '' });
+                        setEventDayId(dayId);
+                        setEventForm({ time: '', title: '', description: '', categoryId: getIdString(categories[0]?._id) || '' });
                         setShowEventModal(true);
                       }}
                       aria-label="Neues Event hinzufügen"
@@ -527,7 +532,7 @@ const AdminTimelineTab: React.FC<AdminTimelineTabProps> = ({ days, setDays, even
                   >
                     <option value="" disabled>Kategorie wählen</option>
                     {categories.map(cat => (
-                      <option key={cat._id} value={cat._id}>{cat.name}</option>
+                      <option key={getIdString(cat._id)} value={getIdString(cat._id)}>{cat.name}</option>
                     ))}
                   </select>
                 </div>
@@ -550,23 +555,13 @@ const AdminTimelineTab: React.FC<AdminTimelineTabProps> = ({ days, setDays, even
                 </div>
               </div>
               <div className="border-t bg-white p-4">
-                <div className="flex gap-2">
-                  <Button 
-                    type="button" 
-                    variant="secondary" 
-                    onClick={handleCancelEventForm}
-                    className="flex-1"
-                  >
-                    Abbrechen
-                  </Button>
-                  <Button 
-                    type="submit" 
-                    disabled={loading || !eventForm.title || !eventForm.time || !eventForm.categoryId} 
-                    className="bg-gradient-to-br from-[#ff9900] to-[#ffb84d] text-white shadow-3xl border-2 border-white flex-1"
-                  >
-                    {loading ? <Loader2 className="animate-spin" /> : (eventToEdit ? 'Speichern' : 'Anlegen')}
-                  </Button>
-                </div>
+                <Button 
+                  type="submit" 
+                  disabled={loading || !eventForm.title || !eventForm.time || !eventForm.categoryId} 
+                  className="bg-gradient-to-br from-[#ff9900] to-[#ffb84d] text-white shadow-3xl border-2 border-white w-full"
+                >
+                  {loading ? <Loader2 className="animate-spin" /> : (eventToEdit ? 'Speichern' : 'Anlegen')}
+                </Button>
               </div>
             </form>
           </SheetContent>
@@ -599,163 +594,173 @@ const AdminTimelineTab: React.FC<AdminTimelineTabProps> = ({ days, setDays, even
     );
   }
 
-  // --- Desktop ---
-  if (!isMobile) {
-    return (
-      <div className="relative min-h-[60vh] pb-24 flex flex-col max-w-5xl mx-auto">
-        {/* Header-Row */}
-        <div className="flex flex-row items-center gap-8 mt-8 mb-6">
-          <h2 className="text-2xl font-bold text-[#460b6c] flex-1">{desktopFormTab === 'event' ? (eventToEdit ? 'Event bearbeiten' : 'Neues Event') : (editDayId ? 'Tag bearbeiten' : 'Neuer Tag')}</h2>
-          <div className="flex items-center gap-3 flex-1">
-            <h2 className="text-2xl font-bold text-[#460b6c]">Timeline</h2>
-            {/* Süßes Status-Label für unbestätigte Events */}
-            {days.some(day => (eventsByDay[day._id] || []).some(ev => ev.status === 'pending' && !ev.submittedByAdmin)) && (
-              <div className="bg-gradient-to-r from-yellow-400 to-amber-500 text-white text-sm font-semibold px-4 py-1.5 rounded-full shadow-lg flex items-center gap-2 animate-pulse">
-                <span className="w-2 h-2 bg-white rounded-full"></span>
-                Neue Events
-              </div>
-            )}
+  // Desktop-Version
+  return (
+    <div className="max-w-6xl mx-auto">
+      <div className="flex items-center justify-between mb-6">
+        <h3 className="text-xl font-bold text-[#460b6c]">Timeline</h3>
+        {/* Süßes Status-Label für unbestätigte Events */}
+        {days.some(day => (eventsByDay[getIdString(day._id)] || []).some(ev => ev.status === 'pending' && !ev.submittedByAdmin)) && (
+          <div className="bg-gradient-to-r from-yellow-400 to-amber-500 text-white text-sm font-semibold px-4 py-2 rounded-full shadow-lg flex items-center gap-2 animate-pulse">
+            <span className="w-2 h-2 bg-white rounded-full"></span>
+            Neue Events
           </div>
-        </div>
-        <div className="flex flex-row gap-8 justify-center items-start">
-          {/* --- WICHTIG: Tabs für Tag/Event immer sichtbar --- */}
-          <div className="w-full max-w-lg flex-shrink-0">
-            <div className="bg-white/90 rounded-2xl shadow-2xl border-2 border-gray-200 p-6 sticky top-8">
-              <Tabs value={desktopFormTab} onValueChange={v => setDesktopFormTab(v as 'day' | 'event')} className="w-full">
-                <TabsList className="mb-4 w-full flex gap-2 justify-center">
-                  <TabsTrigger value="day">Tag</TabsTrigger>
-                  <TabsTrigger value="event">Event</TabsTrigger>
-                </TabsList>
-                <TabsContent value="day">
-                  {/* Tag-Formular */}
-                  <div className="flex flex-col gap-4">
-                    <label htmlFor="day-title" className="text-sm font-medium text-gray-700">Titel</label>
-                    <Input
-                      id="day-title"
-                      placeholder="Titel"
-                      value={dayForm.title}
-                      onChange={e => setDayForm(f => ({ ...f, title: e.target.value }))}
-                      required
-                      className="w-full"
-                      autoFocus
-                      ref={dayTitleRef}
-                    />
-                    <label htmlFor="day-date" className="text-sm font-medium text-gray-700">Datum</label>
-                    <DatePicker
-                      value={dayForm.date ?? undefined}
-                      onChange={date => setDayForm(f => ({ ...f, date: date ?? null }))}
-                    />
-                    <label htmlFor="day-description" className="text-sm font-medium text-gray-700">Beschreibung</label>
-                    <Textarea
-                      id="day-description"
-                      placeholder="Beschreibung (optional)"
-                      value={dayForm.description}
-                      onChange={e => setDayForm(f => ({ ...f, description: e.target.value }))}
-                      className="w-full"
-                      rows={2}
-                    />
+        )}
+      </div>
+
+      <div className="grid grid-cols-2 gap-8">
+        {/* Linke Spalte: Formulare */}
+        <div className="bg-white shadow rounded-xl p-6">
+          <Tabs value={desktopFormTab} onValueChange={value => setDesktopFormTab(value as 'day' | 'event')}>
+            <TabsList className="grid w-full grid-cols-2">
+              <TabsTrigger value="day">Tag anlegen</TabsTrigger>
+              <TabsTrigger value="event">Event anlegen</TabsTrigger>
+            </TabsList>
+            <TabsContent value="day">
+              {/* Tag-Formular */}
+              <div className="flex flex-col gap-4">
+                <label htmlFor="day-title" className="text-sm font-medium text-gray-700">Titel</label>
+                <Input
+                  id="day-title"
+                  placeholder="Titel"
+                  value={dayForm.title}
+                  onChange={e => setDayForm(f => ({ ...f, title: e.target.value }))}
+                  required
+                  className="w-full"
+                  ref={dayTitleRef}
+                />
+                <label htmlFor="day-date" className="text-sm font-medium text-gray-700">Datum</label>
+                <DatePicker
+                  value={dayForm.date ?? undefined}
+                  onChange={date => setDayForm(f => ({ ...f, date: date ?? null }))}
+                />
+                <label htmlFor="day-description" className="text-sm font-medium text-gray-700">Beschreibung</label>
+                <Textarea
+                  id="day-description"
+                  placeholder="Beschreibung (optional)"
+                  value={dayForm.description}
+                  onChange={e => setDayForm(f => ({ ...f, description: e.target.value }))}
+                  className="w-full"
+                  rows={2}
+                />
+                <div className="flex gap-2 mt-4">
+                  {editDayId && (
                     <Button
-                      variant="default"
-                      onClick={handleDayFormSubmit}
-                      disabled={loading}
-                      className="bg-[#ff9900] text-white w-full mt-4"
+                      variant="secondary"
+                      onClick={() => {
+                        setEditDayId(null);
+                        setDayForm({ title: '', description: '', date: null });
+                      }}
+                      className="flex-1"
                     >
-                      {loading ? <Loader2 className="animate-spin" /> : (editDayId ? 'Tag speichern' : 'Tag anlegen')}
+                      Abbrechen
                     </Button>
-                  </div>
-                </TabsContent>
-                <TabsContent value="event">
-                  {/* Event-Formular */}
-                  <div className="flex flex-col gap-4">
-                    <label htmlFor="event-day" className="text-sm font-medium text-gray-700">Tag</label>
-                    <select
-                      id="event-day"
-                      value={eventDayId || ''}
-                      onChange={e => setEventDayId(e.target.value)}
-                      className="w-full border rounded px-2 py-1"
-                      required
+                  )}
+                  <Button
+                    variant="default"
+                    onClick={handleDayFormSubmit}
+                    disabled={loading || !dayForm.title || !dayForm.date}
+                    className="bg-[#ff9900] text-white flex-1"
+                  >
+                    {loading ? <Loader2 className="animate-spin" /> : (editDayId ? 'Tag speichern' : 'Tag anlegen')}
+                  </Button>
+                </div>
+              </div>
+            </TabsContent>
+            <TabsContent value="event">
+              {/* Event-Formular */}
+              <div className="flex flex-col gap-4">
+                <label htmlFor="event-day" className="text-sm font-medium text-gray-700">Tag</label>
+                <select
+                  id="event-day"
+                  value={eventDayId || ''}
+                  onChange={e => setEventDayId(e.target.value)}
+                  className="w-full border rounded px-2 py-1"
+                  required
+                >
+                  <option value="" disabled>Tag wählen</option>
+                  {sortDays(days).map(day => (
+                    <option key={getIdString(day._id)} value={getIdString(day._id)}>{day.title}</option>
+                  ))}
+                </select>
+                <label htmlFor="event-title" className="text-sm font-medium text-gray-700">Titel</label>
+                <Input
+                  id="event-title"
+                  placeholder="Titel"
+                  value={eventForm.title}
+                  onChange={e => setEventForm(f => ({ ...f, title: e.target.value }))}
+                  required
+                  className="w-full"
+                  ref={eventTitleRef}
+                />
+                <label htmlFor="event-time" className="text-sm font-medium text-gray-700">Zeit</label>
+                <input
+                  type="time"
+                  id="event-time"
+                  value={eventForm.time}
+                  onChange={e => setEventForm(f => ({ ...f, time: e.target.value }))}
+                  required
+                  className="w-full border border-gray-300 rounded-md px-3 py-2 text-base focus:outline-none focus:ring-2 focus:ring-[#ff9900] focus:border-transparent"
+                />
+                <label htmlFor="event-category" className="text-sm font-medium text-gray-700">Kategorie</label>
+                <select
+                  id="event-category"
+                  value={eventForm.categoryId}
+                  onChange={e => setEventForm(f => ({ ...f, categoryId: e.target.value }))}
+                  className="w-full border rounded px-2 py-1"
+                  required
+                >
+                  <option value="" disabled>Kategorie wählen</option>
+                  {categories.map(cat => (
+                    <option key={getIdString(cat._id)} value={getIdString(cat._id)}>{cat.name}</option>
+                  ))}
+                </select>
+                <label htmlFor="event-description" className="text-sm font-medium text-gray-700">Beschreibung</label>
+                <Textarea
+                  id="event-description"
+                  placeholder="Beschreibung (optional)"
+                  value={eventForm.description}
+                  onChange={e => setEventForm(f => ({ ...f, description: e.target.value }))}
+                  className="w-full"
+                  rows={2}
+                />
+                <div className="flex gap-2 mt-4">
+                  {eventToEdit && (
+                    <Button
+                      variant="secondary"
+                      onClick={handleCancelEventForm}
+                      className="flex-1"
                     >
-                      <option value="" disabled>Tag wählen</option>
-                      {sortDays(days).map(day => (
-                        <option key={day._id} value={day._id}>{day.title}</option>
-                      ))}
-                    </select>
-                    <label htmlFor="event-title" className="text-sm font-medium text-gray-700">Titel</label>
-                    <Input
-                      id="event-title"
-                      placeholder="Titel"
-                      value={eventForm.title}
-                      onChange={e => setEventForm(f => ({ ...f, title: e.target.value }))}
-                      required
-                      className="w-full"
-                      ref={eventTitleRef}
-                    />
-                    <label htmlFor="event-time" className="text-sm font-medium text-gray-700">Zeit</label>
-                    <input
-                      type="time"
-                      id="event-time"
-                      value={eventForm.time}
-                      onChange={e => setEventForm(f => ({ ...f, time: e.target.value }))}
-                      required
-                      className="w-full border border-gray-300 rounded-md px-3 py-2 text-base focus:outline-none focus:ring-2 focus:ring-[#ff9900] focus:border-transparent"
-                    />
-                    <label htmlFor="event-category" className="text-sm font-medium text-gray-700">Kategorie</label>
-                    <select
-                      id="event-category"
-                      value={eventForm.categoryId}
-                      onChange={e => setEventForm(f => ({ ...f, categoryId: e.target.value }))}
-                      className="w-full border rounded px-2 py-1"
-                      required
-                    >
-                      <option value="" disabled>Kategorie wählen</option>
-                      {categories.map(cat => (
-                        <option key={cat._id} value={cat._id}>{cat.name}</option>
-                      ))}
-                    </select>
-                    <label htmlFor="event-description" className="text-sm font-medium text-gray-700">Beschreibung</label>
-                    <Textarea
-                      id="event-description"
-                      placeholder="Beschreibung (optional)"
-                      value={eventForm.description}
-                      onChange={e => setEventForm(f => ({ ...f, description: e.target.value }))}
-                      className="w-full"
-                      rows={2}
-                    />
-                    <div className="flex gap-2 mt-4">
-                      {eventToEdit && (
-                        <Button
-                          variant="secondary"
-                          onClick={handleCancelEventForm}
-                          className="flex-1"
-                        >
-                          Abbrechen
-                        </Button>
-                      )}
-                      <Button
-                        variant="default"
-                        onClick={handleEventFormSubmit}
-                        disabled={loading || !eventDayId}
-                        className="bg-[#ff9900] text-white flex-1"
-                      >
-                        {loading ? <Loader2 className="animate-spin" /> : (eventToEdit ? 'Event speichern' : 'Event anlegen')}
-                      </Button>
-                    </div>
-                  </div>
-                </TabsContent>
-              </Tabs>
-            </div>
-          </div>
-          {/* Rechte Spalte: Liste der Tage und Events */}
-          <div className="flex-1">
+                      Abbrechen
+                    </Button>
+                  )}
+                  <Button
+                    variant="default"
+                    onClick={handleEventFormSubmit}
+                    disabled={loading || !eventDayId}
+                    className="bg-[#ff9900] text-white flex-1"
+                  >
+                    {loading ? <Loader2 className="animate-spin" /> : (eventToEdit ? 'Event speichern' : 'Event anlegen')}
+                  </Button>
+                </div>
+              </div>
+            </TabsContent>
+          </Tabs>
+        </div>
+
+        {/* Rechte Spalte: Liste */}
+        <div className="bg-white shadow rounded-xl p-6">
+          <div className="max-h-96 overflow-y-auto">
             <ul className="space-y-4">
               {sortDays(days).map(day => {
-                const hasPending = (eventsByDay[day._id] || []).some(ev => ev.status === 'pending' && !ev.submittedByAdmin);
-                const isCollapsed = collapsedDays.has(day._id);
+                const dayId = getIdString(day._id);
+                const hasPending = (eventsByDay[dayId] || []).some(ev => ev.status === 'pending' && !ev.submittedByAdmin);
+                const isCollapsed = collapsedDays.has(dayId);
                 return (
-                <li key={day._id} className="bg-white shadow rounded-xl px-4 py-3">
+                <li key={dayId} className="border rounded-lg p-4">
                   <div 
                     className="flex items-center justify-between cursor-pointer"
-                    onClick={() => toggleDayCollapse(day._id)}
+                    onClick={() => toggleDayCollapse(dayId)}
                   >
                     <div className="flex items-center gap-3 flex-1">
                       <div className="flex items-center gap-2">
@@ -774,24 +779,25 @@ const AdminTimelineTab: React.FC<AdminTimelineTabProps> = ({ days, setDays, even
                       </div>
                     </div>
                     <div className="flex gap-1" onClick={(e) => e.stopPropagation()}>
-                      <Button variant="secondary" size="icon" onClick={() => { setEditDayId(day._id); setDayForm({ title: day.title, description: day.description || '', date: day.date ? new Date(day.date) : null }); setDesktopFormTab('day'); }} aria-label="Bearbeiten"><Pencil className="h-4 w-4" /></Button>
-                      <Button variant="destructive" size="icon" onClick={() => setConfirmDelete({ type: 'day', id: day._id })} aria-label="Löschen"><Trash2 className="h-4 w-4" /></Button>
+                      <Button variant="secondary" size="icon" onClick={() => handleEditDay(day)} aria-label="Bearbeiten"><Pencil className="h-4 w-4" /></Button>
+                      <Button variant="destructive" size="icon" onClick={() => setConfirmDelete({ type: 'day', id: dayId })} aria-label="Löschen"><Trash2 className="h-4 w-4" /></Button>
                     </div>
                   </div>
-                  {/* Events - nur anzeigen wenn nicht eingeklappt */}
+                  {/* Events */}
                   {!isCollapsed && (
                     <ul className="mt-2 space-y-2">
-                      {(eventsByDay[day._id] || []).map(event => {
-                        const category = categories.find((cat) => cat._id === event.categoryId);
+                      {(eventsByDay[dayId] || []).map(event => {
+                        const eventId = getIdString(event._id);
+                        const category = categories.find((cat) => getIdString(cat._id) === event.categoryId);
                         const IconComponent = category ? getIconComponent(category.icon) : LucideIcons.HelpCircle;
                         return (
-                          <li key={event._id} className={clsx("flex items-center justify-between bg-gray-50 rounded-xl px-4 py-3 shadow-sm", event.status === 'pending' && !event.submittedByAdmin && 'border-l-4 border-yellow-400')}>
-                            <div className="flex items-center gap-4">
-                              <div className="bg-[#ff9900]/20 rounded-full p-3 flex items-center justify-center">
-                                <IconComponent className="text-[#ff9900] text-4xl" />
+                          <li key={eventId} className={clsx("flex items-center justify-between bg-gray-50 rounded-lg p-3", event.status === 'pending' && !event.submittedByAdmin && 'border-l-4 border-yellow-400')}>
+                            <div className="flex items-center gap-3">
+                              <div className="bg-[#ff9900]/20 rounded-full p-2 flex items-center justify-center">
+                                <IconComponent className="text-[#ff9900] text-lg" />
                               </div>
                               <div>
-                                <div className="font-semibold text-lg text-gray-900">{event.title}</div>
+                                <div className="font-medium text-gray-900">{event.title}</div>
                                 <div className="text-xs text-gray-500 flex items-center gap-1">
                                   <Clock className="inline h-4 w-4" />{event.time}
                                 </div>
@@ -799,12 +805,12 @@ const AdminTimelineTab: React.FC<AdminTimelineTabProps> = ({ days, setDays, even
                             </div>
                             <div className="flex gap-1 items-center">
                               {event.status === 'pending' && !event.submittedByAdmin && (
-                                <Button variant="ghost" size="icon" onClick={() => handleApproveEvent(event._id, day._id)} aria-label="Bestätigen" title="Event bestätigen">
+                                <Button variant="ghost" size="icon" onClick={() => handleApproveEvent(eventId, dayId)} aria-label="Bestätigen" title="Event bestätigen">
                                   <Check className="h-4 w-4 text-yellow-500" />
                                 </Button>
                               )}
-                              <Button variant="secondary" size="icon" onClick={() => handleEditEvent(event, day._id)} aria-label="Bearbeiten"><Pencil className="h-4 w-4" /></Button>
-                              <Button variant="destructive" size="icon" onClick={() => setConfirmDelete({ type: 'event', id: event._id, parentId: day._id })} aria-label="Löschen"><Trash2 className="h-4 w-4" /></Button>
+                              <Button variant="secondary" size="icon" onClick={() => handleEditEvent(event, dayId)} aria-label="Bearbeiten"><Pencil className="h-4 w-4" /></Button>
+                              <Button variant="destructive" size="icon" onClick={() => setConfirmDelete({ type: 'event', id: eventId, parentId: dayId })} aria-label="Löschen"><Trash2 className="h-4 w-4" /></Button>
                             </div>
                           </li>
                         );})}
@@ -815,33 +821,34 @@ const AdminTimelineTab: React.FC<AdminTimelineTabProps> = ({ days, setDays, even
             </ul>
           </div>
         </div>
-        {/* Delete-Dialog */}
-        <AlertDialog open={!!confirmDelete} onOpenChange={open => !open && setConfirmDelete(null)}>
-          <AlertDialogContent>
-            <AlertDialogHeader>
-              <AlertDialogTitle>Löschen bestätigen</AlertDialogTitle>
-              <AlertDialogDescription>
-                {confirmDelete?.type === 'day' ? 'Diesen Tag' : 'Dieses Event'} wirklich löschen? Diese Aktion kann nicht rückgängig gemacht werden.
-              </AlertDialogDescription>
-            </AlertDialogHeader>
-            <AlertDialogFooter>
-              <AlertDialogCancel>Abbrechen</AlertDialogCancel>
-              <AlertDialogAction
-                className="bg-[#ff9900] text-white hover:bg-[#ffb84d] focus:ring-2 focus:ring-[#ff9900]"
-                onClick={async () => {
-                  if (confirmDelete?.type === 'day') await handleDeleteDay(confirmDelete.id);
-                  if (confirmDelete?.type === 'event' && confirmDelete.parentId) await handleDeleteEvent(confirmDelete.id, confirmDelete.parentId);
-                  setConfirmDelete(null);
-                }}
-              >
-                Löschen
-              </AlertDialogAction>
-            </AlertDialogFooter>
-          </AlertDialogContent>
-        </AlertDialog>
       </div>
-    );
-  }
+
+      {/* Delete-Dialog */}
+      <AlertDialog open={!!confirmDelete} onOpenChange={open => !open && setConfirmDelete(null)}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Löschen bestätigen</AlertDialogTitle>
+            <AlertDialogDescription>
+              {confirmDelete?.type === 'day' ? 'Diesen Tag' : 'Dieses Event'} wirklich löschen? Diese Aktion kann nicht rückgängig gemacht werden.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Abbrechen</AlertDialogCancel>
+            <AlertDialogAction
+              className="bg-[#ff9900] text-white hover:bg-[#ffb84d] focus:ring-2 focus:ring-[#ff9900]"
+              onClick={async () => {
+                if (confirmDelete?.type === 'day') await handleDeleteDay(confirmDelete.id);
+                if (confirmDelete?.type === 'event' && confirmDelete.parentId) await handleDeleteEvent(confirmDelete.id, confirmDelete.parentId);
+                setConfirmDelete(null);
+              }}
+            >
+              Löschen
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+    </div>
+  );
 };
 
 export default AdminTimelineTab; 

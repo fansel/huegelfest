@@ -8,6 +8,7 @@ import DatenschutzSettings from './DatenschutzSettings';
 import ResetAppDataSettings from './ResetAppDataSettings';
 import MusicNoteSettings from './MusicNoteSettings';
 import { useDeviceContext } from '@/shared/contexts/DeviceContext';
+import AppUpdateSettings from './AppUpdateSettings';
 
 
 interface SettingsProps {
@@ -37,6 +38,7 @@ export default function Settings({
         <DatenschutzSettings variant="row" />
         <ImpressumSettings variant="row" />
         <ResetAppDataSettings variant="row" />
+        <AppUpdateSettings variant="row" />
       </div>
     );
   }
@@ -53,6 +55,7 @@ export default function Settings({
         <DatenschutzSettings variant="tile" />
         <ImpressumSettings variant="tile" />
         <ResetAppDataSettings variant="tile" />
+        <AppUpdateSettings variant="tile" />
       </div>
     </div>
   );

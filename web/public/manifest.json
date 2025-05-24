@@ -21,5 +21,8 @@
       "purpose": "any maskable"
     }
   ],
-  "gcm_sender_id": "103953800507"
-} 
+  "gcm_sender_id": "103953800507",
+  "version": "0.1.0",
+  "build_id": "0217f84605a1f6e6",
+  "build_time": 1748069376026
+}

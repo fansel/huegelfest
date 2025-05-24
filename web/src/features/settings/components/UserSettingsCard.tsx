@@ -26,9 +26,11 @@ const UserSettingsCard: React.FC<UserSettingsCardProps> = ({ icon, title, switch
         <Info className="w-5 h-5 text-[#ff9900]/80 hover:text-[#ff9900]" />
       </span>
       <Dialog open={open} onOpenChange={setOpen}>
-        <DialogContent>
-          <DialogTitle className="text-[#ff9900]">Info</DialogTitle>
-          <DialogDescription>{info}</DialogDescription>
+        <DialogContent className="max-w-md">
+          <DialogTitle className="text-[#ff9900]">Informationen</DialogTitle>
+          <DialogDescription className="max-h-80 overflow-y-auto">
+            {info}
+          </DialogDescription>
           <button
             className="mt-4 px-4 py-2 rounded bg-[#ff9900] text-white font-semibold border border-[#ff9900]/30 hover:bg-[#460b6c] transition"
             onClick={() => setOpen(false)}
@@ -51,7 +53,7 @@ const UserSettingsCard: React.FC<UserSettingsCardProps> = ({ icon, title, switch
             isMobile
               ? InfoIconMobile
               : (
-                <Tooltip content={info} side="top" className="bg-[#2d0066] text-[#ff9900] border border-[#ff9900]/30 max-w-xs text-sm rounded-xl shadow-lg">
+                <Tooltip content={info} side="top" className="bg-[#2d0066] text-[#ff9900] border border-[#ff9900]/30 max-w-sm text-sm rounded-xl shadow-lg max-h-80 overflow-y-auto">
                   <span className="ml-1 cursor-pointer">
                     <Info className="w-5 h-5 text-[#ff9900]/80 hover:text-[#ff9900]" />
                   </span>
@@ -78,7 +80,7 @@ const UserSettingsCard: React.FC<UserSettingsCardProps> = ({ icon, title, switch
           isMobile
             ? InfoIconMobile
             : (
-              <Tooltip content={info} side="top" className="bg-[#2d0066] text-[#ff9900] border border-[#ff9900]/30 max-w-xs text-sm rounded-xl shadow-lg">
+              <Tooltip content={info} side="top" className="bg-[#2d0066] text-[#ff9900] border border-[#ff9900]/30 max-w-sm text-sm rounded-xl shadow-lg max-h-80 overflow-y-auto">
                 <span className="ml-1 cursor-pointer">
                   <Info className="w-5 h-5 text-[#ff9900]/80 hover:text-[#ff9900]" />
                 </span>

@@ -18,36 +18,46 @@ const LOCAL_STORAGE_KEY = "install_prompt_hidden";
 
 export const InstallPrompt: React.FC<InstallPromptProps> = () => {
   const { deviceType, displayMode } = useDeviceContext();
-  const [show, setShow] = useState(false);
+  const [mounted, setMounted] = useState(false);
+  const [shouldShow, setShouldShow] = useState(false);
   const [dontShowAgain, setDontShowAgain] = useState(false);
   const [platform, setPlatform] = useState<"ios" | "android" | "unknown" | null>(null);
-  const [isClient, setIsClient] = useState(false);
 
+  // Hydration-sicherer Mount-Check
   useEffect(() => {
-    if (deviceType !== "mobile" || displayMode === "standalone") {
-      setShow(false);
-      return;
-    }
-    const hidden = localStorage.getItem(LOCAL_STORAGE_KEY);
-    if (hidden === "1") {
-      setShow(false);
-      return;
-    }
-    const detected = getMobilePlatform();
-    setPlatform(detected ?? "unknown");
-    setShow(true);
-  }, [deviceType, displayMode]);
+    setMounted(true);
+  }, []);
 
-  useEffect(() => { setIsClient(true); }, []);
+  // Logik für Anzeige-Entscheidung nur nach Mount
+  useEffect(() => {
+    if (!mounted) return;
+
+    // Prüfungen für Anzeige
+    if (typeof window === "undefined") return;
+    if (deviceType !== "mobile") return;
+    if (displayMode === "standalone") return;
+    
+    const hidden = localStorage.getItem(LOCAL_STORAGE_KEY);
+    if (hidden === "1") return;
+    
+    const detected = getMobilePlatform();
+    if (!detected) return;
+    
+    setPlatform(detected);
+    setShouldShow(true);
+  }, [mounted, deviceType, displayMode]);
 
   const handleClose = () => {
     if (dontShowAgain) {
       localStorage.setItem(LOCAL_STORAGE_KEY, "1");
     }
-    setShow(false);
+    setShouldShow(false);
   };
 
-  if (!isClient || !show || platform === null) return null;
+  // Verhindere jedes Rendering vor vollständiger Hydration
+  if (!mounted || !shouldShow || !platform) {
+    return null;
+  }
 
   // Warn-Design: gelber Rahmen, Warn-Icon, freundlicher Text
   return (
