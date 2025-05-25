@@ -1,6 +1,6 @@
 export type AdminTab =
   | 'announcements'
-  | 'groups'
+  | 'workingGroups'
   | 'timeline'
   | 'music'
   | 'registrations'
@@ -9,7 +9,7 @@ export type AdminTab =
 
 export const ADMIN_TABS: AdminTab[] = [
   'announcements',
-  'groups',
+  'workingGroups',
   'timeline',
   'music',
   'registrations',

@@ -8,7 +8,7 @@ export const useAnnouncementsManager = () => {
     createAnnouncement,
     updateAnnouncement,
     deleteAnnouncement,
-    groups,
+    workingGroups,
   } = useAdminDashboard();
 
   // Hier ggf. weitere Logik, z.B. für Form-Handling
@@ -20,6 +20,6 @@ export const useAnnouncementsManager = () => {
     createAnnouncement,
     updateAnnouncement,
     deleteAnnouncement,
-    groups,
+    workingGroups,
   };
 }; 

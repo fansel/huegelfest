@@ -1,13 +1,13 @@
 import mongoose, { Document, Model } from 'mongoose';
 
-interface IGroupDocument extends Document {
+interface IWorkingGroupDocument extends Document {
   name: string;
   color: string;
   createdAt: Date;
   updatedAt: Date;
 }
 
-const groupSchema = new mongoose.Schema({
+const workingGroupSchema = new mongoose.Schema({
   name: { 
     type: String, 
     required: true,
@@ -40,22 +40,22 @@ const groupSchema = new mongoose.Schema({
 });
 
 // Virtuelle Felder für Ankündigungen
-groupSchema.virtual('announcements', {
+workingGroupSchema.virtual('announcements', {
   ref: 'Announcement',
   localField: '_id',
-  foreignField: 'groupId'
+  foreignField: 'workingGroupId'
 });
 
 // Middleware für Validierung
-groupSchema.pre('save', async function(next) {
+workingGroupSchema.pre('save', async function(next) {
   try {
     // Prüfe auf Duplikate
-    const existingGroup = await this.constructor.findOne({ 
+    const existingWorkingGroup = await this.constructor.findOne({ 
       name: this.name,
       _id: { $ne: this._id }
     });
     
-    if (existingGroup) {
+    if (existingWorkingGroup) {
       throw new Error(`Eine Gruppe mit dem Namen "${this.name}" existiert bereits`);
     }
     
@@ -65,11 +65,11 @@ groupSchema.pre('save', async function(next) {
   }
 });
 
-let Group: Model<IGroupDocument>;
+let WorkingGroup: Model<IWorkingGroupDocument>;
 try {
-  Group = mongoose.model<IGroupDocument>('Group');
+  WorkingGroup = mongoose.model<IWorkingGroupDocument>('WorkingGroup');
 } catch {
-  Group = mongoose.model<IGroupDocument>('Group', groupSchema);
+  WorkingGroup = mongoose.model<IWorkingGroupDocument>('WorkingGroup', workingGroupSchema);
 }
 
-export { Group }; 
+export { WorkingGroup }; 

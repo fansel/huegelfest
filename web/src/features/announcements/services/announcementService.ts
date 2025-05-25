@@ -1,6 +1,6 @@
 import { connectDB } from '@/lib/db/connector';
 import Announcement from '@/lib/db/models/Announcement';
-import { Group } from '@/lib/db/models/Group';
+import { WorkingGroup } from '@/lib/db/models/WorkingGroup';
 import { revalidatePath } from 'next/cache';
 import { webPushService } from '@/lib/webpush/webPushService';
 import { logger } from '@/lib/logger';
@@ -85,12 +85,12 @@ export async function saveAnnouncements(announcements: IAnnouncement[]): Promise
         announcement.groupId &&
         mongoose.Types.ObjectId.isValid(announcement.groupId)
       ) {
-        group = await Group.findById(announcement.groupId);
+        group = await WorkingGroup.findById(announcement.groupId);
       }
       if (!group) {
-        const defaultGroup = await Group.findOne({ name: 'default' });
-        if (!defaultGroup) throw new Error('Default-Gruppe nicht gefunden');
-        group = defaultGroup;
+        const defaultWorkingGroup = await WorkingGroup.findOne({ name: 'default' });
+        if (!defaultWorkingGroup) throw new Error('Default-Gruppe nicht gefunden');
+        group = defaultWorkingGroup;
       }
       if (announcement.id) {
         const existingAnnouncement = await Announcement.findById(announcement.id);

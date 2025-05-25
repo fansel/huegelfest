@@ -3,10 +3,10 @@ import { IAnnouncement } from '@/shared/types/types';
 import { getAllAnnouncementsAction } from '../../announcements/actions/getAllAnnouncements';
 import { saveAnnouncementsAction } from '../../announcements/actions/saveAnnouncementAction';
 import { deleteAnnouncementAction } from '../../announcements/actions/deleteAnnouncement';
-import { getGroupsArrayAction } from '../../groups/actions/getGroupColors';
+import { getWorkingGroupsArrayAction } from '../../workingGroups/actions/getWorkingGroupColors';
 // Importiere hier die Services, z.B.:
 // import { getAnnouncements, createAnnouncement, updateAnnouncement, deleteAnnouncement } from '../../announcements/services/announcementService';
-// import { getGroups, createGroup, updateGroup, deleteGroup } from '../../groups/services/groupService';
+// import { getGroups, createGroup, updateGroup, deleteGroup } from '../../workingGroups/services/groupService';
 // import { getTimeline, createTimelineEntry, updateTimelineEntry, deleteTimelineEntry } from '../../timeline/services/timelineService';
 
 // Typdefinitionen (Platzhalter, bitte mit echten Typen ersetzen)
@@ -34,10 +34,10 @@ export interface UseAdminDashboard {
   updateAnnouncement: (id: string, data: Partial<Announcement>) => Promise<void>;
   deleteAnnouncement: (id: string) => Promise<void>;
 
-  // Groups
-  groups: Group[];
-  loadingGroups: boolean;
-  errorGroups: string | null;
+  // WorkingGroups
+  workingGroups: WorkingGroup[];
+  loadingWorkingGroups: boolean;
+  errorWorkingGroups: string | null;
   createGroup: (data: Omit<Group, 'id'>) => Promise<void>;
   updateGroup: (id: string, data: Partial<Group>) => Promise<void>;
   deleteGroup: (id: string) => Promise<void>;
@@ -61,10 +61,10 @@ export const useAdminDashboard = (): UseAdminDashboard => {
   const [loadingAnnouncements, setLoadingAnnouncements] = useState<boolean>(false);
   const [errorAnnouncements, setErrorAnnouncements] = useState<string | null>(null);
 
-  // Groups State
-  const [groups, setGroups] = useState<Group[]>([]);
-  const [loadingGroups, setLoadingGroups] = useState<boolean>(false);
-  const [errorGroups, setErrorGroups] = useState<string | null>(null);
+  // WorkingGroups State
+  const [workingGroups, setWorkingGroups] = useState<WorkingGroup[]>([]);
+  const [loadingWorkingGroups, setLoadingGroups] = useState<boolean>(false);
+  const [errorWorkingGroups, setErrorGroups] = useState<string | null>(null);
 
   // Timeline State
   const [timeline, setTimeline] = useState<TimelineEntry[]>([]);
@@ -94,21 +94,21 @@ export const useAdminDashboard = (): UseAdminDashboard => {
     fetchAnnouncements();
   }, []);
 
-  // Groups laden beim Mount
+  // WorkingGroups laden beim Mount
   useEffect(() => {
-    const fetchGroups = async () => {
+    const fetchWorkingGroups = async () => {
       setLoadingGroups(true);
       setErrorGroups(null);
       try {
-        const data = await getGroupsArrayAction();
-        setGroups(data);
+        const data = await getWorkingGroupsArrayAction();
+        setWorkingGroups(data);
       } catch (error: any) {
-        setErrorGroups('Fehler beim Laden der Gruppen');
+        setErrorGroups('Fehler beim Laden der Arbeitsgruppen');
       } finally {
         setLoadingGroups(false);
       }
     };
-    fetchGroups();
+    fetchWorkingGroups();
   }, []);
 
   // Create Announcement
@@ -197,9 +197,9 @@ export const useAdminDashboard = (): UseAdminDashboard => {
     createAnnouncement,
     updateAnnouncement,
     deleteAnnouncement,
-    groups,
-    loadingGroups,
-    errorGroups,
+    workingGroups,
+    loadingWorkingGroups,
+    errorWorkingGroups,
     createGroup,
     updateGroup,
     deleteGroup,

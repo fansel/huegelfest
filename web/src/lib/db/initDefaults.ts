@@ -1,14 +1,14 @@
-import { Group } from './models/Group';
+import { WorkingGroup } from './models/WorkingGroup';
 import { Category } from './models/Category';
 
 /**
  * Stellt sicher, dass die Default-Gruppe existiert.
  * Legt sie an, falls sie nicht vorhanden ist.
  */
-export async function ensureDefaultGroup(): Promise<void> {
-  const exists = await Group.findOne({ name: 'default' }).lean();
+export async function ensureDefaultWorkingGroup(): Promise<void> {
+  const exists = await WorkingGroup.findOne({ name: 'default' }).lean();
   if (!exists) {
-    await Group.create({
+    await WorkingGroup.create({
       name: 'default',
       color: '#ff9900', // Standardfarbe, ggf. anpassen
     });

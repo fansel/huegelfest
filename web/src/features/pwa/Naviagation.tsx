@@ -31,7 +31,7 @@ const userTabs: Tab[] = [
 
 const adminTabs: Tab[] = [
   { id: 'announcements', icon: <Megaphone size={24} />, label: 'Ankündigungen' },
-  { id: 'groups', icon: <Users size={24} />, label: 'Gruppen' },
+  { id: 'workingGroups', icon: <Users size={24} />, label: 'Arbeitsgruppen' },
   { id: 'timeline', icon: <Clock size={24} />, label: 'Timeline' },
   { id: 'music', icon: <Music size={24} />, label: 'Musik' },
   { id: 'registrations', icon: <ClipboardList size={24} />, label: 'Anmeldungen' },

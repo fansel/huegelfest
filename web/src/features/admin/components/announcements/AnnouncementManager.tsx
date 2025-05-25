@@ -143,10 +143,10 @@ const AnnouncementsManager: React.FC = () => {
                 <label htmlFor="announcement-group" className="text-sm font-medium text-gray-700">Gruppe</label>
                 <Select value={groupId} onValueChange={setGroupId} required>
                   <SelectTrigger className="w-full" id="announcement-group">
-                    <SelectValue>{manager.groups.find(g => g.id === groupId)?.name || 'Wähle eine Gruppe'}</SelectValue>
+                    <SelectValue>{manager.workingGroups.find(g => g.id === groupId)?.name || 'Wähle eine Gruppe'}</SelectValue>
                   </SelectTrigger>
                   <SelectContent>
-                    {manager.groups.filter(isNotDefaultGroup).map(group => (
+                    {manager.workingGroups.filter(isNotDefaultGroup).map(group => (
                       <SelectItem key={group.id} value={group.id}>{group.name}</SelectItem>
                     ))}
                   </SelectContent>
@@ -275,10 +275,10 @@ const AnnouncementsManager: React.FC = () => {
                 <label htmlFor="announcement-group" className="text-sm font-medium text-gray-700">Gruppe</label>
                 <Select value={groupId} onValueChange={setGroupId} required>
                   <SelectTrigger className="w-full" id="announcement-group">
-                    <SelectValue>{manager.groups.find(g => g.id === groupId)?.name || 'Wähle eine Gruppe'}</SelectValue>
+                    <SelectValue>{manager.workingGroups.find(g => g.id === groupId)?.name || 'Wähle eine Gruppe'}</SelectValue>
                   </SelectTrigger>
                   <SelectContent>
-                    {manager.groups.filter(isNotDefaultGroup).map(group => (
+                    {manager.workingGroups.filter(isNotDefaultGroup).map(group => (
                       <SelectItem key={group.id} value={group.id}>{group.name}</SelectItem>
                     ))}
                   </SelectContent>

@@ -10,7 +10,7 @@ type View =
   | 'admin'
   | 'favorites'
   | 'announcements'
-  | 'groups'
+  | 'workingGroups'
   | 'timeline'
   | 'admin-settings'
   | 'signup'

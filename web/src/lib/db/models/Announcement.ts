@@ -1,5 +1,5 @@
 import mongoose, { Document, Model } from 'mongoose';
-import { Group } from './Group';
+import { WorkingGroup } from './WorkingGroup';
 import { ReactionType } from '@/shared/types/types';
 import type { CallbackError } from 'mongoose';
 
@@ -20,7 +20,7 @@ const announcementSchema = new mongoose.Schema({
   time: { type: String },
   groupId: { 
     type: mongoose.Schema.Types.ObjectId,
-    ref: 'Group',
+    ref: 'WorkingGroup',
     required: true,
     index: true
   },
@@ -46,7 +46,7 @@ const announcementSchema = new mongoose.Schema({
 
 // Virtuelle Felder für Gruppen-Informationen
 announcementSchema.virtual('group', {
-  ref: 'Group',
+  ref: 'WorkingGroup',
   localField: 'groupId',
   foreignField: '_id',
   justOne: true
@@ -63,7 +63,7 @@ announcementSchema.virtual('author', {
 // Middleware für Validierung
 announcementSchema.pre('save', async function(next) {
   try {
-    const group = await Group.findById(this.groupId);
+    const group = await WorkingGroup.findById(this.groupId);
     if (!group) {
       throw new Error(`Gruppe mit ID ${this.groupId} nicht gefunden`);
     }
