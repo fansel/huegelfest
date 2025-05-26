@@ -7,6 +7,7 @@ import {
   getAllUsers,
   deleteUser
 } from '../services/userService';
+import { broadcast } from '@/lib/websocket/broadcast';
 
 /**
  * Server Action: Findet oder erstellt einen User
@@ -61,7 +62,11 @@ export async function getAllUsersAction() {
  */
 export async function deleteUserAction(deviceId: string) {
   try {
-    return await deleteUser(deviceId);
+    const result = await deleteUser(deviceId);
+    if (result.success) {
+      await broadcast('user-deleted', { deviceId });
+    }
+    return result;
   } catch (error) {
     console.error('[UserActions] Fehler bei deleteUser:', error);
     return { success: false, error: 'Ein unerwarteter Fehler ist aufgetreten' };

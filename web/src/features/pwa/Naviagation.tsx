@@ -34,7 +34,6 @@ const adminTabs: Tab[] = [
   { id: 'workingGroups', icon: <Users size={24} />, label: 'Arbeitsgruppen' },
   { id: 'timeline', icon: <Clock size={24} />, label: 'Timeline' },
   { id: 'music', icon: <Music size={24} />, label: 'Musik' },
-  { id: 'registrations', icon: <ClipboardList size={24} />, label: 'Anmeldungen' },
   { id: 'groups', icon: <Users2 size={24} />, label: 'Gruppen' },
   { id: 'admin-settings', icon: <SlidersHorizontal size={24} />, label: 'Admin-Einstellungen' },
 ];

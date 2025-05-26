@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '@/shared/components/ui/dialog';
 import { Button } from "@/shared/components/ui/button";
 import { Input } from "@/shared/components/ui/input";
@@ -14,10 +14,61 @@ interface CreateGroupDialogProps {
   onGroupCreated: (group: GroupData) => void;
 }
 
+// Tiernamen für Gruppen-Vorschläge
+const ANIMAL_NAMES = [
+  'Giraffen', 'Elefanten', 'Löwen', 'Tiger', 'Pandas', 'Koalas', 'Pinguine', 'Delfine',
+  'Wale', 'Adler', 'Falken', 'Eulen', 'Papageien', 'Flamingos', 'Zebras', 'Nashörner',
+  'Hippos', 'Kängurus', 'Affen', 'Gorillas', 'Bären', 'Wölfe', 'Füchse', 'Hasen',
+  'Eichhörnchen', 'Igel', 'Schildkröten', 'Krokodile', 'Schlangen', 'Frösche'
+];
+
+// Generiert eine zufällige Hex-Farbe aus dem vollen RGB-Spektrum
+// Aber nicht zu grell und nicht zu düster
+function generateRandomColor(): string {
+  // Verwende HSL für bessere Kontrolle über Helligkeit und Sättigung
+  const hue = Math.floor(Math.random() * 360); // Vollständig zufälliger Farbton
+  const saturation = Math.floor(Math.random() * 50) + 30; // 30-80% Sättigung (nicht zu grau, nicht zu knallig)
+  const lightness = Math.floor(Math.random() * 30) + 40; // 40-70% Helligkeit (nicht zu dunkel, nicht zu hell)
+  
+  // Konvertiere HSL zu RGB
+  const hslToRgb = (h: number, s: number, l: number) => {
+    h = h / 360;
+    s = s / 100;
+    l = l / 100;
+    
+    const a = s * Math.min(l, 1 - l);
+    const f = (n: number) => {
+      const k = (n + h * 12) % 12;
+      return l - a * Math.max(Math.min(k - 3, 9 - k, 1), -1);
+    };
+    
+    return [Math.round(f(0) * 255), Math.round(f(8) * 255), Math.round(f(4) * 255)];
+  };
+  
+  const [r, g, b] = hslToRgb(hue, saturation, lightness);
+  
+  // Konvertiere zu Hex
+  return `#${r.toString(16).padStart(2, '0')}${g.toString(16).padStart(2, '0')}${b.toString(16).padStart(2, '0')}`;
+}
+
+// Gibt einen zufälligen Tiernamen zurück
+function getRandomAnimalName(): string {
+  return ANIMAL_NAMES[Math.floor(Math.random() * ANIMAL_NAMES.length)];
+}
+
 export function CreateGroupDialog({ open, onOpenChange, onGroupCreated }: CreateGroupDialogProps) {
   const [newGroupName, setNewGroupName] = useState('');
   const [newGroupColor, setNewGroupColor] = useState('#ff9900');
   const [newGroupIsAssignable, setNewGroupIsAssignable] = useState(true);
+  const [placeholderName, setPlaceholderName] = useState('');
+
+  // Generiere zufällige Farbe und Placeholder-Namen beim Öffnen des Dialogs
+  useEffect(() => {
+    if (open) {
+      setNewGroupColor(generateRandomColor());
+      setPlaceholderName(getRandomAnimalName());
+    }
+  }, [open]);
 
   const handleCreateGroup = async () => {
     if (!newGroupName.trim()) {
@@ -37,7 +88,9 @@ export function CreateGroupDialog({ open, onOpenChange, onGroupCreated }: Create
         setNewGroupName('');
         setNewGroupColor('#ff9900');
         setNewGroupIsAssignable(true);
+        setPlaceholderName('');
         onOpenChange(false);
+        toast.success(`Gruppe "${result.data.name}" wurde erstellt`);
       } else {
         toast.error(result.error || 'Fehler beim Erstellen der Gruppe');
       }
@@ -58,22 +111,29 @@ export function CreateGroupDialog({ open, onOpenChange, onGroupCreated }: Create
             <Input
               value={newGroupName}
               onChange={(e) => setNewGroupName(e.target.value)}
-              placeholder="z.B. Küche, Technik, Orga..."
+              placeholder={placeholderName}
             />
           </div>
           <div className="space-y-2">
             <label className="text-sm font-medium">Farbe</label>
-            <div className="flex gap-2">
-              {['#ff9900', '#e74c3c', '#3498db', '#2ecc71', '#9b59b6', '#f39c12'].map(color => (
-                <button
-                  key={color}
-                  onClick={() => setNewGroupColor(color)}
-                  className={`w-8 h-8 rounded-full border-2 ${
-                    newGroupColor === color ? 'border-gray-800' : 'border-gray-300'
-                  }`}
-                  style={{ backgroundColor: color }}
+            <div className="space-y-3">
+              {/* Color Picker als einzige Farbanzeige */}
+              <div className="flex items-center gap-3">
+                <input
+                  type="color"
+                  id="colorPicker"
+                  value={newGroupColor}
+                  onChange={(e) => setNewGroupColor(e.target.value)}
+                  className="w-12 h-10 rounded border border-gray-300 cursor-pointer"
                 />
-              ))}
+                <button
+                  onClick={() => setNewGroupColor(generateRandomColor())}
+                  className="px-3 py-2 text-sm bg-gray-100 hover:bg-gray-200 rounded transition-colors"
+                  title="Zufällige Farbe generieren"
+                >
+                  🎲 Zufällig
+                </button>
+              </div>
             </div>
           </div>
           <div className="space-y-2">

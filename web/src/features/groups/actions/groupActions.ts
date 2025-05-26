@@ -12,6 +12,7 @@ import {
   getGroupStats,
   assignAllUnassignedUsers
 } from '../services/groupService';
+import { broadcast } from '@/lib/websocket/broadcast';
 import type { CreateGroupData, UpdateGroupData } from '../types';
 
 /**
@@ -31,7 +32,14 @@ export async function getAllGroupsAction() {
  */
 export async function createGroupAction(data: CreateGroupData) {
   try {
-    return await createGroup(data);
+    const result = await createGroup(data);
+    if (result.success && result.data) {
+      await broadcast('group-created', { 
+        groupId: result.data.id, 
+        name: result.data.name 
+      });
+    }
+    return result;
   } catch (error) {
     console.error('[GroupActions] Fehler bei createGroup:', error);
     return { success: false, error: 'Ein unerwarteter Fehler ist aufgetreten' };
@@ -43,7 +51,14 @@ export async function createGroupAction(data: CreateGroupData) {
  */
 export async function updateGroupAction(groupId: string, data: UpdateGroupData) {
   try {
-    return await updateGroup(groupId, data);
+    const result = await updateGroup(groupId, data);
+    if (result.success && result.data) {
+      await broadcast('group-updated', { 
+        groupId: result.data.id, 
+        name: result.data.name 
+      });
+    }
+    return result;
   } catch (error) {
     console.error('[GroupActions] Fehler bei updateGroup:', error);
     return { success: false, error: 'Ein unerwarteter Fehler ist aufgetreten' };
@@ -55,7 +70,11 @@ export async function updateGroupAction(groupId: string, data: UpdateGroupData) 
  */
 export async function deleteGroupAction(groupId: string) {
   try {
-    return await deleteGroup(groupId);
+    const result = await deleteGroup(groupId);
+    if (result.success) {
+      await broadcast('group-deleted', { groupId });
+    }
+    return result;
   } catch (error) {
     console.error('[GroupActions] Fehler bei deleteGroup:', error);
     return { success: false, error: 'Ein unerwarteter Fehler ist aufgetreten' };
@@ -79,7 +98,11 @@ export async function getGroupMembersAction(groupId: string) {
  */
 export async function assignUserToGroupAction(deviceId: string, groupId: string) {
   try {
-    return await assignUserToGroup(deviceId, groupId);
+    const result = await assignUserToGroup(deviceId, groupId);
+    if (result.success) {
+      await broadcast('user-assigned', { deviceId, groupId });
+    }
+    return result;
   } catch (error) {
     console.error('[GroupActions] Fehler bei assignUserToGroup:', error);
     return { success: false, error: 'Ein unerwarteter Fehler ist aufgetreten' };
@@ -91,7 +114,11 @@ export async function assignUserToGroupAction(deviceId: string, groupId: string)
  */
 export async function removeUserFromGroupAction(deviceId: string) {
   try {
-    return await removeUserFromGroup(deviceId);
+    const result = await removeUserFromGroup(deviceId);
+    if (result.success) {
+      await broadcast('user-removed', { deviceId });
+    }
+    return result;
   } catch (error) {
     console.error('[GroupActions] Fehler bei removeUserFromGroup:', error);
     return { success: false, error: 'Ein unerwarteter Fehler ist aufgetreten' };
@@ -103,7 +130,11 @@ export async function removeUserFromGroupAction(deviceId: string) {
  */
 export async function assignUserToRandomGroupAction(deviceId: string) {
   try {
-    return await assignUserToRandomGroup(deviceId);
+    const result = await assignUserToRandomGroup(deviceId);
+    if (result.success && result.groupName) {
+      await broadcast('user-assigned', { deviceId, groupName: result.groupName });
+    }
+    return result;
   } catch (error) {
     console.error('[GroupActions] Fehler bei assignUserToRandomGroup:', error);
     return { success: false, error: 'Ein unerwarteter Fehler ist aufgetreten' };
@@ -127,7 +158,11 @@ export async function getGroupStatsAction() {
  */
 export async function assignAllUnassignedUsersAction() {
   try {
-    return await assignAllUnassignedUsers();
+    const result = await assignAllUnassignedUsers();
+    if (result.success) {
+      await broadcast('groups-updated', { massAssignment: true, assignedCount: result.assignedCount });
+    }
+    return result;
   } catch (error) {
     console.error('[GroupActions] Fehler bei assignAllUnassignedUsers:', error);
     return { success: false, error: 'Ein unerwarteter Fehler ist aufgetreten' };

@@ -77,12 +77,17 @@ export function UsersTab({
   };
 
   const getUserGroup = (user: User): GroupData | null => {
-    return user.groupId ? groups.find(g => g.id === user.groupId) || null : null;
-  };
-
-  const getSelectDisplayValue = (user: User): string => {
-    const userGroup = getUserGroup(user);
-    return userGroup ? userGroup.name : "Keine Gruppe";
+    const foundGroup = user.groupId ? groups.find(g => g.id === user.groupId) || null : null;
+    
+    // Debug logging
+    if (user.groupId && !foundGroup) {
+      console.warn(`[UsersTab] Group not found for user ${user.name}:`, {
+        userGroupId: user.groupId,
+        availableGroups: groups.map(g => ({ id: g.id, name: g.name }))
+      });
+    }
+    
+    return foundGroup;
   };
 
   return (
@@ -106,6 +111,13 @@ export function UsersTab({
           const userGroup = getUserGroup(user);
           const isLoading = loadingUsers.has(user.deviceId);
           
+          // Debug logging
+          console.log(`[UsersTab] User ${user.name}:`, {
+            groupId: user.groupId,
+            userGroup: userGroup?.name,
+            selectValue: user.groupId || "NONE"
+          });
+          
           return (
             <div
               key={user.deviceId}
@@ -121,8 +133,13 @@ export function UsersTab({
                 <span className="font-medium">{user.name}</span>
                 <span className="text-sm text-gray-500 font-mono">{user.deviceId}</span>
                 {userGroup && (
-                  <span className="text-xs bg-gray-100 text-gray-600 px-2 py-1 rounded">
+                  <span className={`text-xs px-2 py-1 rounded ${
+                    userGroup.isAssignable 
+                      ? 'bg-gray-100 text-gray-600' 
+                      : 'bg-orange-100 text-orange-700'
+                  }`}>
                     {userGroup.name}
+                    {!userGroup.isAssignable && ' (gesperrt)'}
                   </span>
                 )}
               </div>
@@ -148,7 +165,25 @@ export function UsersTab({
                         <span>Speichere...</span>
                       </div>
                     ) : (
-                      <SelectValue>{getSelectDisplayValue(user)}</SelectValue>
+                      <SelectValue>
+                        {userGroup ? (
+                          <div className="flex items-center gap-2">
+                            <div 
+                              className="w-3 h-3 rounded-full"
+                              style={{ backgroundColor: userGroup.color }}
+                            />
+                            <span>{userGroup.name}</span>
+                            {!userGroup.isAssignable && (
+                              <span className="text-xs text-orange-600">(gesperrt)</span>
+                            )}
+                          </div>
+                        ) : (
+                          <div className="flex items-center gap-2">
+                            <div className="w-3 h-3 rounded-full bg-gray-300" />
+                            <span>Keine Gruppe</span>
+                          </div>
+                        )}
+                      </SelectValue>
                     )}
                   </SelectTrigger>
                   <SelectContent>
@@ -158,22 +193,31 @@ export function UsersTab({
                         <span>Keine Gruppe</span>
                       </div>
                     </SelectItem>
-                    {groups
-                      .filter(group => group.isAssignable)
-                      .map(group => (
-                        <SelectItem key={group.id} value={group.id}>
-                          <div className="flex items-center gap-2">
-                            <div 
-                              className="w-3 h-3 rounded-full"
-                              style={{ backgroundColor: group.color }}
-                            />
-                            <span>{group.name}</span>
-                            <span className="text-xs text-gray-500">
-                              ({group.memberCount} Mitglieder)
+                    {groups.map(group => (
+                      <SelectItem 
+                        key={group.id} 
+                        value={group.id}
+                        disabled={!group.isAssignable}
+                      >
+                        <div className="flex items-center gap-2">
+                          <div 
+                            className="w-3 h-3 rounded-full"
+                            style={{ backgroundColor: group.color }}
+                          />
+                          <span className={!group.isAssignable ? 'text-gray-500' : ''}>
+                            {group.name}
+                          </span>
+                          <span className="text-xs text-gray-500">
+                            ({group.memberCount} Mitglieder)
+                          </span>
+                          {!group.isAssignable && (
+                            <span className="text-xs text-orange-600 ml-1">
+                              (gesperrt)
                             </span>
-                          </div>
-                        </SelectItem>
-                      ))}
+                          )}
+                        </div>
+                      </SelectItem>
+                    ))}
                   </SelectContent>
                 </Select>
                 <Button 

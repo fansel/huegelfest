@@ -158,16 +158,35 @@ export async function getAllUsers() {
       .sort({ createdAt: -1 })
       .lean();
     
-    return users.map(user => ({
+    const mappedUsers = users.map(user => ({
       deviceId: user.deviceId,
       name: user.name,
-      groupId: user.groupId?.toString(),
+      groupId: user.groupId?._id?.toString() || user.groupId?.toString(),
       groupName: (user.groupId as any)?.name,
       isRegistered: !!user.registrationId,
       registrationId: user.registrationId?.toString(),
       createdAt: user.createdAt,
       lastActivity: user.updatedAt
     }));
+    
+    // Debug logging
+    console.log('[UserService] getAllUsers - Gefundene User:', {
+      total: mappedUsers.length,
+      withGroups: mappedUsers.filter(u => u.groupId).length,
+      userSample: mappedUsers.slice(0, 3).map(u => ({ 
+        name: u.name, 
+        deviceId: u.deviceId,
+        groupId: u.groupId,
+        groupName: u.groupName 
+      })),
+      groupIdTypes: mappedUsers.slice(0, 3).map(u => ({ 
+        name: u.name, 
+        groupIdType: typeof u.groupId,
+        groupIdValue: u.groupId
+      }))
+    });
+    
+    return mappedUsers;
   } catch (error) {
     logger.error('[UserService] Fehler bei getAllUsers:', error);
     return [];
