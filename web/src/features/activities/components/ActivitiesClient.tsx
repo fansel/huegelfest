@@ -28,7 +28,11 @@ export default function ActivitiesClient() {
   // WebSocket für Live-Updates
   useWebSocket(getWebSocketUrl(), {
     onMessage: (msg) => {
-      if (msg.topic === 'user-updated' || msg.topic === 'group-updated') {
+      if (msg.topic === 'user-updated' || 
+          msg.topic === 'group-updated' || 
+          msg.topic === 'user-assigned' || 
+          msg.topic === 'user-removed' ||
+          msg.topic === 'groups-updated') {
         mutate();
       }
     },

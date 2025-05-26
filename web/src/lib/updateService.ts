@@ -28,6 +28,34 @@ export class UpdateService {
   }
 
   /**
+   * Initialisiert den Update-Service
+   */
+  async initialize() {
+    if (this.isInitialized) return;
+    
+    try {
+      this.startAutoUpdateCheck();
+      logger.info('[UpdateService] Update-Service erfolgreich initialisiert');
+    } catch (error) {
+      logger.error('[UpdateService] Fehler bei der Initialisierung:', error);
+    }
+  }
+
+  /**
+   * Zerstört den Update-Service und räumt Ressourcen auf
+   */
+  destroy() {
+    try {
+      this.stopAutoUpdateCheck();
+      this.onUpdateCallback = null;
+      this.hasShownUpdateNotification = false;
+      logger.info('[UpdateService] Update-Service erfolgreich zerstört');
+    } catch (error) {
+      logger.error('[UpdateService] Fehler beim Zerstören:', error);
+    }
+  }
+
+  /**
    * Startet Update-Service über bestehende WebSocket-Infrastruktur
    */
   startAutoUpdateCheck(callback?: () => void) {

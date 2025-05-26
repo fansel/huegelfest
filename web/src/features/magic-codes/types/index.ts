@@ -34,24 +34,41 @@ export interface DeviceTransferResult {
   userId?: string;
   userName?: string;
   error?: string;
-  transferredDeviceId?: string;
-  newFreshDeviceId?: string;
   pushSubscriptionInfo?: {
     hadPushSubscription: boolean;
     requiresReactivation: boolean;
     message?: string;
   };
+  transferredDeviceId?: string;
+  newFreshDeviceId?: string;
 }
 
+/**
+ * ActiveMagicCode as returned from server actions (dates as strings)
+ */
 export interface ActiveMagicCode {
   id: string;
   code: string;
   userName: string;
   deviceId: string;
-  expiresAt: Date;
+  expiresAt: string; // String from server action
   createdBy: 'user' | 'admin';
   adminId?: string;
-  createdAt: Date;
+  createdAt: string; // String from server action
+}
+
+/**
+ * ActiveMagicCode with parsed dates for client use
+ */
+export interface ParsedActiveMagicCode {
+  id: string;
+  code: string;
+  userName: string;
+  deviceId: string;
+  expiresAt: Date; // Parsed Date object
+  createdBy: 'user' | 'admin';
+  adminId?: string;
+  createdAt: Date; // Parsed Date object
 }
 
 export type TransferStep = 'initial' | 'generate' | 'input' | 'success';

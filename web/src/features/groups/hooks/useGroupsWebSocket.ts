@@ -5,6 +5,7 @@ import { toast } from 'react-hot-toast';
 import { useWebSocket, WebSocketMessage } from '@/shared/hooks/useWebSocket';
 import { getWebSocketUrl } from '@/shared/utils/getWebSocketUrl';
 import { fetchGroupsData, type GroupsData } from '../actions/fetchGroupsData';
+import { globalWebSocketManager } from '@/shared/utils/globalWebSocketManager';
 
 type GroupsWebSocketEventType = 
   | 'groups-updated'
@@ -29,6 +30,19 @@ export function useGroupsWebSocket() {
   });
   const [loading, setLoading] = useState(true);
   const [connected, setConnected] = useState(false);
+
+  // Echten WebSocket-Status vom globalen Manager abfragen
+  const updateConnectionStatus = useCallback(() => {
+    const status = globalWebSocketManager.getStatus();
+    setConnected(status.connected);
+  }, []);
+
+  // Status-Updates alle 2 Sekunden prüfen (falls Callbacks nicht funktionieren)
+  useEffect(() => {
+    updateConnectionStatus(); // Sofort prüfen
+    const interval = setInterval(updateConnectionStatus, 2000);
+    return () => clearInterval(interval);
+  }, [updateConnectionStatus]);
 
   // Initiale Daten laden
   const loadInitialData = useCallback(async () => {
@@ -90,16 +104,16 @@ export function useGroupsWebSocket() {
     {
       onMessage: handleWebSocketMessage,
       onOpen: () => {
-        setConnected(true);
+        updateConnectionStatus(); // Status sofort aktualisieren
         console.log('[useGroupsWebSocket] WebSocket verbunden');
       },
       onClose: () => {
-        setConnected(false);
+        updateConnectionStatus(); // Status sofort aktualisieren
         console.log('[useGroupsWebSocket] WebSocket getrennt');
       },
       onError: (err) => {
         console.error('[useGroupsWebSocket] WebSocket-Fehler:', err);
-        setConnected(false);
+        updateConnectionStatus(); // Status sofort aktualisieren
       },
       reconnectIntervalMs: 5000,
     }
