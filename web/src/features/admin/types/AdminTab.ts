@@ -5,6 +5,7 @@ export type AdminTab =
   | 'music'
   | 'registrations'
   | 'groups'
+  | 'task-manager'
   | 'admin-settings'
   | 'packlist';
 
@@ -15,6 +16,7 @@ export const ADMIN_TABS: AdminTab[] = [
   'music',
   'registrations',
   'groups',
+  'task-manager',
   'admin-settings',
   'packlist',
 ]; 

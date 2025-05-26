@@ -313,11 +313,13 @@ function FormStep({ children }: { children: React.ReactNode }) {
 export interface FestivalRegisterFormProps {
   onRegister?: (data: FestivalRegisterData) => void;
   setCookies?: boolean;
+  skipRegistrationCheck?: boolean;
+  customDeviceId?: string;
 }
 
 const LOCAL_STORAGE_KEY = 'festival_register_form';
 
-export default function FestivalRegisterForm({ onRegister, setCookies = true }: FestivalRegisterFormProps) {
+export default function FestivalRegisterForm({ onRegister, setCookies = true, skipRegistrationCheck = false, customDeviceId }: FestivalRegisterFormProps) {
   const { deviceType } = useDeviceContext();
   const deviceId = useDeviceId();
   const isMobile = deviceType === "mobile";
@@ -393,6 +395,14 @@ export default function FestivalRegisterForm({ onRegister, setCookies = true }: 
   // NEU: Kombinierter Check - Cookie DANN DB-Check
   useEffect(() => {
     const checkRegistrationStatus = async () => {
+      // Frühe Rückkehr wenn Registration-Check übersprungen werden soll
+      if (skipRegistrationCheck) {
+        console.log('[FestivalRegisterForm] Registration-Check übersprungen (skipRegistrationCheck=true)');
+        setIsLoaded(true);
+        hasAlreadyCheckedRef.current = true;
+        return;
+      }
+
       // ✅ RACE CONDITION FIX: Wenn bereits gecheckt und Registration geladen, dann abbrechen
       if (hasAlreadyCheckedRef.current && existingRegistration) {
         console.log('[FestivalRegisterForm] Registration bereits geladen - überspringe Check');
@@ -534,7 +544,7 @@ export default function FestivalRegisterForm({ onRegister, setCookies = true }: 
     };
 
     checkRegistrationStatus();
-  }, [deviceId, setCookies]); // hasCookie nicht in Dependencies!
+  }, [deviceId, setCookies, skipRegistrationCheck]); // hasCookie nicht in Dependencies!
 
   // LocalStorage: Nach erfolgreichem Absenden NICHT mehr löschen!
   // LocalStorage wird erst beim Klick auf "Neue Anmeldung" gelöscht
@@ -960,7 +970,7 @@ export default function FestivalRegisterForm({ onRegister, setCookies = true }: 
       // DeviceID zu den Formulardaten hinzufügen
       const formDataWithDevice = {
         ...form,
-        deviceId: deviceId || undefined
+        deviceId: customDeviceId || deviceId || undefined
       };
       
       const result = await registerFestival(formDataWithDevice);
@@ -969,10 +979,10 @@ export default function FestivalRegisterForm({ onRegister, setCookies = true }: 
         
         // ✨ Custom Event für andere Komponenten dispatchen
         window.dispatchEvent(new CustomEvent('registration-updated', {
-          detail: { deviceId: deviceId, registrationData: formDataWithDevice }
+          detail: { deviceId: customDeviceId || deviceId, registrationData: formDataWithDevice }
         }));
         window.dispatchEvent(new CustomEvent('user-logged-in', {
-          detail: { deviceId: deviceId, userName: formDataWithDevice.name }
+          detail: { deviceId: customDeviceId || deviceId, userName: formDataWithDevice.name }
         }));
         
         if (onRegister) onRegister(formDataWithDevice);

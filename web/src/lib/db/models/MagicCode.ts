@@ -1,8 +1,9 @@
 import mongoose, { Schema, Document, Model } from 'mongoose';
 
 /**
- * Magic Code für Gerätewechsel
- * - Kurzlebig (5 Minuten)
+ * Magic Code für Gerätewechsel und Nachmeldungen
+ * - Device Transfer: Kurzlebig (5 Minuten)
+ * - Nachmeldung: Langlebig (unbegrenzt)
  * - Nur einmal verwendbar
  * - Verknüpft mit User deviceId
  */
@@ -12,7 +13,8 @@ export interface IMagicCode extends Document {
   userId: mongoose.Types.ObjectId; // User Reference
   expiresAt: Date; // Ablaufzeit
   isUsed: boolean; // Bereits verwendet
-  createdBy: 'user' | 'admin'; // Wer hat den Code erstellt
+  createdBy: 'user' | 'admin' | 'nachmeldung'; // Wer hat den Code erstellt
+  codeType: 'device-transfer' | 'nachmeldung'; // Typ des Codes
   adminId?: string; // Bei Admin-Erstellung: Admin Username
   createdAt: Date;
   
@@ -27,6 +29,7 @@ export interface IMagicCode extends Document {
 export interface IMagicCodeModel extends Model<IMagicCode> {
   generateCode(): string;
   createForUser(deviceId: string, createdBy: 'user' | 'admin', adminId?: string): Promise<IMagicCode>;
+  createForNachmeldung(deviceId: string): Promise<IMagicCode>;
   verifyCode(code: string): Promise<IMagicCode | null>;
   cleanupExpired(): Promise<number>;
 }
@@ -61,7 +64,12 @@ const MagicCodeSchema = new Schema<IMagicCode>({
   },
   createdBy: {
     type: String,
-    enum: ['user', 'admin'],
+    enum: ['user', 'admin', 'nachmeldung'],
+    required: true
+  },
+  codeType: {
+    type: String,
+    enum: ['device-transfer', 'nachmeldung'],
     required: true
   },
   adminId: {
@@ -117,7 +125,7 @@ MagicCodeSchema.statics.createForUser = async function(
   let code: string;
   let attempts = 0;
   do {
-    code = this.generateCode();
+    code = Math.floor(100000 + Math.random() * 900000).toString();
     const existing = await this.findOne({ code });
     if (!existing) break;
     attempts++;
@@ -134,7 +142,48 @@ MagicCodeSchema.statics.createForUser = async function(
     userId: user._id,
     expiresAt: new Date(Date.now() + 5 * 60 * 1000), // 5 Minuten
     createdBy,
+    codeType: 'device-transfer',
     adminId
+  });
+
+  await magicCode.save();
+  return magicCode;
+};
+
+MagicCodeSchema.statics.createForNachmeldung = async function(deviceId: string): Promise<IMagicCode> {
+  // Finde User
+  const { User } = await import('./User');
+  const user = await User.findByDeviceId(deviceId);
+  
+  if (!user) {
+    throw new Error('User nicht gefunden');
+  }
+
+  // Lösche alte Nachmeldung-Codes für diesen User
+  await this.deleteMany({ userId: user._id, codeType: 'nachmeldung' });
+
+  // Generiere neuen eindeutigen Code
+  let code: string;
+  let attempts = 0;
+  do {
+    code = Math.floor(100000 + Math.random() * 900000).toString();
+    const existing = await this.findOne({ code });
+    if (!existing) break;
+    attempts++;
+  } while (attempts < 10);
+
+  if (attempts >= 10) {
+    throw new Error('Konnte keinen eindeutigen Code generieren');
+  }
+
+  // Erstelle Magic Code - 1 Jahr gültig für Nachmeldungen
+  const magicCode = new this({
+    code,
+    deviceId,
+    userId: user._id,
+    expiresAt: new Date(Date.now() + 365 * 24 * 60 * 60 * 1000), // 1 Jahr
+    createdBy: 'nachmeldung',
+    codeType: 'nachmeldung'
   });
 
   await magicCode.save();

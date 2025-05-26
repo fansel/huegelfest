@@ -6,10 +6,11 @@ import WorkingGroupManager from '../components/workingGroups/WorkingGroupManager
 import TimelineManager from '../components/timeline/TimelineManager';
 import MusicManager from '../components/music/MusicManager';
 import { GroupsOverviewWebSocket } from '../../groups/components/GroupsOverviewWebSocket';
+import ActivityManager from '../../activities/components/ActivityManager';
 import type { AdminTab } from '../types/AdminTab';
 import Settings from '@/features/admin/components/settings/Settings';
 
-const TABS: AdminTab[] = ['announcements', 'workingGroups', 'timeline', 'music', 'groups', 'admin-settings'];
+const TABS: AdminTab[] = ['announcements', 'workingGroups', 'timeline', 'music', 'groups', 'task-manager', 'admin-settings'];
 
 interface AdminDashboardClientProps {
   activeTab: AdminTab;
@@ -24,6 +25,7 @@ export const AdminDashboardClient: React.FC<AdminDashboardClientProps> = ({ acti
       {activeTab === 'timeline' && <TimelineManager />}
       {activeTab === 'music' && <MusicManager />}
       {activeTab === 'groups' && <GroupsOverviewWebSocket />}
+      {activeTab === 'task-manager' && <ActivityManager />}
       {activeTab === 'admin-settings' && <Settings />}
       <BottomBar
         mode="admin"

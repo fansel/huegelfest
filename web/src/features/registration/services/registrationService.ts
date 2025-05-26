@@ -6,22 +6,66 @@ import { FestivalRegisterData } from '../FestivalRegisterForm';
 import { logger } from '@/lib/logger';
 import mongoose from 'mongoose';
 
+// Hilfsfunktion um neue deviceId zu generieren
+function generateDeviceId(): string {
+  const chars = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789';
+  let result = '';
+  for (let i = 0; i < 6; i++) {
+    result += chars.charAt(Math.floor(Math.random() * chars.length));
+  }
+  return result;
+}
+
 export async function createRegistration(data: FestivalRegisterData) {
   await connectDB();
   
   try {
-    // Erstelle die Registration
-    const reg = new Registration(data);
+    // NEUE LOGIK: Prüfe deviceID-Konflikte und generiere neue deviceID wenn nötig
+    let finalDeviceId = data.deviceId;
+    
+    if (data.deviceId && data.name.trim()) {
+      const existingUser = await User.findByDeviceId(data.deviceId);
+      
+      if (existingUser && existingUser.name.trim() !== data.name.trim()) {
+        // DeviceID wird bereits von einem anderen User verwendet!
+        // Generiere neue deviceID für diese Anmeldung
+        let newDeviceId;
+        let attempts = 0;
+        const maxAttempts = 10;
+        
+        do {
+          newDeviceId = generateDeviceId();
+          attempts++;
+          const conflict = await User.findByDeviceId(newDeviceId);
+          if (!conflict) break;
+        } while (attempts < maxAttempts);
+        
+        if (attempts >= maxAttempts) {
+          throw new Error('Konnte keine freie Device ID generieren');
+        }
+        
+        finalDeviceId = newDeviceId;
+        logger.info(`[Registration] DeviceID-Konflikt erkannt! ${data.deviceId} bereits von ${existingUser.name} verwendet. Neue deviceID generiert: ${finalDeviceId}`);
+      }
+    }
+    
+    // Erstelle die Registration mit der finalen deviceID
+    const registrationData = {
+      ...data,
+      deviceId: finalDeviceId
+    };
+    
+    const reg = new Registration(registrationData);
     await reg.save();
-    logger.info(`[Registration] Registration erstellt: ${reg._id}`);
+    logger.info(`[Registration] Registration erstellt: ${reg._id} mit deviceId: ${finalDeviceId}`);
     
     // Wenn deviceId vorhanden ist, erstelle automatisch einen User
-    if (data.deviceId && data.name.trim()) {
-      logger.info(`[Registration] Versuche User-Erstellung für deviceId: ${data.deviceId}, name: ${data.name}`);
+    if (finalDeviceId && data.name.trim()) {
+      logger.info(`[Registration] Versuche User-Erstellung für deviceId: ${finalDeviceId}, name: ${data.name}`);
       
       try {
         // Prüfe ob bereits ein User mit dieser deviceId existiert
-        const existingUser = await User.findByDeviceId(data.deviceId);
+        const existingUser = await User.findByDeviceId(finalDeviceId);
         
         if (existingUser) {
           logger.info(`[Registration] Bestehender User gefunden: ${existingUser._id}`);
@@ -50,12 +94,12 @@ export async function createRegistration(data: FestivalRegisterData) {
           // Erstelle neuen User
           const newUser = await User.create({
             name: data.name,
-            deviceId: data.deviceId,
+            deviceId: finalDeviceId,
             registrationId: reg._id,
             isActive: true
           });
           
-          logger.info(`[Registration] Neuer User erfolgreich erstellt: ${newUser._id} für Device: ${data.deviceId}`);
+          logger.info(`[Registration] Neuer User erfolgreich erstellt: ${newUser._id} für Device: ${finalDeviceId}`);
           
           // Automatische Gruppenzuweisung für neue User
           try {
@@ -76,13 +120,13 @@ export async function createRegistration(data: FestivalRegisterData) {
         // Werfe den Fehler nicht weiter, aber logge alle Details
         console.error('[Registration] Detaillierter User-Erstellungsfehler:', {
           error: userError,
-          deviceId: data.deviceId,
+          deviceId: finalDeviceId,
           name: data.name,
           registrationId: reg._id
         });
       }
     } else {
-      logger.warn(`[Registration] User-Erstellung übersprungen - deviceId: ${data.deviceId}, name: "${data.name}"`);
+      logger.warn(`[Registration] User-Erstellung übersprungen - deviceId: ${finalDeviceId}, name: "${data.name}"`);
     }
     
     return reg;

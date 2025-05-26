@@ -3,6 +3,7 @@ import { logger } from './logger';
 import { ensureDefaultCategories, ensureDefaultWorkingGroup } from './db/initDefaults';
 import { initWebpush } from './initWebpush';
 import { webPushService } from './webpush/webPushService';
+
 export interface InitStatus {
   db: boolean;
   webPush: boolean;

@@ -188,15 +188,9 @@ export async function transferDevice(
     // User behält seine deviceId (seine "Identität") - nur das physische Gerät ändert sich
     // KEINE Änderung an user.deviceId nötig - die bleibt gleich!
     
-    // 6. Erstelle "Fresh Start" User für das alte (nun verlassene) physische Gerät
+    // 6. Erstelle neue deviceId für das alte (nun verlassene) physische Gerät
+    // KEIN neuer User wird erstellt - nur eine neue deviceId generiert für Referenzierung
     const newFreshDeviceId = generateDeviceId(); // Neue zufällige deviceId für altes Gerät
-    
-    await User.create({
-      deviceId: newFreshDeviceId,
-      name: 'Neuer Benutzer',
-      isActive: true
-      // Komplett clean - keine Verknüpfungen
-    });
     
     logger.info(`[MagicCode] Altes Gerät resettet: Neue deviceId ${newFreshDeviceId} für das verlassene Gerät erstellt`);
 

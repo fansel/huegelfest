@@ -216,10 +216,11 @@ export class UpdateService {
     
     toast.success(updateMessage, {
       duration: 10000,
-      position: 'bottom-center',
+      position: 'top-center',
       style: {
         maxWidth: '400px',
-        textAlign: 'center'
+        textAlign: 'center',
+        marginTop: '20px'
       }
     });
     

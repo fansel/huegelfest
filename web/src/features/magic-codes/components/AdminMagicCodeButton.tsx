@@ -53,7 +53,7 @@ export default function AdminMagicCodeButton({
       if (result.success && result.code && result.expiresAt) {
         setGeneratedCode({
           code: result.code,
-          expiresAt: result.expiresAt
+          expiresAt: new Date(result.expiresAt)
         });
         toast.success(`Magic Code für ${userName} erstellt`);
       } else {
