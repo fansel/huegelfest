@@ -1,4 +1,4 @@
-export type TabType = 'groups' | 'users' | 'registrations';
+export type TabType = 'groups' | 'users' | 'registrations' | 'magic-codes';
 
 export interface User {
   deviceId: string;

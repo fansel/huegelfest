@@ -7,6 +7,7 @@ import ImpressumSettings from './ImpressumSettings';
 import DatenschutzSettings from './DatenschutzSettings';
 import ResetAppDataSettings from './ResetAppDataSettings';
 import MusicNoteSettings from './MusicNoteSettings';
+import DeviceTransferSettings from '../../magic-codes/components/DeviceTransferSettings';
 import { useDeviceContext } from '@/shared/contexts/DeviceContext';
 import AppUpdateSettings from './AppUpdateSettings';
 
@@ -34,6 +35,9 @@ export default function Settings({
         <PushNotificationSettings isSubscribed={false} variant="row" />
         <StarfieldSettings showStarfield={showStarfield} onToggle={onToggleStarfield} variant="row" />
         <MusicNoteSettings showMusicNote={showMusicNote} onToggle={onToggleMusicNote} variant="row" />
+        <div className="flex justify-center">
+          <DeviceTransferSettings variant="row" />
+        </div>
         <AdminSettings variant="row" />
         <DatenschutzSettings variant="row" />
         <ImpressumSettings variant="row" />
@@ -51,6 +55,9 @@ export default function Settings({
         <PushNotificationSettings isSubscribed={false} variant="tile" />
         <StarfieldSettings showStarfield={showStarfield} onToggle={onToggleStarfield} variant="tile" />
         <MusicNoteSettings showMusicNote={showMusicNote} onToggle={onToggleMusicNote} variant="tile" />
+        <div className="flex justify-center items-center">
+          <DeviceTransferSettings variant="tile" />
+        </div>
         <AdminSettings variant="tile" />
         <DatenschutzSettings variant="tile" />
         <ImpressumSettings variant="tile" />

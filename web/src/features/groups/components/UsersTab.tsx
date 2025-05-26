@@ -7,6 +7,7 @@ import { Select, SelectTrigger, SelectValue, SelectContent, SelectItem } from '@
 import { toast } from "react-hot-toast";
 import { Trash2, Search, Loader2 } from 'lucide-react';
 import { assignUserToGroupAction, removeUserFromGroupAction } from '../actions/groupActions';
+import AdminMagicCodeButton from '../../magic-codes/components/AdminMagicCodeButton';
 import type { GroupData } from '../types';
 import type { User } from './types';
 
@@ -229,6 +230,12 @@ export function UsersTab({
                 >
                   <Trash2 className="w-4 h-4" />
                 </Button>
+                <AdminMagicCodeButton 
+                  deviceId={user.deviceId} 
+                  userName={user.name}
+                  variant="outline"
+                  size="sm"
+                />
               </div>
             </div>
           );

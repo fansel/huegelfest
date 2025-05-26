@@ -146,4 +146,107 @@ export async function updateRegistration(id: string, updates: Partial<IRegistrat
     logger.error('[Registration] Fehler bei updateRegistration:', error);
     return { success: false, error: 'Fehler beim Aktualisieren der Anmeldung' };
   }
+}
+
+/**
+ * Lädt Registration-Daten für einen User basierend auf deviceId
+ * Wird verwendet um nach Device Transfer die bestehende Registration zu laden
+ */
+export async function getRegistrationByDeviceId(deviceId: string): Promise<{ success: boolean; data?: any; error?: string }> {
+  if (!deviceId) {
+    return { success: false, error: 'Device ID ist erforderlich' };
+  }
+  
+  await connectDB();
+  
+  try {
+    // Finde User mit Registration
+    let user = await User.findOne({ deviceId, isActive: true })
+      .populate('registrationId')
+      .lean()
+      .exec();
+    
+    if (!user || !user.registrationId) {
+      // NEUE LOGIK: Suche auch nach Registration ohne User-Verknüpfung
+      // Das kann passieren wenn Registration existiert aber User fehlt
+      const orphanRegistration = await Registration.findOne({ deviceId }).lean().exec();
+      
+      if (orphanRegistration) {
+        logger.info(`[Registration] Orphan Registration gefunden für ${deviceId}, erstelle User`);
+        
+        try {
+          // Erstelle User für bestehende Registration
+          const newUser = await User.create({
+            name: orphanRegistration.name,
+            deviceId: deviceId,
+            registrationId: orphanRegistration._id,
+            isActive: true
+          });
+          
+          // Automatische Gruppenzuweisung
+          try {
+            const randomGroup = await Group.getRandomAssignableGroup();
+            if (randomGroup) {
+              await newUser.assignToGroup(randomGroup._id as mongoose.Types.ObjectId);
+              logger.info(`[Registration] User ${newUser._id} automatisch zu Gruppe ${randomGroup.name} zugewiesen`);
+            }
+          } catch (groupError) {
+            logger.warn('[Registration] Fehler bei automatischer Gruppenzuweisung:', groupError);
+          }
+          
+          // Lade den neu erstellten User mit populated Registration
+          user = await User.findById(newUser._id)
+            .populate('registrationId')
+            .lean()
+            .exec();
+            
+          logger.info(`[Registration] User für bestehende Registration erstellt: ${newUser._id}`);
+        } catch (userError) {
+          logger.error('[Registration] Fehler beim Erstellen des Users für bestehende Registration:', userError);
+          return { success: false, error: 'Fehler beim Erstellen des Benutzers' };
+        }
+      } else {
+        return { success: false, error: 'Keine Registration gefunden' };
+      }
+    }
+    
+    if (!user || !user.registrationId) {
+      return { success: false, error: 'Keine Registration gefunden' };
+    }
+    
+    // TypeScript Fix: Cast to any da populate() das Objekt zurückgibt
+    const registration = user.registrationId as any;
+    
+    // Konvertiere zu FestivalRegisterData Format
+    const registrationData = {
+      name: registration.name || '',
+      days: registration.days || [],
+      priceOption: registration.priceOption || 'full',
+      isMedic: registration.isMedic || false,
+      travelType: registration.travelType || 'auto',
+      equipment: registration.equipment || '',
+      concerns: registration.concerns || '',
+      wantsToContribute: registration.wantsToContribute || false,
+      wantsToOfferWorkshop: registration.wantsToOfferWorkshop || '',
+      sleepingPreference: registration.sleepingPreference || 'bed',
+      lineupContribution: registration.lineupContribution || '',
+      deviceId: deviceId
+    };
+    
+    logger.info(`[Registration] Bestehende Registration für ${deviceId} geladen`);
+    
+    return { 
+      success: true, 
+      data: {
+        ...registration,
+        _id: registration._id.toString(),
+        createdAt: registration.createdAt instanceof Date ? registration.createdAt.toISOString() : registration.createdAt,
+        // Zusätzlich: FestivalRegisterData für FormFeed
+        formData: registrationData
+      }
+    };
+  } catch (error) {
+    logger.error('[Registration] Fehler beim Laden der Registration:', error);
+    return { success: false, error: 'Fehler beim Laden der Registration' };
+  }
 } 

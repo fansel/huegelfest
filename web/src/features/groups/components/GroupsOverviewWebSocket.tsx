@@ -17,6 +17,7 @@ import { AddUserToGroupDialog } from './dialogs/AddUserToGroupDialog';
 import { RegistrationDetailDialog } from './dialogs/RegistrationDetailDialog';
 import { EditRegistrationDialog } from './dialogs/EditRegistrationDialog';
 import { DeleteUserDialog } from './dialogs/DeleteUserDialog';
+import AdminMagicCodeOverview from '../../magic-codes/components/AdminMagicCodeOverview';
 
 /**
  * Groups Overview mit WebSocket-Integration über die bestehende Infrastruktur
@@ -111,6 +112,16 @@ export function GroupsOverviewWebSocket() {
           >
             Anmeldungen ({data.registrations.length})
           </button>
+          <button
+            onClick={() => setActiveTab('magic-codes')}
+            className={`py-4 px-1 border-b-2 font-medium text-sm ${
+              activeTab === 'magic-codes'
+                ? 'border-[#ff9900] text-[#ff9900]'
+                : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
+            }`}
+          >
+            Magic Codes
+          </button>
         </div>
       </div>
 
@@ -173,6 +184,10 @@ export function GroupsOverviewWebSocket() {
             onSelectRegistration={setSelectedRegistration}
             onEditRegistration={setEditingRegistration}
           />
+        )}
+
+        {activeTab === 'magic-codes' && (
+          <AdminMagicCodeOverview />
         )}
       </div>
 

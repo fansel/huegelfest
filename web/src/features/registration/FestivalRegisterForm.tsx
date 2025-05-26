@@ -24,8 +24,9 @@ import {
   ArrowRight,
   SwatchBook,
   Check,
+  CheckCircle,
 } from 'lucide-react';
-import { registerFestival } from './actions/register';
+import { registerFestival, getExistingRegistration } from './actions/register';
 import { useDeviceContext } from "@/shared/contexts/DeviceContext";
 import { useDeviceId } from "@/shared/hooks/useDeviceId";
 import Cookies from 'js-cookie';
@@ -330,6 +331,7 @@ export default function FestivalRegisterForm({ onRegister, setCookies = true }: 
   const contentRef = useRef<HTMLDivElement>(null);
   const isKeyboardVisible = useKeyboardVisible();
   const [isLoaded, setIsLoaded] = useState(false);
+  const [existingRegistration, setExistingRegistration] = useState<any | null>(null);
   
   // Verwende den Auto-Scroll-Hook
   useAutoScrollOnFocus(contentRef, isKeyboardVisible);
@@ -353,29 +355,87 @@ export default function FestivalRegisterForm({ onRegister, setCookies = true }: 
     }
   }, [isMobile]);
 
-  // LocalStorage: Beim Mount versuchen, gespeicherte Daten zu laden
+  // NEU: Kombinierter Check - Cookie DANN DB-Check
   useEffect(() => {
-    try {
-      const saved = localStorage.getItem(LOCAL_STORAGE_KEY);
-      if (saved) {
-        const parsed = JSON.parse(saved);
-        if (parsed && typeof parsed === 'object') {
-          setForm({ ...defaultData, ...parsed });
-        }
+    const checkRegistrationStatus = async () => {
+      console.log('[FestivalRegisterForm] Starte Registration-Check für deviceId:', deviceId);
+      
+      // 1. ERST: Cookie-Check (synchron)
+      const hasCookieSet = !!Cookies.get('festival_registered');
+      console.log('[FestivalRegisterForm] Cookie-Status:', hasCookieSet);
+      
+      if (hasCookieSet) {
+        console.log('[FestivalRegisterForm] Cookie gefunden - springe zur Bestätigungsseite');
+        setHasCookie(true);
+        setStep(steps.length - 1); // Direkt auf Bestätigungsseite
+        setIsLoaded(true);
+        return; // Kein DB-Check nötig
       }
-    } catch (e) {
-      // ignore
-    }
-    setIsLoaded(true);
-  }, []);
+      
+      // 2. DANN: DB-Check nur wenn kein Cookie
+      if (deviceId) {
+        try {
+          console.log('[FestivalRegisterForm] Kein Cookie - prüfe DB für deviceId:', deviceId);
+          const result = await getExistingRegistration(deviceId);
+          console.log('[FestivalRegisterForm] DB-Ergebnis:', result);
+          
+          if (result.success && result.data?.formData) {
+            console.log('[FestivalRegisterForm] Bestehende Registration in DB gefunden!');
+            console.log('[FestivalRegisterForm] FormData:', result.data.formData);
+            
+            // Lade Daten aus DB
+            setForm(result.data.formData);
+            setExistingRegistration(result.data);
+            
+            // WICHTIG: Setze Cookie und Status
+            if (setCookies) Cookies.set('festival_registered', 'true', { expires: 365 });
+            setHasCookie(true);
+            setStep(steps.length - 1); // Direkt zur Bestätigungsseite
+            
+            // Auch in localStorage als Fallback
+            try { 
+              localStorage.setItem(LOCAL_STORAGE_KEY, JSON.stringify(result.data.formData)); 
+            } catch (e) { console.error('[FestivalRegisterForm] localStorage-Fehler:', e); }
+          } else {
+            console.log('[FestivalRegisterForm] Keine DB-Registration - versuche localStorage');
+            // Fallback: localStorage
+            try {
+              const saved = localStorage.getItem(LOCAL_STORAGE_KEY);
+              if (saved) {
+                const parsed = JSON.parse(saved);
+                if (parsed && typeof parsed === 'object') {
+                  console.log('[FestivalRegisterForm] localStorage-Daten gefunden:', parsed);
+                  setForm({ ...defaultData, ...parsed });
+                }
+              }
+            } catch (e) {
+              console.error('[FestivalRegisterForm] localStorage-Parse-Fehler:', e);
+            }
+          }
+        } catch (error) {
+          console.error('[FestivalRegisterForm] Fehler beim DB-Check:', error);
+          // Fallback localStorage
+          try {
+            const saved = localStorage.getItem(LOCAL_STORAGE_KEY);
+            if (saved) {
+              const parsed = JSON.parse(saved);
+              if (parsed && typeof parsed === 'object') {
+                setForm({ ...defaultData, ...parsed });
+              }
+            }
+          } catch (e) {
+            // ignore
+          }
+        }
+      } else {
+        console.log('[FestivalRegisterForm] Keine deviceId verfügbar');
+      }
+      
+      setIsLoaded(true);
+    };
 
-  // NEU: Cookie beim Mount prüfen
-  useEffect(() => {
-    if (Cookies.get('festival_registered')) {
-      setHasCookie(true);
-      setStep(steps.length - 1); // Direkt auf Bestätigungsseite
-    }
-  }, []);
+    checkRegistrationStatus();
+  }, [deviceId, setCookies]); // hasCookie nicht in Dependencies!
 
   // LocalStorage: Nach erfolgreichem Absenden NICHT mehr löschen!
   // LocalStorage wird erst beim Klick auf "Neue Anmeldung" gelöscht
@@ -386,27 +446,9 @@ export default function FestivalRegisterForm({ onRegister, setCookies = true }: 
     setToDay(FESTIVAL_DAYS.length - 1);
     if (setCookies) Cookies.remove('festival_registered');
     setHasCookie(false);
+    setExistingRegistration(null);
     try { localStorage.removeItem(LOCAL_STORAGE_KEY); } catch (e) { /* ignore */ }
   };
-
-  // Wenn Cookie gesetzt ist und Name leer, lade Daten aus LocalStorage für Zusammenfassung (robust, auch mobil)
-  useEffect(() => {
-    if (hasCookie && !form.name.trim()) {
-      try {
-        const saved = localStorage.getItem(LOCAL_STORAGE_KEY);
-        if (saved) {
-          const parsed = JSON.parse(saved);
-          if (parsed && typeof parsed === 'object') {
-            setForm({ ...defaultData, ...parsed });
-            // Debug: Logge das Laden aus dem LocalStorage
-            if (typeof window !== 'undefined') {
-              console.log('[FestivalRegisterForm] LocalStorage geladen für Zusammenfassung:', parsed);
-            }
-          }
-        }
-      } catch (e) { /* ignore */ }
-    }
-  }, [hasCookie, form.name]);
 
   // Steps-Definition
   const steps = [
@@ -734,6 +776,44 @@ export default function FestivalRegisterForm({ onRegister, setCookies = true }: 
             <MailCheck className="w-16 h-16 text-[#ff9900] mx-auto mb-4" />
             <h2 className="font-semibold text-2xl text-[#460b6c] mb-2">Du bist angemeldet!</h2>
             <p className="text-[#460b6c] text-lg mb-6">Wir freuen uns auf dich beim Festival 🎉</p>
+            
+            {/* NEU: Hinweis bei bestehender Registration */}
+            {existingRegistration && (
+              <div className="mb-4 p-3 bg-blue-50 border border-blue-200 rounded-lg w-full">
+                <div className="flex items-center gap-2 text-blue-800 text-sm">
+                  <CheckCircle className="w-4 h-4" />
+                  <span className="font-medium">Deine Anmeldung war bereits gespeichert</span>
+                </div>
+                <p className="text-blue-700 text-xs mt-1">
+                  Nach dem Gerätewechsel haben wir deine bestehenden Daten geladen.
+                </p>
+              </div>
+            )}
+            
+            {/* Zusammenfassung auch auf der Bestätigungsseite anzeigen */}
+            <div className="flex flex-col gap-1 w-full px-3 py-0 text-sm mb-6">
+              <span className="block text-xs text-[#460b6c]/70 mb-1 text-center">Deine Angaben</span>
+              <div className="bg-[#460b6c]/10 border border-[#ff9900]/30 rounded-xl px-3 py-2 text-[#460b6c] w-full flex flex-col gap-1 mx-auto text-sm">
+                <div className="flex items-center gap-2"><User className="w-4 h-4 text-[#ff9900]" /><span className="font-medium">Name:</span> <span className="truncate">{form.name.trim()}</span></div>
+                <div className="flex items-center gap-2"><Euro className="w-4 h-4 text-[#ff9900]" /><span className="font-medium">Preis:</span> <span>{form.priceOption === 'full' ? 'Solipreis' : form.priceOption === 'reduced' ? 'Reduziert' : 'Kostenlos'}</span></div>
+                <div className="flex items-center gap-2"><Bed className="w-4 h-4 text-[#ff9900]" /><span className="font-medium">Schlafplatz:</span> <span>{form.sleepingPreference === 'bed' ? 'Bett' : form.sleepingPreference === 'tent' ? 'Zelt' : 'Auto'}</span></div>
+                <div className="flex items-center gap-2"><Stethoscope className="w-4 h-4 text-[#ff9900]" /><span className="font-medium">Sanitäter:in:</span> <span>{form.isMedic ? 'Ja' : 'Nein'}</span></div>
+                <div className="flex items-center gap-2"><CarIcon className="w-4 h-4 text-[#ff9900]" /><span className="font-medium">Anreise:</span> <span>{form.travelType === 'zug' ? 'Zug' : form.travelType === 'auto' ? 'Auto' : form.travelType === 'fahrrad' ? 'Fahrrad' : 'Unklar'}</span></div>
+                <div className="flex items-center gap-2"><Bed className="w-4 h-4 text-[#ff9900]" /><span className="font-medium">Zeitraum:</span> <span>{FESTIVAL_DAYS[form.days[0]]} – {FESTIVAL_DAYS[form.days[form.days.length - 1]]}</span></div>
+                {form.lineupContribution.trim() ? (
+                  <div className="flex items-center gap-2"><Music className="w-4 h-4 text-[#ff9900]" /><span className="font-medium">Line-Up:</span> <span className="truncate max-w-[220px]">{form.lineupContribution.length > 60 ? form.lineupContribution.slice(0, 60) + '…' : form.lineupContribution}</span></div>
+                ) : null}
+                {form.wantsToOfferWorkshop.trim() ? (
+                  <div className="flex items-center gap-2"><Hammer className="w-4 h-4 text-[#ff9900]" /><span className="font-medium">Workshop:</span> <span className="truncate max-w-[220px]">{form.wantsToOfferWorkshop.length > 60 ? form.wantsToOfferWorkshop.slice(0, 60) + '…' : form.wantsToOfferWorkshop}</span></div>
+                ) : null}
+                {form.equipment.trim() ? (
+                  <div className="flex items-center gap-2"><Wrench className="w-4 h-4 text-[#ff9900]" /><span className="font-medium">Equipment:</span> <span className="truncate max-w-[220px]">{form.equipment.length > 60 ? form.equipment.slice(0, 60) + '…' : form.equipment}</span></div>
+                ) : null}
+                {form.concerns.trim() ? (
+                  <div className="flex items-center gap-2"><MessageCircle className="w-4 h-4 text-[#ff9900]" /><span className="font-medium">Anliegen:</span> <span className="truncate max-w-[220px]">{form.concerns.length > 60 ? form.concerns.slice(0, 60) + '…' : form.concerns}</span></div>
+                ) : null}
+              </div>
+            </div>
           </div>
         </FormStep>
       ),
@@ -918,6 +998,20 @@ export default function FestivalRegisterForm({ onRegister, setCookies = true }: 
               <MailCheck className="w-16 h-16 text-[#ff9900] mx-auto mb-4" />
               <h2 className="font-semibold text-2xl text-[#460b6c] mb-2">Du bist angemeldet!</h2>
               <p className="text-[#460b6c] text-lg mb-6">Wir freuen uns auf dich beim Festival 🎉</p>
+              
+              {/* NEU: Hinweis bei bestehender Registration */}
+              {existingRegistration && (
+                <div className="mb-4 p-3 bg-blue-50 border border-blue-200 rounded-lg w-full">
+                  <div className="flex items-center gap-2 text-blue-800 text-sm">
+                    <CheckCircle className="w-4 h-4" />
+                    <span className="font-medium">Deine Anmeldung war bereits gespeichert</span>
+                  </div>
+                  <p className="text-blue-700 text-xs mt-1">
+                    Nach dem Gerätewechsel haben wir deine bestehenden Daten geladen.
+                  </p>
+                </div>
+              )}
+              
               {/* Zusammenfassung auch auf der Bestätigungsseite anzeigen */}
               <div className="flex flex-col gap-1 w-full px-3 py-0 text-sm mb-6">
                 <span className="block text-xs text-[#460b6c]/70 mb-1 text-center">Deine Angaben</span>

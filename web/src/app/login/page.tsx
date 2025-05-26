@@ -1,2 +1,2 @@
-import LoginForm from '../../features/auth/login/page';
+import LoginForm from '../../features/admin/components/LoginForm';
 export default LoginForm;

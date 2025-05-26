@@ -13,6 +13,7 @@ import React, { useState, useEffect } from 'react';
 const Starfield = dynamic(() => import('./Starfield'), { ssr: false });
 const OfflineBanner = dynamic(() => import('./OfflineBanner'), { ssr: false });
 const InstallPrompt = dynamic(() => import("@/shared/components/ui/InstallPrompt").then(mod => ({ default: mod.InstallPrompt })), { ssr: false });
+const AutoPushPrompt = dynamic(() => import('@/features/push/components/AutoPushPrompt'), { ssr: false });
 
 interface PWAContainerClientProps {
   isAdmin: boolean;
@@ -38,10 +39,18 @@ export default function PWAContainerClient({ isAdmin, timelineData, infoBoardDat
    const [hasMounted, setHasMounted] = useState(false);
     useEffect(() => setHasMounted(true), []);
 
+  // NEU: Handler für Push-Subscription Änderungen
+  const handlePushSubscriptionChange = (isSubscribed: boolean) => {
+    // Zusätzliche Aktionen bei Subscription-Änderung falls nötig
+    // Z.B. State Updates, Analytics, etc.
+    console.log('Push subscription changed:', isSubscribed);
+  };
+
   return (
     <div className="relative min-h-screen bg-[#460b6c] text-[#ff9900] flex flex-col">
       <InstallPrompt />
       <OfflineBanner />
+      <AutoPushPrompt onSubscriptionChange={handlePushSubscriptionChange} />
       {showStarfield && <Starfield />}
       {hasMounted && showMusicNote && mode !== 'admin' && (
         <div className="fixed top-2 right-2 z-[9999] select-none">

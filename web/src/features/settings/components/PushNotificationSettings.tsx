@@ -17,6 +17,10 @@ import { Bell } from 'lucide-react';
 // VAPID-Schlüssel als Konstanten
 const VAPID_PUBLIC_KEY = env('NEXT_PUBLIC_VAPID_PUBLIC_KEY');
 
+// NEU: Cookie/LocalStorage Schlüssel für Push-Präferenzen
+const PUSH_PERMISSION_ASKED_KEY = 'push-permission-asked';
+const PUSH_PERMISSION_DENIED_KEY = 'push-permission-denied';
+
 interface PushSubscriptionData {
   endpoint: string;
   keys: {
@@ -39,6 +43,41 @@ interface PushNotificationSettingsProps {
   variant?: 'row' | 'tile';
 }
 
+// NEU: Hilfsfunktionen für Push-Permission Management
+export const pushPermissionUtils = {
+  hasAskedBefore: () => {
+    return localStorage.getItem(PUSH_PERMISSION_ASKED_KEY) === 'true';
+  },
+  
+  setAskedBefore: () => {
+    localStorage.setItem(PUSH_PERMISSION_ASKED_KEY, 'true');
+  },
+  
+  hasDeniedBefore: () => {
+    return localStorage.getItem(PUSH_PERMISSION_DENIED_KEY) === 'true';
+  },
+  
+  setDenied: () => {
+    localStorage.setItem(PUSH_PERMISSION_DENIED_KEY, 'true');
+    localStorage.setItem(PUSH_PERMISSION_ASKED_KEY, 'true');
+  },
+  
+  resetPermissions: () => {
+    localStorage.removeItem(PUSH_PERMISSION_ASKED_KEY);
+    localStorage.removeItem(PUSH_PERMISSION_DENIED_KEY);
+  },
+  
+  shouldPromptUser: async () => {
+    // Nur prompts wenn Browser unterstützt und noch nie gefragt wurde
+    if (typeof window === 'undefined' || !('Notification' in window)) return false;
+    if (pushPermissionUtils.hasAskedBefore()) return false;
+    
+    // Prüfe aktuelle Permission
+    const permission = await Notification.requestPermission();
+    return permission === 'default'; // Noch nicht entschieden
+  }
+};
+
 export default function PushNotificationSettings({ isSubscribed, variant = 'row' }: PushNotificationSettingsProps) {
   const deviceId = useDeviceId();
   const [isSupported, setIsSupported] = useState(false);
@@ -57,6 +96,54 @@ export default function PushNotificationSettings({ isSubscribed, variant = 'row'
 
   const isDeviceReady = !!deviceId;
 
+  // NEU: Funktion zum Aktualisieren des Subscription-Status
+  const refreshSubscriptionStatus = async () => {
+    if (!deviceId) return;
+    
+    try {
+      const serviceWorkerSupported = 'serviceWorker' in navigator;
+      if (serviceWorkerSupported) {
+        const registration = await navigator.serviceWorker.ready;
+        const pushSubscription = await registration.pushManager.getSubscription();
+        
+        if (pushSubscription) {
+          // Prüfe ob die Subscription in der Datenbank existiert
+          const { exists } = await checkSubscription(deviceId);
+          
+          if (exists) {
+            const p256dhKey = pushSubscription.getKey('p256dh');
+            const authKey = pushSubscription.getKey('auth');
+            const p256dh = p256dhKey
+              ? btoa(String.fromCharCode.apply(null, Array.from(new Uint8Array(p256dhKey))))
+              : '';
+            const auth = authKey
+              ? btoa(String.fromCharCode.apply(null, Array.from(new Uint8Array(authKey))))
+              : '';
+            const subscriptionData: PushSubscriptionData = {
+              endpoint: pushSubscription.endpoint,
+              keys: {
+                p256dh,
+                auth,
+              }
+            };
+            setSubscription(subscriptionData);
+            setIsEnabled(true);
+          } else {
+            // Subscription existiert nicht in der Datenbank, also abbestellen
+            await pushSubscription.unsubscribe();
+            setSubscription(null);
+            setIsEnabled(false);
+          }
+        } else {
+          setSubscription(null);
+          setIsEnabled(false);
+        }
+      }
+    } catch (error) {
+      console.error('Fehler beim Aktualisieren des Subscription-Status:', error);
+    }
+  };
+
   useEffect(() => {
     if (!deviceId) return;
     const checkSupport = async () => {
@@ -71,55 +158,7 @@ export default function PushNotificationSettings({ isSubscribed, variant = 'row'
       logger.info('Notification Permission:', Notification.permission);
 
       if (serviceWorkerSupported) {
-        try {
-          logger.info('Warte auf Service Worker Registrierung...');
-          const registration = await navigator.serviceWorker.ready;
-          logger.info('Service Worker ready:', registration);
-          const pushSubscription = await registration.pushManager.getSubscription();
-          logger.info('Push Subscription:', pushSubscription);
-          
-          if (pushSubscription) {
-            logger.info('Gefundene deviceId:', deviceId);
-            if (deviceId) {
-              // Prüfe ob die Subscription in der Datenbank existiert
-              const { exists } = await checkSubscription(deviceId);
-              logger.info('Subscription in DB exists:', exists);
-              if (exists) {
-                const p256dhKey = pushSubscription.getKey('p256dh');
-                const authKey = pushSubscription.getKey('auth');
-                const p256dh = p256dhKey
-                  ? btoa(String.fromCharCode.apply(null, Array.from(new Uint8Array(p256dhKey))))
-                  : '';
-                const auth = authKey
-                  ? btoa(String.fromCharCode.apply(null, Array.from(new Uint8Array(authKey))))
-                  : '';
-                const subscriptionData: PushSubscriptionData = {
-                  endpoint: pushSubscription.endpoint,
-                  keys: {
-                    p256dh,
-                    auth,
-                  }
-                };
-                setSubscription(subscriptionData);
-                setIsEnabled(true);
-                logger.info('Subscription erfolgreich gesetzt', subscriptionData);
-              } else {
-                // Subscription existiert nicht in der Datenbank, also abbestellen
-                logger.info('Subscription nicht in DB, unsubscribing...');
-                await pushSubscription.unsubscribe();
-                setSubscription(null);
-                setIsEnabled(false);
-              }
-            } else {
-              logger.warn('Keine deviceId im localStorage gefunden');
-            }
-          } else {
-            logger.info('Kein PushSubscription im Browser gefunden');
-          }
-        } catch (error) {
-          console.error('Fehler beim Prüfen des Subscription-Status:', error);
-          logger.error('Fehler beim Prüfen des Subscription-Status', error);
-        }
+        await refreshSubscriptionStatus();
       } else {
         logger.warn('Service Worker wird nicht unterstützt');
       }
@@ -135,6 +174,28 @@ export default function PushNotificationSettings({ isSubscribed, variant = 'row'
       logger.info('Push-Settings Check abgeschlossen');
     };
     checkSupport();
+  }, [deviceId]);
+
+  // NEU: Event-Listener für Subscription-Änderungen
+  useEffect(() => {
+    const handleSubscriptionChange = () => {
+      refreshSubscriptionStatus();
+    };
+
+    // Lausche auf Custom Events von AutoPushPrompt
+    window.addEventListener('pushSubscriptionChanged', handleSubscriptionChange);
+    
+    // Lausche auch auf Visibility Change um zu refreshen wenn User zurückkommt
+    window.addEventListener('visibilitychange', () => {
+      if (!document.hidden) {
+        refreshSubscriptionStatus();
+      }
+    });
+
+    return () => {
+      window.removeEventListener('pushSubscriptionChanged', handleSubscriptionChange);
+      window.removeEventListener('visibilitychange', handleSubscriptionChange);
+    };
   }, [deviceId]);
 
   const handleSubscribe = async () => {
