@@ -333,6 +333,9 @@ export default function FestivalRegisterForm({ onRegister, setCookies = true }: 
   const [isLoaded, setIsLoaded] = useState(false);
   const [existingRegistration, setExistingRegistration] = useState<any | null>(null);
   
+  // ✅ RACE CONDITION FIX: Verhindere mehrfache Registration-Checks
+  const hasAlreadyCheckedRef = useRef(false);
+  
   // Verwende den Auto-Scroll-Hook
   useAutoScrollOnFocus(contentRef, isKeyboardVisible);
   
@@ -358,6 +361,12 @@ export default function FestivalRegisterForm({ onRegister, setCookies = true }: 
   // NEU: Kombinierter Check - Cookie DANN DB-Check
   useEffect(() => {
     const checkRegistrationStatus = async () => {
+      // ✅ RACE CONDITION FIX: Wenn bereits gecheckt und Registration geladen, dann abbrechen
+      if (hasAlreadyCheckedRef.current && existingRegistration) {
+        console.log('[FestivalRegisterForm] Registration bereits geladen - überspringe Check');
+        return;
+      }
+      
       console.log('[FestivalRegisterForm] Starte Registration-Check für deviceId:', deviceId);
       
       // 1. ERST: Cookie-Check (synchron)
@@ -369,6 +378,7 @@ export default function FestivalRegisterForm({ onRegister, setCookies = true }: 
         setHasCookie(true);
         setStep(steps.length - 1); // Direkt auf Bestätigungsseite
         setIsLoaded(true);
+        hasAlreadyCheckedRef.current = true; // ✅ Markiere als gecheckt
         return; // Kein DB-Check nötig
       }
       
@@ -396,6 +406,8 @@ export default function FestivalRegisterForm({ onRegister, setCookies = true }: 
             try { 
               localStorage.setItem(LOCAL_STORAGE_KEY, JSON.stringify(result.data.formData)); 
             } catch (e) { console.error('[FestivalRegisterForm] localStorage-Fehler:', e); }
+            
+            hasAlreadyCheckedRef.current = true; // ✅ Markiere als gecheckt
           } else {
             console.log('[FestivalRegisterForm] Keine DB-Registration - versuche localStorage');
             // Fallback: localStorage
@@ -411,6 +423,7 @@ export default function FestivalRegisterForm({ onRegister, setCookies = true }: 
             } catch (e) {
               console.error('[FestivalRegisterForm] localStorage-Parse-Fehler:', e);
             }
+            hasAlreadyCheckedRef.current = true; // ✅ Markiere als gecheckt (auch bei no-result)
           }
         } catch (error) {
           console.error('[FestivalRegisterForm] Fehler beim DB-Check:', error);
@@ -426,9 +439,11 @@ export default function FestivalRegisterForm({ onRegister, setCookies = true }: 
           } catch (e) {
             // ignore
           }
+          hasAlreadyCheckedRef.current = true; // ✅ Markiere als gecheckt (auch bei error)
         }
       } else {
         console.log('[FestivalRegisterForm] Keine deviceId verfügbar');
+        hasAlreadyCheckedRef.current = true; // ✅ Markiere als gecheckt
       }
       
       setIsLoaded(true);
@@ -448,6 +463,9 @@ export default function FestivalRegisterForm({ onRegister, setCookies = true }: 
     setHasCookie(false);
     setExistingRegistration(null);
     try { localStorage.removeItem(LOCAL_STORAGE_KEY); } catch (e) { /* ignore */ }
+    
+    // ✅ RACE CONDITION FIX: Reset Check-Flag für neue Registration
+    hasAlreadyCheckedRef.current = false;
   };
 
   // Steps-Definition

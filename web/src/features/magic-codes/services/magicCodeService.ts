@@ -7,6 +7,7 @@ import { connectDB } from '@/lib/db/connector';
 import { logger } from '@/lib/logger';
 import mongoose from 'mongoose';
 import { broadcast } from '@/lib/websocket/broadcast';
+import { sendPushNotificationToDevice } from '@/features/push/services/pushService';
 
 export interface MagicCodeResult {
   success: boolean;
@@ -109,14 +110,7 @@ export async function transferDevice(
 
     const oldDeviceId = user.deviceId;
 
-    // Prüfe ob neue Device ID bereits verwendet wird
-    const existingUser = await User.findByDeviceId(newDeviceId);
-    if (existingUser && (existingUser._id as mongoose.Types.ObjectId).toString() !== (user._id as mongoose.Types.ObjectId).toString()) {
-      return { success: false, error: 'Neue Device ID wird bereits von einem anderen Benutzer verwendet' };
-    }
-
-    // 1. Push-Subscription Handling (korrigiert)
-    const oldSubscription = await Subscriber.findOne({ deviceId: oldDeviceId });
+    // 1. Push-Subscription Info initialisieren
     let pushSubscriptionInfo: {
       hadPushSubscription: boolean;
       requiresReactivation: boolean;
@@ -125,10 +119,33 @@ export async function transferDevice(
       hadPushSubscription: false,
       requiresReactivation: false
     };
-    
+
+    // Prüfe ob neue Device ID bereits verwendet wird - aber nur von echten Usern!
+    // Push-Subscriptions allein machen ein Gerät NICHT "belegt"
+    const existingUser = await User.findByDeviceId(newDeviceId);
+    if (existingUser && (existingUser._id as mongoose.Types.ObjectId).toString() !== (user._id as mongoose.Types.ObjectId).toString()) {
+      // Prüfe ob der bestehende User wirklich "vollständig" ist (Name + aktiv)
+      if (existingUser.name && existingUser.name.trim() !== 'Neuer Benutzer' && existingUser.isActive) {
+        return { success: false, error: 'Neue Device ID wird bereits von einem anderen Benutzer verwendet' };
+      } else {
+        // Es ist nur ein "leerer" User - lösche ihn und überschreibe
+        logger.info(`[MagicCode] Lösche leeren/temporären User ${existingUser._id} für Device Transfer`);
+        await User.findByIdAndDelete(existingUser._id);
+      }
+    }
+
+    // NEU: Prüfe ob es bereits eine Push-Subscription auf dem neuen Gerät gibt
+    // Wir löschen sie NICHT automatisch, sondern merken uns nur ob sie existiert
+    const existingNewDeviceSubscription = await Subscriber.findOne({ deviceId: newDeviceId });
+    if (existingNewDeviceSubscription) {
+      logger.info(`[MagicCode] Neues Gerät ${newDeviceId} hat bereits Push-Subscription - wird beibehalten`);
+      // NICHT löschen! Wir nutzen sie später für intelligente Behandlung
+    }
+
+    // 2. Push-Subscription Handling für altes Gerät
+    const oldSubscription = await Subscriber.findOne({ deviceId: oldDeviceId });
     if (oldSubscription) {
-      // ❌ ALTE LOGIC: oldSubscription.deviceId = newDeviceId; (funktioniert nicht!)
-      // ✅ NEUE LOGIC: Lösche alte Subscription - User muss sich neu anmelden
+      // Lösche alte Subscription - User muss sich neu anmelden
       await Subscriber.deleteOne({ deviceId: oldDeviceId });
       pushSubscriptionInfo = {
         hadPushSubscription: true,
@@ -138,18 +155,18 @@ export async function transferDevice(
       logger.info(`[MagicCode] Push-Subscription für ${oldDeviceId} gelöscht - User muss sich auf neuem Gerät neu für Push-Notifications anmelden`);
     }
 
-    // 2. Aktualisiere User deviceId
+    // 3. Aktualisiere User deviceId
     user.deviceId = newDeviceId;
     await user.save();
 
-    // 3. Markiere Magic Code als verwendet
+    // 4. Markiere Magic Code als verwendet
     magicCode.isUsed = true;
     await magicCode.save();
 
-    // 4. Lösche eventuell bestehende Magic Codes für das alte Gerät
+    // 5. Lösche eventuell bestehende Magic Codes für das alte Gerät
     await MagicCode.deleteMany({ deviceId: oldDeviceId });
 
-    // 🔒 5. NEUER SICHERHEITS-SCHRITT: "Altes Gerät platt machen"
+    // 🔒 6. NEUER SICHERHEITS-SCHRITT: "Altes Gerät platt machen"
     // Erstelle einen "Fresh Start" User für die alte Device ID
     // Das bedeutet: Wenn jemand anders das alte Gerät bekommt, sieht er keine persönlichen Daten
     await User.create({
@@ -162,7 +179,7 @@ export async function transferDevice(
     logger.info(`[MagicCode] Device Transfer erfolgreich: ${user.name} von ${oldDeviceId} auf ${newDeviceId}`);
     logger.info(`[MagicCode] SICHERHEIT: Alte Device ID ${oldDeviceId} wurde resettet - bereit für neuen User`);
 
-    // 🔔 6. BENACHRICHTIGUNG: Informiere das alte Gerät über erfolgreichen Transfer
+    // 🔔 7. BENACHRICHTIGUNG: Informiere das alte Gerät über erfolgreichen Transfer
     try {
       await broadcast('device-transfer-confirmation', {
         oldDeviceId,
@@ -175,6 +192,59 @@ export async function transferDevice(
     } catch (broadcastError) {
       // Broadcast-Fehler sollten den Transfer nicht verhindern
       logger.warn(`[MagicCode] Warnung: Bestätigung an altes Gerät konnte nicht gesendet werden:`, broadcastError);
+    }
+
+    // 🎯 8. INTELLIGENTE PUSH-BEHANDLUNG für neues Gerät
+    try {
+      // Prüfe nochmal ob neues Gerät bereits Push-Subscription hat
+      const newDeviceSubscription = await Subscriber.findOne({ deviceId: newDeviceId });
+      
+      if (newDeviceSubscription) {
+        // ✅ NEUES GERÄT HAT BEREITS PUSH → Sende Willkommens-Nachricht
+        logger.info(`[MagicCode] Neues Gerät ${newDeviceId} hat bereits Push - sende Willkommens-Nachricht`);
+        
+        try {
+          await sendPushNotificationToDevice(newDeviceId, {
+            title: '🎉 Transfer erfolgreich!',
+            body: `Hallo ${user.name}, dein Gerätewechsel war erfolgreich!`,
+            icon: '/android-chrome-192x192.png',
+            badge: '/android-chrome-192x192.png',
+            data: {
+              type: 'device-transfer-success',
+              timestamp: new Date().toISOString()
+            }
+          });
+          
+          logger.info(`[MagicCode] Willkommens-Push an neues Gerät ${newDeviceId} gesendet`);
+          pushSubscriptionInfo.requiresReactivation = false; // Kein Prompt nötig
+          pushSubscriptionInfo.message = 'Push-Benachrichtigungen sind bereits aktiv';
+        } catch (pushError) {
+          logger.warn(`[MagicCode] Willkommens-Push konnte nicht gesendet werden:`, pushError);
+          // Fallback: Prompt wird trotzdem getriggert
+          pushSubscriptionInfo.requiresReactivation = true;
+        }
+      } else {
+        // ❌ NEUES GERÄT HAT KEIN PUSH → Trigger Prompt über WebSocket
+        logger.info(`[MagicCode] Neues Gerät ${newDeviceId} hat kein Push - trigger Prompt über WebSocket`);
+        
+        try {
+          await broadcast('device-transfer-push-prompt', {
+            deviceId: newDeviceId,
+            userName: user.name,
+            reason: 'device-transfer'
+          });
+          
+          logger.info(`[MagicCode] Push-Prompt-Trigger an neues Gerät ${newDeviceId} gesendet`);
+          pushSubscriptionInfo.requiresReactivation = true;
+          pushSubscriptionInfo.message = 'Push-Benachrichtigungen müssen aktiviert werden';
+        } catch (broadcastError) {
+          logger.warn(`[MagicCode] Push-Prompt-Trigger konnte nicht gesendet werden:`, broadcastError);
+        }
+      }
+    } catch (pushHandlingError) {
+      logger.error(`[MagicCode] Fehler bei intelligenter Push-Behandlung:`, pushHandlingError);
+      // Bei Fehlern: Sichere Seite und trigger Prompt
+      pushSubscriptionInfo.requiresReactivation = true;
     }
 
     return {

@@ -68,6 +68,64 @@ class WebPushService {
     }
   }
 
+  async sendNotificationToDevice(deviceId: string, payload: PushNotificationPayload) {
+    if (!this.initialized) {
+      logger.error('[WebPush] Service ist nicht initialisiert');
+      throw new Error('WebPush-Service ist nicht initialisiert');
+    }
+
+    try {
+      logger.info('[WebPush] Sende Benachrichtigung an Gerät', { 
+        deviceId,
+        title: payload.title,
+        body: payload.body
+      });
+
+      const subscriber = await Subscriber.findOne({ deviceId }).exec();
+      
+      if (!subscriber) {
+        logger.warn('[WebPush] Keine Subscription für Gerät gefunden', { deviceId });
+        return { success: false, error: 'Keine Push-Subscription für dieses Gerät gefunden' };
+      }
+
+      const subscription = {
+        endpoint: subscriber.endpoint,
+        keys: subscriber.keys
+      };
+      
+      logger.debug('[WebPush] Sende Benachrichtigung an Subscriber', {
+        deviceId: subscriber.deviceId,
+        endpoint: subscriber.endpoint.substring(0, 50) + '...'
+      });
+
+      await this.sendNotification(subscription, payload);
+      
+      logger.info('[WebPush] Benachrichtigung erfolgreich gesendet', { 
+        deviceId: subscriber.deviceId,
+        timestamp: new Date().toISOString()
+      });
+
+      return { success: true };
+    } catch (error) {
+      if ((error as any).statusCode === 410) {
+        logger.warn('[WebPush] Subscription abgelaufen, entferne sie', { 
+          deviceId,
+          errorCode: (error as any).statusCode
+        });
+        await Subscriber.findOneAndDelete({ deviceId }).exec();
+        return { success: false, error: 'Push-Subscription abgelaufen und entfernt' };
+      }
+      
+      logger.error('[WebPush] Fehler beim Senden der Benachrichtigung an Gerät', {
+        deviceId,
+        error: (error as Error).message,
+        statusCode: (error as any).statusCode
+      });
+      
+      throw error;
+    }
+  }
+
   async sendNotificationToAll(payload: PushNotificationPayload) {
     if (!this.initialized) {
       logger.error('[WebPush] Service ist nicht initialisiert');

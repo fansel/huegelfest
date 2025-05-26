@@ -1,7 +1,6 @@
 import { initServices } from '@/lib/initServices';
 import { webPushService } from '@/lib/webpush/webPushService';
 import { logger } from '@/lib/logger';
-import { isServicesInitialized } from '../../../../scripts/init';
 import { Subscriber } from '@/lib/db/models/Subscriber';
 
 export interface PushNotificationPayload {
@@ -24,6 +23,19 @@ export async function sendPushNotification(payload: PushNotificationPayload) {
     await webPushService.sendNotificationToAll(payload);
   }
   return { status: 'success', message: 'Benachrichtigungen erfolgreich gesendet' };
+}
+
+export async function sendPushNotificationToDevice(deviceId: string, payload: PushNotificationPayload) {
+  await initServices();
+  if (webPushService.isInitialized()) {
+    const result = await webPushService.sendNotificationToDevice(deviceId, payload);
+    if (result.success) {
+      return { status: 'success', message: 'Benachrichtigung erfolgreich gesendet' };
+    } else {
+      return { status: 'error', message: result.error || 'Fehler beim Senden der Benachrichtigung' };
+    }
+  }
+  return { status: 'error', message: 'WebPush-Service nicht verfügbar' };
 }
 
 export async function subscribePush(payload: PushSubscriptionPayload) {

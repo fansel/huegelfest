@@ -21,7 +21,6 @@ import {
   checkActiveMagicCodeAction 
 } from '../actions/magicCodeActions';
 import { toast } from 'react-hot-toast';
-import AutoPushPrompt from '../../push/components/AutoPushPrompt';
 import { pushPermissionUtils } from '../../settings/components/PushNotificationSettings';
 import { useWebSocket, WebSocketMessage } from '@/shared/hooks/useWebSocket';
 import { getWebSocketUrl } from '@/shared/utils/getWebSocketUrl';
@@ -48,7 +47,6 @@ export default function DeviceTransferSettings({ variant = 'row' }: DeviceTransf
   const [hasActiveCode, setHasActiveCode] = useState(false);
   const [transferredUser, setTransferredUser] = useState<string | null>(null);
   const [transferResult, setTransferResult] = useState<any | null>(null);
-  const [showPushPrompt, setShowPushPrompt] = useState(false);
 
   // NEU: WebSocket-Listener für Transfer-Bestätigungen
   useWebSocket(
@@ -57,17 +55,37 @@ export default function DeviceTransferSettings({ variant = 'row' }: DeviceTransf
       onMessage: (msg: WebSocketMessage) => {
         if (msg.topic === 'device-transfer-confirmation') {
           const payload = msg.payload as any;
-          // Prüfe ob die Nachricht für dieses Gerät ist
+          // Prüfe ob die Nachricht für dieses Gerät ist (ALTES Gerät)
           if (payload.oldDeviceId === deviceId) {
+            console.log('[DeviceTransferSettings] Transfer-Bestätigung erhalten:', payload);
+            
+            // Zeige erfolgreiche Bestätigung
             toast.success(payload.message || 'Gerätewechsel erfolgreich!', {
               duration: 5000,
               icon: '✅'
             });
             
-            // Nach kurzer Verzögerung die Seite neu laden
+            // WICHTIG: Dialog schließen - Transfer ist abgeschlossen!
+            setIsOpen(false);
+            setCurrentStep('initial');
+            setGeneratedCode(null);
+            setInputCode('');
+            setError(null);
+            setTransferredUser(null);
+            setTransferResult(null);
+            
+            // Toast mit weiteren Infos
+            setTimeout(() => {
+              toast.success(
+                'Dein Account ist jetzt auf dem neuen Gerät verfügbar. Dieses Gerät wurde zurückgesetzt.',
+                { duration: 7000, icon: '📱' }
+              );
+            }, 1000);
+            
+            // Nach kurzer Verzögerung die Seite neu laden (für Clean-Up)
             setTimeout(() => {
               window.location.reload();
-            }, 2000);
+            }, 3000);
           }
         }
       },
@@ -141,12 +159,10 @@ export default function DeviceTransferSettings({ variant = 'row' }: DeviceTransf
         
         setTransferResult(result);
         
-        // WICHTIG: Prompt VOR dem Reload setzen
-        setTimeout(() => {
-          setShowPushPrompt(true);
-        }, 1000); // Schneller zeigen
+        // ✅ Push-Behandlung läuft jetzt automatisch über WebSocket vom Server
+        // Kein manueller Trigger mehr nötig - Server entscheidet intelligent!
         
-        // Längerer Delay für Reload damit User den Prompt sieht
+        // Längerer Delay für Reload damit User eventuellen Prompt oder Push sieht
         setTimeout(() => {
           window.location.reload();
         }, 8000); // 8 Sekunden damit User Zeit hat
@@ -180,7 +196,6 @@ export default function DeviceTransferSettings({ variant = 'row' }: DeviceTransf
     setError(null);
     setTransferredUser(null);
     setTransferResult(null);
-    setShowPushPrompt(false);
   };
 
   const renderInitialStep = () => (
@@ -420,17 +435,6 @@ export default function DeviceTransferSettings({ variant = 'row' }: DeviceTransf
           </div>
         </DialogContent>
       </Dialog>
-
-      {/* NEU: Push-Prompt nach Device Transfer */}
-      <AutoPushPrompt 
-        forceShow={showPushPrompt}
-        onClose={() => setShowPushPrompt(false)}
-        onSubscriptionChange={(isSubscribed) => {
-          console.log('Device Transfer - Push subscription changed:', isSubscribed);
-          // Sende auch Custom Event für Settings-Seite
-          window.dispatchEvent(new CustomEvent('pushSubscriptionChanged', { detail: { isSubscribed } }));
-        }}
-      />
     </>
   );
 } 

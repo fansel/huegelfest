@@ -16,6 +16,8 @@ import { checkSubscription } from '../actions/checkSubscription';
 import { pushPermissionUtils } from '../../settings/components/PushNotificationSettings';
 import { env } from 'next-runtime-env';
 import { toast } from 'react-hot-toast';
+import { useWebSocket, WebSocketMessage } from '@/shared/hooks/useWebSocket';
+import { getWebSocketUrl } from '@/shared/utils/getWebSocketUrl';
 
 const VAPID_PUBLIC_KEY = env('NEXT_PUBLIC_VAPID_PUBLIC_KEY');
 
@@ -31,53 +33,102 @@ export default function AutoPushPrompt({ forceShow = false, onClose, onSubscript
   const deviceId = useDeviceId();
   const [showPrompt, setShowPrompt] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
+  const [hasChecked, setHasChecked] = useState(false);
+  const [triggerReason, setTriggerReason] = useState<string>('app-start');
 
   useEffect(() => {
+    if (hasChecked && !forceShow) return;
+
     const checkShouldPrompt = async () => {
-      // Force Show (z.B. nach Device Transfer)
       if (forceShow) {
         setShowPrompt(true);
         return;
       }
 
-      // Automatischer Check beim App-Start
       if (!deviceId) return;
 
-      // Prüfe erst ob bereits eine Subscription existiert
+      setHasChecked(true);
+
       try {
         const { exists } = await checkSubscription(deviceId);
         if (exists) {
-          // User hat bereits Push aktiviert, kein Prompt nötig
           return;
         }
       } catch (error) {
         console.error('Fehler beim Prüfen der Subscription:', error);
       }
 
-      // Prüfe Browser-Support
       if (typeof window === 'undefined' || !('Notification' in window)) {
         return;
       }
 
-      // Prüfe aktuelle Permission
       const currentPermission = Notification.permission;
       
-      // Wenn bereits granted oder denied, und User schon mal gefragt wurde
       if (currentPermission !== 'default' && pushPermissionUtils.hasAskedBefore()) {
         return;
       }
 
-      // Warte kurz um störende Prompts zu vermeiden (nur beim App-Start)
       await new Promise(resolve => setTimeout(resolve, 2000));
 
-      // Zeige Prompt wenn noch nie gefragt wurde oder bei Force-Show
       if (!pushPermissionUtils.hasAskedBefore()) {
         setShowPrompt(true);
       }
     };
 
     checkShouldPrompt();
-  }, [deviceId, forceShow]);
+  }, [deviceId, forceShow, hasChecked]);
+
+  useEffect(() => {
+    const handleTriggerPushPrompt = (event: CustomEvent) => {
+      console.log('[AutoPushPrompt] Trigger-Event erhalten:', event.detail);
+      
+      setHasChecked(false);
+      
+      setTriggerReason(event.detail?.reason || 'manual');
+      
+      if (event.detail?.reason === 'device-transfer') {
+        pushPermissionUtils.resetPermissions();
+      }
+      
+      setShowPrompt(true);
+    };
+
+    window.addEventListener('triggerPushPrompt', handleTriggerPushPrompt as EventListener);
+    
+    return () => {
+      window.removeEventListener('triggerPushPrompt', handleTriggerPushPrompt as EventListener);
+    };
+  }, []);
+
+  // NEU: WebSocket-Listener für Device Transfer Push-Prompt
+  useWebSocket(
+    getWebSocketUrl(),
+    {
+      onMessage: (msg: WebSocketMessage) => {
+        if (msg.topic === 'device-transfer-push-prompt') {
+          const payload = msg.payload as any;
+          // Prüfe ob die Nachricht für dieses Gerät ist
+          if (payload.deviceId === deviceId) {
+            console.log('[AutoPushPrompt] WebSocket-Trigger erhalten:', payload);
+            
+            // Reset State für neuen Prompt
+            setHasChecked(false);
+            setTriggerReason('device-transfer');
+            
+            // Reset permissions für Device Transfer
+            pushPermissionUtils.resetPermissions();
+            
+            // Trigger Prompt
+            setShowPrompt(true);
+          }
+        }
+      },
+      onError: (err) => {
+        console.error('[AutoPushPrompt] WebSocket-Fehler:', err);
+      },
+      reconnectIntervalMs: 5000,
+    }
+  );
 
   const handleAllow = async () => {
     if (!deviceId) {
@@ -88,33 +139,24 @@ export default function AutoPushPrompt({ forceShow = false, onClose, onSubscript
     setIsLoading(true);
 
     try {
-      // iOS-kompatibel: Permission muss durch User-Geste ausgelöst werden
-      // Das passiert hier durch den Button-Click
-      
-      // Prüfe Browser-Support
       if (!('Notification' in window) || !('serviceWorker' in navigator) || !('PushManager' in window)) {
         throw new Error('Push-Benachrichtigungen werden von diesem Browser nicht unterstützt');
       }
 
-      // Permission anfragen (iOS-kompatibel durch User-Geste)
       const permission = await Notification.requestPermission();
       
       if (permission === 'granted') {
-        // Service Worker bereit machen
         const registration = await navigator.serviceWorker.ready;
         
-        // Prüfe ob bereits eine Subscription existiert
         let pushSubscription = await registration.pushManager.getSubscription();
         
         if (!pushSubscription) {
-          // Neue Push Subscription erstellen
           pushSubscription = await registration.pushManager.subscribe({
             userVisibleOnly: true,
             applicationServerKey: VAPID_PUBLIC_KEY
           });
         }
 
-        // Keys extrahieren
         const p256dhKey = pushSubscription.getKey('p256dh');
         const authKey = pushSubscription.getKey('auth');
         const p256dh = p256dhKey
@@ -124,22 +166,18 @@ export default function AutoPushPrompt({ forceShow = false, onClose, onSubscript
           ? btoa(String.fromCharCode.apply(null, Array.from(new Uint8Array(authKey))))
           : '';
 
-        // WICHTIG: Nutze den normalen subscribePushAction Endpunkt
         const result = await subscribePushAction({
           endpoint: pushSubscription.endpoint,
           keys: { p256dh, auth },
           deviceId
         });
 
-        // subscribePushAction gibt { status: string, message: string } zurück
         if (result.status === 'success') {
           pushPermissionUtils.setAskedBefore();
           toast.success('Push-Benachrichtigungen aktiviert! 🔔');
           
-          // Informiere Parent Component über erfolgreiche Subscription
           onSubscriptionChange?.(true);
           
-          // NEU: Sende Custom Event für andere Komponenten (z.B. PushNotificationSettings)
           window.dispatchEvent(new CustomEvent('pushSubscriptionChanged', { detail: { isSubscribed: true } }));
           
           setShowPrompt(false);
@@ -154,7 +192,6 @@ export default function AutoPushPrompt({ forceShow = false, onClose, onSubscript
         onClose?.();
         toast.error('Push-Benachrichtigungen wurden abgelehnt');
       } else {
-        // Default - User hat abgebrochen
         setShowPrompt(false);
         onClose?.();
       }
@@ -176,16 +213,13 @@ export default function AutoPushPrompt({ forceShow = false, onClose, onSubscript
   };
 
   const handleLater = () => {
-    // Bei "Später" nicht als "gefragt" markieren - wird beim nächsten App-Start wieder gefragt
-    // Nur bei Force-Show (Device Transfer) nicht wieder fragen
-    if (forceShow) {
+    if (triggerReason === 'device-transfer') {
       pushPermissionUtils.setAskedBefore();
     }
     setShowPrompt(false);
     onClose?.();
   };
 
-  // Zeige Dialog nur wenn alle Bedingungen erfüllt sind
   if (!showPrompt || !deviceId) return null;
 
   return (
@@ -201,7 +235,7 @@ export default function AutoPushPrompt({ forceShow = false, onClose, onSubscript
             Benachrichtigungen erlauben?
           </DialogTitle>
           <DialogDescription>
-            {forceShow 
+            {triggerReason === 'device-transfer'
               ? 'Nach dem Gerätewechsel musst du Push-Benachrichtigungen neu aktivieren.'
               : 'Möchtest du Benachrichtigungen über wichtige Updates erhalten?'
             }
@@ -262,7 +296,6 @@ export default function AutoPushPrompt({ forceShow = false, onClose, onSubscript
             </div>
           </div>
 
-          {/* iOS-spezifischer Hinweis */}
           <div className="text-xs text-gray-500 text-center">
             💡 Auf iOS: Tippe "Erlauben" und dann nochmal "Erlauben" im Browser-Dialog
           </div>
