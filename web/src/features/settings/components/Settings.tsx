@@ -7,10 +7,9 @@ import ImpressumSettings from './ImpressumSettings';
 import DatenschutzSettings from './DatenschutzSettings';
 import ResetAppDataSettings from './ResetAppDataSettings';
 import MusicNoteSettings from './MusicNoteSettings';
-import DeviceTransferSettings from '../../magic-codes/components/DeviceTransferSettings';
+import DeviceTransferSettings from '@/features/magic-codes/components/DeviceTransferSettings';
 import { useDeviceContext } from '@/shared/contexts/DeviceContext';
-import AppUpdateSettings from './AppUpdateSettings';
-
+import { UpdateSettings } from './UpdateSettings';
 
 interface SettingsProps {
   showStarfield: boolean;
@@ -35,14 +34,12 @@ export default function Settings({
         <PushNotificationSettings isSubscribed={false} variant="row" />
         <StarfieldSettings showStarfield={showStarfield} onToggle={onToggleStarfield} variant="row" />
         <MusicNoteSettings showMusicNote={showMusicNote} onToggle={onToggleMusicNote} variant="row" />
-        <div className="flex justify-center">
-          <DeviceTransferSettings variant="row" />
-        </div>
+        <UpdateSettings variant="row" />
+        <DeviceTransferSettings />
         <AdminSettings variant="row" />
         <DatenschutzSettings variant="row" />
         <ImpressumSettings variant="row" />
         <ResetAppDataSettings variant="row" />
-        <AppUpdateSettings variant="row" />
       </div>
     );
   }
@@ -55,14 +52,12 @@ export default function Settings({
         <PushNotificationSettings isSubscribed={false} variant="tile" />
         <StarfieldSettings showStarfield={showStarfield} onToggle={onToggleStarfield} variant="tile" />
         <MusicNoteSettings showMusicNote={showMusicNote} onToggle={onToggleMusicNote} variant="tile" />
-        <div className="flex justify-center items-center">
-          <DeviceTransferSettings variant="tile" />
-        </div>
+        <UpdateSettings variant="tile" />
+        <DeviceTransferSettings />
         <AdminSettings variant="tile" />
         <DatenschutzSettings variant="tile" />
         <ImpressumSettings variant="tile" />
         <ResetAppDataSettings variant="tile" />
-        <AppUpdateSettings variant="tile" />
       </div>
     </div>
   );

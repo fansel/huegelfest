@@ -1,15 +1,10 @@
 // useWebSocket.ts
-// Typsicherer React-Hook für WebSocket-Verbindungen
-// Unterstützt verschiedene Topics, Reconnect, Fehlerbehandlung
+// DEPRECATED: Legacy-Wrapper für globalen WebSocket Manager
+// Verwende stattdessen useGlobalWebSocket für bessere Performance
 
 'use client';
 
-import { useEffect, useRef } from 'react';
-
-export interface WebSocketMessage<T = unknown> {
-  topic: string;
-  payload: T;
-}
+import { useGlobalWebSocket, WebSocketMessage } from './useGlobalWebSocket';
 
 export interface UseWebSocketOptions {
   onMessage: (msg: WebSocketMessage) => void;
@@ -23,76 +18,31 @@ export interface UseWebSocketOptions {
   onUnavailable?: (err: unknown) => void;
 }
 
+// Re-export WebSocketMessage für Kompatibilität
+export type { WebSocketMessage };
+
 /**
- * useWebSocket
- * @param url WebSocket-URL (z.B. ws://localhost:8080)
+ * DEPRECATED: Legacy useWebSocket Hook
+ * 
+ * Dieser Hook nutzt jetzt den globalen WebSocket Manager.
+ * Alle Komponenten teilen sich eine einzige WebSocket-Verbindung.
+ * 
+ * @deprecated Verwende useGlobalWebSocket mit topicFilter für bessere Performance
+ * @param url WebSocket-URL (wird ignoriert - globaler Manager übernimmt)
  * @param options Callback-Optionen
  */
 export function useWebSocket(
   url: string,
   options: UseWebSocketOptions
 ): void {
-  const ws = useRef<WebSocket | null>(null);
-  const reconnectTimeout = useRef<NodeJS.Timeout | null>(null);
-
-  useEffect(() => {
-    let isMounted = true;
-    let wsFailed = false;
-
-    function connect() {
-      try {
-        ws.current = new window.WebSocket(url);
-      } catch (err) {
-        wsFailed = true;
-        if (options.onUnavailable) options.onUnavailable(err);
-        // Kein Fehler ins UI loggen, nur still bleiben
-        // Reconnect nach Intervall versuchen
-        if (isMounted) {
-          reconnectTimeout.current = setTimeout(
-            connect,
-            options.reconnectIntervalMs ?? 5000
-          );
-        }
-        return;
-      }
-
-      ws.current.onopen = () => {
-        wsFailed = false;
-        if (options.onOpen) options.onOpen();
-      };
-
-      ws.current.onmessage = (event: MessageEvent) => {
-        try {
-          const data: WebSocketMessage = JSON.parse(event.data);
-          options.onMessage(data);
-        } catch (err) {
-          if (options.onError) options.onError(event);
-        }
-      };
-
-      ws.current.onerror = (event: Event) => {
-        if (options.onError) options.onError(event);
-      };
-
-      ws.current.onclose = () => {
-        if (options.onClose) options.onClose();
-        // Reconnect-Logik
-        if (isMounted) {
-          reconnectTimeout.current = setTimeout(
-            connect,
-            options.reconnectIntervalMs ?? 5000
-          );
-        }
-      };
-    }
-
-    connect();
-
-    return () => {
-      isMounted = false;
-      if (reconnectTimeout.current) clearTimeout(reconnectTimeout.current);
-      ws.current?.close();
-    };
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [url]);
+  console.warn(`[useWebSocket] DEPRECATED: ${url} - Verwende useGlobalWebSocket für bessere Performance`);
+  
+  // Nutze globalen Manager statt eigene Verbindung
+  useGlobalWebSocket({
+    onMessage: options.onMessage,
+    onOpen: options.onOpen,
+    onClose: options.onClose,
+    onError: options.onError
+    // URL, reconnectIntervalMs und onUnavailable werden ignoriert - globaler Manager übernimmt
+  });
 } 

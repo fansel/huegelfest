@@ -41,30 +41,94 @@ app
     const wss = new WebSocketServer({ noServer: true });
     setWebSocketServer(wss);
 
-    let clientIdCounter = 1;
-    const clients = new Map<WebSocket, string>();
+    // Verbessertes Client-Management mit Device-ID-Tracking
+    const deviceConnections = new Map<string, WebSocket>(); // deviceId -> WebSocket
+    const activeConnections = new Map<WebSocket, string>(); // WebSocket -> deviceId
 
     console.log('Initialisiere WebSocket-Server auf /ws …');
     wss.on('connection', ws => {
-      const clientId = `User${clientIdCounter++}`;
-      clients.set(ws, clientId);
-      console.log(`${clientId} verbunden`);
-      ws.send(JSON.stringify({ type: 'system', text: `Willkommen, ${clientId}!` }));
+      let deviceId: string | null = null;
+      
+      console.log('Neue WebSocket-Verbindung eingegangen');
 
       ws.on('message', message => {
-        const text = message.toString();
-        console.log(`${clientId} sagt:`, text);
-        for (const [client] of clients) {
-          if (client.readyState === WebSocket.OPEN) {
-            client.send(JSON.stringify({ type: 'chat', sender: clientId, text }));
+        try {
+          const data = JSON.parse(message.toString());
+          
+          // Prüfe auf Device-ID Registration
+          if (data.type === 'DEVICE_REGISTRATION' && data.deviceId && typeof data.deviceId === 'string') {
+            const registeredDeviceId = data.deviceId; // String-Typ gesichert
+            deviceId = registeredDeviceId;
+            
+            // Prüfe ob Device bereits verbunden ist
+            const existingConnection = deviceConnections.get(registeredDeviceId);
+            if (existingConnection && existingConnection.readyState === WebSocket.OPEN) {
+              console.log(`[WebSocket] Device ${registeredDeviceId} bereits verbunden - schließe alte Verbindung`);
+              existingConnection.close();
+            }
+            
+            // Registriere neue Verbindung
+            deviceConnections.set(registeredDeviceId, ws);
+            activeConnections.set(ws, registeredDeviceId);
+            
+            console.log(`[WebSocket] Device ${registeredDeviceId} registriert`);
+            ws.send(JSON.stringify({ 
+              type: 'DEVICE_REGISTERED', 
+              deviceId: registeredDeviceId,
+              message: `Willkommen zurück, ${registeredDeviceId}!`
+            }));
+            return;
+          }
+          
+          // Fallback: Legacy Chat-Support
+          const text = message.toString();
+          const senderId = deviceId || 'Anonymous';
+          console.log(`${senderId} sagt:`, text);
+          
+          // Broadcast an alle aktiven Verbindungen
+          for (const [client, clientDeviceId] of activeConnections) {
+            if (client.readyState === WebSocket.OPEN) {
+              client.send(JSON.stringify({ 
+                type: 'chat', 
+                sender: senderId, 
+                text 
+              }));
+            }
+          }
+          
+        } catch (error) {
+          // Fallback für nicht-JSON Nachrichten
+          const text = message.toString();
+          const senderId = deviceId || 'Anonymous';
+          console.log(`${senderId} sagt:`, text);
+          
+          for (const [client] of activeConnections) {
+            if (client.readyState === WebSocket.OPEN) {
+              client.send(JSON.stringify({ 
+                type: 'chat', 
+                sender: senderId, 
+                text 
+              }));
+            }
           }
         }
       });
 
       ws.on('close', () => {
-        console.log(`${clientId} getrennt`);
-        clients.delete(ws);
+        if (deviceId) {
+          console.log(`[WebSocket] Device ${deviceId} getrennt`);
+          deviceConnections.delete(deviceId);
+        } else {
+          console.log('[WebSocket] Anonyme Verbindung getrennt');
+        }
+        activeConnections.delete(ws);
       });
+
+      // Sende Initial-Message
+      ws.send(JSON.stringify({ 
+        type: 'system', 
+        text: 'Verbunden! Sende Device-Registrierung...' 
+      }));
     });
 
     server.on('upgrade', (request, socket, head) => {
@@ -80,6 +144,7 @@ app
     // ─── 4. Server lauschen ───────────────────────────────────────────────────────
     server.listen(port, () => {
       console.log(`> Ready on http://localhost:${port}`);
+      console.log(`> WebSocket verfügbar auf ws://localhost:${port}/ws`);
     });
   })
   .catch(err => {

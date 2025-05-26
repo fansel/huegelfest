@@ -1,5 +1,5 @@
 'use client';
-import React from 'react';
+import React, { useEffect, useState } from 'react';
 import { useNetworkStatus } from '../hooks/useNetworkStatus';
 
 /**
@@ -8,8 +8,15 @@ import { useNetworkStatus } from '../hooks/useNetworkStatus';
  */
 export const OfflineBanner: React.FC = () => {
   const isOnline = useNetworkStatus();
+  const [isMounted, setIsMounted] = useState(false);
 
-  if (isOnline) return null;
+  // Erst nach Mount anzeigen (Hydration-safe)
+  useEffect(() => {
+    setIsMounted(true);
+  }, []);
+
+  // Während SSR und vor Mount: Nichts anzeigen
+  if (!isMounted || isOnline) return null;
 
   return (
     <div

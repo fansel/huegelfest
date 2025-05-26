@@ -339,6 +339,38 @@ export default function FestivalRegisterForm({ onRegister, setCookies = true }: 
   // Verwende den Auto-Scroll-Hook
   useAutoScrollOnFocus(contentRef, isKeyboardVisible);
   
+  // Synchronisiere fromDay/toDay mit form.days wenn Daten geladen werden
+  useEffect(() => {
+    if (form.days && form.days.length > 0) {
+      const minDay = Math.min(...form.days);
+      const maxDay = Math.max(...form.days);
+      
+      // Nur aktualisieren wenn sich die Werte geändert haben
+      if (minDay !== fromDay || maxDay !== toDay) {
+        console.log('[FestivalRegisterForm] Synchronisiere Zeitraumauswahl:', {
+          formDays: form.days,
+          newFromDay: minDay,
+          newToDay: maxDay,
+          currentFromDay: fromDay,
+          currentToDay: toDay
+        });
+        setFromDay(minDay);
+        setToDay(maxDay);
+      }
+    }
+  }, [form.days, fromDay, toDay]);
+  
+  // Debug: Überwache form State Änderungen
+  useEffect(() => {
+    console.log('[FestivalRegisterForm] Form State geändert:', {
+      name: form.name,
+      days: form.days,
+      priceOption: form.priceOption,
+      hasName: !!form.name.trim(),
+      isDefault: form === defaultData
+    });
+  }, [form]);
+  
   // Disable scrolling on body
   useEffect(() => {
     if (isMobile) {
@@ -373,80 +405,132 @@ export default function FestivalRegisterForm({ onRegister, setCookies = true }: 
       const hasCookieSet = !!Cookies.get('festival_registered');
       console.log('[FestivalRegisterForm] Cookie-Status:', hasCookieSet);
       
-      if (hasCookieSet) {
-        console.log('[FestivalRegisterForm] Cookie gefunden - springe zur Bestätigungsseite');
-        setHasCookie(true);
-        setStep(steps.length - 1); // Direkt auf Bestätigungsseite
-        setIsLoaded(true);
-        hasAlreadyCheckedRef.current = true; // ✅ Markiere als gecheckt
-        return; // Kein DB-Check nötig
+      // 2. SOFORT: localStorage Check für Offline-Fallback
+      let localStorageData = null;
+      try {
+        const saved = localStorage.getItem(LOCAL_STORAGE_KEY);
+        if (saved) {
+          const parsed = JSON.parse(saved);
+          if (parsed && typeof parsed === 'object') {
+            localStorageData = parsed;
+            console.log('[FestivalRegisterForm] localStorage-Daten gefunden:', localStorageData);
+          }
+        }
+      } catch (e) {
+        console.error('[FestivalRegisterForm] localStorage-Parse-Fehler:', e);
       }
       
-      // 2. DANN: DB-Check nur wenn kein Cookie
+      // 3. Netzwerk-Check: Versuche DB-Abfrage, bei Fehler sofort localStorage verwenden
       if (deviceId) {
         try {
-          console.log('[FestivalRegisterForm] Kein Cookie - prüfe DB für deviceId:', deviceId);
+          console.log('[FestivalRegisterForm] Prüfe DB für deviceId:', deviceId);
+          console.log('[FestivalRegisterForm] Rufe getExistingRegistration auf...');
+          
           const result = await getExistingRegistration(deviceId);
-          console.log('[FestivalRegisterForm] DB-Ergebnis:', result);
+          console.log('[FestivalRegisterForm] getExistingRegistration Ergebnis:', result);
+          console.log('[FestivalRegisterForm] result.success:', result.success);
+          console.log('[FestivalRegisterForm] result.data:', result.data);
+          console.log('[FestivalRegisterForm] result.data?.formData:', result.data?.formData);
           
           if (result.success && result.data?.formData) {
             console.log('[FestivalRegisterForm] Bestehende Registration in DB gefunden!');
-            console.log('[FestivalRegisterForm] FormData:', result.data.formData);
+            console.log('[FestivalRegisterForm] FormData Name:', result.data.formData.name);
+            console.log('[FestivalRegisterForm] FormData Days:', result.data.formData.days);
+            console.log('[FestivalRegisterForm] FormData PriceOption:', result.data.formData.priceOption);
+            console.log('[FestivalRegisterForm] Vollständige FormData:', result.data.formData);
             
-            // Lade Daten aus DB
+            // Lade Daten aus DB - WICHTIG: Vor allen State-Updates loggen
+            console.log('[FestivalRegisterForm] Aktuelle form vor Update:', form);
             setForm(result.data.formData);
+            console.log('[FestivalRegisterForm] setForm aufgerufen mit:', result.data.formData);
+            
             setExistingRegistration(result.data);
             
-            // WICHTIG: Setze Cookie und Status
-            if (setCookies) Cookies.set('festival_registered', 'true', { expires: 365 });
+            // Setze Cookie falls noch nicht vorhanden
+            if (setCookies && !hasCookieSet) {
+              Cookies.set('festival_registered', 'true', { expires: 365 });
+            }
             setHasCookie(true);
             setStep(steps.length - 1); // Direkt zur Bestätigungsseite
             
             // Auch in localStorage als Fallback
             try { 
               localStorage.setItem(LOCAL_STORAGE_KEY, JSON.stringify(result.data.formData)); 
-            } catch (e) { console.error('[FestivalRegisterForm] localStorage-Fehler:', e); }
+              console.log('[FestivalRegisterForm] localStorage gesetzt');
+            } catch (e) { 
+              console.error('[FestivalRegisterForm] localStorage-Fehler:', e); 
+            }
             
             hasAlreadyCheckedRef.current = true; // ✅ Markiere als gecheckt
           } else {
-            console.log('[FestivalRegisterForm] Keine DB-Registration - versuche localStorage');
-            // Fallback: localStorage
-            try {
-              const saved = localStorage.getItem(LOCAL_STORAGE_KEY);
-              if (saved) {
-                const parsed = JSON.parse(saved);
-                if (parsed && typeof parsed === 'object') {
-                  console.log('[FestivalRegisterForm] localStorage-Daten gefunden:', parsed);
-                  setForm({ ...defaultData, ...parsed });
-                }
-              }
-            } catch (e) {
-              console.error('[FestivalRegisterForm] localStorage-Parse-Fehler:', e);
+            console.log('[FestivalRegisterForm] Keine DB-Registration gefunden - result.success:', result.success);
+            console.log('[FestivalRegisterForm] result.data:', result.data);
+            
+            // Wenn Cookie existiert aber keine DB-Daten, dann Cookie ungültig machen
+            if (hasCookieSet) {
+              console.log('[FestivalRegisterForm] Cookie vorhanden aber keine DB-Daten - entferne Cookie');
+              if (setCookies) Cookies.remove('festival_registered');
+              setHasCookie(false);
             }
+            
+            // Fallback: localStorage verwenden falls vorhanden
+            if (localStorageData) {
+              console.log('[FestivalRegisterForm] Verwende localStorage als Fallback');
+              setForm({ ...defaultData, ...localStorageData });
+              if (hasCookieSet) {
+                setHasCookie(true);
+                setStep(steps.length - 1); // Zur Bestätigungsseite wenn Cookie da war
+              }
+            } else {
+              console.log('[FestivalRegisterForm] Kein localStorage Fallback verfügbar');
+            }
+            
             hasAlreadyCheckedRef.current = true; // ✅ Markiere als gecheckt (auch bei no-result)
           }
         } catch (error) {
-          console.error('[FestivalRegisterForm] Fehler beim DB-Check:', error);
-          // Fallback localStorage
-          try {
-            const saved = localStorage.getItem(LOCAL_STORAGE_KEY);
-            if (saved) {
-              const parsed = JSON.parse(saved);
-              if (parsed && typeof parsed === 'object') {
-                setForm({ ...defaultData, ...parsed });
-              }
+          console.error('[FestivalRegisterForm] Fehler beim DB-Check (vermutlich offline):', error);
+          console.error('[FestivalRegisterForm] Error Stack:', (error as any)?.stack);
+          
+          // 🚨 OFFLINE-MODUS: DB-Fehler → sofort localStorage verwenden
+          console.log('[FestivalRegisterForm] 🚨 OFFLINE-MODUS: Verwende localStorage');
+          
+          if (localStorageData) {
+            console.log('[FestivalRegisterForm] OFFLINE: localStorage-Daten gefunden, lade Formular');
+            setForm({ ...defaultData, ...localStorageData });
+            
+            // Wenn Cookie da war, zur Bestätigungsseite
+            if (hasCookieSet) {
+              setHasCookie(true);
+              setStep(steps.length - 1);
+              setExistingRegistration({ formData: localStorageData }); // Fake Registration für UI
             }
-          } catch (e) {
-            // ignore
+          } else {
+            console.log('[FestivalRegisterForm] OFFLINE: Kein localStorage verfügbar - zeige leeres Formular');
+            
+            // Wenn Cookie da war aber keine Daten, Cookie entfernen
+            if (hasCookieSet) {
+              console.log('[FestivalRegisterForm] OFFLINE: Cookie entfernen da keine Daten');
+              if (setCookies) Cookies.remove('festival_registered');
+              setHasCookie(false);
+            }
           }
+          
           hasAlreadyCheckedRef.current = true; // ✅ Markiere als gecheckt (auch bei error)
         }
       } else {
         console.log('[FestivalRegisterForm] Keine deviceId verfügbar');
+        
+        // Auch ohne deviceId localStorage checken
+        if (localStorageData) {
+          console.log('[FestivalRegisterForm] Keine deviceId aber localStorage verfügbar');
+          setForm({ ...defaultData, ...localStorageData });
+        }
+        
         hasAlreadyCheckedRef.current = true; // ✅ Markiere als gecheckt
       }
       
       setIsLoaded(true);
+      console.log('[FestivalRegisterForm] checkRegistrationStatus beendet');
     };
 
     checkRegistrationStatus();
@@ -882,6 +966,15 @@ export default function FestivalRegisterForm({ onRegister, setCookies = true }: 
       const result = await registerFestival(formDataWithDevice);
       if (result.success) {
         toast.success("Anmeldung erfolgreich gespeichert!");
+        
+        // ✨ Custom Event für andere Komponenten dispatchen
+        window.dispatchEvent(new CustomEvent('registration-updated', {
+          detail: { deviceId: deviceId, registrationData: formDataWithDevice }
+        }));
+        window.dispatchEvent(new CustomEvent('user-logged-in', {
+          detail: { deviceId: deviceId, userName: formDataWithDevice.name }
+        }));
+        
         if (onRegister) onRegister(formDataWithDevice);
         if (setCookies) Cookies.set('festival_registered', 'true', { expires: 365 });
         setStep(steps.length - 1);

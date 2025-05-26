@@ -26,9 +26,11 @@ interface PWAContainerClientProps {
     reactionsMap: Record<string, any>;
     deviceId: string;
   };
+  carpoolData: any[];
+  packlistData: any[];
 }
 
-export default function PWAContainerClient({ isAdmin, timelineData, infoBoardData }: PWAContainerClientProps) {
+export default function PWAContainerClient({ isAdmin, timelineData, infoBoardData, carpoolData, packlistData }: PWAContainerClientProps) {
   const { mode, activeTab, adminActiveTab, handleAdminToggle, handleTabChange } = useNavigation(isAdmin);
   const { showStarfield, showMusicNote } = useUISettings();
   const { deviceType } = useDeviceContext();
@@ -73,6 +75,8 @@ export default function PWAContainerClient({ isAdmin, timelineData, infoBoardDat
           handleTabChange={handleTabChange}
           timelineData={timelineData}
           infoBoardData={infoBoardData}
+          carpoolData={carpoolData}
+          packlistData={packlistData}
         />
       </main>
       <BottomBar

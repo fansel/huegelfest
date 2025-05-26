@@ -2,8 +2,11 @@
 export const APP_VERSION = {
   // Version aus package.json + Build-Zeit
   version: '0.1.0',
-  buildTime: '1748251722138',
-  buildId: '3a9d7a20165578fd',
+  buildTime: '1748281935831',
+  buildId: '6c9addd0c1f2a122',
+  
+  // Development vs Production unterscheiden
+  isDevelopment: process.env.NODE_ENV === 'development',
   
   // Cache-Namen mit automatischer Versionierung
   getCacheName: () => `huegelfest-cache-v${APP_VERSION.version}-${APP_VERSION.buildId}`,
@@ -14,6 +17,11 @@ export const APP_VERSION = {
   // Check ob neue Version verfügbar
   isNewerThan: (storedVersion: string) => {
     return APP_VERSION.getAppIdentifier() !== storedVersion;
+  },
+  
+  // Development: Sofortige Updates, Production: Controlled Updates
+  shouldForceUpdate: () => {
+    return APP_VERSION.isDevelopment;
   }
 };
 
@@ -21,5 +29,6 @@ export const APP_VERSION = {
 export const VERSION_STORAGE_KEYS = {
   APP_VERSION: 'huegelfest_app_version',
   LAST_UPDATE_CHECK: 'huegelfest_last_update_check',
-  UPDATE_AVAILABLE: 'huegelfest_update_available'
+  UPDATE_AVAILABLE: 'huegelfest_update_available',
+  USER_UPDATE_DISMISSED: 'huegelfest_user_dismissed_update'
 }; 

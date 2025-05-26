@@ -10,6 +10,8 @@ import { useWebSocket, WebSocketMessage } from '@/shared/hooks/useWebSocket';
 import { getWebSocketUrl } from '@/shared/utils/getWebSocketUrl';
 import useSWR from 'swr';
 import { useDeviceId } from '@/shared/hooks/useDeviceId';
+import { OfflineIndicator } from '@/shared/components/OfflineIndicator';
+import { useNetworkStatus } from '@/shared/hooks/useNetworkStatus';
 
 const REACTION_TYPES: ReactionType[] = ['thumbsUp', 'clap', 'laugh', 'surprised', 'heart'];
 
@@ -33,6 +35,7 @@ export default function InfoBoard({ isPWA = false, allowClipboard = false, annou
   const deviceId = useDeviceId();
   const boardRef = useRef<HTMLDivElement>(null);
   const [isVisible, setIsVisible] = useState(false);
+  const isOnline = useNetworkStatus();
 
   // SWR für Announcements + Reactions
   const { data, mutate } = useSWR(
@@ -131,8 +134,23 @@ export default function InfoBoard({ isPWA = false, allowClipboard = false, annou
 
   // UI-Rendering
   return (
-    <div className="relative min-h-screen w-full">
-      <div ref={boardRef} className="relative z-10 w-full px-2 sm:px-6 mt-4 sm:mt-6 lg:mt-10">
+    <div ref={boardRef} className="w-full max-w-4xl mx-auto relative">
+      {/* Offline-Indicator */}
+      <div className="mb-4">
+        <OfflineIndicator className="mx-4" />
+      </div>
+      
+      {/* Status-Anzeige für Ankündigungen */}
+      {!isOnline && announcements.length > 0 && (
+        <div className="mx-4 mb-4 p-3 bg-orange-500/10 border border-orange-500/30 rounded-lg">
+          <p className="text-orange-600 text-sm">
+            📄 Zeige {announcements.length} gespeicherte Ankündigungen. 
+            Neue Ankündigungen werden bei Internetverbindung geladen.
+          </p>
+        </div>
+      )}
+
+      <div className="relative z-10 w-full px-2 sm:px-6 mt-4 sm:mt-6 lg:mt-10">
         <div className="space-y-2 sm:space-y-4 w-full">
           {announcements.length === 0 ? (
             <p className="text-gray-400 text-center">Keine aktuellen Informationen</p>

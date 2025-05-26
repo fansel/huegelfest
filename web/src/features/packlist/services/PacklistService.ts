@@ -1,6 +1,7 @@
 import Packlist from '@/lib/db/models/Packlist';
 import { connectDB } from '@/lib/db/connector';
 import type { PacklistItem } from '../types/PacklistItem';
+import { initServices } from '@/lib/initServices';
 
 const DEFAULT_ITEMS: PacklistItem[] = [
   { id: '1', text: 'Schlafsack', checked: false },
@@ -10,7 +11,7 @@ const DEFAULT_ITEMS: PacklistItem[] = [
 ];
 
 export async function getGlobalPacklist(): Promise<PacklistItem[]> {
-  await connectDB();
+  await initServices();
   const packlist = await Packlist.findOne({ key: 'global' });
   if (!packlist) return DEFAULT_ITEMS;
   return packlist.items.map((item, idx) => ({
@@ -21,7 +22,7 @@ export async function getGlobalPacklist(): Promise<PacklistItem[]> {
 }
 
 export async function updateGlobalPacklist(items: PacklistItem[]): Promise<void> {
-  await connectDB();
+  await initServices();
   await Packlist.findOneAndUpdate(
     { key: 'global' },
     { items: items.map(({ text, checked }) => ({ text, checked })) },
@@ -30,7 +31,7 @@ export async function updateGlobalPacklist(items: PacklistItem[]): Promise<void>
 }
 
 export async function addGlobalPacklistItem(text: string): Promise<void> {
-  await connectDB();
+  await initServices();
   const packlist = await Packlist.findOne({ key: 'global' });
   const items = packlist ? packlist.items : [];
   items.push({ text, checked: false });
@@ -41,15 +42,20 @@ export async function addGlobalPacklistItem(text: string): Promise<void> {
   );
 }
 
-export async function removeGlobalPacklistItem(index: number): Promise<void> {
-  await connectDB();
+export async function removeGlobalPacklistItem(index: number): Promise<string | null> {
+  await initServices();
   const packlist = await Packlist.findOne({ key: 'global' });
-  if (!packlist) return;
+  if (!packlist || !packlist.items[index]) return null;
+  
   const items = [...packlist.items];
+  const removedItem = items[index];
   items.splice(index, 1);
+  
   await Packlist.findOneAndUpdate(
     { key: 'global' },
     { items },
     { upsert: true }
   );
+  
+  return removedItem.text;
 } 

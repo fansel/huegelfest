@@ -9,6 +9,7 @@ import { GlobalStateProvider } from '@/contexts/GlobalStateContext';
 import React from 'react';
 import { DeviceProvider } from "@/shared/contexts/DeviceContext";
 import { UISettingsProvider } from '@/shared/contexts/UISettingsContext';
+import { UpdateServiceProvider } from '@/shared/components/UpdateServiceProvider';
 
 export const metadata: Metadata = {
   title: 'Hügelfest',
@@ -24,8 +25,11 @@ export const viewport: Viewport = {
   themeColor: '#460b6c',
 };
 
-export default async function RootLayout({ children }: { children: React.ReactNode }) {
-
+export default function RootLayout({
+  children,
+}: {
+  children: React.ReactNode;
+}) {
   return (
     <html lang="de" className={GeistMono.className}>
       <head>
@@ -41,8 +45,10 @@ export default async function RootLayout({ children }: { children: React.ReactNo
             <AuthProvider>
               <GlobalStateProvider>
                 <UISettingsProvider>
-                  {children}
-                  <Toaster position="top-right" />
+                  <UpdateServiceProvider>
+                    {children}
+                    <Toaster position="top-right" />
+                  </UpdateServiceProvider>
                 </UISettingsProvider>
               </GlobalStateProvider>
             </AuthProvider>

@@ -146,7 +146,7 @@ export async function updateRegistration(id: string, updates: Partial<IRegistrat
     logger.error('[Registration] Fehler bei updateRegistration:', error);
     return { success: false, error: 'Fehler beim Aktualisieren der Anmeldung' };
   }
-}
+} 
 
 /**
  * Lädt Registration-Daten für einen User basierend auf deviceId
@@ -233,14 +233,49 @@ export async function getRegistrationByDeviceId(deviceId: string): Promise<{ suc
       deviceId: deviceId
     };
     
-    logger.info(`[Registration] Bestehende Registration für ${deviceId} geladen`);
+    logger.info(`[Registration] Bestehende Registration für ${deviceId} geladen:`, {
+      name: registrationData.name,
+      days: registrationData.days,
+      priceOption: registrationData.priceOption
+    });
+    
+    // Debug: Logge alle Details der geladenen Registration
+    console.log('[RegistrationService] Raw registration from DB:', registration);
+    console.log('[RegistrationService] Converted registrationData:', registrationData);
+    
+    // Serialisiere die vollständige Registration korrekt
+    const serializedRegistration = {
+      _id: registration._id?.toString(),
+      name: registration.name,
+      days: registration.days,
+      priceOption: registration.priceOption,
+      isMedic: registration.isMedic,
+      travelType: registration.travelType,
+      equipment: registration.equipment,
+      concerns: registration.concerns,
+      wantsToContribute: registration.wantsToContribute,
+      wantsToOfferWorkshop: registration.wantsToOfferWorkshop,
+      sleepingPreference: registration.sleepingPreference,
+      lineupContribution: registration.lineupContribution,
+      paid: registration.paid,
+      checkedIn: registration.checkedIn,
+      // Serialisiere Dates korrekt
+      createdAt: registration.createdAt ? 
+        (registration.createdAt instanceof Date ? 
+          registration.createdAt.toISOString() : 
+          registration.createdAt) : 
+        null,
+      updatedAt: registration.updatedAt ? 
+        (registration.updatedAt instanceof Date ? 
+          registration.updatedAt.toISOString() : 
+          registration.updatedAt) : 
+        null,
+    };
     
     return { 
       success: true, 
       data: {
-        ...registration,
-        _id: registration._id.toString(),
-        createdAt: registration.createdAt instanceof Date ? registration.createdAt.toISOString() : registration.createdAt,
+        ...serializedRegistration,
         // Zusätzlich: FestivalRegisterData für FormFeed
         formData: registrationData
       }

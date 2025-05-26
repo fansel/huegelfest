@@ -17,6 +17,8 @@ import { useFavorites } from '@/features/favorites/hooks/useFavorites';
 import { fetchTimeline } from '../actions/fetchTimeline';
 import toast from 'react-hot-toast';
 import { formatDateBerlin } from '@/shared/utils/formatDateBerlin';
+import { OfflineIndicator } from '@/shared/components/OfflineIndicator';
+import { useNetworkStatus } from '@/shared/hooks/useNetworkStatus';
 
 
 interface TimelineDay {
@@ -87,6 +89,7 @@ export default function Timeline({ showFavoritesOnly = false, allowClipboard = f
   );
 
   const { isFavorite } = useFavorites();
+  const isOnline = useNetworkStatus();
 
   useWebSocket(getWebSocketUrl(), {
     onMessage: async (msg: any) => {
@@ -282,6 +285,11 @@ export default function Timeline({ showFavoritesOnly = false, allowClipboard = f
 
   return (
     <div className="w-full max-w-4xl mx-auto">
+      {/* Offline-Indicator am oberen Rand */}
+      <div className="mb-2">
+        <OfflineIndicator className="mx-4" />
+      </div>
+      
       <div className="sticky top-0 z-10 bg-[#460b6c]/90 backdrop-blur-sm py-2 px-4">
         {/* Tage-Auswahl für Desktop */}
         <div className="hidden md:grid md:grid-cols-3 lg:grid-cols-4 gap-2 mb-4">
@@ -374,16 +382,25 @@ export default function Timeline({ showFavoritesOnly = false, allowClipboard = f
           )}
         </div>
       </div>
-      {/* Dezent platzierter kleiner Button unterhalb der Tages-/Filterauswahl */}
+      
+      {/* Event vorschlagen Button - zeigt Offline-Status */}
       <div className="flex justify-center my-4">
         <button
-          className="flex items-center gap-1 px-2 py-1 rounded bg-[#ff9900]/20 text-[#ff9900] text-xs font-medium hover:bg-[#ff9900]/30 transition border border-[#ff9900]/30 shadow-none"
+          className={`flex items-center gap-1 px-2 py-1 rounded text-xs font-medium transition border shadow-none ${
+            isOnline 
+              ? 'bg-[#ff9900]/20 text-[#ff9900] hover:bg-[#ff9900]/30 border-[#ff9900]/30' 
+              : 'bg-gray-400/20 text-gray-500 border-gray-400/30 cursor-not-allowed'
+          }`}
           style={{ minHeight: 0, minWidth: 0 }}
-          onClick={() => setShowSubmissionSheet(true)}
+          onClick={() => isOnline && setShowSubmissionSheet(true)}
+          disabled={!isOnline}
+          title={!isOnline ? 'Event einreichen ist nur online möglich' : 'Event vorschlagen'}
         >
-          <span className="text-base leading-none">＋</span> Event vorschlagen
+          <span className="text-base leading-none">＋</span> 
+          {isOnline ? 'Event vorschlagen' : 'Event vorschlagen (offline)'}
         </button>
       </div>
+
       {/* EventSubmissionSheet */}
       <EventSubmissionSheet
         open={showSubmissionSheet}

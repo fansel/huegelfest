@@ -34,6 +34,13 @@ export interface DeviceTransferResult {
   userId?: string;
   userName?: string;
   error?: string;
+  transferredDeviceId?: string;
+  newFreshDeviceId?: string;
+  pushSubscriptionInfo?: {
+    hadPushSubscription: boolean;
+    requiresReactivation: boolean;
+    message?: string;
+  };
 }
 
 export interface ActiveMagicCode {

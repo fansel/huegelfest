@@ -13,17 +13,19 @@ import { Input } from '@/shared/components/ui/input';
 import { Label } from '@/shared/components/ui/label';
 import { Alert, AlertDescription } from '@/shared/components/ui/alert';
 import { Card, CardHeader, CardTitle, CardDescription, CardContent } from '@/shared/components/ui/card';
-import { Smartphone, ArrowRight, Key, Clock, CheckCircle, AlertCircle, QrCode } from 'lucide-react';
+import { Smartphone, ArrowRight, Key, Clock, CheckCircle, AlertCircle, QrCode, Info } from 'lucide-react';
 import { useDeviceId } from '@/shared/hooks/useDeviceId';
 import { 
   createMagicCodeAction, 
   transferDeviceAction, 
   checkActiveMagicCodeAction 
 } from '../actions/magicCodeActions';
+import { getUserWithRegistrationAction } from '@/features/auth/actions/userActions';
 import { toast } from 'react-hot-toast';
 import { pushPermissionUtils } from '../../settings/components/PushNotificationSettings';
 import { useWebSocket, WebSocketMessage } from '@/shared/hooks/useWebSocket';
 import { getWebSocketUrl } from '@/shared/utils/getWebSocketUrl';
+import UserSettingsCard from '../../settings/components/UserSettingsCard';
 
 interface DeviceTransferSettingsProps {
   variant?: 'row' | 'tile';
@@ -33,7 +35,13 @@ type TransferStep = 'initial' | 'generate' | 'input' | 'success';
 
 interface GeneratedCode {
   code: string;
-  expiresAt: Date;
+  expiresAt: string;
+}
+
+interface UserInfo {
+  name: string;
+  hasRegistration: boolean;
+  deviceId: string;
 }
 
 export default function DeviceTransferSettings({ variant = 'row' }: DeviceTransferSettingsProps) {
@@ -47,6 +55,8 @@ export default function DeviceTransferSettings({ variant = 'row' }: DeviceTransf
   const [hasActiveCode, setHasActiveCode] = useState(false);
   const [transferredUser, setTransferredUser] = useState<string | null>(null);
   const [transferResult, setTransferResult] = useState<any | null>(null);
+  const [userInfo, setUserInfo] = useState<UserInfo | null>(null);
+  const [showDebug, setShowDebug] = useState(false);
 
   // NEU: WebSocket-Listener für Transfer-Bestätigungen
   useWebSocket(
@@ -77,15 +87,47 @@ export default function DeviceTransferSettings({ variant = 'row' }: DeviceTransf
             // Toast mit weiteren Infos
             setTimeout(() => {
               toast.success(
-                'Dein Account ist jetzt auf dem neuen Gerät verfügbar. Dieses Gerät wurde zurückgesetzt.',
+                'Dein Account ist jetzt auf dem neuen Gerät verfügbar. Dieses Gerät wird resettet.',
                 { duration: 7000, icon: '📱' }
               );
             }, 1000);
             
-            // Nach kurzer Verzögerung die Seite neu laden (für Clean-Up)
+            // ✨ WICHTIG: Setze neue deviceId für dieses (alte) Gerät im localStorage
+            // Das alte Gerät bekommt eine neue Identität
+            if (payload.newFreshDeviceId) {
+              localStorage.setItem('deviceId', payload.newFreshDeviceId);
+              console.log(`[DeviceTransferSettings] Neue deviceId für altes Gerät gesetzt: ${payload.newFreshDeviceId}`);
+            }
+            
+            // Nach kurzer Verzögerung die Seite neu laden (für kompletten Reset)
             setTimeout(() => {
               window.location.reload();
             }, 3000);
+          }
+        } else if (msg.topic === 'device-transfer-push-prompt') {
+          const payload = msg.payload as any;
+          // Prüfe ob die Nachricht für dieses Gerät ist (NEUES Gerät)
+          if (payload.deviceId === deviceId) {
+            console.log('[DeviceTransferSettings] Push-Prompt erhalten:', payload);
+            
+            // ✨ WICHTIG: Setze übertragene deviceId für dieses (neue) Gerät
+            // Das neue Gerät übernimmt die Identität des alten Geräts
+            if (payload.transferredDeviceId) {
+              localStorage.setItem('deviceId', payload.transferredDeviceId);
+              console.log(`[DeviceTransferSettings] Übertragene deviceId für neues Gerät gesetzt: ${payload.transferredDeviceId}`);
+            }
+            
+            // Push-Prompt wird von AutoPushPrompt automatisch gehandhabt 
+            // - kein manueller Code hier nötig
+            toast.success(
+              `Willkommen zurück, ${payload.userName}! Die App wird neu geladen...`,
+              { duration: 4000, icon: '🔔' }
+            );
+            
+            // Reload nach deviceId-Update
+            setTimeout(() => {
+              window.location.reload();
+            }, 2000);
           }
         }
       },
@@ -96,6 +138,112 @@ export default function DeviceTransferSettings({ variant = 'row' }: DeviceTransf
     }
   );
 
+  // Lade User-Informationen
+  const loadUserInfo = async () => {
+    if (!deviceId) {
+      console.log('[DeviceTransferSettings] Keine deviceId verfügbar');
+      return;
+    }
+    
+    console.log('[DeviceTransferSettings] Lade User-Info für deviceId:', deviceId);
+    
+    try {
+      const user = await getUserWithRegistrationAction(deviceId);
+      console.log('[DeviceTransferSettings] User-Daten erhalten:', user);
+      
+      if (user) {
+        const userInfo = {
+          name: user.name,
+          hasRegistration: !!user.registrationId,
+          deviceId: deviceId
+        };
+        console.log('[DeviceTransferSettings] Setting userInfo:', userInfo);
+        setUserInfo(userInfo);
+      } else {
+        console.log('[DeviceTransferSettings] Kein User gefunden - setze Standard-Werte');
+        setUserInfo({
+          name: 'Nicht angemeldet',
+          hasRegistration: false,
+          deviceId: deviceId
+        });
+      }
+    } catch (error) {
+      console.error('[DeviceTransferSettings] Fehler beim Laden der User-Info:', error);
+      setUserInfo({
+        name: 'Nicht angemeldet',
+        hasRegistration: false,
+        deviceId: deviceId || 'Unbekannt'
+      });
+    }
+  };
+
+  useEffect(() => {
+    loadUserInfo();
+  }, [deviceId, transferResult]); // Auch bei transferResult neu laden
+
+  // Beim Öffnen des Dialogs User-Info neu laden
+  useEffect(() => {
+    if (isOpen) {
+      loadUserInfo();
+    }
+  }, [isOpen]);
+
+  // Event Listener für Registrierungsänderungen
+  useEffect(() => {
+    const handleRegistrationChange = () => {
+      console.log('[DeviceTransferSettings] Registrierung geändert - lade User-Info neu');
+      loadUserInfo();
+    };
+
+    const handleStorageChange = (e: StorageEvent) => {
+      if (e.key === 'deviceId' || e.key === 'userRegistration') {
+        console.log('[DeviceTransferSettings] Storage-Änderung erkannt - lade User-Info neu');
+        loadUserInfo();
+      }
+    };
+
+    const handleVisibilityChange = () => {
+      if (!document.hidden) {
+        console.log('[DeviceTransferSettings] App wieder fokussiert - lade User-Info neu');
+        loadUserInfo();
+      }
+    };
+
+    // Custom Events für Registrierungsänderungen
+    window.addEventListener('registration-updated', handleRegistrationChange);
+    window.addEventListener('user-logged-in', handleRegistrationChange);
+    window.addEventListener('user-logged-out', handleRegistrationChange);
+    
+    // Storage Events für deviceId Änderungen
+    window.addEventListener('storage', handleStorageChange);
+    
+    // Visibility Change für App-Fokus
+    document.addEventListener('visibilitychange', handleVisibilityChange);
+
+    return () => {
+      window.removeEventListener('registration-updated', handleRegistrationChange);
+      window.removeEventListener('user-logged-in', handleRegistrationChange);
+      window.removeEventListener('user-logged-out', handleRegistrationChange);
+      window.removeEventListener('storage', handleStorageChange);
+      document.removeEventListener('visibilitychange', handleVisibilityChange);
+    };
+  }, [deviceId]);
+
+  // Zusätzlich: Aktualisiere User-Info wenn ein Transfer abgeschlossen ist
+  useEffect(() => {
+    if (transferResult?.success && transferResult?.userName) {
+      setUserInfo(prev => prev ? {
+        ...prev,
+        name: transferResult.userName,
+        hasRegistration: true
+      } : {
+        name: transferResult.userName,
+        hasRegistration: true,
+        deviceId: transferResult.transferredDeviceId || deviceId || 'Unbekannt'
+      });
+    }
+  }, [transferResult, deviceId]);
+
   // Prüfe bei Öffnung ob bereits ein aktiver Code existiert
   useEffect(() => {
     if (isOpen && deviceId) {
@@ -104,29 +252,26 @@ export default function DeviceTransferSettings({ variant = 'row' }: DeviceTransf
   }, [isOpen, deviceId]);
 
   const handleGenerateCode = async () => {
-    if (!deviceId) {
-      setError('Device ID nicht verfügbar');
-      return;
-    }
-
+    if (!deviceId) return;
+    
     setIsLoading(true);
     setError(null);
-
+    
     try {
       const result = await createMagicCodeAction(deviceId);
       
       if (result.success && result.code && result.expiresAt) {
-        setGeneratedCode({
-          code: result.code,
-          expiresAt: result.expiresAt
+        setGeneratedCode({ 
+          code: result.code, 
+          expiresAt: result.expiresAt // Bereits ISO String vom Server
         });
         setCurrentStep('generate');
-        toast.success('Magic Code erstellt');
       } else {
-        setError(result.error || 'Fehler beim Erstellen des Codes');
+        setError(result.error || 'Fehler beim Generieren des Codes');
       }
-    } catch (err) {
-      setError(err instanceof Error ? err.message : 'Unbekannter Fehler');
+    } catch (error) {
+      console.error('[DeviceTransferSettings] Fehler beim Generieren:', error);
+      setError('Ein unerwarteter Fehler ist aufgetreten');
     } finally {
       setIsLoading(false);
     }
@@ -154,18 +299,23 @@ export default function DeviceTransferSettings({ variant = 'row' }: DeviceTransf
         setCurrentStep('success');
         toast.success('Gerätewechsel erfolgreich!');
         
-        // NEU: Reset Push-Permissions und zeige Prompt nach erfolgreichem Transfer
+        // ✨ WICHTIG: Übernehme die deviceId des alten Geräts SOFORT
+        // Das neue Gerät übernimmt die "Identität" des alten Geräts
+        if (result.transferredDeviceId) {
+          localStorage.setItem('deviceId', result.transferredDeviceId);
+          console.log(`[DeviceTransferSettings] Neue Identität übernommen: ${result.transferredDeviceId}`);
+        }
+        
+        // Reset Push-Permissions - wird automatisch über WebSocket gehandhabt
         pushPermissionUtils.resetPermissions();
         
         setTransferResult(result);
         
-        // ✅ Push-Behandlung läuft jetzt automatisch über WebSocket vom Server
-        // Kein manueller Trigger mehr nötig - Server entscheidet intelligent!
-        
-        // Längerer Delay für Reload damit User eventuellen Prompt oder Push sieht
+        // Automatisches Reload nach erfolgreichem Transfer
+        // WebSocket-Handler übernimmt Push-Einrichtung automatisch
         setTimeout(() => {
           window.location.reload();
-        }, 8000); // 8 Sekunden damit User Zeit hat
+        }, 3000); // Kürzerer Delay da deviceId bereits gesetzt ist
       } else {
         setError(result.error || 'Fehler beim Gerätewechsel');
       }
@@ -176,14 +326,15 @@ export default function DeviceTransferSettings({ variant = 'row' }: DeviceTransf
     }
   };
 
-  const formatTimeRemaining = (expiresAt: Date): string => {
+  const formatTimeRemaining = (expiresAt: string): string => {
+    const expiry = new Date(expiresAt); // Konvertiere ISO String zu Date
     const now = new Date();
-    const diff = expiresAt.getTime() - now.getTime();
+    const diffMs = expiry.getTime() - now.getTime();
     
-    if (diff <= 0) return 'Abgelaufen';
+    if (diffMs <= 0) return 'Abgelaufen';
     
-    const minutes = Math.floor(diff / (1000 * 60));
-    const seconds = Math.floor((diff % (1000 * 60)) / 1000);
+    const minutes = Math.floor(diffMs / (1000 * 60));
+    const seconds = Math.floor((diffMs % (1000 * 60)) / 1000);
     
     return `${minutes}:${seconds.toString().padStart(2, '0')}`;
   };
@@ -197,6 +348,8 @@ export default function DeviceTransferSettings({ variant = 'row' }: DeviceTransf
     setTransferredUser(null);
     setTransferResult(null);
   };
+
+  const isCodeGenerationDisabled = !userInfo?.hasRegistration;
 
   const renderInitialStep = () => (
     <div className="space-y-4">
@@ -213,20 +366,39 @@ export default function DeviceTransferSettings({ variant = 'row' }: DeviceTransf
           </CardHeader>
         </Card>
 
-        <Card className="cursor-pointer hover:shadow-md transition-shadow" onClick={handleGenerateCode}>
+        <Card 
+          className={`cursor-pointer transition-shadow ${
+            isCodeGenerationDisabled 
+              ? 'opacity-50 cursor-not-allowed' 
+              : 'hover:shadow-md'
+          }`} 
+          onClick={isCodeGenerationDisabled ? undefined : handleGenerateCode}
+        >
           <CardHeader className="text-center pb-4">
             <div className="mx-auto w-12 h-12 bg-green-100 rounded-full flex items-center justify-center mb-2">
               <Key className="w-6 h-6 text-green-600" />
             </div>
             <CardTitle className="text-base">Code erstellen</CardTitle>
             <CardDescription className="text-sm">
-              Für Transfer auf neues Gerät
+              {isCodeGenerationDisabled 
+                ? 'Erst anmelden erforderlich'
+                : 'Für Transfer auf neues Gerät'
+              }
             </CardDescription>
           </CardHeader>
         </Card>
       </div>
 
-      {hasActiveCode && (
+      {isCodeGenerationDisabled && (
+        <Alert className="border-orange-200 bg-orange-50">
+          <AlertCircle className="h-4 w-4 text-orange-600" />
+          <AlertDescription className="text-orange-800">
+            Du musst dich zuerst für das Festival anmelden, bevor du einen Magic Code erstellen kannst.
+          </AlertDescription>
+        </Alert>
+      )}
+
+      {hasActiveCode && !isCodeGenerationDisabled && (
         <Alert className="border-orange-200 bg-orange-50">
           <AlertCircle className="h-4 w-4 text-orange-600" />
           <AlertDescription className="text-orange-800">
@@ -234,6 +406,39 @@ export default function DeviceTransferSettings({ variant = 'row' }: DeviceTransf
           </AlertDescription>
         </Alert>
       )}
+
+      {/* Debug-Informationen */}
+      <div className="mt-4 p-3 bg-gray-50 rounded-lg border">
+        <div className="flex items-center justify-between">
+          <span className="text-sm font-medium text-gray-700">Debug-Informationen</span>
+          <Button
+            variant="ghost"
+            size="sm"
+            onClick={() => setShowDebug(!showDebug)}
+            className="text-xs"
+          >
+            {showDebug ? 'Ausblenden' : 'Anzeigen'}
+          </Button>
+        </div>
+        {showDebug && (
+          <div className="mt-2 space-y-1 text-xs text-gray-600">
+            <div><strong>Device ID:</strong> {userInfo?.deviceId || 'Nicht verfügbar'}</div>
+            <div><strong>Name:</strong> {userInfo?.name || 'Nicht verfügbar'}</div>
+            <div><strong>Angemeldet:</strong> {userInfo?.hasRegistration ? 'Ja' : 'Nein'}</div>
+            <div><strong>Hook Device ID:</strong> {deviceId || 'Nicht verfügbar'}</div>
+            <div><strong>userInfo State:</strong> {userInfo ? 'Gesetzt' : 'Null'}</div>
+            <div><strong>Code-Generierung disabled:</strong> {isCodeGenerationDisabled ? 'Ja' : 'Nein'}</div>
+            <Button 
+              variant="outline" 
+              size="sm" 
+              onClick={loadUserInfo}
+              className="mt-2 text-xs"
+            >
+              User-Info neu laden
+            </Button>
+          </div>
+        )}
+      </div>
     </div>
   );
 
@@ -357,33 +562,79 @@ export default function DeviceTransferSettings({ variant = 'row' }: DeviceTransf
       <Alert className="border-green-200 bg-green-50">
         <CheckCircle className="h-4 w-4 text-green-600" />
         <AlertDescription className="text-green-800">
-          Die App wird automatisch neu geladen, um die Änderungen zu übernehmen.
+          ✨ Dieses Gerät hat deine Account-Identität übernommen.<br />
+          Die App wird automatisch neu geladen.
         </AlertDescription>
       </Alert>
 
-      {/* NEU: Push-Notification Warnung falls nötig */}
+      {/* Push-Notification Info */}
       {transferResult?.pushSubscriptionInfo?.requiresReactivation && (
         <Alert className="border-blue-200 bg-blue-50">
           <CheckCircle className="h-4 w-4 text-blue-600" />
           <AlertDescription className="text-blue-800">
             <strong>Fast fertig!</strong><br />
-            Du wirst gleich gefragt, ob du Push-Benachrichtigungen aktivieren möchtest.
+            Push-Benachrichtigungen werden automatisch eingerichtet.
           </AlertDescription>
         </Alert>
+      )}
+
+      <div className="text-sm text-gray-500 bg-gray-50 p-3 rounded-lg">
+        <p><strong>Was ist passiert?</strong></p>
+        <ul className="list-disc list-inside space-y-1 mt-2 text-left">
+          <li>Dieses Gerät hat deine Account-Identität übernommen</li>
+          <li>Das alte Gerät wurde komplett zurückgesetzt</li>
+          <li>Alle deine Daten sind auf diesem Gerät verfügbar</li>
+          <li>Push-Benachrichtigungen werden automatisch aktiviert</li>
+        </ul>
+      </div>
+    </div>
+  );
+
+  // Haupt-Button für SettingsCard
+  const switchElement = (
+    <Button 
+      variant="outline" 
+      size="sm"
+      onClick={(e) => {
+        e.stopPropagation();
+        setIsOpen(true);
+      }}
+      className="text-xs"
+    >
+      Öffnen
+    </Button>
+  );
+
+  // Info-Text für Tooltip
+  const infoText = (
+    <div className="space-y-2">
+      <p>Übertrage deine Festival-Anmeldung auf ein neues Gerät oder hole sie von einem alten Gerät.</p>
+      <div className="space-y-1">
+        <p><strong>Funktionen:</strong></p>
+        <ul className="list-disc list-inside space-y-1 text-sm">
+          <li>Code erstellen für Transfer auf neues Gerät</li>
+          <li>Code eingeben um Daten zu empfangen</li>
+          <li>Automatische Push-Einrichtung</li>
+          <li>Kompletter Account-Transfer</li>
+        </ul>
+      </div>
+      {!userInfo?.hasRegistration && (
+        <p className="text-orange-600 font-medium">
+          Hinweis: Du musst zuerst angemeldet sein, um einen Code zu erstellen.
+        </p>
       )}
     </div>
   );
 
   return (
     <>
-      <Button
-        variant="outline"
-        onClick={() => setIsOpen(true)}
-        className="gap-2"
-      >
-        <Smartphone className="w-4 h-4" />
-        Gerätewechsel
-      </Button>
+      <UserSettingsCard
+        icon={<Smartphone className="w-5 h-5 text-[#ff9900]" />}
+        title="Gerätewechsel"
+        switchElement={switchElement}
+        info={infoText}
+        variant={variant}
+      />
 
       <Dialog open={isOpen} onOpenChange={setIsOpen}>
         <DialogContent className="max-w-md">

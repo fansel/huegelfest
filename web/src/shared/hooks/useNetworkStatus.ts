@@ -2,12 +2,18 @@ import { useEffect, useState } from 'react';
 
 /**
  * React-Hook zur Überwachung des Netzwerkstatus (online/offline).
- * Gibt true zurück, wenn online, sonst false.
+ * SSR-safe: Startet mit null und zeigt dann den echten Status.
  */
 export function useNetworkStatus(): boolean {
-  const [isOnline, setIsOnline] = useState<boolean>(typeof navigator !== 'undefined' ? navigator.onLine : true);
+  // Starte mit null für SSR-Kompatibilität, dann echter Wert
+  const [isOnline, setIsOnline] = useState<boolean>(true); // Default online für SSR
+  const [isHydrated, setIsHydrated] = useState(false);
 
   useEffect(() => {
+    // Nach Hydration: Echten Navigator-Status setzen
+    setIsOnline(navigator.onLine);
+    setIsHydrated(true);
+
     const handleOnline = () => setIsOnline(true);
     const handleOffline = () => setIsOnline(false);
 
@@ -19,6 +25,11 @@ export function useNetworkStatus(): boolean {
       window.removeEventListener('offline', handleOffline);
     };
   }, []);
+
+  // Während SSR und vor Hydration: Immer online annehmen
+  if (!isHydrated) {
+    return true;
+  }
 
   return isOnline;
 } 

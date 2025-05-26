@@ -3,6 +3,9 @@
 import React, { useState } from 'react';
 import type { Category, Event, Day } from '../types/types';
 import { Sheet, SheetContent, SheetHeader, SheetTitle } from '@/shared/components/ui/sheet';
+import { useNetworkStatus } from '@/shared/hooks/useNetworkStatus';
+import { WifiOff } from 'lucide-react';
+
 export interface EventSubmissionSheetProps {
   open: boolean;
   onClose: () => void;
@@ -14,6 +17,7 @@ export interface EventSubmissionSheetProps {
 /**
  * Sheet-Komponente für das Einreichen eines neuen Events durch Nutzer.
  * Validiert Eingaben und gibt Fehler/Erfolgsmeldungen aus.
+ * Deaktiviert sich automatisch im Offline-Modus.
  */
 export const EventSubmissionSheet: React.FC<EventSubmissionSheetProps> = ({ open, onClose, categories, days, onSubmit }) => {
   const [title, setTitle] = useState('');
@@ -25,6 +29,8 @@ export const EventSubmissionSheet: React.FC<EventSubmissionSheetProps> = ({ open
   const [error, setError] = useState<string | null>(null);
   const [success, setSuccess] = useState(false);
   const [loading, setLoading] = useState(false);
+  
+  const isOnline = useNetworkStatus();
 
   const resetForm = () => {
     setTitle('');
@@ -41,6 +47,13 @@ export const EventSubmissionSheet: React.FC<EventSubmissionSheetProps> = ({ open
     e.preventDefault();
     setError(null);
     setSuccess(false);
+    
+    // Offline-Prüfung
+    if (!isOnline) {
+      setError('Event-Einreichung ist nur online möglich. Bitte stelle eine Internetverbindung her.');
+      return;
+    }
+    
     // Validierung
     if (!title.trim()) {
       setError('Bitte gib einen Titel an.');
@@ -91,23 +104,41 @@ export const EventSubmissionSheet: React.FC<EventSubmissionSheetProps> = ({ open
             <span className="text-xl font-semibold text-[#460b6c]">Event vorschlagen</span>
           </SheetTitle>
         </SheetHeader>
+        
+        {/* Offline-Warnung */}
+        {!isOnline && (
+          <div className="mx-4 mt-4 p-3 bg-orange-500/10 border border-orange-500/30 rounded-lg flex items-center gap-2">
+            <WifiOff className="text-orange-500" size={20} />
+            <div>
+              <p className="text-orange-600 font-medium text-sm">Offline-Modus</p>
+              <p className="text-orange-600/80 text-xs">Event-Einreichung benötigt eine Internetverbindung</p>
+            </div>
+          </div>
+        )}
+        
         <div className="flex flex-col gap-6 items-center justify-center py-8 pb-4 h-full">
           <form onSubmit={handleSubmit} className="w-full max-w-md mx-auto flex flex-col gap-4 px-4 flex-1">
             <label className="text-sm font-medium text-gray-700">Titel*</label>
             <input
               type="text"
-              className="mt-1 block w-full border border-gray-300 rounded-md p-2"
+              className={`mt-1 block w-full border border-gray-300 rounded-md p-2 ${
+                !isOnline ? 'bg-gray-100 cursor-not-allowed' : ''
+              }`}
               value={title}
               onChange={e => setTitle(e.target.value)}
               required
               maxLength={80}
+              disabled={!isOnline}
             />
             <label className="text-sm font-medium text-gray-700">Tag*</label>
             <select
-              className="mt-1 block w-full border border-gray-300 rounded-md p-2"
+              className={`mt-1 block w-full border border-gray-300 rounded-md p-2 ${
+                !isOnline ? 'bg-gray-100 cursor-not-allowed' : ''
+              }`}
               value={dayId}
               onChange={e => setDayId(e.target.value)}
               required
+              disabled={!isOnline}
             >
               <option value="">Bitte wählen...</option>
               {days.map(day => (
@@ -117,17 +148,23 @@ export const EventSubmissionSheet: React.FC<EventSubmissionSheetProps> = ({ open
             <label className="text-sm font-medium text-gray-700">Uhrzeit* (HH:MM)</label>
             <input
               type="time"
-              className="mt-1 block w-full border border-gray-300 rounded-md p-2 text-base focus:outline-none focus:ring-2 focus:ring-[#ff9900] focus:border-transparent"
+              className={`mt-1 block w-full border border-gray-300 rounded-md p-2 text-base focus:outline-none focus:ring-2 focus:ring-[#ff9900] focus:border-transparent ${
+                !isOnline ? 'bg-gray-100 cursor-not-allowed' : ''
+              }`}
               value={time}
               onChange={e => setTime(e.target.value)}
               required
+              disabled={!isOnline}
             />
             <label className="text-sm font-medium text-gray-700">Kategorie*</label>
             <select
-              className="mt-1 block w-full border border-gray-300 rounded-md p-2"
+              className={`mt-1 block w-full border border-gray-300 rounded-md p-2 ${
+                !isOnline ? 'bg-gray-100 cursor-not-allowed' : ''
+              }`}
               value={categoryId}
               onChange={e => setCategoryId(e.target.value)}
               required
+              disabled={!isOnline}
             >
               <option value="">Bitte wählen...</option>
               {categories.map(cat => (
@@ -136,20 +173,26 @@ export const EventSubmissionSheet: React.FC<EventSubmissionSheetProps> = ({ open
             </select>
             <label className="text-sm font-medium text-gray-700">Beschreibung</label>
             <textarea
-              className="mt-1 block w-full border border-gray-300 rounded-md p-2"
+              className={`mt-1 block w-full border border-gray-300 rounded-md p-2 ${
+                !isOnline ? 'bg-gray-100 cursor-not-allowed' : ''
+              }`}
               value={description}
               onChange={e => setDescription(e.target.value)}
               rows={3}
               maxLength={500}
+              disabled={!isOnline}
             />
             <label className="text-sm font-medium text-gray-700">Angeboten von</label>
             <input
               type="text"
-              className="mt-1 block w-full border border-gray-300 rounded-md p-2"
+              className={`mt-1 block w-full border border-gray-300 rounded-md p-2 ${
+                !isOnline ? 'bg-gray-100 cursor-not-allowed' : ''
+              }`}
               value={offeredBy}
               onChange={e => setOfferedBy(e.target.value)}
               maxLength={80}
               placeholder="z.B. Max Mustermann oder Gruppe XY"
+              disabled={!isOnline}
             />
             {error && <div className="text-red-500 text-sm">{error}</div>}
             {success && <div className="text-green-600 text-sm">Event wurde eingereicht und wird geprüft.</div>}
@@ -164,8 +207,12 @@ export const EventSubmissionSheet: React.FC<EventSubmissionSheetProps> = ({ open
               </button>
               <button
                 type="submit"
-                className="bg-[#ff9900] text-[#460b6c] font-semibold px-4 py-2 rounded-md hover:bg-[#ff9900]/90 transition"
-                disabled={loading}
+                className={`px-4 py-2 rounded-md font-semibold transition ${
+                  !isOnline 
+                    ? 'bg-gray-300 text-gray-500 cursor-not-allowed' 
+                    : 'bg-[#ff9900] text-[#460b6c] hover:bg-[#ff9900]/90'
+                }`}
+                disabled={loading || !isOnline}
               >
                 {loading ? 'Wird gesendet...' : 'Event einreichen'}
               </button>

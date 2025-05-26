@@ -52,9 +52,48 @@ export async function getUserWithRegistration(deviceId: string) {
   try {
     const user = await User.findOne({ deviceId, isActive: true })
       .populate('registrationId')
-      .populate('groupId', 'name description');
+      .populate('groupId', 'name description')
+      .lean(); // Wichtig: lean() für plain objects
     
-    return user;
+    if (!user) {
+      logger.info(`[UserService] Kein User gefunden für deviceId: ${deviceId}`);
+      return null;
+    }
+    
+    logger.info(`[UserService] User gefunden: ${user.name} (${deviceId})`);
+    
+    // Serialisiere die Daten für den Client
+    const serializedUser = {
+      _id: user._id?.toString(),
+      deviceId: user.deviceId,
+      name: user.name,
+      isActive: user.isActive,
+      // Serialisiere registrationId
+      registrationId: user.registrationId ? {
+        _id: (user.registrationId as any)?._id?.toString(),
+        name: (user.registrationId as any)?.name,
+        days: (user.registrationId as any)?.days,
+        priceOption: (user.registrationId as any)?.priceOption,
+        // Weitere Felder falls nötig
+      } : null,
+      // Serialisiere groupId
+      groupId: user.groupId ? {
+        _id: (user.groupId as any)?._id?.toString(),
+        name: (user.groupId as any)?.name,
+        description: (user.groupId as any)?.description,
+      } : null,
+      // Konvertiere Dates zu Strings (mit null-Check)
+      createdAt: user.createdAt ? user.createdAt.toISOString() : null,
+      updatedAt: user.updatedAt ? user.updatedAt.toISOString() : null,
+    };
+    
+    logger.info(`[UserService] Serialisierter User:`, {
+      name: serializedUser.name,
+      hasRegistration: !!serializedUser.registrationId,
+      deviceId: serializedUser.deviceId
+    });
+    
+    return serializedUser;
   } catch (error) {
     logger.error('[UserService] Fehler bei getUserWithRegistration:', error);
     return null;

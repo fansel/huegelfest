@@ -1,6 +1,6 @@
 'use client';
 import React, { useRef, useEffect, useState } from 'react';
-import { Calendar, MapPin, Megaphone, Settings as SettingsIcon, Heart, Shield, Users, Users2, Clock, SlidersHorizontal, Music, ClipboardList, Car } from 'lucide-react';
+import { Calendar, Megaphone, Settings as SettingsIcon, Heart, Shield, Users, Users2, Clock, SlidersHorizontal, Music, ClipboardList, Car, Check } from 'lucide-react';
 import { useNetworkStatus } from '@/shared/hooks/useNetworkStatus';
 import { useGlobalState } from '@/contexts/GlobalStateContext';
 import { useDeviceContext } from '@/shared/contexts/DeviceContext';
@@ -22,8 +22,8 @@ interface BottomBarProps {
 
 const userTabs: Tab[] = [
   { id: 'home', icon: <Calendar size={24} />, label: 'Timeline' },
-  { id: 'anreise', icon: <MapPin size={24} />, label: 'Anreise' },
   { id: 'carpool', icon: <Car size={24} />, label: 'Mitfahren' },
+  { id: 'activities', icon: <Check size={24} />, label: 'Aufgaben' },
   { id: 'infoboard', icon: <Megaphone size={24} />, label: 'News' },
   { id: 'favorites', icon: <Heart size={24} />, label: 'Favoriten' },
   { id: 'settings', icon: <SettingsIcon size={24} />, label: 'Einstellungen' },

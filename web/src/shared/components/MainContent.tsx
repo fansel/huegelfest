@@ -1,14 +1,14 @@
 import React from 'react';
 import TimelineServer from '@/features/timeline/components/TimelineServer';
 import InfoBoard from '@/features/infoboard/components/InfoBoard';
-import Anreise from '@/features/anreise/components/page';
 import Settings from '@/features/settings/components/Settings';
 import AdminDashboard from '@/features/admin/dashboard/AdminDashboard';
 import type { AdminTab } from '@/features/admin/types/AdminTab';
 import { FavoritesList } from '@/features/favorites/components/FavoritesList';
 import SignupPhaseInfo from '@/features/pwa/SignupPhaseInfo';
-import Packlist from '@/features/packlist/Packlist';
-import CarpoolManager from '@/features/registration/components/CarpoolManager';
+import PacklistClient from '@/features/packlist/components/PacklistClient';
+import CarpoolClient from '@/features/registration/components/CarpoolClient';
+import ActivitiesServer from '@/features/activities/components/ActivitiesServer';
 import { useGlobalState } from '@/contexts/GlobalStateContext';
 import TimelineClient from '@/features/timeline/components/TimelineClient';
 import { useUISettings } from '@/shared/contexts/UISettingsContext';
@@ -28,13 +28,15 @@ interface MainContentProps {
     announcements: any[];
     reactionsMap: Record<string, any>;
   };
+  carpoolData: any[];
+  packlistData: any[];
 }
 
 function isValidAdminTab(tab: string): tab is AdminTab {
   return ADMIN_TABS.includes(tab as AdminTab);
 }
 
-const MainContent: React.FC<MainContentProps> = ({ mode, activeTab, adminActiveTab, handleTabChange, timelineData, infoBoardData }) => {
+const MainContent: React.FC<MainContentProps> = ({ mode, activeTab, adminActiveTab, handleTabChange, timelineData, infoBoardData, carpoolData, packlistData }) => {
   const { signupOpen } = useGlobalState();
   const { showStarfield, setShowStarfield, showMusicNote, setShowMusicNote } = useUISettings();
   
@@ -51,10 +53,10 @@ const MainContent: React.FC<MainContentProps> = ({ mode, activeTab, adminActiveT
       );
     }
     if (activeTab === 'packlist') {
-      return <Packlist />;
+      return <PacklistClient initialItems={packlistData} />;
     }
     if (activeTab === 'carpool') {
-      return <CarpoolManager />;
+      return <CarpoolClient initialRides={carpoolData} />;
     }
     // Standard: Anmeldung
     return <SignupPhaseInfo />;
@@ -66,10 +68,10 @@ const MainContent: React.FC<MainContentProps> = ({ mode, activeTab, adminActiveT
     switch (activeTab) {
       case 'home':
         return<TimelineClient days={timelineData.days} categories={timelineData.categories} />;
-      case 'anreise':
-        return <Anreise />;
       case 'carpool':
-        return <CarpoolManager />;
+        return <CarpoolClient initialRides={carpoolData} />;
+      case 'activities':
+        return <ActivitiesServer />;
       case 'infoboard':
         return <InfoBoard announcements={infoBoardData.announcements} reactionsMap={infoBoardData.reactionsMap} />;
       case 'favorites':
@@ -84,7 +86,7 @@ const MainContent: React.FC<MainContentProps> = ({ mode, activeTab, adminActiveT
           />
         );
       case 'packlist':
-        return <Packlist />;
+        return <PacklistClient initialItems={packlistData} />;
       default:
         return null;
     }

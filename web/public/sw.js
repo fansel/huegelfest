@@ -1,196 +1,278 @@
-// Service Worker für App-Updates und statische Assets - SWR macht das Daten-Caching
-console.log('Service Worker wird geladen...');
+// Service Worker mit vollständigem Offline-Support für Hügelfest PWA
+console.log('[SW] Service Worker lädt...');
 
-// Dynamische Cache-Versionierung - wird bei Build-Zeit ersetzt
-const CACHE_VERSION = 'v0.1.0';
-const BUILD_ID = '3a9d7a20165578fd';
-const CACHE_NAME = `huegelfest-cache-${CACHE_VERSION}-${BUILD_ID}`;
+const CACHE_NAME = 'huegelfest-static-v1';
+const API_CACHE_NAME = 'huegelfest-data-v1'; // Umbenannt für Server Actions
 
-const APP_SHELL = [
+// Statische Assets die gecached werden sollen
+const STATIC_ASSETS = [
   '/',
   '/android-chrome-192x192.png',
   '/logo.jpg',
-  // ggf. weitere statische Dateien aus /public
+  '/manifest.json'
 ];
 
-// Funktion zum Benachrichtigen aller Clients über Updates
-const notifyClients = (message) => {
-  self.clients.matchAll().then(clients => {
-    clients.forEach(client => {
-      client.postMessage(message);
-    });
-  });
-};
-
-// Hilfsfunktion: Prüfung ob es sich um ein statisches Asset handelt
+// Hilfsfunktionen
 const isStaticAsset = (pathname) => {
   return pathname.startsWith('/_next/static/') ||
          /\.(png|jpg|jpeg|webp|svg|ico|css|js|woff2|woff|ttf)$/.test(pathname);
 };
 
-// Message-Handler für Client-Kommunikation
-self.addEventListener('message', (event) => {
-  if (event.data && event.data.type === 'SKIP_WAITING') {
-    self.skipWaiting();
-  }
-  if (event.data && event.data.type === 'GET_VERSION') {
-    event.ports[0].postMessage({
-      type: 'VERSION_INFO',
-      version: CACHE_VERSION,
-      buildId: BUILD_ID,
-      cacheName: CACHE_NAME
-    });
-  }
-  if (event.data && event.data.type === 'APP_UPDATE_INVALIDATE') {
-    // Bei App-Updates: Alle Caches löschen (außer aktueller)
-    caches.keys().then(cacheNames => {
-      const oldCaches = cacheNames.filter(name => name !== CACHE_NAME);
-      return Promise.all(oldCaches.map(name => caches.delete(name)));
-    }).then(() => {
-      console.log('[SW] Alte Caches nach App-Update gelöscht');
-    });
-  }
-});
+// Server Actions erkennen (POST mit Next-Action Header)
+const isServerAction = (request) => {
+  return request.method === 'POST' && 
+         request.headers.get('next-action') !== null;
+};
 
-// Installations-Event: App Shell und Assets cachen
+// Navigation/Page Requests
+const isNavigation = (request) => {
+  return request.mode === 'navigate' || 
+         (request.method === 'GET' && request.headers.get('accept')?.includes('text/html'));
+};
+
+// Installation: Cache initial befüllen
 self.addEventListener('install', (event) => {
-  console.log('Service Worker: Installation gestartet für', CACHE_NAME);
+  console.log('[SW] Installing...');
   event.waitUntil(
-    caches.open(CACHE_NAME).then((cache) => {
-      return Promise.all(APP_SHELL.map((url) =>
-        fetch(url)
-          .then((response) => {
-            if (!response.ok) throw new Error(`Request for ${url} failed with status ${response.status}`);
-            return cache.put(url, response);
-          })
-          .catch((err) => {
-            console.error('Failed to cache', url, err);
-          })
-      ));
-    }).then(() => {
-      console.log('Service Worker: Installation abgeschlossen');
-      // Clients über neue Version informieren
-      notifyClients({
-        type: 'SW_INSTALLED',
-        version: CACHE_VERSION,
-        buildId: BUILD_ID
-      });
+    Promise.all([
+      caches.open(CACHE_NAME).then((cache) => {
+        return cache.addAll(STATIC_ASSETS).catch((error) => {
+          console.error('[SW] Cache initial fill failed:', error);
+        });
+      }),
+      caches.open(API_CACHE_NAME) // Server Actions Cache
+    ]).then(() => {
+      console.log('[SW] Installation complete - Static & Data caches ready');
       self.skipWaiting();
     })
   );
 });
 
-// Aktivierungs-Event: Alte Caches löschen
+// Aktivierung: Alte Caches aufräumen
 self.addEventListener('activate', (event) => {
-  console.log('Service Worker: Aktivierung gestartet für', CACHE_NAME);
+  console.log('[SW] Activating...');
   event.waitUntil(
-    caches.keys().then(cacheNames => {
+    caches.keys().then((cacheNames) => {
       return Promise.all(
-        cacheNames.map(cacheName => {
-          if (cacheName.startsWith('huegelfest-cache-') && cacheName !== CACHE_NAME) {
-            console.log('Alter Cache wird gelöscht:', cacheName);
+        cacheNames.map((cacheName) => {
+          if (![CACHE_NAME, API_CACHE_NAME].includes(cacheName)) {
+            console.log('[SW] Deleting old cache:', cacheName);
             return caches.delete(cacheName);
           }
         })
       );
     }).then(() => {
-      console.log('Service Worker: Aktivierung abgeschlossen');
-      // Clients über Aktivierung informieren
-      notifyClients({
-        type: 'SW_ACTIVATED',
-        version: CACHE_VERSION,
-        buildId: BUILD_ID
-      });
+      console.log('[SW] Activation complete');
       return self.clients.claim();
     })
   );
 });
 
-// Fetch-Event: Nur statische Assets cachen
-self.addEventListener('fetch', (event) => {
-  // Nur GET-Anfragen behandeln
-  if (event.request.method !== 'GET') return;
-  const url = new URL(event.request.url);
+// Message-Handler für UpdateService Integration
+self.addEventListener('message', (event) => {
+  if (event.data?.type === 'CLEAR_CACHE') {
+    console.log('[SW] Cache clearing requested by UpdateService');
+    Promise.all([
+      caches.delete(CACHE_NAME),
+      caches.delete(API_CACHE_NAME)
+    ]).then(() => {
+      event.ports[0]?.postMessage({ type: 'CACHE_CLEARED' });
+    });
+  }
+  
+  if (event.data?.type === 'CLEAR_DATA_CACHE') {
+    console.log('[SW] Data cache clearing requested');
+    caches.delete(API_CACHE_NAME).then(() => {
+      event.ports[0]?.postMessage({ type: 'DATA_CACHE_CLEARED' });
+    });
+  }
+});
 
-  // Statische Assets: Cache First
+// Hauptfetch-Handler
+self.addEventListener('fetch', (event) => {
+  const url = new URL(event.request.url);
+  
+  // 1. Statische Assets: Cache First
   if (isStaticAsset(url.pathname)) {
     event.respondWith(
-      caches.match(event.request).then((cachedResponse) => {
-        if (cachedResponse) {
-          return cachedResponse;
-        }
+      caches.match(event.request).then((cached) => {
+        if (cached) return cached;
+        
         return fetch(event.request).then((response) => {
-          return caches.open(CACHE_NAME).then((cache) => {
-            if (response.ok) {
-              cache.put(event.request, response.clone());
-            }
-            return response;
-          });
+          if (response.ok) {
+            const responseClone = response.clone();
+            caches.open(CACHE_NAME).then((cache) => {
+              cache.put(event.request, responseClone);
+            });
+          }
+          return response;
         });
       })
     );
     return;
   }
 
-  // App Shell für Navigation (Offline-Fallback)
-  if (event.request.mode === 'navigate') {
+  // 2. Server Actions: Cache für Offline-Fallback
+  if (isServerAction(event.request)) {
     event.respondWith(
-      fetch(event.request).catch(() => {
-        return caches.match('/') || Response.error();
+      caches.open(API_CACHE_NAME).then(async (cache) => {
+        // Cache-Key basierend auf URL + Action-Name
+        const actionName = event.request.headers.get('next-action');
+        const cacheKey = `${url.pathname}?action=${actionName}`;
+        
+        try {
+          // Immer erst das Netzwerk versuchen (Server Actions sind meist nicht wiederholbar)
+          const response = await fetch(event.request.clone());
+          
+          if (response.ok) {
+            // Nur erfolgreiche GET-ähnliche Server Actions cachen (fetchTimeline, etc.)
+            if (actionName && (
+              actionName.includes('fetch') || 
+              actionName.includes('get') || 
+              actionName.includes('getAllAnnouncements')
+            )) {
+              console.log('[SW] Caching Server Action response:', actionName);
+              cache.put(cacheKey, response.clone());
+            }
+          }
+          return response;
+        } catch (error) {
+          console.log('[SW] Server Action offline, checking cache:', actionName);
+          
+          // Offline: Versuch aus Cache zu laden
+          const cachedResponse = await cache.match(cacheKey);
+          if (cachedResponse) {
+            console.log('[SW] Serving cached Server Action:', actionName);
+            return cachedResponse;
+          }
+          
+          // Kein Cache: Offline-Fallback für wichtige Actions
+          if (actionName && (
+            actionName.includes('fetchTimeline') || 
+            actionName.includes('getAllAnnouncements')
+          )) {
+            return new Response(JSON.stringify({
+              offline: true,
+              message: 'Offline - Nutze lokale Daten (localStorage/SWR)',
+              data: null
+            }), {
+              status: 200,
+              headers: { 'Content-Type': 'application/json' }
+            });
+          }
+          
+          throw error;
+        }
       })
     );
     return;
   }
 
-  // Service Worker und Manifest nicht cachen
-  if (
-    url.pathname === '/sw.js' ||
-    url.pathname === '/manifest'
-  ) {
+  // 3. Navigation: Network First mit Offline-Fallback
+  if (isNavigation(event.request)) {
+    event.respondWith(
+      fetch(event.request).catch(() => {
+        // Offline: Cached Root-Route zurückgeben
+        return caches.match('/').then((cached) => {
+          if (cached) return cached;
+          
+          // Fallback: Offline-Page
+          return new Response(`
+            <!DOCTYPE html>
+            <html>
+              <head>
+                <meta charset="utf-8">
+                <meta name="viewport" content="width=device-width, initial-scale=1">
+                <title>Hügelfest - Offline</title>
+                <style>
+                  body { 
+                    font-family: system-ui, -apple-system, sans-serif; 
+                    text-align: center; 
+                    padding: 50px; 
+                    background: linear-gradient(135deg, #460b6c, #2a0845); 
+                    color: #ff9900; 
+                    min-height: 100vh; 
+                    margin: 0;
+                    display: flex;
+                    flex-direction: column;
+                    justify-content: center;
+                    align-items: center;
+                  }
+                  .container { max-width: 400px; }
+                  h1 { font-size: 2.5rem; margin-bottom: 1rem; }
+                  p { margin: 1rem 0; opacity: 0.9; }
+                  button { 
+                    background: #ff9900; 
+                    color: #460b6c; 
+                    border: none; 
+                    padding: 12px 24px; 
+                    border-radius: 8px; 
+                    font-size: 1rem; 
+                    font-weight: bold; 
+                    cursor: pointer; 
+                    margin: 10px;
+                  }
+                  .status { 
+                    background: rgba(255, 153, 0, 0.1); 
+                    border: 1px solid rgba(255, 153, 0, 0.3); 
+                    border-radius: 8px; 
+                    padding: 15px; 
+                    margin: 20px 0; 
+                  }
+                </style>
+              </head>
+              <body>
+                <div class="container">
+                  <h1>🎪 Hügelfest</h1>
+                  <div class="status">
+                    <p><strong>Offline-Modus</strong></p>
+                    <p>Deine Favoriten und Timeline-Daten sind lokal gespeichert und verfügbar.</p>
+                    <p>Server Actions werden über lokale Caches bereitgestellt.</p>
+                  </div>
+                  <button onclick="location.reload()">↻ Erneut versuchen</button>
+                </div>
+                <script>
+                  // Auto-Reconnect wenn Online
+                  window.addEventListener('online', () => {
+                    setTimeout(() => location.reload(), 1000);
+                  });
+                </script>
+              </body>
+            </html>
+          `, { 
+            headers: { 'Content-Type': 'text/html' },
+            status: 200
+          });
+        });
+      })
+    );
     return;
   }
-
-  // Alle anderen Requests: Network Only (SWR macht das Caching)
-  // Kein Cache-Eingriff für API-Calls oder Seiten-Requests
+  
+  // 4. Alles andere: Network Only
 });
 
-// Push-Event
-self.addEventListener('push', function(event) {
-  console.log('Push-Ereignis empfangen:', event);
+// Push Notifications (unverändert)
+self.addEventListener('push', (event) => {
+  if (!event.data) return;
   
-  if (event.data) {
-    try {
-      const data = event.data.json();
-      const options = {
+  try {
+    const data = event.data.json();
+    event.waitUntil(
+      self.registration.showNotification(data.title, {
         body: data.body,
         icon: '/android-chrome-192x192.png',
-        badge: '/android-chrome-192x192.png',
-        vibrate: [100, 50, 100],
-        data: {
-          url: data.url || '/'
-        }
-      };
-
-      event.waitUntil(
-        self.registration.showNotification(data.title, options)
-      );
-    } catch (error) {
-      console.error('Fehler beim Verarbeiten der Push-Nachricht:', error);
-    }
+        data: { url: data.url || '/' }
+      })
+    );
+  } catch (error) {
+    console.error('[SW] Push notification error:', error);
   }
 });
 
-// Notification-Click-Event
-self.addEventListener('notificationclick', function(event) {
-  console.log('Benachrichtigung geklickt:', event.notification);
+self.addEventListener('notificationclick', (event) => {
   event.notification.close();
-  
-  event.waitUntil(
-    clients.openWindow(event.notification.data.url)
-      .catch(error => {
-        console.error('Fehler beim Öffnen des Fensters:', error);
-      })
-  );
+  event.waitUntil(clients.openWindow(event.notification.data.url));
 });
 
-// Fokus: Nur App-Updates und statische Assets - SWR + WebSockets machen das Daten-Caching 
+console.log('[SW] Service Worker ready - Server Actions & Static Assets cached'); 
