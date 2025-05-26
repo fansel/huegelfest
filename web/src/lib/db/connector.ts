@@ -1,5 +1,5 @@
 import mongoose from 'mongoose';
-import { User } from './models/User';
+import { SystemUser } from './models/SystemUser';
 // Passe ggf. logger-Import an, z.B. aus web/src/lib/logger
 
 declare const window: Window & typeof globalThis | undefined;
@@ -46,14 +46,14 @@ const state: ConnectionState = {
 
 async function initializeDatabase() {
   try {
-    const userCount = await User.countDocuments();
+    const userCount = await SystemUser.countDocuments();
     if (userCount === 0) {
       // logger.info('[Auth] Datenbank ist leer, erstelle Admin-Benutzer');
       // Passe ggf. getAuthConfig-Import an
       const adminUsername = process.env.ADMIN_USERNAME || 'admin';
       const adminPassword = process.env.ADMIN_PASSWORD || 'admin';
-      await User.create({
-        username: adminUsername,
+      await SystemUser.create({
+        systemUsername: adminUsername,
         password: adminPassword,
         role: 'admin'
       });

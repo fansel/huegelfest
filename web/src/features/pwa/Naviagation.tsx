@@ -1,6 +1,6 @@
 'use client';
 import React, { useRef, useEffect, useState } from 'react';
-import { Calendar, MapPin, Megaphone, Settings as SettingsIcon, Heart, Shield, Users, Clock, SlidersHorizontal, Music, ClipboardList, Car } from 'lucide-react';
+import { Calendar, MapPin, Megaphone, Settings as SettingsIcon, Heart, Shield, Users, Users2, Clock, SlidersHorizontal, Music, ClipboardList, Car } from 'lucide-react';
 import { useNetworkStatus } from '@/shared/hooks/useNetworkStatus';
 import { useGlobalState } from '@/contexts/GlobalStateContext';
 import { useDeviceContext } from '@/shared/contexts/DeviceContext';
@@ -35,6 +35,7 @@ const adminTabs: Tab[] = [
   { id: 'timeline', icon: <Clock size={24} />, label: 'Timeline' },
   { id: 'music', icon: <Music size={24} />, label: 'Musik' },
   { id: 'registrations', icon: <ClipboardList size={24} />, label: 'Anmeldungen' },
+  { id: 'groups', icon: <Users2 size={24} />, label: 'Gruppen' },
   { id: 'admin-settings', icon: <SlidersHorizontal size={24} />, label: 'Admin-Einstellungen' },
 ];
 

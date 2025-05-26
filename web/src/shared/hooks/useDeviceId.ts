@@ -1,6 +1,18 @@
 import { useEffect, useState } from 'react';
 
 /**
+ * Generiert eine 6-stellige zufällige Device-ID mit A-Z 0-9
+ */
+function generateDeviceId(): string {
+  const chars = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789';
+  let result = '';
+  for (let i = 0; i < 6; i++) {
+    result += chars.charAt(Math.floor(Math.random() * chars.length));
+  }
+  return result;
+}
+
+/**
  * Gibt die deviceId zurück oder erzeugt sie, falls sie noch nicht existiert.
  * Nur im Client verwenden! (window !== undefined)
  */
@@ -8,7 +20,7 @@ export function getOrCreateDeviceId(): string {
   if (typeof window === 'undefined') return '';
   let id = localStorage.getItem('deviceId');
   if (!id) {
-    id = btoa(`${navigator.userAgent}-${Date.now()}-${Math.random()}`);
+    id = generateDeviceId();
     localStorage.setItem('deviceId', id);
   }
   return id;

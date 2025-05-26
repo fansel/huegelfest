@@ -3,7 +3,7 @@ console.log('Service Worker wird geladen...');
 
 // Dynamische Cache-Versionierung - wird bei Build-Zeit ersetzt
 const CACHE_VERSION = 'v0.1.0';
-const BUILD_ID = '3fbba42ac1a50c6b';
+const BUILD_ID = '18b43e51174a06e4';
 const CACHE_NAME = `huegelfest-cache-${CACHE_VERSION}-${BUILD_ID}`;
 
 const APP_SHELL = [

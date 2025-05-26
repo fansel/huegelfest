@@ -1,6 +1,6 @@
 "use server";
 
-import { createUser } from '../services/authService';
+import { createSystemUser } from '../services/authService';
 
 export interface RegisterResult {
   success: boolean;
@@ -12,5 +12,5 @@ export async function register(
   password: string,
   email?: string
 ): Promise<RegisterResult> {
-  return await createUser(username, password, 'user', email);
+  return await createSystemUser(username, password, 'systemUser', email);
 } 

@@ -2,6 +2,6 @@
 import { cookies } from 'next/headers';
 
 export async function logout() {
-  const cookiesStore = cookies();
+  const cookiesStore = await cookies();
   cookiesStore.set('authToken', '', { maxAge: 0, path: '/' });
 } 

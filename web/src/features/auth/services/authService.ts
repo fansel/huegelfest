@@ -32,11 +32,11 @@ export async function validateCredentials(
   password: string,
 ): Promise<{ isValid: boolean; isAdmin: boolean; error?: string }> {
   try {
-    const { User } = await import('@/lib/db/models/User');
+    const { SystemUser } = await import('@/lib/db/models/SystemUser');
     const { connectDB } = await import('@/lib/db/connector');
     await connectDB();
     logger.info(`[Auth] Suche Benutzer: ${username}`);
-    const user = await User.findOne({ username });
+    const user = await SystemUser.findOne({ systemUsername: username });
     if (!user) {
       logger.warn(`[Auth] Benutzer nicht gefunden: ${username}`);
       return { isValid: false, isAdmin: false, error: 'Benutzer nicht gefunden' };
@@ -70,18 +70,18 @@ export async function validateCredentials(
   }
 }
 
-export async function createUser(
+export async function createSystemUser(
   username: string,
   password: string,
-  role: 'admin' | 'user' = 'user',
+  role: 'admin' | 'systemUser' = 'systemUser',
   email?: string
 ): Promise<{ success: boolean; error?: string }> {
   try {
-    const { User } = await import('@/lib/db/models/User');
+    const { SystemUser } = await import('@/lib/db/models/SystemUser');
     const { connectDB } = await import('@/lib/db/connector');
     await connectDB();
-    const user = new User({
-      username,
+    const user = new SystemUser({
+      systemUsername: username,
       password, // wird automatisch gehasht durch das Model
       role,
       email
@@ -99,17 +99,17 @@ export async function createUser(
 
 export async function initializeAdmin(): Promise<void> {
   try {
-    const { User } = await import('@/lib/db/models/User');
+    const { SystemUser } = await import('@/lib/db/models/SystemUser');
     const { connectDB } = await import('@/lib/db/connector');
     const { adminUsername, adminPassword } = getAuthConfig();
     await connectDB();
-    const existingAdmin = await User.findOne({ username: adminUsername });
+    const existingAdmin = await SystemUser.findOne({ systemUsername: adminUsername });
     if (existingAdmin) {
       logger.info('[Auth] Admin-Benutzer existiert bereits');
       return;
     }
-    await User.create({
-      username: adminUsername,
+    await SystemUser.create({
+      systemUsername: adminUsername,
       password: adminPassword, // wird automatisch gehasht durch das Model
       role: 'admin'
     });

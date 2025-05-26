@@ -27,6 +27,7 @@ import {
 } from 'lucide-react';
 import { registerFestival } from './actions/register';
 import { useDeviceContext } from "@/shared/contexts/DeviceContext";
+import { useDeviceId } from "@/shared/hooks/useDeviceId";
 import Cookies from 'js-cookie';
 
 // Maximale Zeichenanzahl für Textareas
@@ -136,6 +137,7 @@ export interface FestivalRegisterData {
   wantsToOfferWorkshop: string;
   sleepingPreference: "bed" | "tent" | "car";
   lineupContribution: string;
+  deviceId?: string; // DeviceID für User-Erstellung
 }
 
 const defaultData: FestivalRegisterData = {
@@ -316,6 +318,7 @@ const LOCAL_STORAGE_KEY = 'festival_register_form';
 
 export default function FestivalRegisterForm({ onRegister, setCookies = true }: FestivalRegisterFormProps) {
   const { deviceType } = useDeviceContext();
+  const deviceId = useDeviceId();
   const isMobile = deviceType === "mobile";
   const [form, setForm] = useState<FestivalRegisterData>(defaultData);
   const [loading, setLoading] = useState(false);
@@ -769,16 +772,23 @@ export default function FestivalRegisterForm({ onRegister, setCookies = true }: 
       toast.error("Bitte gib einen gültigen Namen ein.");
       return;
     }
+    
     setLoading(true);
     try {
-      const result = await registerFestival(form);
+      // DeviceID zu den Formulardaten hinzufügen
+      const formDataWithDevice = {
+        ...form,
+        deviceId: deviceId || undefined
+      };
+      
+      const result = await registerFestival(formDataWithDevice);
       if (result.success) {
         toast.success("Anmeldung erfolgreich gespeichert!");
-        if (onRegister) onRegister(form);
+        if (onRegister) onRegister(formDataWithDevice);
         if (setCookies) Cookies.set('festival_registered', 'true', { expires: 365 });
         setStep(steps.length - 1);
         setHasCookie(true);
-        try { localStorage.setItem(LOCAL_STORAGE_KEY, JSON.stringify(form)); } catch (e) { /* ignore */ }
+        try { localStorage.setItem(LOCAL_STORAGE_KEY, JSON.stringify(formDataWithDevice)); } catch (e) { /* ignore */ }
       } else {
         toast.error(result.error || "Fehler beim Speichern der Anmeldung.");
       }

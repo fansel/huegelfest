@@ -1,36 +1,30 @@
 'use client';
 import React, { useState } from 'react';
 import BottomBar from '../../pwa/Naviagation';
-import AnnouncementsMobile from '../components/announcements/AnnouncementManager'
-import WorkingGroupsManagerMobile from '../components/workingGroups/WorkingGroupManager';
-import TimelineMobile from '../components/timeline/TimelineManager';
+import AnnouncementManager from '../components/announcements/AnnouncementManager'
+import WorkingGroupManager from '../components/workingGroups/WorkingGroupManager';
+import TimelineManager from '../components/timeline/TimelineManager';
 import MusicManager from '../components/music/MusicManager';
-import RegistrationManager from '../components/registration/RegistrationManager';
+import { GroupsOverview } from '../../groups/components/GroupsOverview';
 import type { AdminTab } from '../types/AdminTab';
 import Settings from '@/features/admin/components/settings/Settings';
-// import TimelineManagerMobile from '../components/timeline/TimelineMobile';
-// import WorkingGroupsMobile from './WorkingGroupsMobile'; // Placeholder, analog zu AnnouncementsMobile
-// const TimelineMobile: React.FC = () => <div className="p-6 text-center text-lg text-gray-500">Timeline mobil (kommt noch)</div>;
 
-const TABS: AdminTab[] = ['announcements', 'workingGroups', 'timeline', 'music', 'registrations', 'admin-settings'];
-type Tab = typeof TABS[number];
+const TABS: AdminTab[] = ['announcements', 'workingGroups', 'timeline', 'music', 'registrations', 'groups', 'admin-settings'];
 
-// Dummy-Komponenten für Gruppen und Timeline
-const WorkingGroupsMobile: React.FC = () => <div className="p-6 text-center text-lg text-gray-500">Arbeitsgruppenverwaltung mobil (kommt noch)</div>;
-
-interface AdminDashboardMobileProps {
+interface AdminDashboardProps {
   activeTab: AdminTab;
   setActiveTab: (tab: AdminTab) => void;
 }
 
-const AdminDashboard: React.FC<AdminDashboardMobileProps> = ({ activeTab, setActiveTab }) => {
+const AdminDashboard: React.FC<AdminDashboardProps> = ({ activeTab, setActiveTab }) => {
   return (
     <div className="pb-16">
-      {activeTab === 'announcements' && <AnnouncementsMobile />}
-      {activeTab === 'workingGroups' && <WorkingGroupsManagerMobile />}
-      {activeTab === 'timeline' && <TimelineMobile />}
+      {activeTab === 'announcements' && <AnnouncementManager />}
+      {activeTab === 'workingGroups' && <WorkingGroupManager />}
+      {activeTab === 'timeline' && <TimelineManager />}
       {activeTab === 'music' && <MusicManager />}
-      {activeTab === 'registrations' && <RegistrationManager />}
+      {activeTab === 'registrations' && <GroupsOverview />}
+      {activeTab === 'groups' && <GroupsOverview />}
       {activeTab === 'admin-settings' && <Settings />}
       <BottomBar
         mode="admin"
