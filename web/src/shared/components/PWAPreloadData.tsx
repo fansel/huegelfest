@@ -9,33 +9,49 @@ import { useNetworkStatus } from '../hooks/useNetworkStatus';
 
 /**
  * Preload-Komponente für kritische Daten der PWA.
- * Wird am Anfang der App geladen und stellt sicher, dass wichtige Daten
+ * Wird sofort beim App-Start geladen und stellt sicher, dass wichtige Daten
  * für den Offline-Modus verfügbar sind.
  */
 export function PWAPreloadData() {
   const isOnline = useNetworkStatus();
   
-  // Beim ersten Laden wichtige Daten in den SWR-Cache laden
+  // Beim ersten Laden wichtige Daten SOFORT in den SWR-Cache laden
   useEffect(() => {
     if (isOnline && typeof window !== 'undefined') {
       const preloadCriticalData = async () => {
         try {
-          console.log('[PWA] Starte Preload kritischer Daten...');
+          console.log('[PWA] Starte SOFORTIGES Preload kritischer Daten...');
           
-          // 1. Timeline-Daten vorladen (wichtigste Daten)
-          const timelineData = await fetchTimeline();
-          mutate('timeline', timelineData, false);
-          console.log('[PWA] Timeline-Daten erfolgreich vorgeladen');
+          // Alle Daten parallel laden für bessere Performance
+          const [timelineData, announcements, packlistItems] = await Promise.allSettled([
+            fetchTimeline(),
+            getAllAnnouncementsAction(),
+            getGlobalPacklistAction()
+          ]);
           
-          // 2. Ankündigungen vorladen
-          const announcements = await getAllAnnouncementsAction();
-          mutate(['infoboard', null], { announcements, reactionsMap: {} }, false);
-          console.log('[PWA] Ankündigungen erfolgreich vorgeladen');
+          // Timeline-Daten (wichtigste Daten)
+          if (timelineData.status === 'fulfilled') {
+            mutate('timeline', timelineData.value, false);
+            console.log('[PWA] Timeline-Daten erfolgreich vorgeladen');
+          } else {
+            console.error('[PWA] Fehler beim Vorladen der Timeline:', timelineData.reason);
+          }
           
-          // 3. Packliste vorladen
-          const packlistItems = await getGlobalPacklistAction();
-          mutate('packlist-data', packlistItems, false);
-          console.log('[PWA] Packliste erfolgreich vorgeladen');
+          // Ankündigungen
+          if (announcements.status === 'fulfilled') {
+            mutate(['infoboard', null], { announcements: announcements.value, reactionsMap: {} }, false);
+            console.log('[PWA] Ankündigungen erfolgreich vorgeladen');
+          } else {
+            console.error('[PWA] Fehler beim Vorladen der Ankündigungen:', announcements.reason);
+          }
+          
+          // Packliste
+          if (packlistItems.status === 'fulfilled') {
+            mutate('packlist-data', packlistItems.value, false);
+            console.log('[PWA] Packliste erfolgreich vorgeladen');
+          } else {
+            console.error('[PWA] Fehler beim Vorladen der Packliste:', packlistItems.reason);
+          }
           
           console.log('[PWA] Preload kritischer Daten abgeschlossen');
         } catch (error) {
@@ -43,12 +59,8 @@ export function PWAPreloadData() {
         }
       };
       
-      // Mit kurzer Verzögerung ausführen, um die App-Start-Performance nicht zu beeinträchtigen
-      const timer = setTimeout(() => {
-        preloadCriticalData();
-      }, 2000);
-      
-      return () => clearTimeout(timer);
+      // SOFORT ausführen, keine Verzögerung mehr
+      preloadCriticalData();
     }
   }, [isOnline]);
   
