@@ -4,7 +4,6 @@ import React, { useEffect, useState, useCallback } from 'react';
 import { Package, Plus, X, Check, Loader2, Trash2, RefreshCw } from 'lucide-react';
 import { PacklistItem } from '../types/PacklistItem';
 import { useNetworkStatus } from '@/shared/hooks/useNetworkStatus';
-import { OfflineIndicator } from '@/shared/components/OfflineIndicator';
 import { getGlobalPacklistAction } from '../actions/getGlobalPacklistAction';
 import { useWebSocket, WebSocketMessage } from '@/shared/hooks/useWebSocket';
 import { getWebSocketUrl } from '@/shared/utils/getWebSocketUrl';
@@ -165,8 +164,6 @@ export default function PacklistClient({ initialItems }: PacklistClientProps) {
 
   return (
     <div className="py-6 px-2 flex flex-col items-center min-h-[40vh]">
-      {!isOnline && <OfflineIndicator />}
-      
       {/* Header mit Progress */}
       <div className="w-full max-w-3xl mb-6">
         <h3 className="text-xl font-bold mb-4 text-[#ff9900] tracking-wide text-center drop-shadow">Packliste</h3>

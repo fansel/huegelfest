@@ -8,6 +8,7 @@ import { APP_VERSION, VERSION_STORAGE_KEYS } from '@/lib/config/appVersion';
 import { toast } from 'react-hot-toast';
 import { checkForUpdatesAction, getAppInfoAction } from '../actions/updateActions';
 import { RefreshCw } from 'lucide-react';
+import { useNetworkStatus } from '@/shared/hooks/useNetworkStatus';
 
 interface UpdateSettingsProps {
   variant?: 'row' | 'tile';
@@ -21,6 +22,7 @@ export function UpdateSettings({ variant = 'tile' }: UpdateSettingsProps) {
     current: APP_VERSION.getAppIdentifier(),
     environment: APP_VERSION.isDevelopment ? 'Development' : 'Production'
   });
+  const isOnline = useNetworkStatus();
 
   // Check Update-Status beim Mount
   useEffect(() => {
@@ -49,6 +51,11 @@ export function UpdateSettings({ variant = 'tile' }: UpdateSettingsProps) {
   };
 
   const handleCheckForUpdates = async () => {
+    if (!isOnline) {
+      toast.error('Update-Prüfung ist nur online möglich');
+      return;
+    }
+    
     setIsChecking(true);
     
     try {
@@ -82,6 +89,11 @@ export function UpdateSettings({ variant = 'tile' }: UpdateSettingsProps) {
   };
 
   const handleApplyUpdate = async () => {
+    if (!isOnline) {
+      toast.error('Update-Installation ist nur online möglich');
+      return;
+    }
+    
     try {
       await updateService.forceUpdate();
     } catch (error) {
@@ -100,9 +112,15 @@ export function UpdateSettings({ variant = 'tile' }: UpdateSettingsProps) {
             e.stopPropagation();
             handleApplyUpdate();
           }}
-          className="bg-[#ff9900] hover:bg-[#e6890a] text-white text-xs"
+          disabled={!isOnline}
+          className={`text-xs ${
+            isOnline 
+              ? 'bg-[#ff9900] hover:bg-[#e6890a] text-white' 
+              : 'bg-gray-400 text-gray-600 cursor-not-allowed'
+          }`}
+          title={!isOnline ? 'Update-Installation ist nur online möglich' : undefined}
         >
-          Update anwenden
+          {isOnline ? 'Update anwenden' : 'Update anwenden (offline)'}
         </Button>
       ) : (
         <Button 
@@ -112,10 +130,13 @@ export function UpdateSettings({ variant = 'tile' }: UpdateSettingsProps) {
             e.stopPropagation();
             handleCheckForUpdates();
           }}
-          disabled={isChecking}
-          className="text-xs"
+          disabled={isChecking || !isOnline}
+          className={`text-xs ${
+            !isOnline ? 'border-gray-400 text-gray-500 cursor-not-allowed' : ''
+          }`}
+          title={!isOnline ? 'Update-Prüfung ist nur online möglich' : undefined}
         >
-          {isChecking ? 'Prüfe...' : 'Prüfen'}
+          {isChecking ? 'Prüfe...' : (isOnline ? 'Prüfen' : 'Prüfen (offline)')}
         </Button>
       )}
     </div>

@@ -10,7 +10,6 @@ import { useWebSocket, WebSocketMessage } from '@/shared/hooks/useWebSocket';
 import { getWebSocketUrl } from '@/shared/utils/getWebSocketUrl';
 import useSWR from 'swr';
 import { useDeviceId } from '@/shared/hooks/useDeviceId';
-import { OfflineIndicator } from '@/shared/components/OfflineIndicator';
 import { useNetworkStatus } from '@/shared/hooks/useNetworkStatus';
 
 const REACTION_TYPES: ReactionType[] = ['thumbsUp', 'clap', 'laugh', 'surprised', 'heart'];
@@ -123,33 +122,63 @@ export default function InfoBoard({ isPWA = false, allowClipboard = false, annou
   // Reaktion-Handler mit Optimistic Update und Fehlerbehandlung
   const handleReaction = async (announcementId: string, type: ReactionType) => {
     try {
-      if (!deviceId) return;
+      if (!deviceId || !isOnline) return; // Offline: keine neuen Reaktionen möglich
+      
+      // Optimistic Update: Sofort UI aktualisieren
+      const currentReactions = reactionsMap[announcementId] || { counts: {}, userReaction: undefined };
+      const newReactions = { ...currentReactions };
+      
+      // Wenn User bereits diese Reaktion hat: entfernen
+      if (currentReactions.userReaction === type) {
+        newReactions.userReaction = undefined;
+        newReactions.counts = { ...currentReactions.counts };
+        newReactions.counts[type] = Math.max(0, (newReactions.counts[type] || 0) - 1);
+      } 
+      // Wenn User andere Reaktion hatte: alte entfernen, neue hinzufügen
+      else if (currentReactions.userReaction) {
+        const oldType = currentReactions.userReaction;
+        newReactions.userReaction = type;
+        newReactions.counts = { ...currentReactions.counts };
+        newReactions.counts[oldType] = Math.max(0, (newReactions.counts[oldType] || 0) - 1);
+        newReactions.counts[type] = (newReactions.counts[type] || 0) + 1;
+      }
+      // Neue Reaktion hinzufügen
+      else {
+        newReactions.userReaction = type;
+        newReactions.counts = { ...currentReactions.counts };
+        newReactions.counts[type] = (newReactions.counts[type] || 0) + 1;
+      }
+      
+      // Optimistic Update im lokalen State
+      mutate(
+        (currentData) => {
+          if (!currentData) return currentData;
+          return {
+            ...currentData,
+            reactionsMap: {
+              ...currentData.reactionsMap,
+              [announcementId]: newReactions
+            }
+          };
+        },
+        false // Kein Revalidate
+      );
+      
+      // Server-Update im Hintergrund
       await updateAnnouncementReactionsAction(announcementId, type, deviceId);
-      // Nach Server-Update: mutate, damit SWR die Daten neu lädt
+      
+      // Nach Server-Update: Daten neu laden für Konsistenz
       mutate();
     } catch (error) {
       console.error('[InfoBoard] Fehler beim Verarbeiten der Reaktion:', error);
+      // Bei Fehler: Daten neu laden um inkonsistenten State zu korrigieren
+      mutate();
     }
   };
 
   // UI-Rendering
   return (
     <div ref={boardRef} className="w-full max-w-4xl mx-auto relative">
-      {/* Offline-Indicator */}
-      <div className="mb-4">
-        <OfflineIndicator className="mx-4" />
-      </div>
-      
-      {/* Status-Anzeige für Ankündigungen */}
-      {!isOnline && announcements.length > 0 && (
-        <div className="mx-4 mb-4 p-3 bg-orange-500/10 border border-orange-500/30 rounded-lg">
-          <p className="text-orange-600 text-sm">
-            📄 Zeige {announcements.length} gespeicherte Ankündigungen. 
-            Neue Ankündigungen werden bei Internetverbindung geladen.
-          </p>
-        </div>
-      )}
-
       <div className="relative z-10 w-full px-2 sm:px-6 mt-4 sm:mt-6 lg:mt-10">
         <div className="space-y-2 sm:space-y-4 w-full">
           {announcements.length === 0 ? (
@@ -164,7 +193,8 @@ export default function InfoBoard({ isPWA = false, allowClipboard = false, annou
                 important={announcement.important}
                 createdAt={announcement.createdAt}
                 reactions={reactionsMap[announcement.id]}
-                onReact={(type) => handleReaction(announcement.id, type)}
+                onReact={isOnline ? (type) => handleReaction(announcement.id, type) : undefined}
+                isOffline={!isOnline}
               />
             ))
           )}

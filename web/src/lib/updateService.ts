@@ -208,17 +208,13 @@ export class UpdateService {
     this.setBadge();
     
     // Update-Benachrichtigung
-    let updateMessage = '🎉 Update verfügbar!\n';
-    if (updates.appUpdate) updateMessage += '✨ Neue Funktionen\n';
-    if (updates.assetUpdate) updateMessage += '🎨 Design-Updates\n';
-    if (updates.serviceWorkerUpdate) updateMessage += '⚡ Verbesserte Offline-Funktionen\n';
-    updateMessage += '\n👆 Öffne Einstellungen zum Aktualisieren';
+    const updateMessage = 'Update verfügbar';
     
     toast.success(updateMessage, {
-      duration: 10000,
+      duration: 6000,
       position: 'top-center',
       style: {
-        maxWidth: '400px',
+        maxWidth: '200px',
         textAlign: 'center',
         marginTop: '20px'
       }

@@ -4,118 +4,154 @@ import { Activity } from '@/lib/db/models/Activity';
 import { connectDB } from '@/lib/db/connector';
 import { initActivityDefaults } from '@/lib/db/initActivityDefaults';
 import { getUserWithRegistration } from '@/features/auth/services/userService';
-import type { ActivityWithCategoryAndTemplate } from '../types';
+import type { ActivityWithCategoryAndTemplate, UserStatus } from '../types';
+import { ActivityCategory } from '@/lib/db/models/ActivityCategory';
+import { ActivityTemplate } from '@/lib/db/models/ActivityTemplate';
+import { Group } from '@/lib/db/models/Group';
+import { User } from '@/lib/db/models/User';
 
 export interface UserActivitiesData {
   activities: ActivityWithCategoryAndTemplate[];
-  userStatus: {
-    isRegistered: boolean;
-    name?: string;
-    groupId?: string;
-    groupName?: string;
-    groupColor?: string;
-  };
+  userStatus: UserStatus;
 }
 
 /**
  * Lädt alle Aufgaben für einen Benutzer basierend auf seiner Gruppenzugehörigkeit
  */
-export async function fetchUserActivitiesAction(deviceId: string): Promise<UserActivitiesData> {
+export async function fetchUserActivities(deviceId: string | null): Promise<UserActivitiesData> {
+  if (!deviceId) {
+    return {
+      activities: [],
+      userStatus: {
+        isRegistered: false,
+        name: undefined,
+        groupId: undefined,
+        groupName: undefined,
+        groupColor: undefined,
+      } as UserStatus
+    };
+  }
+
   try {
     await connectDB();
     await initActivityDefaults();
 
-    // Get user status first
-    const user = await getUserWithRegistration(deviceId);
+    // Get user information
+    const user = await User.findOne({ deviceId }).populate('groupId', 'name color').lean();
     
-    if (!user || !user.groupId) {
+    if (!user) {
       return {
         activities: [],
-        userStatus: { 
-          isRegistered: !!user,
-          name: user?.name,
+        userStatus: {
+          isRegistered: false,
+          name: undefined,
           groupId: undefined,
           groupName: undefined,
-          groupColor: undefined
-        }
+          groupColor: undefined,
+        } as UserStatus
+      };
+    }
+
+    const userStatus: UserStatus = {
+      isRegistered: true,
+      name: user.name,
+      groupId: user.groupId?._id?.toString() || user.groupId?.toString(),
+      groupName: (user.groupId as any)?.name,
+      groupColor: (user.groupId as any)?.color,
+    };
+
+    // If user has no group, return empty activities
+    if (!userStatus.groupId) {
+      return {
+        activities: [],
+        userStatus
       };
     }
 
     // Get activities for user's group
-    const activities = await Activity.find({ groupId: user.groupId._id })
+    const activities = await Activity.find({ 
+      groupId: userStatus.groupId 
+    })
       .populate('categoryId', 'name icon color')
       .populate('templateId', 'name defaultDescription')
       .populate('groupId', 'name color')
       .populate('responsibleUsers', 'name deviceId')
-      .sort({ date: 1, time: 1 })
+      .sort({ date: 1, startTime: 1 })
       .lean();
 
-    // Convert to proper format with populated data
     const populatedActivities: ActivityWithCategoryAndTemplate[] = activities.map(activity => {
-      const category = activity.categoryId as any;
-      const template = activity.templateId as any;
-      const group = activity.groupId as any;
-      const responsibleUsers = activity.responsibleUsers as any[];
+      // Get responsible users data
+      const responsibleUsersData = (activity.responsibleUsers as any[])?.map(user => ({
+        _id: user._id.toString(),
+        name: user.name,
+        deviceId: user.deviceId
+      })) || [];
 
       return {
-        _id: activity._id.toString(),
+        _id: (activity._id as any).toString(),
         date: activity.date.toISOString(),
-        time: activity.time,
-        categoryId: category._id.toString(),
-        templateId: template?._id.toString(),
+        startTime: activity.startTime,
+        endTime: activity.endTime,
+        categoryId: (activity.categoryId as any)._id.toString(),
+        templateId: (activity.templateId as any)?._id?.toString(),
         customName: activity.customName,
         description: activity.description,
-        groupId: group._id.toString(),
-        responsibleUsers: responsibleUsers ? responsibleUsers.map(user => user._id.toString()) : [],
+        groupId: (activity.groupId as any)._id.toString(),
+        responsibleUsers: (activity.responsibleUsers as any[])?.map(user => user._id.toString()) || [],
         createdBy: activity.createdBy,
         agendaJobId: activity.agendaJobId,
+        responsiblePushJobId: activity.responsiblePushJobId,
         createdAt: activity.createdAt.toISOString(),
         updatedAt: activity.updatedAt.toISOString(),
         category: {
-          _id: category._id.toString(),
-          name: category.name,
-          icon: category.icon,
-          color: category.color,
-          isDefault: category.isDefault || false,
-          createdAt: category.createdAt ? category.createdAt.toISOString() : new Date().toISOString(),
-          updatedAt: category.updatedAt ? category.updatedAt.toISOString() : new Date().toISOString(),
+          _id: (activity.categoryId as any)._id.toString(),
+          name: (activity.categoryId as any).name,
+          icon: (activity.categoryId as any).icon,
+          color: (activity.categoryId as any).color,
+          isDefault: (activity.categoryId as any).isDefault || false,
+          createdAt: (activity.categoryId as any).createdAt?.toISOString() || '',
+          updatedAt: (activity.categoryId as any).updatedAt?.toISOString() || '',
         },
-        template: template ? {
-          _id: template._id.toString(),
-          name: template.name,
-          defaultDescription: template.defaultDescription,
-          categoryId: template.categoryId.toString(),
-          createdAt: template.createdAt ? template.createdAt.toISOString() : new Date().toISOString(),
-          updatedAt: template.updatedAt ? template.updatedAt.toISOString() : new Date().toISOString(),
+        template: activity.templateId ? {
+          _id: (activity.templateId as any)._id.toString(),
+          name: (activity.templateId as any).name,
+          categoryId: (activity.templateId as any).categoryId.toString(),
+          defaultDescription: (activity.templateId as any).defaultDescription,
+          createdAt: (activity.templateId as any).createdAt?.toISOString() || '',
+          updatedAt: (activity.templateId as any).updatedAt?.toISOString() || '',
         } : undefined,
         group: {
-          _id: group._id.toString(),
-          name: group.name,
-          color: group.color
+          _id: (activity.groupId as any)._id.toString(),
+          name: (activity.groupId as any).name,
+          color: (activity.groupId as any).color,
         },
-        responsibleUsersData: responsibleUsers ? responsibleUsers.map(user => ({
-          _id: user._id.toString(),
-          name: user.name,
-          deviceId: user.deviceId
-        })) : []
+        responsibleUsersData
       };
     });
 
     return {
       activities: populatedActivities,
-      userStatus: {
-        isRegistered: true,
-        name: user.name,
-        groupId: user.groupId._id.toString(),
-        groupName: user.groupId.name,
-        groupColor: populatedActivities.length > 0 ? populatedActivities[0].group?.color : undefined
-      }
+      userStatus
     };
-  } catch (error: any) {
-    console.error('[fetchUserActivitiesAction]', error);
+
+  } catch (error) {
+    console.error('Error fetching user activities:', error);
     return {
       activities: [],
-      userStatus: { isRegistered: false }
+      userStatus: {
+        isRegistered: false,
+        name: undefined,
+        groupId: undefined,
+        groupName: undefined,
+        groupColor: undefined,
+      } as UserStatus
     };
   }
+}
+
+/**
+ * Server Action wrapper for fetchUserActivities
+ */
+export async function fetchUserActivitiesAction(deviceId: string): Promise<UserActivitiesData> {
+  return fetchUserActivities(deviceId);
 } 

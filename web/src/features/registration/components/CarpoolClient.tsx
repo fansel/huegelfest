@@ -15,6 +15,9 @@ import { createRideAction } from '../actions/createRide';
 import { updateRideAction } from '../actions/updateRide';
 import { deleteRideAction } from '../actions/deleteRide';
 import { useDeviceContext } from '@/shared/contexts/DeviceContext';
+import { useNetworkStatus } from '@/shared/hooks/useNetworkStatus';
+import { OfflineDisabled } from '@/shared/components/ui/OfflineDisabledButton';
+import useSWR from 'swr';
 
 interface Ride {
   _id?: string;
@@ -45,10 +48,21 @@ const festivalLocation = 'Hügelfest';
 
 export default function CarpoolClient({ initialRides }: CarpoolClientProps) {
   const { deviceType } = useDeviceContext();
+  const isOnline = useNetworkStatus();
   const isMobile = deviceType === 'mobile';
   
-  const [rides, setRides] = useState<Ride[]>(initialRides);
-  const [loading, setLoading] = useState(false);
+  // SWR für Carpool-Daten mit Offline-Caching
+  const { data: rides = [], mutate, isLoading } = useSWR<Ride[]>(
+    'carpool-rides',
+    getRidesAction,
+    {
+      fallbackData: initialRides,
+      revalidateOnFocus: false,
+      revalidateOnReconnect: true,
+      dedupingInterval: 30000, // 30 Sekunden
+    }
+  );
+  
   const [showCreateDialog, setShowCreateDialog] = useState(false);
   const [passengerName, setPassengerName] = useState('');
   const [showPassengerDialog, setShowPassengerDialog] = useState<string | null>(null);
@@ -69,20 +83,7 @@ export default function CarpoolClient({ initialRides }: CarpoolClientProps) {
   const [passengerContact, setPassengerContact] = useState('');
   const [showPassengerContact, setShowPassengerContact] = useState<{ name: string, contact?: string } | null>(null);
 
-  const loadRides = async () => {
-    try {
-      setLoading(true);
-      const data = await getRidesAction();
-      setRides(Array.isArray(data) ? data : []);
-    } catch (error) {
-      console.error('Fehler beim Laden der Fahrten:', error);
-      toast.error('Fehler beim Laden der Fahrten');
-      setRides([]);
-    } finally {
-      setLoading(false);
-    }
-  };
-
+  // Filter Logic
   const filteredRides = rides.filter(ride => {
     const matchesDate = !filterDate || filterDate === 'all' || ride.date === filterDate;
     const matchesDirection = !filterDirection || filterDirection === 'all' || ride.direction === filterDirection;
@@ -111,7 +112,7 @@ export default function CarpoolClient({ initialRides }: CarpoolClientProps) {
         seats: 1,
         contact: '',
       });
-      loadRides();
+      mutate();
     } catch (error) {
       console.error('Fehler beim Erstellen der Fahrt:', error);
       toast.error('Fehler beim Erstellen der Fahrt');
@@ -145,7 +146,7 @@ export default function CarpoolClient({ initialRides }: CarpoolClientProps) {
       setPassengerName('');
       setPassengerContact('');
       setShowPassengerDialog(null);
-      loadRides();
+      mutate();
     } catch (error) {
       console.error('Fehler beim Anmelden:', error);
       toast.error('Fehler beim Anmelden');
@@ -161,7 +162,7 @@ export default function CarpoolClient({ initialRides }: CarpoolClientProps) {
       await updateRideAction(rideId, { passengers: updatedPassengers });
       
       toast.success('Mitfahrer entfernt');
-      loadRides();
+      mutate();
     } catch (error) {
       console.error('Fehler beim Entfernen:', error);
       toast.error('Fehler beim Entfernen');
@@ -174,7 +175,7 @@ export default function CarpoolClient({ initialRides }: CarpoolClientProps) {
     try {
       await deleteRideAction(rideId);
       toast.success('Fahrt gelöscht');
-      loadRides();
+      mutate();
     } catch (error) {
       console.error('Fehler beim Löschen:', error);
       toast.error('Fehler beim Löschen');
@@ -240,128 +241,138 @@ export default function CarpoolClient({ initialRides }: CarpoolClientProps) {
           </div>
         </div>
         
-        <Dialog open={showCreateDialog} onOpenChange={setShowCreateDialog}>
-          <DialogTrigger asChild>
-            <Button className="w-full bg-gradient-to-r from-[#ff9900] to-orange-600 hover:from-orange-600 hover:to-orange-700 text-white font-semibold py-3 text-base">
-              <Plus className="h-5 w-5 mr-2" />
-              Fahrt anbieten
-            </Button>
-          </DialogTrigger>
-          <DialogContent className="max-w-md">
-            <DialogHeader>
-              <DialogTitle className="text-[#460b6c] text-xl text-center">Neue Fahrt erstellen</DialogTitle>
-            </DialogHeader>
-            <div className="space-y-4">
-              <div>
-                <Label className="text-[#460b6c]">Fahrer *</Label>
-                <Input
-                  value={newRide.driver}
-                  onChange={(e) => setNewRide({ ...newRide, driver: e.target.value })}
-                  placeholder="Dein Name"
-                  className="mt-1"
-                />
-              </div>
-              
-              <div>
-                <Label className="text-[#460b6c]">Richtung *</Label>
-                <Select value={newRide.direction} onValueChange={handleDirectionChange}>
-                  <SelectTrigger className="mt-1">
-                    <SelectValue />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="hinfahrt">Hinfahrt (zum Festival)</SelectItem>
-                    <SelectItem value="rückfahrt">Rückfahrt (vom Festival)</SelectItem>
-                  </SelectContent>
-                </Select>
-              </div>
-              
-              {newRide.direction === 'hinfahrt' ? (
+        <OfflineDisabled actionType="write" showIcon={false}>
+          <Dialog open={showCreateDialog && isOnline} onOpenChange={(open) => isOnline && setShowCreateDialog(open)}>
+            <DialogTrigger asChild>
+              <Button 
+                className={`w-full font-semibold py-3 text-base ${
+                  isOnline 
+                    ? 'bg-gradient-to-r from-[#ff9900] to-orange-600 hover:from-orange-600 hover:to-orange-700 text-white' 
+                    : 'bg-gray-400 text-gray-600 cursor-not-allowed'
+                }`}
+                disabled={!isOnline}
+                title={!isOnline ? 'Fahrt anbieten ist nur online möglich' : undefined}
+              >
+                <Plus className="h-5 w-5 mr-2" />
+                {isOnline ? 'Fahrt anbieten' : 'Fahrt anbieten (offline)'}
+              </Button>
+            </DialogTrigger>
+            <DialogContent className="max-w-md">
+              <DialogHeader>
+                <DialogTitle className="text-[#460b6c] text-xl text-center">Neue Fahrt erstellen</DialogTitle>
+              </DialogHeader>
+              <div className="space-y-4">
                 <div>
-                  <Label className="text-[#460b6c]">Abfahrtsort *</Label>
+                  <Label className="text-[#460b6c]">Fahrer *</Label>
                   <Input
-                    value={newRide.start}
-                    onChange={(e) => setNewRide({ ...newRide, start: e.target.value })}
-                    placeholder="z.B. München, Bahnhof"
+                    value={newRide.driver}
+                    onChange={(e) => setNewRide({ ...newRide, driver: e.target.value })}
+                    placeholder="Dein Name"
                     className="mt-1"
                   />
                 </div>
-              ) : (
+                
                 <div>
-                  <Label className="text-[#460b6c]">Zielort *</Label>
-                  <Input
-                    value={newRide.destination}
-                    onChange={(e) => setNewRide({ ...newRide, destination: e.target.value })}
-                    placeholder="z.B. München, Bahnhof"
-                    className="mt-1"
-                  />
-                </div>
-              )}
-              
-              <div>
-                <Label className="text-[#460b6c]">Erreichbar über / Nachricht *</Label>
-                <Textarea
-                  value={newRide.contact}
-                  onChange={(e) => setNewRide({ ...newRide, contact: e.target.value })}
-                  placeholder="z.B. WhatsApp: 0171/123456 / Telegram: @username / weitere Infos..."
-                  className="mt-1 min-h-[80px] resize-none"
-                />
-              </div>
-              
-              <div className="grid grid-cols-2 gap-4">
-                <div>
-                  <Label className="text-[#460b6c]">Datum *</Label>
-                  <Select value={newRide.date} onValueChange={(value) => setNewRide({ ...newRide, date: value })}>
+                  <Label className="text-[#460b6c]">Richtung *</Label>
+                  <Select value={newRide.direction} onValueChange={handleDirectionChange}>
                     <SelectTrigger className="mt-1">
                       <SelectValue />
                     </SelectTrigger>
                     <SelectContent>
-                      {festivalDates.map(({ date, label }) => (
-                        <SelectItem key={date} value={date}>{label}</SelectItem>
+                      <SelectItem value="hinfahrt">Hinfahrt (zum Festival)</SelectItem>
+                      <SelectItem value="rückfahrt">Rückfahrt (vom Festival)</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+                
+                {newRide.direction === 'hinfahrt' ? (
+                  <div>
+                    <Label className="text-[#460b6c]">Abfahrtsort *</Label>
+                    <Input
+                      value={newRide.start}
+                      onChange={(e) => setNewRide({ ...newRide, start: e.target.value })}
+                      placeholder="z.B. München, Bahnhof"
+                      className="mt-1"
+                    />
+                  </div>
+                ) : (
+                  <div>
+                    <Label className="text-[#460b6c]">Zielort *</Label>
+                    <Input
+                      value={newRide.destination}
+                      onChange={(e) => setNewRide({ ...newRide, destination: e.target.value })}
+                      placeholder="z.B. München, Bahnhof"
+                      className="mt-1"
+                    />
+                  </div>
+                )}
+                
+                <div>
+                  <Label className="text-[#460b6c]">Erreichbar über / Nachricht *</Label>
+                  <Textarea
+                    value={newRide.contact}
+                    onChange={(e) => setNewRide({ ...newRide, contact: e.target.value })}
+                    placeholder="z.B. WhatsApp: 0171/123456 / Telegram: @username / weitere Infos..."
+                    className="mt-1 min-h-[80px] resize-none"
+                  />
+                </div>
+                
+                <div className="grid grid-cols-2 gap-4">
+                  <div>
+                    <Label className="text-[#460b6c]">Datum *</Label>
+                    <Select value={newRide.date} onValueChange={(value) => setNewRide({ ...newRide, date: value })}>
+                      <SelectTrigger className="mt-1">
+                        <SelectValue />
+                      </SelectTrigger>
+                      <SelectContent>
+                        {festivalDates.map(({ date, label }) => (
+                          <SelectItem key={date} value={date}>{label}</SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  </div>
+                  
+                  <div>
+                    <Label className="text-[#460b6c]">Zeit *</Label>
+                    <Input
+                      type="time"
+                      value={newRide.time}
+                      onChange={(e) => setNewRide({ ...newRide, time: e.target.value })}
+                      className="mt-1"
+                    />
+                  </div>
+                </div>
+                
+                <div>
+                  <Label className="text-[#460b6c]">Plätze</Label>
+                  <Select value={newRide.seats.toString()} onValueChange={(value) => setNewRide({ ...newRide, seats: parseInt(value) })}>
+                    <SelectTrigger className="mt-1">
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {[1, 2, 3, 4, 5, 6].map(num => (
+                        <SelectItem key={num} value={num.toString()}>{num}</SelectItem>
                       ))}
                     </SelectContent>
                   </Select>
                 </div>
                 
-                <div>
-                  <Label className="text-[#460b6c]">Zeit *</Label>
-                  <Input
-                    type="time"
-                    value={newRide.time}
-                    onChange={(e) => setNewRide({ ...newRide, time: e.target.value })}
-                    className="mt-1"
-                  />
+                <div className="flex gap-2 pt-4">
+                  <Button variant="outline" onClick={() => setShowCreateDialog(false)} className="flex-1">
+                    Abbrechen
+                  </Button>
+                  <Button onClick={handleCreateRide} className="flex-1 bg-[#ff9900] hover:bg-orange-600">
+                    Erstellen
+                  </Button>
                 </div>
               </div>
-              
-              <div>
-                <Label className="text-[#460b6c]">Plätze</Label>
-                <Select value={newRide.seats.toString()} onValueChange={(value) => setNewRide({ ...newRide, seats: parseInt(value) })}>
-                  <SelectTrigger className="mt-1">
-                    <SelectValue />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {[1, 2, 3, 4, 5, 6].map(num => (
-                      <SelectItem key={num} value={num.toString()}>{num}</SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-              </div>
-              
-              <div className="flex gap-2 pt-4">
-                <Button variant="outline" onClick={() => setShowCreateDialog(false)} className="flex-1">
-                  Abbrechen
-                </Button>
-                <Button onClick={handleCreateRide} className="flex-1 bg-[#ff9900] hover:bg-orange-600">
-                  Erstellen
-                </Button>
-              </div>
-            </div>
-          </DialogContent>
-        </Dialog>
+            </DialogContent>
+          </Dialog>
+        </OfflineDisabled>
       </div>
 
       {/* Rides List */}
-      {loading ? (
+      {isLoading ? (
         <div className="flex justify-center py-12">
           <div className="animate-spin rounded-full h-12 w-12 border-4 border-[#ff9900] border-t-transparent"></div>
         </div>
@@ -441,59 +452,79 @@ export default function CarpoolClient({ initialRides }: CarpoolClientProps) {
                 )}
                 <div className="flex gap-2 mt-1">
                   {ride.passengers.length < ride.seats && (
-                    <Dialog open={showPassengerDialog === ride._id} onOpenChange={(open) => setShowPassengerDialog(open ? ride._id! : null)}>
-                      <DialogTrigger asChild>
-                        <Button variant="outline" size="sm" className="border-[#ff9900] text-[#ff9900] hover:bg-[#ff9900] hover:text-white text-xs">
-                          Mitfahren
-                        </Button>
-                      </DialogTrigger>
-                      <DialogContent className="max-w-sm">
-                        <DialogHeader>
-                          <DialogTitle className="text-[#460b6c] text-base sm:text-xl text-center">
-                            Mitfahren
-                          </DialogTitle>
-                        </DialogHeader>
-                        <div className="space-y-3">
-                          <div>
-                            <Label className="text-[#460b6c]">Dein Name</Label>
-                            <Input
-                              value={passengerName}
-                              onChange={(e) => setPassengerName(e.target.value)}
-                              placeholder="Wie soll dich der Fahrer nennen?"
-                              className="mt-1"
-                            />
+                    <OfflineDisabled actionType="write" showIcon={false}>
+                      <Dialog open={showPassengerDialog === ride._id && isOnline} onOpenChange={(open) => isOnline && setShowPassengerDialog(open ? ride._id! : null)}>
+                        <DialogTrigger asChild>
+                          <Button 
+                            variant="outline" 
+                            size="sm" 
+                            className={`text-xs ${
+                              isOnline 
+                                ? 'border-[#ff9900] text-[#ff9900] hover:bg-[#ff9900] hover:text-white' 
+                                : 'border-gray-400 text-gray-500 cursor-not-allowed'
+                            }`}
+                            disabled={!isOnline}
+                            title={!isOnline ? 'Mitfahren ist nur online möglich' : undefined}
+                          >
+                            {isOnline ? 'Mitfahren' : 'Mitfahren (offline)'}
+                          </Button>
+                        </DialogTrigger>
+                        <DialogContent className="max-w-sm">
+                          <DialogHeader>
+                            <DialogTitle className="text-[#460b6c] text-base sm:text-xl text-center">
+                              Mitfahren
+                            </DialogTitle>
+                          </DialogHeader>
+                          <div className="space-y-3">
+                            <div>
+                              <Label className="text-[#460b6c]">Dein Name</Label>
+                              <Input
+                                value={passengerName}
+                                onChange={(e) => setPassengerName(e.target.value)}
+                                placeholder="Wie soll dich der Fahrer nennen?"
+                                className="mt-1"
+                              />
+                            </div>
+                            <div>
+                              <Label className="text-[#460b6c]">Erreichbar über / Nachricht (optional)</Label>
+                              <Textarea
+                                value={passengerContact}
+                                onChange={(e) => setPassengerContact(e.target.value)}
+                                placeholder="z.B. Telegram: @user123 / WhatsApp: Max / Nachricht an den Fahrer ..."
+                                className="mt-1 min-h-[48px] resize-none"
+                              />
+                            </div>
+                            <div className="flex gap-2">
+                              <Button variant="outline" onClick={() => setShowPassengerDialog(null)} className="flex-1" size="sm">
+                                Abbrechen
+                              </Button>
+                              <Button onClick={() => handleJoinRide(ride._id!)} className="flex-1 bg-[#ff9900] hover:bg-orange-600" size="sm">
+                                Anmelden
+                              </Button>
+                            </div>
                           </div>
-                          <div>
-                            <Label className="text-[#460b6c]">Erreichbar über / Nachricht (optional)</Label>
-                            <Textarea
-                              value={passengerContact}
-                              onChange={(e) => setPassengerContact(e.target.value)}
-                              placeholder="z.B. Telegram: @user123 / WhatsApp: Max / Nachricht an den Fahrer ..."
-                              className="mt-1 min-h-[48px] resize-none"
-                            />
-                          </div>
-                          <div className="flex gap-2">
-                            <Button variant="outline" onClick={() => setShowPassengerDialog(null)} className="flex-1" size="sm">
-                              Abbrechen
-                            </Button>
-                            <Button onClick={() => handleJoinRide(ride._id!)} className="flex-1 bg-[#ff9900] hover:bg-orange-600" size="sm">
-                              Anmelden
-                            </Button>
-                          </div>
-                        </div>
-                      </DialogContent>
-                    </Dialog>
+                        </DialogContent>
+                      </Dialog>
+                    </OfflineDisabled>
                   )}
                 </div>
               </div>
-              <Button
-                variant="destructive"
-                size="sm"
-                onClick={() => handleDeleteRide(ride._id!)}
-                className="bg-red-100 border-red-200 text-red-700 hover:bg-red-500 hover:text-white text-xs px-3 ml-2 self-start"
-              >
-                <Trash2 className="h-3 w-3" />
-              </Button>
+              <OfflineDisabled actionType="delete" showIcon={false}>
+                <Button
+                  variant="destructive"
+                  size="sm"
+                  onClick={() => isOnline && handleDeleteRide(ride._id!)}
+                  className={`text-xs px-3 ml-2 self-start ${
+                    isOnline 
+                      ? 'bg-red-100 border-red-200 text-red-700 hover:bg-red-500 hover:text-white' 
+                      : 'bg-gray-200 border-gray-300 text-gray-500 cursor-not-allowed'
+                  }`}
+                  disabled={!isOnline}
+                  title={!isOnline ? 'Löschen ist nur online möglich' : undefined}
+                >
+                  <Trash2 className="h-3 w-3" />
+                </Button>
+              </OfflineDisabled>
             </div>
           ))}
         </div>

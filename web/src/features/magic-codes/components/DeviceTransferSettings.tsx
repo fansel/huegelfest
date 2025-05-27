@@ -26,6 +26,7 @@ import { pushPermissionUtils } from '../../settings/components/PushNotificationS
 import { useWebSocket, WebSocketMessage } from '@/shared/hooks/useWebSocket';
 import { getWebSocketUrl } from '@/shared/utils/getWebSocketUrl';
 import UserSettingsCard from '../../settings/components/UserSettingsCard';
+import { useNetworkStatus } from '@/shared/hooks/useNetworkStatus';
 
 interface DeviceTransferSettingsProps {
   variant?: 'row' | 'tile';
@@ -46,6 +47,7 @@ interface UserInfo {
 
 export default function DeviceTransferSettings({ variant = 'row' }: DeviceTransferSettingsProps) {
   const deviceId = useDeviceId();
+  const isOnline = useNetworkStatus();
   const [isOpen, setIsOpen] = useState(false);
   const [currentStep, setCurrentStep] = useState<TransferStep>('initial');
   const [isLoading, setIsLoading] = useState(false);
@@ -252,7 +254,12 @@ export default function DeviceTransferSettings({ variant = 'row' }: DeviceTransf
   }, [isOpen, deviceId]);
 
   const handleGenerateCode = async () => {
-    if (!deviceId) return;
+    if (!deviceId || !isOnline) {
+      if (!isOnline) {
+        setError('Code-Generierung ist nur online möglich');
+      }
+      return;
+    }
     
     setIsLoading(true);
     setError(null);
@@ -280,6 +287,11 @@ export default function DeviceTransferSettings({ variant = 'row' }: DeviceTransf
   const handleTransferDevice = async () => {
     if (!inputCode || !deviceId) {
       setError('Bitte gib den 6-stelligen Code ein');
+      return;
+    }
+
+    if (!isOnline) {
+      setError('Gerätewechsel ist nur online möglich');
       return;
     }
 
@@ -349,19 +361,35 @@ export default function DeviceTransferSettings({ variant = 'row' }: DeviceTransf
     setTransferResult(null);
   };
 
-  const isCodeGenerationDisabled = !userInfo?.hasRegistration;
+  const isCodeGenerationDisabled = !userInfo?.hasRegistration || !isOnline;
 
   const renderInitialStep = () => (
     <div className="space-y-4">
+      {!isOnline && (
+        <Alert className="border-orange-200 bg-orange-50">
+          <AlertCircle className="h-4 w-4 text-orange-600" />
+          <AlertDescription className="text-orange-800">
+            Gerätewechsel-Funktionen sind nur online verfügbar.
+          </AlertDescription>
+        </Alert>
+      )}
+      
       <div className="grid grid-cols-2 gap-4">
-        <Card className="cursor-pointer hover:shadow-md transition-shadow" onClick={() => setCurrentStep('input')}>
+        <Card 
+          className={`cursor-pointer transition-shadow ${
+            !isOnline 
+              ? 'opacity-50 cursor-not-allowed' 
+              : 'hover:shadow-md'
+          }`} 
+          onClick={isOnline ? () => setCurrentStep('input') : undefined}
+        >
           <CardHeader className="text-center pb-4">
             <div className="mx-auto w-12 h-12 bg-blue-100 rounded-full flex items-center justify-center mb-2">
               <QrCode className="w-6 h-6 text-blue-600" />
             </div>
             <CardTitle className="text-base">Ich habe einen Code</CardTitle>
             <CardDescription className="text-sm">
-              Code vom alten Gerät eingeben
+              {!isOnline ? 'Nur online verfügbar' : 'Code vom alten Gerät eingeben'}
             </CardDescription>
           </CardHeader>
         </Card>
@@ -380,16 +408,27 @@ export default function DeviceTransferSettings({ variant = 'row' }: DeviceTransf
             </div>
             <CardTitle className="text-base">Code erstellen</CardTitle>
             <CardDescription className="text-sm">
-              {isCodeGenerationDisabled 
-                ? 'Erst anmelden erforderlich'
-                : 'Für Transfer auf neues Gerät'
+              {!isOnline 
+                ? 'Nur online verfügbar'
+                : !userInfo?.hasRegistration 
+                  ? 'Erst anmelden erforderlich'
+                  : 'Für Transfer auf neues Gerät'
               }
             </CardDescription>
           </CardHeader>
         </Card>
       </div>
 
-      {isCodeGenerationDisabled && (
+      {!isOnline && (
+        <Alert className="border-orange-200 bg-orange-50">
+          <AlertCircle className="h-4 w-4 text-orange-600" />
+          <AlertDescription className="text-orange-800">
+            Du musst online sein, um Magic Codes zu erstellen oder zu verwenden.
+          </AlertDescription>
+        </Alert>
+      )}
+
+      {isOnline && isCodeGenerationDisabled && !userInfo?.hasRegistration && (
         <Alert className="border-orange-200 bg-orange-50">
           <AlertCircle className="h-4 w-4 text-orange-600" />
           <AlertDescription className="text-orange-800">
@@ -516,6 +555,7 @@ export default function DeviceTransferSettings({ variant = 'row' }: DeviceTransf
           onChange={(e) => setInputCode(e.target.value.replace(/\D/g, '').slice(0, 6))}
           className="text-center text-2xl font-mono tracking-wider"
           maxLength={6}
+          disabled={!isOnline}
         />
         <p className="text-xs text-gray-500 text-center">
           Der Code ist nur 5 Minuten gültig
@@ -524,8 +564,13 @@ export default function DeviceTransferSettings({ variant = 'row' }: DeviceTransf
 
       <Button
         onClick={handleTransferDevice}
-        disabled={isLoading || inputCode.length !== 6}
-        className="w-full bg-[#ff9900] hover:bg-orange-600"
+        disabled={isLoading || inputCode.length !== 6 || !isOnline}
+        className={`w-full ${
+          isOnline 
+            ? 'bg-[#ff9900] hover:bg-orange-600' 
+            : 'bg-gray-400 text-gray-600 cursor-not-allowed'
+        }`}
+        title={!isOnline ? 'Gerätewechsel ist nur online möglich' : undefined}
       >
         {isLoading ? (
           <>
@@ -535,7 +580,7 @@ export default function DeviceTransferSettings({ variant = 'row' }: DeviceTransf
         ) : (
           <>
             <ArrowRight className="w-4 h-4 mr-2" />
-            Gerätewechsel durchführen
+            {isOnline ? 'Gerätewechsel durchführen' : 'Gerätewechsel durchführen (offline)'}
           </>
         )}
       </Button>
@@ -597,11 +642,19 @@ export default function DeviceTransferSettings({ variant = 'row' }: DeviceTransf
       size="sm"
       onClick={(e) => {
         e.stopPropagation();
-        setIsOpen(true);
+        if (isOnline) {
+          setIsOpen(true);
+        } else {
+          toast.error('Gerätewechsel ist nur online möglich');
+        }
       }}
-      className="text-xs"
+      disabled={!isOnline}
+      className={`text-xs ${
+        !isOnline ? 'border-gray-400 text-gray-500 cursor-not-allowed' : ''
+      }`}
+      title={!isOnline ? 'Gerätewechsel ist nur online möglich' : undefined}
     >
-      Öffnen
+      {isOnline ? 'Öffnen' : 'Öffnen (offline)'}
     </Button>
   );
 
@@ -618,7 +671,12 @@ export default function DeviceTransferSettings({ variant = 'row' }: DeviceTransf
           <li>Kompletter Account-Transfer</li>
         </ul>
       </div>
-      {!userInfo?.hasRegistration && (
+      {!isOnline && (
+        <p className="text-orange-600 font-medium">
+          Hinweis: Gerätewechsel ist nur online möglich.
+        </p>
+      )}
+      {isOnline && !userInfo?.hasRegistration && (
         <p className="text-orange-600 font-medium">
           Hinweis: Du musst zuerst angemeldet sein, um einen Code zu erstellen.
         </p>

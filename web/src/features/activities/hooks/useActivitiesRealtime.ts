@@ -3,6 +3,7 @@ import { toast } from 'react-hot-toast';
 import { useGlobalWebSocket } from '@/shared/hooks/useGlobalWebSocket';
 import { globalWebSocketManager } from '@/shared/utils/globalWebSocketManager';
 import { fetchActivitiesData, type ActivitiesData } from '../actions/fetchActivitiesData';
+import { useNetworkStatus } from '@/shared/hooks/useNetworkStatus';
 
 type ActivitiesEvent = {
   type: 'ACTIVITY_CREATED' | 'ACTIVITY_UPDATED' | 'ACTIVITY_DELETED' | 'ACTIVITY_CATEGORY_CREATED' | 'ACTIVITY_CATEGORY_UPDATED' | 'ACTIVITY_CATEGORY_DELETED';
@@ -23,6 +24,7 @@ export function useActivitiesRealtime() {
   });
   const [loading, setLoading] = useState(true);
   const [connected, setConnected] = useState(false);
+  const isOnline = useNetworkStatus();
 
   // WebSocket-Status vom globalen Manager abfragen
   const updateConnectionStatus = useCallback(() => {
@@ -45,11 +47,13 @@ export function useActivitiesRealtime() {
       setData(initialData);
     } catch (error) {
       console.error('[useActivitiesRealtime] Fehler beim Laden der initial Daten:', error);
-      toast.error('Fehler beim Laden der Activities-Daten');
+      if (isOnline) {
+        toast.error('Fehler beim Laden der Activities-Daten');
+      }
     } finally {
       setLoading(false);
     }
-  }, []);
+  }, [isOnline]);
 
   // Daten vollständig neu laden (fallback für komplexe Updates)
   const refreshData = useCallback(async () => {
@@ -65,9 +69,11 @@ export function useActivitiesRealtime() {
       setData(freshData);
     } catch (error) {
       console.error('[useActivitiesRealtime] Fehler beim Aktualisieren der Daten:', error);
-      toast.error('Fehler beim Aktualisieren der Activities-Daten');
+      if (isOnline) {
+        toast.error('Fehler beim Aktualisieren der Activities-Daten');
+      }
     }
-  }, []);
+  }, [isOnline]);
 
   // WebSocket Message Handler - verwendet globales System
   const handleWebSocketMessage = useCallback((msg: any) => {

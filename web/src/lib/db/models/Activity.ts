@@ -2,15 +2,17 @@ import mongoose, { Document, Schema, Types } from 'mongoose';
 
 export interface IActivity extends Document {
   date: Date;
-  time?: string;
+  startTime: string; // HH:MM format (e.g., "08:00") - required
+  endTime?: string; // HH:MM format (e.g., "10:00") - optional
   categoryId: Types.ObjectId;
   templateId?: Types.ObjectId;
   customName?: string;
-  description: string;
+  description?: string; // Optional description
   groupId?: Types.ObjectId;
   responsibleUsers?: Types.ObjectId[]; // Hauptverantwortliche Benutzer
   createdBy: string; // Admin device ID
   agendaJobId?: string; // For push reminders
+  responsiblePushJobId?: string; // For responsible users push reminders
   createdAt: Date;
   updatedAt: Date;
 }
@@ -21,15 +23,26 @@ const activitySchema = new Schema<IActivity>(
       type: Date,
       required: true,
     },
-    time: {
+    startTime: {
+      type: String,
+      required: true,
+      validate: {
+        validator: function(v: string) {
+          // Validate time format: "08:00"
+          return /^([0-1]?[0-9]|2[0-3]):[0-5][0-9]$/.test(v);
+        },
+        message: 'Startzeit muss im Format HH:MM sein (z.B. "08:00").'
+      }
+    },
+    endTime: {
       type: String,
       validate: {
         validator: function(v: string) {
           if (!v) return true; // Optional field
-          // Validate time format: "08:00", "08:00-10:00", etc.
-          return /^([0-1]?[0-9]|2[0-3]):[0-5][0-9](-([0-1]?[0-9]|2[0-3]):[0-5][0-9])?$/.test(v);
+          // Validate time format: "08:00"
+          return /^([0-1]?[0-9]|2[0-3]):[0-5][0-9]$/.test(v);
         },
-        message: 'Zeit muss im Format HH:MM oder HH:MM-HH:MM sein (z.B. "08:00" oder "08:00-10:00").'
+        message: 'Endzeit muss im Format HH:MM sein (z.B. "10:00").'
       }
     },
     categoryId: {
@@ -47,7 +60,7 @@ const activitySchema = new Schema<IActivity>(
     },
     description: {
       type: String,
-      required: true,
+      required: false,
       trim: true,
     },
     groupId: {
@@ -65,6 +78,9 @@ const activitySchema = new Schema<IActivity>(
     agendaJobId: {
       type: String,
     },
+    responsiblePushJobId: {
+      type: String,
+    },
   },
   {
     timestamps: true,
@@ -80,23 +96,26 @@ activitySchema.pre('save', function(next) {
   if (this.templateId && this.customName) {
     return next(new Error('Es kann nicht gleichzeitig ein Template und ein eigener Name angegeben werden.'));
   }
+
+  // Validate that endTime is after startTime if both are provided
+  if (this.startTime && this.endTime) {
+    const [startHour, startMin] = this.startTime.split(':').map(Number);
+    const [endHour, endMin] = this.endTime.split(':').map(Number);
+    
+    const startMinutes = startHour * 60 + startMin;
+    const endMinutes = endHour * 60 + endMin;
+    
+    if (endMinutes <= startMinutes) {
+      return next(new Error('Endzeit muss nach der Startzeit liegen.'));
+    }
+  }
   
   next();
 });
 
-// Indexes für bessere Performance
-activitySchema.index({ date: 1 });
+// Index for efficient queries
+activitySchema.index({ date: 1, startTime: 1 });
 activitySchema.index({ groupId: 1, date: 1 });
-activitySchema.index({ categoryId: 1 });
-activitySchema.index({ createdBy: 1 });
+activitySchema.index({ responsibleUsers: 1 });
 
-// Model nur einmal erstellen
-let Activity: mongoose.Model<IActivity>;
-
-try {
-  Activity = mongoose.model<IActivity>('Activity');
-} catch {
-  Activity = mongoose.model<IActivity>('Activity', activitySchema);
-}
-
-export { Activity }; 
+export const Activity = mongoose.models.Activity || mongoose.model<IActivity>('Activity', activitySchema); 

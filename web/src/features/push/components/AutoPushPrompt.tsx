@@ -12,84 +12,33 @@ import { Button } from '@/shared/components/ui/button';
 import { Bell, BellOff, X } from 'lucide-react';
 import { useDeviceId } from '@/shared/hooks/useDeviceId';
 import { subscribePushAction } from '../actions/subscribePush';
-import { checkSubscription } from '../actions/checkSubscription';
-import { pushPermissionUtils } from '../../settings/components/PushNotificationSettings';
 import { env } from 'next-runtime-env';
 import { toast } from 'react-hot-toast';
-import { useWebSocket, WebSocketMessage } from '@/shared/hooks/useWebSocket';
-import { getWebSocketUrl } from '@/shared/utils/getWebSocketUrl';
 
 const VAPID_PUBLIC_KEY = env('NEXT_PUBLIC_VAPID_PUBLIC_KEY');
 
 interface AutoPushPromptProps {
-  // Trigger für manuelles Anzeigen (z.B. nach Device Transfer)
   forceShow?: boolean;
   onClose?: () => void;
-  // NEU: Callback um Parent über erfolgreiche Subscription zu informieren
   onSubscriptionChange?: (isSubscribed: boolean) => void;
 }
 
 export default function AutoPushPrompt({ forceShow = false, onClose, onSubscriptionChange }: AutoPushPromptProps) {
   const deviceId = useDeviceId();
-  const [showPrompt, setShowPrompt] = useState(false);
+  const [showPrompt, setShowPrompt] = useState(forceShow);
   const [isLoading, setIsLoading] = useState(false);
-  const [hasChecked, setHasChecked] = useState(false);
-  const [triggerReason, setTriggerReason] = useState<string>('app-start');
+  const [triggerReason, setTriggerReason] = useState<string>('manual');
 
+  // Nur bei forceShow oder manuellen Triggers anzeigen
   useEffect(() => {
-    if (hasChecked && !forceShow) return;
+    setShowPrompt(forceShow);
+  }, [forceShow]);
 
-    const checkShouldPrompt = async () => {
-      if (forceShow) {
-        setShowPrompt(true);
-        return;
-      }
-
-      if (!deviceId) return;
-
-      setHasChecked(true);
-
-      try {
-        const { exists } = await checkSubscription(deviceId);
-        if (exists) {
-          return;
-        }
-      } catch (error) {
-        console.error('Fehler beim Prüfen der Subscription:', error);
-      }
-
-      if (typeof window === 'undefined' || !('Notification' in window)) {
-        return;
-      }
-
-      const currentPermission = Notification.permission;
-      
-      if (currentPermission !== 'default' && pushPermissionUtils.hasAskedBefore()) {
-        return;
-      }
-
-      await new Promise(resolve => setTimeout(resolve, 2000));
-
-      if (!pushPermissionUtils.hasAskedBefore()) {
-        setShowPrompt(true);
-      }
-    };
-
-    checkShouldPrompt();
-  }, [deviceId, forceShow, hasChecked]);
-
+  // Event-Listener für manuelle Triggers
   useEffect(() => {
     const handleTriggerPushPrompt = (event: CustomEvent) => {
-      console.log('[AutoPushPrompt] Trigger-Event erhalten:', event.detail);
-      
-      setHasChecked(false);
-      
+      console.log('[AutoPushPrompt] Manueller Trigger erhalten:', event.detail);
       setTriggerReason(event.detail?.reason || 'manual');
-      
-      if (event.detail?.reason === 'device-transfer') {
-        pushPermissionUtils.resetPermissions();
-      }
-      
       setShowPrompt(true);
     };
 
@@ -99,36 +48,6 @@ export default function AutoPushPrompt({ forceShow = false, onClose, onSubscript
       window.removeEventListener('triggerPushPrompt', handleTriggerPushPrompt as EventListener);
     };
   }, []);
-
-  // NEU: WebSocket-Listener für Device Transfer Push-Prompt
-  useWebSocket(
-    getWebSocketUrl(),
-    {
-      onMessage: (msg: WebSocketMessage) => {
-        if (msg.topic === 'device-transfer-push-prompt') {
-          const payload = msg.payload as any;
-          // Prüfe ob die Nachricht für dieses Gerät ist
-          if (payload.deviceId === deviceId) {
-            console.log('[AutoPushPrompt] WebSocket-Trigger erhalten:', payload);
-            
-            // Reset State für neuen Prompt
-            setHasChecked(false);
-            setTriggerReason('device-transfer');
-            
-            // Reset permissions für Device Transfer
-            pushPermissionUtils.resetPermissions();
-            
-            // Trigger Prompt
-            setShowPrompt(true);
-          }
-        }
-      },
-      onError: (err) => {
-        console.error('[AutoPushPrompt] WebSocket-Fehler:', err);
-      },
-      reconnectIntervalMs: 5000,
-    }
-  );
 
   const handleAllow = async () => {
     if (!deviceId) {
@@ -173,32 +92,26 @@ export default function AutoPushPrompt({ forceShow = false, onClose, onSubscript
         });
 
         if (result.status === 'success') {
-          pushPermissionUtils.setAskedBefore();
           toast.success('Push-Benachrichtigungen aktiviert! 🔔');
-          
           onSubscriptionChange?.(true);
-          
-          window.dispatchEvent(new CustomEvent('pushSubscriptionChanged', { detail: { isSubscribed: true } }));
-          
           setShowPrompt(false);
           onClose?.();
         } else {
           throw new Error(result.message || 'Fehler beim Speichern der Subscription');
         }
       } else if (permission === 'denied') {
-        pushPermissionUtils.setDenied();
         onSubscriptionChange?.(false);
         setShowPrompt(false);
         onClose?.();
         toast.error('Push-Benachrichtigungen wurden abgelehnt');
       } else {
+        // Permission ist 'default' - User hat abgebrochen
         setShowPrompt(false);
         onClose?.();
       }
     } catch (error) {
-      console.error('Fehler beim Aktivieren der Push-Benachrichtigungen:', error);
+      console.error('[AutoPushPrompt] Fehler beim Aktivieren:', error);
       toast.error('Fehler beim Aktivieren der Push-Benachrichtigungen');
-      pushPermissionUtils.setAskedBefore();
       onSubscriptionChange?.(false);
     } finally {
       setIsLoading(false);
@@ -206,16 +119,12 @@ export default function AutoPushPrompt({ forceShow = false, onClose, onSubscript
   };
 
   const handleDeny = () => {
-    pushPermissionUtils.setDenied();
     onSubscriptionChange?.(false);
     setShowPrompt(false);
     onClose?.();
   };
 
   const handleLater = () => {
-    if (triggerReason === 'device-transfer') {
-      pushPermissionUtils.setAskedBefore();
-    }
     setShowPrompt(false);
     onClose?.();
   };
@@ -247,8 +156,8 @@ export default function AutoPushPrompt({ forceShow = false, onClose, onSubscript
             <p><strong>Du erhältst Benachrichtigungen über:</strong></p>
             <ul className="list-disc list-inside space-y-1 pl-2">
               <li>Neue Ankündigungen</li>
+              <li> Deine Aufgaben</li>
               <li>Timeline-Updates</li>
-              <li>Wichtige Informationen</li>
             </ul>
           </div>
 
@@ -282,22 +191,16 @@ export default function AutoPushPrompt({ forceShow = false, onClose, onSubscript
                 Nein danke
               </Button>
               
-              {!forceShow && (
-                <Button
-                  variant="outline"
-                  onClick={handleLater}
-                  disabled={isLoading}
-                  className="flex-1"
-                >
-                  <X className="w-4 h-4 mr-2" />
-                  Später fragen
-                </Button>
-              )}
+              <Button
+                variant="outline"
+                onClick={handleLater}
+                disabled={isLoading}
+                className="flex-1"
+              >
+                <X className="w-4 h-4 mr-2" />
+                Später
+              </Button>
             </div>
-          </div>
-
-          <div className="text-xs text-gray-500 text-center">
-            💡 Auf iOS: Tippe "Erlauben" und dann nochmal "Erlauben" im Browser-Dialog
           </div>
         </div>
       </DialogContent>

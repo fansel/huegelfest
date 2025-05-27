@@ -76,7 +76,7 @@ async function loadActivitiesWithPopulatedData(): Promise<any[]> {
       .populate('templateId', 'name defaultDescription')
       .populate('groupId', 'name color')
       .populate('responsibleUsers', 'name deviceId')
-      .sort({ date: 1, time: 1 })
+      .sort({ date: 1, startTime: 1 })
       .lean();
 
     return activities.map(activity => {
@@ -87,34 +87,40 @@ async function loadActivitiesWithPopulatedData(): Promise<any[]> {
       const responsibleUsers = activity.responsibleUsers as any[];
 
       return {
-        _id: activity._id.toString(),
+        _id: (activity._id as any).toString(),
         date: activity.date.toISOString(),
-        time: activity.time,
+        startTime: activity.startTime,
+        endTime: activity.endTime,
+        categoryId: category?._id?.toString() || (activity.categoryId as any).toString(),
+        templateId: template?._id?.toString() || (activity.templateId ? (activity.templateId as any).toString() : undefined),
         customName: activity.customName,
         description: activity.description,
+        groupId: group?._id?.toString() || (activity.groupId ? (activity.groupId as any).toString() : undefined),
+        responsibleUsers: responsibleUsers?.map(user => user?._id?.toString()) || [],
         createdBy: activity.createdBy,
         agendaJobId: activity.agendaJobId,
+        responsiblePushJobId: activity.responsiblePushJobId,
         createdAt: activity.createdAt.toISOString(),
         updatedAt: activity.updatedAt.toISOString(),
-        
-        // IDs as strings
-        categoryId: category?._id?.toString() || activity.categoryId.toString(),
-        templateId: template?._id?.toString() || (activity.templateId ? activity.templateId.toString() : undefined),
-        groupId: group?._id?.toString() || (activity.groupId ? activity.groupId.toString() : undefined),
-        responsibleUsers: responsibleUsers?.map(user => user?._id?.toString()) || [],
         
         // Populated data with safe serialization
         category: category ? {
           _id: category._id.toString(),
           name: category.name,
           icon: category.icon,
-          color: category.color
+          color: category.color,
+          isDefault: category.isDefault || false,
+          createdAt: category.createdAt?.toISOString() || '',
+          updatedAt: category.updatedAt?.toISOString() || '',
         } : undefined,
         
         template: template ? {
           _id: template._id.toString(),
           name: template.name,
-          defaultDescription: template.defaultDescription
+          categoryId: template.categoryId.toString(),
+          defaultDescription: template.defaultDescription,
+          createdAt: template.createdAt?.toISOString() || '',
+          updatedAt: template.updatedAt?.toISOString() || '',
         } : undefined,
         
         group: group ? {

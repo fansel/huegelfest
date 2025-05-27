@@ -17,7 +17,6 @@ import { useFavorites } from '@/features/favorites/hooks/useFavorites';
 import { fetchTimeline } from '../actions/fetchTimeline';
 import toast from 'react-hot-toast';
 import { formatDateBerlin } from '@/shared/utils/formatDateBerlin';
-import { OfflineIndicator } from '@/shared/components/OfflineIndicator';
 import { useNetworkStatus } from '@/shared/hooks/useNetworkStatus';
 
 
@@ -285,11 +284,6 @@ export default function Timeline({ showFavoritesOnly = false, allowClipboard = f
 
   return (
     <div className="w-full max-w-4xl mx-auto">
-      {/* Offline-Indicator am oberen Rand */}
-      <div className="mb-2">
-        <OfflineIndicator className="mx-4" />
-      </div>
-      
       <div className="sticky top-0 z-10 bg-[#460b6c]/90 backdrop-blur-sm py-2 px-4">
         {/* Tage-Auswahl für Desktop */}
         <div className="hidden md:grid md:grid-cols-3 lg:grid-cols-4 gap-2 mb-4">

@@ -10,6 +10,10 @@ import React from 'react';
 import { DeviceProvider } from "@/shared/contexts/DeviceContext";
 import { UISettingsProvider } from '@/shared/contexts/UISettingsContext';
 import { UpdateServiceProvider } from '@/shared/components/UpdateServiceProvider';
+import { SWROfflineProvider } from "@/shared/components/SWROfflineProvider";
+import { PWAPreloadData } from "@/shared/components/PWAPreloadData";
+import { NetworkProvider } from "@/shared/contexts/NetworkContext";
+import { OfflineDetector } from "@/shared/components/OfflineDetector";
 
 export const metadata: Metadata = {
   title: 'Hügelfest',
@@ -34,25 +38,46 @@ export default function RootLayout({
     <html lang="de" className={GeistMono.className}>
       <head>
         <PublicEnvScript />
-        <link rel="icon" type="image/png" sizes="32x32" href="/favicon-32x32.png" />
-        <link rel="icon" type="image/png" sizes="16x16" href="/favicon-16x16.png" />
-        <link rel="apple-touch-icon" href="/apple-touch-icon.png" />
+        <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no" />
+        <meta name="theme-color" content="#460b6c" />
+        <meta name="apple-mobile-web-app-capable" content="yes" />
+        <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
+        <meta name="apple-mobile-web-app-title" content="Hügelfest" />
         <link rel="manifest" href="/manifest.json" />
+        <link rel="apple-touch-icon" href="/apple-touch-icon.png" />
+        <link rel="icon" href="/favicon.ico" />
       </head>
-      <body className={`antialiased min-h-screen flex flex-col`}>
-        <PWARegister />
-        <DeviceProvider>
-            <AuthProvider>
+      <body className={`${GeistMono.className} antialiased min-h-screen flex flex-col`}>
+        <NetworkProvider>
+          <UISettingsProvider>
+            <DeviceProvider>
               <GlobalStateProvider>
-                <UISettingsProvider>
+                <PWARegister />
+                <OfflineDetector />
+                <AuthProvider>
                   <UpdateServiceProvider>
-                    {children}
-                    <Toaster position="top-right" />
+                    <SWROfflineProvider>
+                      <PWAPreloadData />
+                      {children}
+                      <Toaster 
+                        position="top-center"
+                        toastOptions={{
+                          duration: 1000,
+                          style: {
+                            background: 'white',
+                            color: '#333',
+                            border: '1px solid rgba(0,0,0,0.1)',
+                            boxShadow: '0 4px 12px rgba(0,0,0,0.15)',
+                          },
+                        }}
+                      />
+                    </SWROfflineProvider>
                   </UpdateServiceProvider>
-                </UISettingsProvider>
+                </AuthProvider>
               </GlobalStateProvider>
-            </AuthProvider>
-        </DeviceProvider>
+            </DeviceProvider>
+          </UISettingsProvider>
+        </NetworkProvider>
       </body>
     </html>
   );

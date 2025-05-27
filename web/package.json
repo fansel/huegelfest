@@ -8,11 +8,10 @@
     "dev:secure": "next dev --experimental-https",
     "prebuild": "node scripts/build-version.js",
     "build": "next build && tsc --project tsconfig.server.json && cp -r public .next/standalone/ && cp -r .next/static .next/standalone/.next/static && npm run postbuild:standalone",
-    "build:server": "node scripts/build-version.js && next build && tsc --project tsconfig.server.json && node ./fix-import-extensions.js",
+    "build:server": "next build && tsc --project tsconfig.server.json && node ./fix-import-extensions.js",
     "start": "NODE_ENV=production node .next/standalone/server.js",
     "postbuild:standalone": "node ./fix-import-extensions.js",
-    "dev:server": "tsx watch server.ts",
-    "version:generate": "node scripts/build-version.js"
+    "dev:server": "tsx watch server.ts"
   },
   "dependencies": {
     "@dnd-kit/core": "^6.3.1",

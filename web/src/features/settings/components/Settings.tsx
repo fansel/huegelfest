@@ -31,7 +31,7 @@ export default function Settings({
     return (
       <div className="w-full max-w-lg mx-auto py-8 flex flex-col gap-3">
         <h2 className="text-xl font-bold text-[#ff9900] mb-6 text-center">Einstellungen</h2>
-        <PushNotificationSettings isSubscribed={false} variant="row" />
+        <PushNotificationSettings variant="row" />
         <StarfieldSettings showStarfield={showStarfield} onToggle={onToggleStarfield} variant="row" />
         <MusicNoteSettings showMusicNote={showMusicNote} onToggle={onToggleMusicNote} variant="row" />
         <UpdateSettings variant="row" />
@@ -49,7 +49,7 @@ export default function Settings({
     <div className="w-full max-w-5xl mx-auto py-12">
       <h2 className="text-2xl font-bold text-[#ff9900] mb-10 text-center">Einstellungen</h2>
       <div className="grid grid-cols-3 gap-8">
-        <PushNotificationSettings isSubscribed={false} variant="tile" />
+        <PushNotificationSettings variant="tile" />
         <StarfieldSettings showStarfield={showStarfield} onToggle={onToggleStarfield} variant="tile" />
         <MusicNoteSettings showMusicNote={showMusicNote} onToggle={onToggleMusicNote} variant="tile" />
         <UpdateSettings variant="tile" />

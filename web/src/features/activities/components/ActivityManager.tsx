@@ -23,6 +23,7 @@ import type { ActivityWithCategoryAndTemplate, CreateActivityData } from '../typ
 import { Badge } from '@/shared/components/ui/badge';
 import { fetchGroupUsersAction } from '../actions/fetchActivitiesData';
 import type { GroupUser } from '../actions/fetchActivitiesData';
+import { formatActivityTime } from '../utils/timeUtils';
 
 interface ActivityManagerProps {}
 
@@ -75,8 +76,9 @@ const ActivityManager: React.FC<ActivityManagerProps> = () => {
 
   // Form state
   const [activityForm, setActivityForm] = useState<CreateActivityData>({
-    date: getFestivalDays()[0].date.toISOString(),
-    time: '',
+    date: new Date(),
+    startTime: '',
+    endTime: '',
     categoryId: '',
     templateId: '',
     customName: '',
@@ -153,8 +155,9 @@ const ActivityManager: React.FC<ActivityManagerProps> = () => {
   // Form handlers
   const resetForm = () => {
     setActivityForm({
-      date: festivalDays[selectedDay].date.toISOString(),
-      time: '',
+      date: new Date(),
+      startTime: '',
+      endTime: '',
       categoryId: '',
       templateId: '',
       customName: '',
@@ -169,12 +172,13 @@ const ActivityManager: React.FC<ActivityManagerProps> = () => {
 
   const populateForm = (activity: ActivityWithCategoryAndTemplate) => {
     setActivityForm({
-      date: activity.date,
-      time: activity.time || '',
+      date: activity.date ? new Date(activity.date) : new Date(),
+      startTime: activity.startTime || '',
+      endTime: activity.endTime || '',
       categoryId: activity.categoryId,
       templateId: activity.templateId || '',
       customName: activity.customName || '',
-      description: activity.description,
+      description: activity.description || '',
       groupId: activity.groupId || '',
       responsibleUsers: activity.responsibleUsers || [],
     });
@@ -188,8 +192,8 @@ const ActivityManager: React.FC<ActivityManagerProps> = () => {
       return;
     }
 
-    if (!activityForm.description.trim()) {
-      toast.error('Bitte gib eine Beschreibung ein');
+    if (!activityForm.startTime.trim()) {
+      toast.error('Bitte gib eine Startzeit ein');
       return;
     }
 
@@ -205,11 +209,12 @@ const ActivityManager: React.FC<ActivityManagerProps> = () => {
         // Update existing activity
         const result = await updateActivityAction(editingActivity._id, {
           date: selectedDate,
-          time: activityForm.time || undefined,
+          startTime: activityForm.startTime,
+          endTime: activityForm.endTime || undefined,
           categoryId: activityForm.categoryId,
           templateId: activityForm.templateId || undefined,
           customName: activityForm.customName || undefined,
-          description: activityForm.description,
+          description: activityForm.description || undefined,
           groupId: activityForm.groupId || undefined,
           responsibleUsers: activityForm.responsibleUsers || undefined,
         });
@@ -225,11 +230,12 @@ const ActivityManager: React.FC<ActivityManagerProps> = () => {
         // Create new activity
         const result = await createActivityAction({
           date: selectedDate,
-          time: activityForm.time || undefined,
+          startTime: activityForm.startTime,
+          endTime: activityForm.endTime || undefined,
           categoryId: activityForm.categoryId,
           templateId: activityForm.templateId || undefined,
           customName: activityForm.customName || undefined,
-          description: activityForm.description,
+          description: activityForm.description || undefined,
           groupId: activityForm.groupId || undefined,
           responsibleUsers: activityForm.responsibleUsers || undefined,
         }, deviceId);
@@ -243,8 +249,8 @@ const ActivityManager: React.FC<ActivityManagerProps> = () => {
         }
       }
     } catch (error) {
-      console.error('Error with activity:', error);
-      toast.error('Fehler beim Verarbeiten der Aktivität');
+      console.error('Error creating/updating activity:', error);
+      toast.error('Ein unerwarteter Fehler ist aufgetreten');
     }
   };
 
@@ -395,10 +401,10 @@ const ActivityManager: React.FC<ActivityManagerProps> = () => {
                             </h4>
                             
                             {/* Time */}
-                            {activity.time && (
-                              <div className="flex items-center gap-1 text-xs text-[#ff9900]/70 mt-1">
+                            {activity.startTime && (
+                              <div className="flex items-center gap-1 text-xs text-gray-500">
                                 <Clock className="h-3 w-3" />
-                                {activity.time}
+                                {formatActivityTime(activity)}
                               </div>
                             )}
                             
@@ -488,15 +494,33 @@ const ActivityManager: React.FC<ActivityManagerProps> = () => {
 
           <div className="flex flex-col gap-4 px-4 py-6 h-full overflow-y-auto">
             {/* Time */}
-            <div>
-              <label className="text-sm font-medium text-gray-700 block mb-1">
-                Uhrzeit (optional)
-              </label>
-              <Input
-                placeholder="z.B. 08:00 oder 08:00-10:00"
-                value={activityForm.time}
-                onChange={(e) => setActivityForm(prev => ({ ...prev, time: e.target.value }))}
-              />
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">
+                  Startzeit *
+                </label>
+                <input
+                  type="time"
+                  step="60"
+                  className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-[#ff9900] focus:border-transparent"
+                  value={activityForm.startTime || ''}
+                  onChange={(e) => setActivityForm(prev => ({ ...prev, startTime: e.target.value }))}
+                  required
+                />
+              </div>
+              
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">
+                  Endzeit (optional)
+                </label>
+                <input
+                  type="time"
+                  step="60"
+                  className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-[#ff9900] focus:border-transparent"
+                  value={activityForm.endTime || ''}
+                  onChange={(e) => setActivityForm(prev => ({ ...prev, endTime: e.target.value }))}
+                />
+              </div>
             </div>
 
             {/* Category */}
@@ -542,7 +566,7 @@ const ActivityManager: React.FC<ActivityManagerProps> = () => {
             {/* Description */}
             <div>
               <label className="text-sm font-medium text-gray-700 block mb-1">
-                Beschreibung *
+                Beschreibung (optional)
               </label>
               <Textarea
                 placeholder="Was soll gemacht werden?"

@@ -3,6 +3,7 @@ import { toast } from 'react-hot-toast';
 import { useGlobalWebSocket } from '@/shared/hooks/useGlobalWebSocket';
 import { globalWebSocketManager } from '@/shared/utils/globalWebSocketManager';
 import { fetchUserActivitiesAction, type UserActivitiesData } from '../actions/fetchUserActivities';
+import { useNetworkStatus } from '@/shared/hooks/useNetworkStatus';
 
 /**
  * Hook für Echtzeit-Synchronisation der Benutzer-Aufgaben über das globale WebSocket-System
@@ -15,6 +16,7 @@ export function useUserActivitiesRealtime(deviceId: string | null) {
   });
   const [loading, setLoading] = useState(true);
   const [connected, setConnected] = useState(false);
+  const isOnline = useNetworkStatus();
 
   // WebSocket-Status vom globalen Manager abfragen
   const updateConnectionStatus = useCallback(() => {
@@ -39,11 +41,13 @@ export function useUserActivitiesRealtime(deviceId: string | null) {
       setData(initialData);
     } catch (error) {
       console.error('[useUserActivitiesRealtime] Fehler beim Laden der Benutzer-Aufgaben:', error);
-      toast.error('Fehler beim Laden der Aufgaben');
+      if (isOnline) {
+        toast.error('Fehler beim Laden der Aufgaben');
+      }
     } finally {
       setLoading(false);
     }
-  }, [deviceId]);
+  }, [deviceId, isOnline]);
 
   // Daten vollständig neu laden (fallback)
   const refreshData = useCallback(async () => {
@@ -54,9 +58,11 @@ export function useUserActivitiesRealtime(deviceId: string | null) {
       setData(freshData);
     } catch (error) {
       console.error('[useUserActivitiesRealtime] Fehler beim Aktualisieren der Benutzer-Aufgaben:', error);
-      toast.error('Fehler beim Aktualisieren der Aufgaben');
+      if (isOnline) {
+        toast.error('Fehler beim Aktualisieren der Aufgaben');
+      }
     }
-  }, [deviceId]);
+  }, [deviceId, isOnline]);
 
   // WebSocket Message Handler - verwendet globales System
   const handleWebSocketMessage = useCallback((msg: any) => {

@@ -1,4 +1,4 @@
-import { Activity } from '@/lib/db/models/Activity';
+import { Activity, type IActivity } from '@/lib/db/models/Activity';
 import { ActivityCategory } from '@/lib/db/models/ActivityCategory';
 import { ActivityTemplate } from '@/lib/db/models/ActivityTemplate';
 import { broadcast } from '@/lib/websocket/broadcast';
@@ -8,21 +8,38 @@ import { Types } from 'mongoose';
 import type { CreateActivityData, UpdateActivityData } from '../types';
 import mongoose from 'mongoose';
 
+// Helper function to safely serialize populated documents
+function serializeActivity(activity: any) {
+  return {
+    _id: activity._id?.toString() || '',
+    date: activity.date instanceof Date ? activity.date.toISOString() : activity.date,
+    startTime: activity.startTime,
+    endTime: activity.endTime,
+    customName: activity.customName,
+    description: activity.description,
+    createdBy: activity.createdBy,
+    agendaJobId: activity.agendaJobId,
+    responsiblePushJobId: activity.responsiblePushJobId,
+    createdAt: activity.createdAt instanceof Date ? activity.createdAt.toISOString() : activity.createdAt,
+    updatedAt: activity.updatedAt instanceof Date ? activity.updatedAt.toISOString() : activity.updatedAt,
+    categoryId: activity.categoryId?._id?.toString() || activity.categoryId?.toString() || '',
+    templateId: activity.templateId?._id?.toString() || activity.templateId?.toString(),
+    groupId: activity.groupId?._id?.toString() || activity.groupId?.toString(),
+    responsibleUsers: activity.responsibleUsers?.map((user: any) => 
+      user?._id?.toString() || user?.toString() || user
+    ) || [],
+  };
+}
+
 export async function getAllActivities() {
   const activities = await Activity.find()
     .populate('categoryId', 'name icon color')
     .populate('templateId', 'name defaultDescription')
     .populate('groupId', 'name color')
-    .sort({ date: 1, time: 1 })
+    .sort({ date: 1, startTime: 1 })
     .lean();
 
-  return activities.map(activity => ({
-    ...activity,
-    _id: activity._id.toString(),
-    categoryId: activity.categoryId.toString(),
-    templateId: activity.templateId?.toString(),
-    groupId: activity.groupId?.toString(),
-  }));
+  return (activities as any[]).map(serializeActivity);
 }
 
 export async function getActivitiesByDate(date: string | Date) {
@@ -41,37 +58,31 @@ export async function getActivitiesByDate(date: string | Date) {
     .populate('categoryId', 'name icon color')
     .populate('templateId', 'name defaultDescription')
     .populate('groupId', 'name color')
-    .sort({ time: 1 })
+    .sort({ startTime: 1 })
     .lean();
 
-  return activities.map(activity => ({
-    ...activity,
-    _id: activity._id.toString(),
-    categoryId: activity.categoryId.toString(),
-    templateId: activity.templateId?.toString(),
-    groupId: activity.groupId?.toString(),
-  }));
+  return (activities as any[]).map(serializeActivity);
 }
 
 export async function getActivitiesByGroup(groupId: string) {
-  const activities = await Activity.find({ groupId })
+  const activities = await Activity.find({ groupId: new Types.ObjectId(groupId) })
     .populate('categoryId', 'name icon color')
     .populate('templateId', 'name defaultDescription')
-    .sort({ date: 1, time: 1 })
+    .populate('groupId', 'name color')
+    .populate('responsibleUsers', 'name deviceId')
+    .sort({ date: 1, startTime: 1 })
     .lean();
 
-  return activities.map(activity => ({
-    ...activity,
-    _id: activity._id.toString(),
-    categoryId: activity.categoryId.toString(),
-    templateId: activity.templateId?.toString(),
-    groupId: activity.groupId?.toString(),
-  }));
+  return (activities as any[]).map(serializeActivity);
 }
 
 export async function createActivity(data: CreateActivityData, createdBy: string) {
   if (!data.categoryId) {
     throw new Error('Kategorie ist erforderlich');
+  }
+
+  if (!data.startTime) {
+    throw new Error('Startzeit ist erforderlich');
   }
 
   if (!data.templateId && !data.customName) {
@@ -82,11 +93,12 @@ export async function createActivity(data: CreateActivityData, createdBy: string
 
   const activityData = {
     date: dateObj,
-    time: data.time,
+    startTime: data.startTime,
+    endTime: data.endTime,
     categoryId: new Types.ObjectId(data.categoryId),
     templateId: data.templateId ? new Types.ObjectId(data.templateId) : undefined,
     customName: data.customName,
-    description: data.description,
+    description: data.description || '', // Default to empty string if not provided
     groupId: data.groupId ? new Types.ObjectId(data.groupId) : undefined,
     responsibleUsers: data.responsibleUsers?.map(userId => new Types.ObjectId(userId)) || [],
     createdBy,
@@ -95,13 +107,22 @@ export async function createActivity(data: CreateActivityData, createdBy: string
   const activity = new Activity(activityData);
   await activity.save();
 
-  // Create push notification if group is assigned and time is specified
-  if (activity.groupId && activity.time) {
+  // Create push notifications if group is assigned and time is specified
+  if (activity.groupId && activity.startTime) {
     try {
-      await createActivityPushEvent(activity);
+      await createActivityPushEvents(activity);
     } catch (error) {
-      console.error('Failed to create push event for activity:', error);
+      console.error('Failed to create push events for activity:', error);
       // Don't fail the activity creation if push fails
+    }
+  }
+
+  // Send immediate notification to responsible users
+  if (activity.responsibleUsers && activity.responsibleUsers.length > 0) {
+    try {
+      await sendResponsibleUserNotification(activity);
+    } catch (error) {
+      console.error('Failed to send responsible user notification:', error);
     }
   }
 
@@ -113,29 +134,11 @@ export async function createActivity(data: CreateActivityData, createdBy: string
     .populate('responsibleUsers', 'name deviceId')
     .lean();
 
-  // Sichere Serialisierung der populated Objects
-  const category = populatedActivity!.categoryId as any;
-  const template = populatedActivity!.templateId as any;
-  const group = populatedActivity!.groupId as any;
-  const responsibleUsers = populatedActivity!.responsibleUsers as any[];
+  if (!populatedActivity) {
+    throw new Error('Aktivität konnte nicht geladen werden');
+  }
 
-  const broadcastData = {
-    _id: populatedActivity!._id.toString(),
-    date: populatedActivity!.date instanceof Date ? populatedActivity!.date.toISOString() : populatedActivity!.date,
-    time: populatedActivity!.time,
-    customName: populatedActivity!.customName,
-    description: populatedActivity!.description,
-    createdBy: populatedActivity!.createdBy,
-    agendaJobId: populatedActivity!.agendaJobId,
-    createdAt: populatedActivity!.createdAt instanceof Date ? populatedActivity!.createdAt.toISOString() : populatedActivity!.createdAt,
-    updatedAt: populatedActivity!.updatedAt instanceof Date ? populatedActivity!.updatedAt.toISOString() : populatedActivity!.updatedAt,
-    
-    // IDs als Strings - nicht die populated Objects
-    categoryId: category?._id?.toString() || populatedActivity!.categoryId.toString(),
-    templateId: template?._id?.toString() || (populatedActivity!.templateId ? populatedActivity!.templateId.toString() : undefined),
-    groupId: group?._id?.toString() || (populatedActivity!.groupId ? populatedActivity!.groupId.toString() : undefined),
-    responsibleUsers: responsibleUsers?.map(user => user?._id?.toString()) || [],
-  };
+  const broadcastData = serializeActivity(populatedActivity);
 
   await broadcast('ACTIVITY_CREATED', { 
     type: 'ACTIVITY_CREATED',
@@ -152,14 +155,16 @@ export async function updateActivity(id: string, data: UpdateActivityData) {
     throw new Error('Aktivität nicht gefunden');
   }
 
+  // Store old values for comparison
   const oldGroupId = activity.groupId?.toString();
-  const oldTime = activity.time;
+  const oldResponsibleUsers = activity.responsibleUsers?.map((userId: any) => userId.toString()) || [];
 
   // Update fields
   if (data.date !== undefined) {
     activity.date = typeof data.date === 'string' ? new Date(data.date) : data.date;
   }
-  if (data.time !== undefined) activity.time = data.time;
+  if (data.startTime !== undefined) activity.startTime = data.startTime;
+  if (data.endTime !== undefined) activity.endTime = data.endTime;
   if (data.categoryId !== undefined) activity.categoryId = new Types.ObjectId(data.categoryId);
   if (data.templateId !== undefined) {
     activity.templateId = data.templateId ? new Types.ObjectId(data.templateId) : undefined;
@@ -175,29 +180,54 @@ export async function updateActivity(id: string, data: UpdateActivityData) {
 
   await activity.save();
 
-  // Update push notification if needed
+  // Handle group change - cancel old push events and create new ones
   const newGroupId = activity.groupId?.toString();
-  const newTime = activity.time;
+  const newResponsibleUsers = activity.responsibleUsers?.map((userId: any) => userId.toString()) || [];
 
-  if ((oldGroupId !== newGroupId) || (oldTime !== newTime)) {
-    try {
-      // Remove old push event if exists
-      if (activity.agendaJobId) {
+  if (oldGroupId !== newGroupId || JSON.stringify(oldResponsibleUsers) !== JSON.stringify(newResponsibleUsers)) {
+    // Cancel old push events
+    if (activity.agendaJobId) {
+      try {
         const agenda = (await import('@/lib/pushScheduler/agenda')).default;
         await agenda.cancel({ _id: activity.agendaJobId });
         activity.agendaJobId = undefined;
+      } catch (error) {
+        console.error('Failed to cancel old push event:', error);
       }
-
-      // Create new push event if group and time are assigned
-      if (activity.groupId && activity.time) {
-        await createActivityPushEvent(activity);
-      }
-    } catch (error) {
-      console.error('Failed to update push event for activity:', error);
     }
+
+    if (activity.responsiblePushJobId) {
+      try {
+        const agenda = (await import('@/lib/pushScheduler/agenda')).default;
+        await agenda.cancel({ _id: activity.responsiblePushJobId });
+        activity.responsiblePushJobId = undefined;
+      } catch (error) {
+        console.error('Failed to cancel old responsible push event:', error);
+      }
+    }
+
+    // Create new push events if group and time are set
+    if (activity.groupId && activity.startTime) {
+      try {
+        await createActivityPushEvents(activity);
+      } catch (error) {
+        console.error('Failed to create new push events:', error);
+      }
+    }
+
+    // Send immediate notification to new responsible users
+    if (activity.responsibleUsers && activity.responsibleUsers.length > 0) {
+      try {
+        await sendResponsibleUserNotification(activity);
+      } catch (error) {
+        console.error('Failed to send responsible user notification:', error);
+      }
+    }
+
+    await activity.save();
   }
 
-  // Load populated data for WebSocket broadcast
+  // Load populated data for broadcast
   const populatedActivity = await Activity.findById(activity._id)
     .populate('categoryId', 'name icon color')
     .populate('templateId', 'name defaultDescription')
@@ -205,29 +235,11 @@ export async function updateActivity(id: string, data: UpdateActivityData) {
     .populate('responsibleUsers', 'name deviceId')
     .lean();
 
-  // Sichere Serialisierung der populated Objects
-  const category = populatedActivity!.categoryId as any;
-  const template = populatedActivity!.templateId as any;
-  const group = populatedActivity!.groupId as any;
-  const responsibleUsers = populatedActivity!.responsibleUsers as any[];
+  if (!populatedActivity) {
+    throw new Error('Aktivität konnte nicht geladen werden');
+  }
 
-  const broadcastData = {
-    _id: populatedActivity!._id.toString(),
-    date: populatedActivity!.date instanceof Date ? populatedActivity!.date.toISOString() : populatedActivity!.date,
-    time: populatedActivity!.time,
-    customName: populatedActivity!.customName,
-    description: populatedActivity!.description,
-    createdBy: populatedActivity!.createdBy,
-    agendaJobId: populatedActivity!.agendaJobId,
-    createdAt: populatedActivity!.createdAt instanceof Date ? populatedActivity!.createdAt.toISOString() : populatedActivity!.createdAt,
-    updatedAt: populatedActivity!.updatedAt instanceof Date ? populatedActivity!.updatedAt.toISOString() : populatedActivity!.updatedAt,
-    
-    // IDs als Strings - nicht die populated Objects
-    categoryId: category?._id?.toString() || populatedActivity!.categoryId.toString(),
-    templateId: template?._id?.toString() || (populatedActivity!.templateId ? populatedActivity!.templateId.toString() : undefined),
-    groupId: group?._id?.toString() || (populatedActivity!.groupId ? populatedActivity!.groupId.toString() : undefined),
-    responsibleUsers: responsibleUsers?.map(user => user?._id?.toString()) || [],
-  };
+  const broadcastData = serializeActivity(populatedActivity);
 
   await broadcast('ACTIVITY_UPDATED', { 
     type: 'ACTIVITY_UPDATED',
@@ -244,13 +256,22 @@ export async function deleteActivity(id: string) {
     throw new Error('Aktivität nicht gefunden');
   }
 
-  // Remove push event if exists
+  // Remove push events if they exist
   if (activity.agendaJobId) {
     try {
       const agenda = (await import('@/lib/pushScheduler/agenda')).default;
       await agenda.cancel({ _id: activity.agendaJobId });
     } catch (error) {
       console.error('Failed to cancel push event for activity:', error);
+    }
+  }
+
+  if (activity.responsiblePushJobId) {
+    try {
+      const agenda = (await import('@/lib/pushScheduler/agenda')).default;
+      await agenda.cancel({ _id: activity.responsiblePushJobId });
+    } catch (error) {
+      console.error('Failed to cancel responsible push event for activity:', error);
     }
   }
 
@@ -272,7 +293,7 @@ export async function sendActivityReminder(activityId: string) {
     .populate('categoryId', 'name icon')
     .populate('templateId', 'name')
     .populate('groupId', 'name')
-    .lean();
+    .lean() as any;
 
   if (!activity) {
     throw new Error('Aktivität nicht gefunden');
@@ -282,9 +303,22 @@ export async function sendActivityReminder(activityId: string) {
     throw new Error('Aktivität ist keiner Gruppe zugewiesen');
   }
 
+  // Check if activity has started (can only send reminder after start)
+  if (activity.startTime) {
+    const now = new Date();
+    const activityDate = new Date(activity.date);
+    const [startHour, startMin] = activity.startTime.split(':').map(Number);
+    const startDateTime = new Date(activityDate);
+    startDateTime.setHours(startHour, startMin, 0, 0);
+
+    if (now < startDateTime) {
+      throw new Error('Erinnerungen können erst gesendet werden, wenn die Aufgabe begonnen hat');
+    }
+  }
+
   // Type assertion since we know the data is populated
-  const populatedTemplate = activity.templateId as any;
-  const populatedGroup = activity.groupId as any;
+  const populatedTemplate = activity.templateId;
+  const populatedGroup = activity.groupId;
 
   const activityName = populatedTemplate?.name || activity.customName || 'Unbekannte Aktivität';
   const groupName = populatedGroup?.name || 'Unbekannte Gruppe';
@@ -333,14 +367,71 @@ export async function sendActivityReminder(activityId: string) {
 }
 
 /**
- * Helper function to create push event for activity
+ * Send immediate notification to responsible users when they are assigned
  */
-async function createActivityPushEvent(activity: any) {
-  if (!activity.time || !activity.groupId) return;
+async function sendResponsibleUserNotification(activity: any) {
+  if (!activity.responsibleUsers || activity.responsibleUsers.length === 0) return;
+
+  const { webPushService } = await import('@/lib/webpush/webPushService');
+  const { Subscriber } = await import('@/lib/db/models/Subscriber');
+  const { User } = await import('@/lib/db/models/User');
+  const { Group } = await import('@/lib/db/models/Group');
+
+  // Get group information
+  const group = await Group.findById(activity.groupId).select('name');
+  const groupName = group?.name || 'Unbekannte Gruppe';
+
+  // Get responsible users
+  const responsibleUsers = await User.find({
+    _id: { $in: activity.responsibleUsers }
+  }).select('deviceId name');
+
+  const responsibleDeviceIds = responsibleUsers.map(user => user.deviceId);
+  
+  // Find subscribers for these deviceIds
+  const subscribers = await Subscriber.find({
+    deviceId: { $in: responsibleDeviceIds }
+  });
+
+  // Format date with day of week and time
+  const activityDate = new Date(activity.date);
+  const dayNames = ['Sonntag', 'Montag', 'Dienstag', 'Mittwoch', 'Donnerstag', 'Freitag', 'Samstag'];
+  const dayName = dayNames[activityDate.getDay()];
+  
+  const activityName = activity.customName || 'Aktivität';
+  const timeText = activity.startTime ? ` um ${activity.startTime}` : '';
+  
+  const title = `Gruppe ${groupName}`;
+  const body = `Du trägst die Hauptverantwortung für Aufgabe "${activityName}" am ${dayName}${timeText}`;
+
+  for (const subscriber of subscribers) {
+    if (subscriber.endpoint && webPushService.isInitialized()) {
+      try {
+        await webPushService.sendNotification(subscriber, {
+          title,
+          body,
+          icon: '/icon-192x192.png',
+          badge: '/badge-96x96.png',
+          data: { 
+            type: 'responsible-assignment', 
+            activityId: activity._id.toString()
+          }
+        });
+      } catch (error) {
+        console.error('Failed to send responsible user notification:', error);
+      }
+    }
+  }
+}
+
+/**
+ * Helper function to create push events for activity
+ */
+async function createActivityPushEvents(activity: any) {
+  if (!activity.startTime || !activity.groupId) return;
 
   // Parse time and create notification date
-  const timePart = activity.time.split('-')[0]; // Get start time from "08:00-10:00" or just "08:00"
-  const [hours, minutes] = timePart.split(':').map(Number);
+  const [hours, minutes] = activity.startTime.split(':').map(Number);
 
   const activityDate = new Date(activity.date);
   activityDate.setHours(hours, minutes, 0, 0);
@@ -348,7 +439,12 @@ async function createActivityPushEvent(activity: any) {
   // Convert to Berlin timezone
   const berlinDate = fromZonedTime(activityDate, 'Europe/Berlin');
 
-  const activityName = activity.templateId?.name || activity.customName || 'Aktivität';
+  const activityName = activity.customName || 'Aktivität';
+  
+  // Get group information for group name
+  const { Group } = await import('@/lib/db/models/Group');
+  const group = await Group.findById(activity.groupId).select('name');
+  const groupName = group?.name || 'Unbekannte Gruppe';
   
   // Get all subscribers of the group
   const { Subscriber } = await import('@/lib/db/models/Subscriber');
@@ -366,52 +462,66 @@ async function createActivityPushEvent(activity: any) {
     deviceId: { $in: groupDeviceIds }
   }).select('_id');
 
-  const subscriberIds = groupSubscribers.map(sub => sub._id) as mongoose.Types.ObjectId[];
+  // Get responsible users if any
+  let responsibleDeviceIds: string[] = [];
+  let responsibleSubscriberIds: mongoose.Types.ObjectId[] = [];
   
-  // Standard push notification for all group members
-  const pushEvent = await createScheduledPushEvent({
-    title: 'Eure Aufgabe startet!',
-    body: `"${activityName}" beginnt jetzt!`,
-    repeat: 'once',
-    schedule: berlinDate,
-    active: true,
-    sendToAll: false,
-    subscribers: subscriberIds,
-  });
-
-  // Special push notification for responsible users
   if (activity.responsibleUsers && activity.responsibleUsers.length > 0) {
     // Get deviceIds of responsible users
     const responsibleUsers = await User.find({
       _id: { $in: activity.responsibleUsers }
     }).select('deviceId');
 
-    const responsibleDeviceIds = responsibleUsers.map(user => user.deviceId);
+    responsibleDeviceIds = responsibleUsers.map(user => user.deviceId);
     
     // Find subscribers with these deviceIds
     const responsibleSubscribers = await Subscriber.find({
       deviceId: { $in: responsibleDeviceIds }
     }).select('_id');
 
-    if (responsibleSubscribers.length > 0) {
-      const responsibleSubscriberIds = responsibleSubscribers.map(sub => sub._id) as mongoose.Types.ObjectId[];
-      
-      // Create additional push event for responsible users (5 minutes earlier)
-      await createScheduledPushEvent({
-        title: 'Du trägst Hauptverantwortung!',
-        body: `"${activityName}" - Du bist hauptverantwortlich für diese Aufgabe!`,
-        repeat: 'once',
-        schedule: new Date(berlinDate.getTime() - 5 * 60 * 1000), // 5 Minuten früher
-        active: true,
-        sendToAll: false,
-        subscribers: responsibleSubscriberIds,
-      });
-    }
+    responsibleSubscriberIds = responsibleSubscribers.map(sub => sub._id) as mongoose.Types.ObjectId[];
   }
 
-  // Update activity with agenda job ID
-  activity.agendaJobId = pushEvent.agendaJobId;
+  // Separate notifications for responsible users and general group members
+  const generalGroupSubscribers = groupSubscribers.filter(sub => {
+    // Only include subscribers who are NOT responsible users
+    return !responsibleSubscriberIds.some(respId => respId.equals(sub._id as mongoose.Types.ObjectId));
+  });
+
+  const generalSubscriberIds = generalGroupSubscribers.map(sub => sub._id) as mongoose.Types.ObjectId[];
+  
+  // Scheduled notification for general group members
+  if (generalSubscriberIds.length > 0) {
+    const pushEvent = await createScheduledPushEvent({
+      title: `Gruppe ${groupName}`,
+      body: `Eure Aufgabe "${activityName}" hat begonnen`,
+      repeat: 'once',
+      schedule: berlinDate,
+      active: true,
+      sendToAll: false,
+      subscribers: generalSubscriberIds,
+    });
+
+    // Update activity with agenda job ID
+    activity.agendaJobId = pushEvent.agendaJobId;
+  }
+
+  // Scheduled notification for responsible users (with additional responsibility note)
+  if (responsibleSubscriberIds.length > 0) {
+    const responsiblePushEvent = await createScheduledPushEvent({
+      title: `Gruppe ${groupName}`,
+      body: `Eure Aufgabe "${activityName}" hat begonnen - Du trägst die Hauptverantwortung!`,
+      repeat: 'once',
+      schedule: berlinDate,
+      active: true,
+      sendToAll: false,
+      subscribers: responsibleSubscriberIds,
+    });
+
+    activity.responsiblePushJobId = responsiblePushEvent.agendaJobId;
+  }
+
   await activity.save();
 
-  return pushEvent;
+  return activity.agendaJobId;
 } 

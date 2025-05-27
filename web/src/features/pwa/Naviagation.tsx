@@ -52,6 +52,9 @@ const BottomBar: React.FC<BottomBarProps> = ({ mode, activeTab, onTabChange, isA
   const { deviceType } = useDeviceContext();
   const isMobileLayout = deviceType === 'mobile';
 
+  // Admin-Button nur online anzeigen
+  const showAdminButtonFinal = showAdminButton && isOnline;
+
   // Während der Anmeldephase: Admins sehen alle Admin-Tabs + User-Settings, User sehen Anmeldung + Einstellungen
   let tabs: Tab[];
   if (signupOpen && mode === 'admin') {
@@ -103,15 +106,9 @@ const BottomBar: React.FC<BottomBarProps> = ({ mode, activeTab, onTabChange, isA
                 {label}
               </span>
             ))}
-            {showAdminButton && (
+            {showAdminButtonFinal && (
               <span
-                onClick={() => {
-                  if (!isOnline) {
-                    window.alert('Admin-Modus ist offline nicht verfügbar');
-                    return;
-                  }
-                  onAdminToggle();
-                }}
+                onClick={onAdminToggle}
                 className={`cursor-pointer px-2 select-none text-base transition-colors duration-200 text-[#ff9900] 
                   ${isAdminActive ? 'font-semibold underline underline-offset-4' : 'hover:font-semibold hover:line-through'}`}
                 aria-label="Admin-Modus"
@@ -145,16 +142,10 @@ const BottomBar: React.FC<BottomBarProps> = ({ mode, activeTab, onTabChange, isA
               <div className={`p-2 rounded-full transition-colors duration-200 ${activeTab === id ? 'bg-[#ff9900]/20' : 'bg-transparent'}`}>{icon}</div>
             </button>
           ))}
-          {/* Shield-Button nur wenn showAdminButton true ist */}
-          {showAdminButton && (
+          {/* Shield-Button nur wenn showAdminButtonFinal true ist */}
+          {showAdminButtonFinal && (
             <button
-              onClick={() => {
-                if (!isOnline) {
-                  window.alert('Admin-Modus ist offline nicht verfügbar');
-                  return;
-                }
-                onAdminToggle();
-              }}
+              onClick={onAdminToggle}
               className={`flex-1 flex flex-col items-center justify-center min-w-0 transition-all duration-200 ${isAdminActive ? 'text-white scale-110' : 'text-[#ff9900]/60 hover:text-[#ff9900]'} `}
               aria-label="Admin-Modus"
             >

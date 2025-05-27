@@ -8,6 +8,7 @@ import { Button } from "@/shared/components/ui/button";
 import { useAuth } from '@/features/auth/AuthContext';
 import UserSettingsCard from './UserSettingsCard';
 import { Shield } from 'lucide-react';
+import { useNetworkStatus } from '@/shared/hooks/useNetworkStatus';
 
 interface AdminSettingsProps {
   variant?: 'row' | 'tile';
@@ -18,8 +19,14 @@ export default function AdminSettings({ variant = 'row' }: AdminSettingsProps) {
   const [password, setPassword] = useState('');
   const [showLoginForm, setShowLoginForm] = useState(false);
   const { isAuthenticated, isAdmin, login, logout, error, loading } = useAuth();
+  const isOnline = useNetworkStatus();
 
   const handleToggle = (value: boolean) => {
+    // Verhindere Aktionen wenn offline
+    if (!isOnline) {
+      return;
+    }
+    
     console.log('Switch toggled:', value, isAuthenticated);
     if (value && !isAuthenticated) {
       setShowLoginForm(true);
@@ -48,10 +55,19 @@ export default function AdminSettings({ variant = 'row' }: AdminSettingsProps) {
       title="Admin-Modus"
       switchElement={
         <div className="flex items-center gap-1">
-          <Switch checked={isAuthenticated} onCheckedChange={handleToggle} />
+          <Switch 
+            checked={isAuthenticated} 
+            onCheckedChange={handleToggle}
+            disabled={!isOnline}
+            className={!isOnline ? 'opacity-50 cursor-not-allowed' : ''}
+          />
         </div>
       }
-      info="Schalte spezielle Admin-Optionen frei (Login erforderlich)."
+      info={
+        !isOnline 
+          ? "Admin-Login ist nur online möglich."
+          : "Schalte spezielle Admin-Optionen frei (Login erforderlich)."
+      }
       variant={variant}
     >
       <Dialog open={showLoginForm && !isAuthenticated} onOpenChange={setShowLoginForm}>

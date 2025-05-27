@@ -1,6 +1,7 @@
 import { useEffect, useState, useCallback } from 'react';
 import { toast } from 'react-hot-toast';
 import { fetchGroupsData, type GroupsData } from '../actions/fetchGroupsData';
+import { useNetworkStatus } from '@/shared/hooks/useNetworkStatus';
 
 type GroupsEvent = {
   type: 'GROUP_CREATED' | 'GROUP_UPDATED' | 'GROUP_DELETED' | 'USER_ASSIGNED' | 'USER_REMOVED' | 'REGISTRATION_UPDATED';
@@ -21,6 +22,7 @@ export function useGroupsRealtime() {
   });
   const [loading, setLoading] = useState(true);
   const [connected, setConnected] = useState(false);
+  const isOnline = useNetworkStatus();
 
   // Initiale Daten laden
   const loadInitialData = useCallback(async () => {
@@ -30,11 +32,13 @@ export function useGroupsRealtime() {
       setData(initialData);
     } catch (error) {
       console.error('Fehler beim Laden der initial Daten:', error);
-      toast.error('Fehler beim Laden der Daten');
+      if (isOnline) {
+        toast.error('Fehler beim Laden der Daten');
+      }
     } finally {
       setLoading(false);
     }
-  }, []);
+  }, [isOnline]);
 
   // Daten vollständig neu laden (fallback)
   const refreshData = useCallback(async () => {
@@ -43,9 +47,11 @@ export function useGroupsRealtime() {
       setData(freshData);
     } catch (error) {
       console.error('Fehler beim Aktualisieren der Daten:', error);
-      toast.error('Fehler beim Aktualisieren der Daten');
+      if (isOnline) {
+        toast.error('Fehler beim Aktualisieren der Daten');
+      }
     }
-  }, []);
+  }, [isOnline]);
 
   // WebSocket Event Handler
   const handleWebSocketMessage = useCallback((event: GroupsEvent) => {

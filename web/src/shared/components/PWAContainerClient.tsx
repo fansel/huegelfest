@@ -8,10 +8,11 @@ import { useNavigation } from '@/shared/hooks/useNavigation';
 import Image from 'next/image';
 import { useUISettings } from '@/shared/contexts/UISettingsContext';
 import { useDeviceContext } from '@/shared/contexts/DeviceContext';
+import { useNetworkStatus } from '@/shared/hooks/useNetworkStatus';
 import React, { useState, useEffect } from 'react';
 
 const Starfield = dynamic(() => import('./Starfield'), { ssr: false });
-const OfflineBanner = dynamic(() => import('./OfflineBanner'), { ssr: false });
+const OfflineIndicator = dynamic(() => import('./OfflineIndicator').then(mod => ({ default: mod.OfflineIndicator })), { ssr: false });
 const InstallPrompt = dynamic(() => import("@/shared/components/ui/InstallPrompt").then(mod => ({ default: mod.InstallPrompt })), { ssr: false });
 const AutoPushPrompt = dynamic(() => import('@/features/push/components/AutoPushPrompt'), { ssr: false });
 
@@ -34,6 +35,7 @@ export default function PWAContainerClient({ isAdmin, timelineData, infoBoardDat
   const { mode, activeTab, adminActiveTab, handleAdminToggle, handleTabChange } = useNavigation(isAdmin);
   const { showStarfield, showMusicNote } = useUISettings();
   const { deviceType } = useDeviceContext();
+  const isOnline = useNetworkStatus();
 
   const isMobileLayout = deviceType === 'mobile';
 
@@ -51,10 +53,10 @@ export default function PWAContainerClient({ isAdmin, timelineData, infoBoardDat
   return (
     <div className="relative min-h-screen bg-[#460b6c] text-[#ff9900] flex flex-col">
       <InstallPrompt />
-      <OfflineBanner />
+      <OfflineIndicator />
       <AutoPushPrompt onSubscriptionChange={handlePushSubscriptionChange} />
       {showStarfield && <Starfield />}
-      {hasMounted && showMusicNote && mode !== 'admin' && (
+      {hasMounted && showMusicNote && mode !== 'admin' && isOnline && (
         <div className="fixed top-2 right-2 z-[9999] select-none">
           <MusicNote />
         </div>

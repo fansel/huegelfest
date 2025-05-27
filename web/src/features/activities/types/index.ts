@@ -41,37 +41,41 @@ export interface CreateActivityTemplateData {
 export interface Activity {
   _id: string;
   date: string; // ISO date string
-  time?: string; // Optional: "08:00-10:00" format
+  startTime: string; // HH:MM format (e.g., "08:00") - required
+  endTime?: string; // HH:MM format (e.g., "10:00") - optional
   categoryId: string;
   templateId?: string; // Optional: reference to template
   customName?: string; // If not using template
-  description: string;
+  description?: string; // Optional description
   groupId?: string; // Assigned group (optional)
   responsibleUsers?: string[]; // IDs der hauptverantwortlichen Benutzer
   createdBy: string; // Admin ID
   agendaJobId?: string; // For push reminders
+  responsiblePushJobId?: string; // For responsible users push reminders
   createdAt: string;
   updatedAt: string;
 }
 
 export interface CreateActivityData {
   date: string | Date;
-  time?: string;
+  startTime: string; // HH:MM format - required
+  endTime?: string; // HH:MM format - optional
   categoryId: string;
   templateId?: string;
   customName?: string;
-  description: string;
+  description?: string; // Optional description
   groupId?: string;
   responsibleUsers?: string[]; // IDs der hauptverantwortlichen Benutzer
 }
 
 export interface UpdateActivityData {
   date?: string | Date;
-  time?: string;
+  startTime?: string; // HH:MM format
+  endTime?: string; // HH:MM format
   categoryId?: string;
   templateId?: string;
   customName?: string;
-  description?: string;
+  description?: string; // Optional description
   groupId?: string;
   responsibleUsers?: string[]; // IDs der hauptverantwortlichen Benutzer
 }
@@ -115,6 +119,34 @@ export interface ActivityDay {
   activities: ActivityWithCategoryAndTemplate[];
 }
 
+// Festival day management
+export interface FestivalDay {
+  _id?: string;
+  date: Date;
+  label: string;
+  description?: string;
+  isActive: boolean;
+  order: number;
+  createdAt?: string;
+  updatedAt?: string;
+}
+
+export interface CreateFestivalDayData {
+  date: Date;
+  label: string;
+  description?: string;
+  isActive?: boolean;
+  order?: number;
+}
+
+export interface UpdateFestivalDayData {
+  date?: Date;
+  label?: string;
+  description?: string;
+  isActive?: boolean;
+  order?: number;
+}
+
 // User status for activities (extends existing UserStatus)
 export interface UserStatus {
   isRegistered: boolean;
@@ -127,4 +159,24 @@ export interface UserStatus {
 export interface UserActivityStatus extends UserStatus {
   assignedActivities: ActivityWithCategoryAndTemplate[];
   upcomingActivities: ActivityWithCategoryAndTemplate[];
+}
+
+// Activity status helpers
+export interface ActivityTimeStatus {
+  isActive: boolean; // Currently happening
+  hasStarted: boolean; // Has started (past start time)
+  hasEnded: boolean; // Has ended (past end time or 1 hour after start if no end time)
+  canSendReminder: boolean; // Can send reminder (has started)
+  timeRemaining?: string; // Human readable time remaining
+}
+
+// Activity view modes
+export type ActivityViewMode = 'all' | 'today' | 'upcoming' | 'past';
+
+// Activity filter options
+export interface ActivityFilters {
+  groupId?: string;
+  categoryId?: string;
+  hasResponsibleUsers?: boolean;
+  timeStatus?: 'upcoming' | 'active' | 'past';
 } 
