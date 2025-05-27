@@ -41,19 +41,46 @@ const Settings: React.FC = () => {
 
   return (
     <div className={isMobile ? 'space-y-6 p-4' : 'flex flex-col items-center w-full min-h-[70vh] py-10'}>
-      <h2 className={isMobile ? 'text-xl font-bold text-[#ff9900] mb-4' : 'text-3xl font-extrabold text-[#ff9900] mb-10 tracking-tight'}>
+      <h2 className={isMobile ? 'text-xl font-bold text-[#ff9900] mb-6' : 'text-3xl font-extrabold text-[#ff9900] mb-10 tracking-tight'}>
         Admin-Einstellungen
       </h2>
       {isMobile ? (
-        <>
-          <FestivalSignupPhaseToggle />
-          <button
-            onClick={() => setOpen(true)}
-            className="bg-gradient-to-r from-[#ff9900] to-[#ffb347] text-white px-4 py-2 rounded-lg font-semibold shadow hover:scale-105 hover:from-[#ff9900]/90 hover:to-[#ffb347]/90 transition-all w-full"
-          >
-            Packliste verwalten
-          </button>
-        </>
+        <div className="space-y-4">
+          {/* Mobile Card für Anmeldephase */}
+          <div className="bg-white rounded-2xl shadow-lg border-2 border-[#ff9900]/10 p-6">
+            <div className="flex items-center gap-4 mb-4">
+              <div className="p-3 bg-[#ff9900]/10 rounded-full">
+                <SettingsIcon className="w-6 h-6 text-[#ff9900]" />
+              </div>
+              <div className="flex-1">
+                <h3 className="text-lg font-bold text-[#ff9900] mb-1">Anmeldephase</h3>
+                <p className="text-gray-600 text-sm">Steuere, ob die Festival-Anmeldung für Nutzer sichtbar ist.</p>
+              </div>
+            </div>
+            <div className="flex justify-center">
+              <FestivalSignupPhaseToggle />
+            </div>
+          </div>
+
+          {/* Mobile Card für Packliste */}
+          <div className="bg-white rounded-2xl shadow-lg border-2 border-[#ff9900]/10 p-6">
+            <div className="flex items-center gap-4 mb-4">
+              <div className="p-3 bg-[#ff9900]/10 rounded-full">
+                <ClipboardList className="w-6 h-6 text-[#ff9900]" />
+              </div>
+              <div className="flex-1">
+                <h3 className="text-lg font-bold text-[#ff9900] mb-1">Packliste</h3>
+                <p className="text-gray-600 text-sm">Verwalte die globale Packliste für alle Teilnehmer.</p>
+              </div>
+            </div>
+            <button
+              onClick={() => setOpen(true)}
+              className="bg-gradient-to-r from-[#ff9900] to-[#ffb347] text-white px-4 py-3 rounded-lg font-semibold shadow hover:scale-105 hover:from-[#ff9900]/90 hover:to-[#ffb347]/90 transition-all w-full"
+            >
+              Packliste verwalten
+            </button>
+          </div>
+        </div>
       ) : (
         <div className="grid grid-cols-3 gap-8 w-full max-w-5xl bg-transparent rounded-3xl p-8 shadow-none">
           {cards.map((card, idx) => (

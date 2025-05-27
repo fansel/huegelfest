@@ -9,6 +9,7 @@ import SignupPhaseInfo from '@/features/pwa/SignupPhaseInfo';
 import PacklistClient from '@/features/packlist/components/PacklistClient';
 import CarpoolClient from '@/features/registration/components/CarpoolClient';
 import ActivitiesServer from '@/features/activities/components/ActivitiesServer';
+import ConceptsServer from '@/features/concepts/components/ConceptsServer';
 import { useGlobalState } from '@/contexts/GlobalStateContext';
 import TimelineClient from '@/features/timeline/components/TimelineClient';
 import { useUISettings } from '@/shared/contexts/UISettingsContext';
@@ -41,26 +42,6 @@ const MainContent: React.FC<MainContentProps> = ({ mode, activeTab, adminActiveT
   const { showStarfield, setShowStarfield, showMusicNote, setShowMusicNote } = useUISettings();
   
   // Content je nach Modus und Tab
-  if (signupOpen && mode !== 'admin') {
-    if (activeTab === 'settings') {
-      return (
-        <Settings 
-          showStarfield={showStarfield} 
-          onToggleStarfield={setShowStarfield}
-          showMusicNote={showMusicNote}
-          onToggleMusicNote={setShowMusicNote}
-        />
-      );
-    }
-    if (activeTab === 'packlist') {
-      return <PacklistClient initialItems={packlistData} />;
-    }
-    if (activeTab === 'carpool') {
-      return <CarpoolClient initialRides={carpoolData} />;
-    }
-    // Standard: Anmeldung
-    return <SignupPhaseInfo />;
-  }
   if (mode === 'admin') {
     const safeTab: AdminTab = isValidAdminTab(adminActiveTab) ? adminActiveTab : 'announcements';
     return <AdminDashboard activeTab={safeTab} setActiveTab={(tab: AdminTab) => handleTabChange(tab)} />;
@@ -72,6 +53,8 @@ const MainContent: React.FC<MainContentProps> = ({ mode, activeTab, adminActiveT
         return <CarpoolClient initialRides={carpoolData} />;
       case 'activities':
         return <ActivitiesServer />;
+      case 'concepts':
+        return <ConceptsServer />;
       case 'infoboard':
         return <InfoBoard announcements={infoBoardData.announcements} reactionsMap={infoBoardData.reactionsMap} />;
       case 'favorites':
@@ -87,6 +70,9 @@ const MainContent: React.FC<MainContentProps> = ({ mode, activeTab, adminActiveT
         );
       case 'packlist':
         return <PacklistClient initialItems={packlistData} />;
+      case 'signup':
+        // Anmeldung nur anzeigen, wenn explizit der signup-Tab ausgewählt ist
+        return <SignupPhaseInfo />;
       default:
         return null;
     }

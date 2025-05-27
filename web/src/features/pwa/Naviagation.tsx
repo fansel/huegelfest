@@ -1,6 +1,6 @@
 'use client';
 import React, { useRef, useEffect, useState } from 'react';
-import { Calendar, Megaphone, Settings as SettingsIcon, Heart, Shield, Users, Users2, Clock, SlidersHorizontal, Music, ClipboardList, Car, Check, CalendarCheck } from 'lucide-react';
+import { Calendar, Megaphone, Settings as SettingsIcon, Heart, Shield, Users, Users2, Clock, SlidersHorizontal, Music, ClipboardList, Car, Check, CalendarCheck, BookOpen, Wrench } from 'lucide-react';
 import { useNetworkStatus } from '@/shared/hooks/useNetworkStatus';
 import { useGlobalState } from '@/contexts/GlobalStateContext';
 import { useDeviceContext } from '@/shared/contexts/DeviceContext';
@@ -24,6 +24,7 @@ const userTabs: Tab[] = [
   { id: 'home', icon: <Calendar size={24} />, label: 'Timeline' },
   { id: 'carpool', icon: <Car size={24} />, label: 'Mitfahren' },
   { id: 'activities', icon: <Check size={24} />, label: 'Aufgaben' },
+  { id: 'concepts', icon: <BookOpen size={24} />, label: 'Konzepte' },
   { id: 'infoboard', icon: <Megaphone size={24} />, label: 'News' },
   { id: 'favorites', icon: <Heart size={24} />, label: 'Favoriten' },
   { id: 'settings', icon: <SettingsIcon size={24} />, label: 'Einstellungen' },
@@ -31,7 +32,7 @@ const userTabs: Tab[] = [
 
 const adminTabs: Tab[] = [
   { id: 'announcements', icon: <Megaphone size={24} />, label: 'Ankündigungen' },
-  { id: 'workingGroups', icon: <Users size={24} />, label: 'Arbeitsgruppen' },
+  { id: 'workingGroups', icon: <Wrench size={24} />, label: 'Arbeitsgruppen' },
   { id: 'timeline', icon: <Clock size={24} />, label: 'Timeline' },
   { id: 'music', icon: <Music size={24} />, label: 'Musik' },
   { id: 'groups', icon: <Users2 size={24} />, label: 'Gruppen' },
@@ -43,6 +44,7 @@ const signupPhaseTabs: Tab[] = [
   { id: 'signup', icon: <Users size={24} />, label: 'Anmeldung' },
   { id: 'carpool', icon: <Car size={24} />, label: 'Mitfahren' },
   { id: 'packlist', icon: <ClipboardList size={24} />, label: 'Packliste' },
+  { id: 'concepts', icon: <BookOpen size={24} />, label: 'Konzepte' },
   { id: 'settings', icon: <SettingsIcon size={24} />, label: 'Einstellungen' },
 ];
 

@@ -33,7 +33,8 @@ import {
   AlertTriangle,
   Shield,
   Camera,
-  ChefHat
+  ChefHat,
+  User
 } from 'lucide-react';
 import type { RegistrationWithId } from './types';
 
@@ -71,14 +72,18 @@ export function RegistrationsTab({
   const registrationColumns = useMemo<ColumnDef<RegistrationWithId, any>[]>(() => {
     const baseCols: ColumnDef<RegistrationWithId, any>[] = [
       columnHelper.accessor('name', {
-        header: 'Name',
+        header: () => (
+          <Tooltip content="Name">
+            <User className="w-3 h-3" />
+          </Tooltip>
+        ),
         cell: info => {
           const name = info.getValue() as string;
           const [vorname, ...rest] = name.trim().split(' ');
           const nachname = rest.length > 0 ? rest[0] : '';
           const display = nachname ? `${vorname} ${nachname.charAt(0).toUpperCase()}.` : vorname;
           return (
-            <span className="max-w-[96px] whitespace-nowrap overflow-hidden text-ellipsis inline-block align-bottom">{display}</span>
+            <span className="max-w-[80px] whitespace-nowrap overflow-hidden text-ellipsis inline-block align-bottom">{display}</span>
           );
         },
         filterFn: (row, columnId, filterValue) =>
@@ -87,12 +92,12 @@ export function RegistrationsTab({
       columnHelper.accessor('isMedic', {
         header: () => (
           <Tooltip content="Sanitäter">
-            <Stethoscope className="w-5 h-5" />
+            <Stethoscope className="w-3 h-3" />
           </Tooltip>
         ),
         cell: info => info.getValue() ? (
           <Tooltip content="Sanitäter">
-            <Stethoscope className="w-5 h-5 text-blue-500" />
+            <Stethoscope className="w-3 h-3 text-blue-500" />
           </Tooltip>
         ) : null,
         filterFn: (row, columnId, filterValue) => !filterValue || row.getValue(columnId) === true,
@@ -100,12 +105,12 @@ export function RegistrationsTab({
       columnHelper.accessor('canStaySober', {
         header: () => (
           <Tooltip content="Nüchtern fahren">
-            <AlertTriangle className="w-5 h-5" />
+            <AlertTriangle className="w-3 h-3" />
           </Tooltip>
         ),
         cell: info => info.getValue() ? (
           <Tooltip content="Kann nüchtern fahren">
-            <AlertTriangle className="w-5 h-5 text-orange-500" />
+            <AlertTriangle className="w-3 h-3 text-orange-500" />
           </Tooltip>
         ) : null,
         filterFn: (row, columnId, filterValue) => !filterValue || row.getValue(columnId) === true,
@@ -113,12 +118,12 @@ export function RegistrationsTab({
       columnHelper.accessor('wantsAwareness', {
         header: () => (
           <Tooltip content="Awareness">
-            <Shield className="w-5 h-5" />
+            <Shield className="w-3 h-3" />
           </Tooltip>
         ),
         cell: info => info.getValue() ? (
           <Tooltip content="Awareness-Team">
-            <Shield className="w-5 h-5 text-purple-500" />
+            <Shield className="w-3 h-3 text-purple-500" />
           </Tooltip>
         ) : null,
         filterFn: (row, columnId, filterValue) => !filterValue || row.getValue(columnId) === true,
@@ -126,12 +131,12 @@ export function RegistrationsTab({
       columnHelper.accessor('wantsKitchenHelp', {
         header: () => (
           <Tooltip content="Küche">
-            <ChefHat className="w-5 h-5" />
+            <ChefHat className="w-3 h-3" />
           </Tooltip>
         ),
         cell: info => info.getValue() ? (
           <Tooltip content="Küchen-Hilfe">
-            <ChefHat className="w-5 h-5 text-green-600" />
+            <ChefHat className="w-3 h-3 text-green-600" />
           </Tooltip>
         ) : null,
         filterFn: (row, columnId, filterValue) => !filterValue || row.getValue(columnId) === true,
@@ -139,12 +144,12 @@ export function RegistrationsTab({
       columnHelper.accessor('allowsPhotos', {
         header: () => (
           <Tooltip content="Fotos">
-            <Camera className="w-5 h-5" />
+            <Camera className="w-3 h-3" />
           </Tooltip>
         ),
         cell: info => (
           <Tooltip content={info.getValue() ? "Fotos erlaubt" : "Keine Fotos"}>
-            <Camera className={`w-5 h-5 ${info.getValue() ? 'text-green-500' : 'text-red-500'}`} />
+            <Camera className={`w-3 h-3 ${info.getValue() ? 'text-green-500' : 'text-red-500'}`} />
           </Tooltip>
         ),
         filterFn: (row, columnId, filterValue) => {
@@ -157,36 +162,36 @@ export function RegistrationsTab({
       columnHelper.accessor('travelType', {
         header: () => (
           <Tooltip content="Anreise">
-            <CarIcon className="w-5 h-5" />
+            <CarIcon className="w-3 h-3" />
           </Tooltip>
         ),
         cell: info => {
           const type = info.getValue();
-          if (type === 'auto') return <Tooltip content="Auto"><CarIcon className="w-5 h-5 text-[#ff9900]" /></Tooltip>;
-          if (type === 'zug') return <Tooltip content="Zug"><TrainIcon className="w-5 h-5 text-[#ff9900]" /></Tooltip>;
-          if (type === 'fahrrad') return <Tooltip content="Fahrrad"><BikeIcon className="w-5 h-5 text-[#ff9900]" /></Tooltip>;
-          if (type === 'andere') return <Tooltip content="Andere"><HelpCircle className="w-5 h-5 text-[#ff9900]" /></Tooltip>;
+          if (type === 'auto') return <Tooltip content="Auto"><CarIcon className="w-3 h-3 text-[#ff9900]" /></Tooltip>;
+          if (type === 'zug') return <Tooltip content="Zug"><TrainIcon className="w-3 h-3 text-[#ff9900]" /></Tooltip>;
+          if (type === 'fahrrad') return <Tooltip content="Fahrrad"><BikeIcon className="w-3 h-3 text-[#ff9900]" /></Tooltip>;
+          if (type === 'andere') return <Tooltip content="Andere"><HelpCircle className="w-3 h-3 text-[#ff9900]" /></Tooltip>;
         },
         filterFn: (row, columnId, filterValue) => filterValue === '' || row.getValue(columnId) === filterValue,
       }),
       columnHelper.accessor('sleepingPreference', {
         header: () => (
           <Tooltip content="Schlafpräferenz">
-            <Bed className="w-5 h-5" />
+            <Bed className="w-3 h-3" />
           </Tooltip>
         ),
         cell: info =>
           info.getValue() === 'bed' ? (
             <Tooltip content="Bett">
-              <Bed className="w-5 h-5" />
+              <Bed className="w-3 h-3" />
             </Tooltip>
           ) : info.getValue() === 'tent' ? (
             <Tooltip content="Zelt">
-              <Tent className="w-5 h-5" />
+              <Tent className="w-3 h-3" />
             </Tooltip>
           ) : (
             <Tooltip content="Auto (Schlaf)">
-              <CarIcon className="w-5 h-5" />
+              <CarIcon className="w-3 h-3" />
             </Tooltip>
           ),
         filterFn: (row, columnId, filterValue) => filterValue === '' || row.getValue(columnId) === filterValue,
@@ -198,7 +203,7 @@ export function RegistrationsTab({
         header: () => (
           <div className="text-center">
             <Tooltip content="Tage">
-              <Calendar className="w-4 h-4 mx-auto" />
+              <Calendar className="w-3 h-3 mx-auto" />
             </Tooltip>
           </div>
         ),
@@ -209,16 +214,16 @@ export function RegistrationsTab({
       columnHelper.accessor('paid', {
         header: () => (
           <Tooltip content="Bezahlstatus">
-            <Euro className="w-5 h-5" />
+            <Euro className="w-3 h-3" />
           </Tooltip>
         ),
         cell: info => info.getValue() ? (
           <Tooltip content="Bezahlt">
-            <Euro className="w-5 h-5 text-green-500" />
+            <Euro className="w-3 h-3 text-green-500" />
           </Tooltip>
         ) : (
           <Tooltip content="Unbezahlt">
-            <Euro className="w-5 h-5 text-red-500" />
+            <Euro className="w-3 h-3 text-red-500" />
           </Tooltip>
         ),
         filterFn: (row, columnId, filterValue) => {
@@ -231,16 +236,16 @@ export function RegistrationsTab({
       columnHelper.accessor('checkedIn', {
         header: () => (
           <Tooltip content="Anmeldestatus">
-            <Info className="w-5 h-5" />
+            <Info className="w-3 h-3" />
           </Tooltip>
         ),
         cell: info => info.getValue() ? (
           <Tooltip content="Angemeldet">
-            <Info className="w-5 h-5 text-green-500" />
+            <Info className="w-3 h-3 text-green-500" />
           </Tooltip>
         ) : (
           <Tooltip content="Nicht angemeldet">
-            <Info className="w-5 h-5 text-red-500" />
+            <Info className="w-3 h-3 text-red-500" />
           </Tooltip>
         ),
         filterFn: (row, columnId, filterValue) => {
@@ -434,7 +439,7 @@ export function RegistrationsTab({
                     className={
                       header.column.id === 'actions'
                         ? 'w-[48px] min-w-[48px] max-w-[48px] p-0 text-center bg-[#ff9900]/10'
-                        : 'p-1.5 text-left font-semibold bg-[#ff9900]/10'
+                        : 'p-2 text-left font-semibold bg-[#ff9900]/10'
                     }
                   >
                     {flexRender(header.column.columnDef.header, header.getContext())}
@@ -463,7 +468,7 @@ export function RegistrationsTab({
                           : (cell.column.id === 'tage'
                               ? 'p-1.5 text-center'
                               : (cell.column.id === 'name'
-                                  ? 'p-1.5 max-w-[96px] whitespace-nowrap overflow-hidden text-ellipsis'
+                                  ? 'p-1.5 max-w-[80px] whitespace-nowrap overflow-hidden text-ellipsis'
                                   : 'p-1.5'))
                       }
                     >
@@ -483,7 +488,7 @@ export function RegistrationsTab({
                       : (col.id === 'tage'
                           ? 'p-1.5 text-center'
                           : (col.id === 'name'
-                              ? 'p-1.5 max-w-[96px] whitespace-nowrap overflow-hidden text-ellipsis'
+                              ? 'p-1.5 max-w-[80px] whitespace-nowrap overflow-hidden text-ellipsis'
                               : 'p-1.5'))
                   }>
                     {/* empty */}

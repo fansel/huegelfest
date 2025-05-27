@@ -12,4 +12,5 @@ export type View =
   | 'timeline'
   | 'admin-settings'
   | 'signup'
-  | 'packlist'; 
+  | 'packlist'
+  | 'concepts'; 

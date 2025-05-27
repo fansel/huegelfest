@@ -22,7 +22,6 @@ import {
 } from '../actions/magicCodeActions';
 import { getUserWithRegistrationAction } from '@/features/auth/actions/userActions';
 import { toast } from 'react-hot-toast';
-import { pushPermissionUtils } from '../../settings/components/PushNotificationSettings';
 import { useWebSocket, WebSocketMessage } from '@/shared/hooks/useWebSocket';
 import { getWebSocketUrl } from '@/shared/utils/getWebSocketUrl';
 import UserSettingsCard from '../../settings/components/UserSettingsCard';
@@ -318,8 +317,14 @@ export default function DeviceTransferSettings({ variant = 'row' }: DeviceTransf
           console.log(`[DeviceTransferSettings] Neue Identität übernommen: ${result.transferredDeviceId}`);
         }
         
-        // Reset Push-Permissions - wird automatisch über WebSocket gehandhabt
-        pushPermissionUtils.resetPermissions();
+        // Reset Push-Permissions - entferne lokale Push-Daten
+        try {
+          localStorage.removeItem('push-subscription');
+          localStorage.removeItem('push-permission-state');
+          console.log('[DeviceTransferSettings] Push-Permissions zurückgesetzt');
+        } catch (error) {
+          console.warn('[DeviceTransferSettings] Fehler beim Zurücksetzen der Push-Permissions:', error);
+        }
         
         setTransferResult(result);
         
