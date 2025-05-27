@@ -15,10 +15,12 @@ import { PWAPreloadData } from "@/shared/components/PWAPreloadData";
 import { NetworkProvider } from "@/shared/contexts/NetworkContext";
 import { OfflineDetector } from "@/shared/components/OfflineDetector";
 
+/** 
 export const metadata: Metadata = {
   title: 'Hügelfest',
   description: 'Die offizielle Progressive Web App für das Hügelfest',
 };
+*/
 
 export const viewport: Viewport = {
   width: 'device-width',
@@ -38,14 +40,11 @@ export default function RootLayout({
     <html lang="de" className={GeistMono.className}>
       <head>
         <PublicEnvScript />
-        <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no" />
-        <meta name="theme-color" content="#460b6c" />
-        <meta name="apple-mobile-web-app-capable" content="yes" />
-        <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
-        <meta name="apple-mobile-web-app-title" content="Hügelfest" />
-        <link rel="manifest" href="/manifest.json" />
+        <link rel="icon" type="image/png" sizes="32x32" href="/favicon-32x32.png" />
+        <link rel="icon" type="image/png" sizes="16x16" href="/favicon-16x16.png" />
         <link rel="apple-touch-icon" href="/apple-touch-icon.png" />
         <link rel="icon" href="/favicon.ico" />
+        <link rel="manifest" href="/manifest.json" />
       </head>
       <body className={`${GeistMono.className} antialiased min-h-screen flex flex-col`}>
         <NetworkProvider>

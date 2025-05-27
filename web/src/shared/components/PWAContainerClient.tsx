@@ -65,7 +65,7 @@ export default function PWAContainerClient({ isAdmin, timelineData, infoBoardDat
       {activeTab !== 'signup' && (
         <div className="flex flex-col items-center justify-center gap-2 pt-4">
           <div className="flex items-center justify-center w-full">
-            <Image src="/android-chrome-192x192.png" alt="Hügelfest Logo" width={48} height={48} />
+            <Image src="/logo.svg" alt="Hügelfest Logo" width={48} height={48} />
           </div>
         </div>
       )}

@@ -6,7 +6,7 @@
   "display": "standalone",
   "background_color": "#460b6c",
   "theme_color": "#460b6c",
-  "orientation": "portrait",
+  "orientation": "portrait-primary",
   "icons": [
     {
       "src": "/android-chrome-192x192.png",
@@ -23,6 +23,6 @@
   ],
   "gcm_sender_id": "103953800507",
   "version": "0.1.0",
-  "build_id": "218290dc3c6c776f",
-  "build_time": 1748362540834
+  "build_id": "8606bf5d43ffb6f6",
+  "build_time": 1748376111476
 }
