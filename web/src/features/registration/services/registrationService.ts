@@ -265,22 +265,27 @@ export async function getRegistrationByDeviceId(deviceId: string): Promise<{ suc
     const registrationData = {
       name: registration.name || '',
       days: registration.days || [],
-      priceOption: registration.priceOption || 'full',
       isMedic: registration.isMedic || false,
       travelType: registration.travelType || 'auto',
       equipment: registration.equipment || '',
       concerns: registration.concerns || '',
-      wantsToContribute: registration.wantsToContribute || false,
       wantsToOfferWorkshop: registration.wantsToOfferWorkshop || '',
       sleepingPreference: registration.sleepingPreference || 'bed',
       lineupContribution: registration.lineupContribution || '',
-      deviceId: deviceId
+      deviceId: deviceId,
+      // Neue Felder
+      canStaySober: registration.canStaySober || false,
+      wantsAwareness: registration.wantsAwareness || false,
+      programContribution: registration.programContribution || '',
+      hasConcreteIdea: registration.hasConcreteIdea || false,
+      wantsKitchenHelp: registration.wantsKitchenHelp || false,
+      allergies: registration.allergies || '',
+      allowsPhotos: registration.allowsPhotos !== undefined ? registration.allowsPhotos : true,
     };
     
     logger.info(`[Registration] Bestehende Registration für ${deviceId} geladen:`, {
       name: registrationData.name,
       days: registrationData.days,
-      priceOption: registrationData.priceOption
     });
     
     // Debug: Logge alle Details der geladenen Registration
@@ -292,17 +297,23 @@ export async function getRegistrationByDeviceId(deviceId: string): Promise<{ suc
       _id: registration._id?.toString(),
       name: registration.name,
       days: registration.days,
-      priceOption: registration.priceOption,
       isMedic: registration.isMedic,
       travelType: registration.travelType,
       equipment: registration.equipment,
       concerns: registration.concerns,
-      wantsToContribute: registration.wantsToContribute,
       wantsToOfferWorkshop: registration.wantsToOfferWorkshop,
       sleepingPreference: registration.sleepingPreference,
       lineupContribution: registration.lineupContribution,
       paid: registration.paid,
       checkedIn: registration.checkedIn,
+      // Neue Felder
+      canStaySober: registration.canStaySober,
+      wantsAwareness: registration.wantsAwareness,
+      programContribution: registration.programContribution,
+      hasConcreteIdea: registration.hasConcreteIdea,
+      wantsKitchenHelp: registration.wantsKitchenHelp,
+      allergies: registration.allergies,
+      allowsPhotos: registration.allowsPhotos,
       // Serialisiere Dates korrekt
       createdAt: registration.createdAt ? 
         (registration.createdAt instanceof Date ? 

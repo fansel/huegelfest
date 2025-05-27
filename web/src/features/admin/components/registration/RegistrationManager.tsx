@@ -2,7 +2,7 @@
 import React, { useEffect, useState, useMemo } from "react";
 import { getRegistrations } from "../../../registration/actions/getRegistrations";
 import { Button } from "@/shared/components/ui/button";
-import { FileText, FileDown, Search, ChevronLeft, ChevronRight, Info, Euro, Percent, Gift, Stethoscope, Car as CarIcon, Bed, Tent, Music, Hammer, Wrench, Calendar, BikeIcon, TrainIcon, LucideBike, HelpCircle } from "lucide-react";
+import { FileText, FileDown, Search, ChevronLeft, ChevronRight, Info, Euro, Percent, Gift, Stethoscope, Car as CarIcon, Bed, Tent, Music, Hammer, Wrench, Calendar, BikeIcon, TrainIcon, LucideBike, HelpCircle, AlertTriangle, Shield, Camera, ChefHat } from "lucide-react";
 import jsPDF from "jspdf";
 import Papa from "papaparse";
 import { Sheet, SheetContent, SheetHeader, SheetTitle } from "@/shared/components/ui/sheet";
@@ -33,7 +33,6 @@ interface RegistrationWithId {
   createdAt: string;
   name: string;
   days: number[];
-  priceOption: 'full' | 'reduced' | 'free';
   isMedic: boolean;
   travelType: 'zug' | 'auto' | 'fahrrad' | 'andere';
   equipment: string;
@@ -43,6 +42,14 @@ interface RegistrationWithId {
   lineupContribution: string;
   paid: boolean;
   checkedIn: boolean;
+  // Neue Felder
+  canStaySober: boolean;
+  wantsAwareness: boolean;
+  programContribution: string;
+  hasConcreteIdea: boolean;
+  wantsKitchenHelp: boolean;
+  allergies: string;
+  allowsPhotos: boolean;
 }
 
 const FESTIVAL_DAYS = ["31.07.", "01.08.", "02.08.", "03.08."];
@@ -84,37 +91,14 @@ export default function RegistrationManager() {
         filterFn: (row, columnId, filterValue) =>
           row.getValue<string>(columnId).toLowerCase().includes(filterValue.toLowerCase()),
       }),
-      columnHelper.accessor(row => ({ priceOption: row.priceOption, paid: row.paid }), {
-        id: 'priceOption',
+      columnHelper.accessor('days', {
         header: () => (
-          <Tooltip content="Preisoption">
-            <Euro className="w-5 h-5" />
+          <Tooltip content="Anzahl Tage">
+            <Calendar className="w-5 h-5" />
           </Tooltip>
         ),
-        cell: info => {
-          const { priceOption, paid } = info.getValue();
-          if (priceOption === 'full') {
-            return (
-              <Tooltip content={paid ? "Vollpreis (bezahlt)" : "Vollpreis (unbezahlt)"}>
-                <Euro className={`w-5 h-5 ${paid ? 'text-green-500' : 'text-red-500'}`} />
-              </Tooltip>
-            );
-          }
-          if (priceOption === 'reduced') {
-            return (
-              <Tooltip content={paid ? "Reduziert (bezahlt)" : "Reduziert (unbezahlt)"}>
-                <Percent className={`w-5 h-5 ${paid ? 'text-yellow-500' : 'text-red-500'}`} />
-              </Tooltip>
-            );
-          }
-          // free
-          return (
-            <Tooltip content="Kostenlos">
-              <Gift className="w-5 h-5 text-green-500" />
-            </Tooltip>
-          );
-        },
-        filterFn: (row, columnId, filterValue) => filterValue === '' || row.original.priceOption === filterValue,
+        cell: info => info.getValue().length,
+        filterFn: (row, columnId, filterValue) => filterValue === '' || (row.getValue(columnId) as number[]).length === Number(filterValue),
       }),
       // Sani-Spalte immer einfügen, aber nur anzeigen, wenn showSani true ist
       columnHelper.accessor('isMedic', {
@@ -227,6 +211,63 @@ export default function RegistrationManager() {
           return true;
         },
       }),
+      columnHelper.accessor('canStaySober', {
+        header: () => (
+          <Tooltip content="Nüchtern fahren">
+            <AlertTriangle className="w-5 h-5" />
+          </Tooltip>
+        ),
+        cell: info => info.getValue() ? (
+          <Tooltip content="Kann nüchtern fahren">
+            <AlertTriangle className="w-5 h-5 text-orange-500" />
+          </Tooltip>
+        ) : null,
+        filterFn: (row, columnId, filterValue) => !filterValue || row.getValue(columnId) === true,
+      }),
+      columnHelper.accessor('wantsAwareness', {
+        header: () => (
+          <Tooltip content="Awareness">
+            <Shield className="w-5 h-5" />
+          </Tooltip>
+        ),
+        cell: info => info.getValue() ? (
+          <Tooltip content="Awareness-Team">
+            <Shield className="w-5 h-5 text-purple-500" />
+          </Tooltip>
+        ) : null,
+        filterFn: (row, columnId, filterValue) => !filterValue || row.getValue(columnId) === true,
+      }),
+      columnHelper.accessor('wantsKitchenHelp', {
+        header: () => (
+          <Tooltip content="Küche">
+            <ChefHat className="w-5 h-5" />
+          </Tooltip>
+        ),
+        cell: info => info.getValue() ? (
+          <Tooltip content="Küchen-Hilfe">
+            <ChefHat className="w-5 h-5 text-green-600" />
+          </Tooltip>
+        ) : null,
+        filterFn: (row, columnId, filterValue) => !filterValue || row.getValue(columnId) === true,
+      }),
+      columnHelper.accessor('allowsPhotos', {
+        header: () => (
+          <Tooltip content="Fotos">
+            <Camera className="w-5 h-5" />
+          </Tooltip>
+        ),
+        cell: info => (
+          <Tooltip content={info.getValue() ? "Fotos erlaubt" : "Keine Fotos"}>
+            <Camera className={`w-5 h-5 ${info.getValue() ? 'text-green-500' : 'text-red-500'}`} />
+          </Tooltip>
+        ),
+        filterFn: (row, columnId, filterValue) => {
+          if (!filterValue) return true;
+          if (filterValue === 'allowed') return row.getValue(columnId) === true;
+          if (filterValue === 'notAllowed') return row.getValue(columnId) === false;
+          return true;
+        },
+      }),
     ];
     // Löschen-Spalte hinzufügen
     baseCols.push({
@@ -277,22 +318,17 @@ export default function RegistrationManager() {
   });
 
   // --- Filter Popover State ---
-  const [priceFilter, setPriceFilter] = useState('');
   const [sleepFilter, setSleepFilter] = useState('');
   const [travelFilter, setTravelFilter] = useState('');
   const [medicFilter, setMedicFilter] = useState(false);
-  const [paidFilter, setPaidFilter] = useState(''); // '', 'paid', 'unpaid'
+  const [paidFilter, setPaidFilter] = useState(''); // '', 'paid', 'notPaid'
   const [checkedInFilter, setCheckedInFilter] = useState(''); // '', 'checkedIn', 'notCheckedIn'
 
   // Dynamische Filteroptionen aus den Daten
-  const priceOptions = useMemo(() => Array.from(new Set(registrations.map(r => r.priceOption))), [registrations]);
   const sleepOptions = useMemo(() => Array.from(new Set(registrations.map(r => r.sleepingPreference))), [registrations]);
   const travelOptions = useMemo(() => Array.from(new Set(registrations.map(r => r.travelType))), [registrations]);
 
   // Filter-Handler
-  useEffect(() => {
-    table.getColumn('priceOption')?.setFilterValue(priceFilter);
-  }, [priceFilter]);
   useEffect(() => {
     table.getColumn('sleepingPreference')?.setFilterValue(sleepFilter);
   }, [sleepFilter]);
@@ -343,7 +379,7 @@ export default function RegistrationManager() {
     let y = 24;
     registrations.forEach((reg, idx) => {
       doc.text(
-        `${idx + 1}. ${reg.name} | Tage: ${reg.days.map(i => FESTIVAL_DAYS[i]).join(", ")} | Preis: ${reg.priceOption} | Sanitäter: ${reg.isMedic ? "Ja" : "Nein"} | Anreise: ${reg.travelType} | Schlaf: ${reg.sleepingPreference}`,
+        `${idx + 1}. ${reg.name} | Tage: ${reg.days.map(i => FESTIVAL_DAYS[i]).join(", ")} | Sanitäter: ${reg.isMedic ? "Ja" : "Nein"} | Anreise: ${reg.travelType} | Schlaf: ${reg.sleepingPreference}`,
         10,
         y
       );
@@ -352,6 +388,12 @@ export default function RegistrationManager() {
       if (reg.concerns) { doc.text(`Anliegen: ${reg.concerns}`, 14, y); y += 6; }
       if (reg.lineupContribution && reg.lineupContribution.trim()) { doc.text(`Line-Up: ${reg.lineupContribution}`, 14, y); y += 6; }
       if (reg.wantsToOfferWorkshop) { doc.text(`Workshop: ${reg.wantsToOfferWorkshop}`, 14, y); y += 6; }
+      // Neue Felder
+      if (reg.canStaySober) { doc.text(`Nüchtern fahren: Ja`, 14, y); y += 6; }
+      if (reg.wantsAwareness) { doc.text(`Awareness: Ja`, 14, y); y += 6; }
+      if (reg.programContribution) { doc.text(`Programmpunkt: ${reg.programContribution}`, 14, y); y += 6; }
+      if (reg.wantsKitchenHelp) { doc.text(`Küche: Ja`, 14, y); y += 6; }
+      if (reg.allergies) { doc.text(`Allergien: ${reg.allergies}`, 14, y); y += 6; }
       y += 2;
       if (y > 270) { doc.addPage(); y = 14; }
     });
@@ -360,20 +402,32 @@ export default function RegistrationManager() {
 
   // CSV Export
   const exportCSV = () => {
-    const csv = Papa.unparse(registrations.map(reg => ({
+    const csvContent = registrations.map((reg, idx) => 
+      `${idx + 1}. ${reg.name} | Tage: ${reg.days.map(i => FESTIVAL_DAYS[i]).join(", ")} | Sanitäter: ${reg.isMedic ? "Ja" : "Nein"} | Anreise: ${reg.travelType} | Schlaf: ${reg.sleepingPreference}`,
+    ).join('\n');
+
+    const jsonContent = registrations.map(reg => ({
       Name: reg.name,
       Tage: reg.days.map(i => FESTIVAL_DAYS[i]).join(", "),
-      Preis: reg.priceOption,
       Sanitäter: reg.isMedic ? "Ja" : "Nein",
       Anreise: reg.travelType,
+      Schlafplatz: reg.sleepingPreference,
       Equipment: reg.equipment,
       Anliegen: reg.concerns,
-      "Line-Up": reg.lineupContribution,
       Workshop: reg.wantsToOfferWorkshop,
-      Schlaf: reg.sleepingPreference,
-      Zeit: formatDateBerlin(reg.createdAt),
-    })));
-    const blob = new Blob([csv], { type: "text/csv;charset=utf-8;" });
+      LineUp: reg.lineupContribution,
+      Bezahlt: reg.paid ? "Ja" : "Nein",
+      Eingecheckt: reg.checkedIn ? "Ja" : "Nein",
+      // Neue Felder
+      NüchternFahren: reg.canStaySober ? "Ja" : "Nein",
+      Awareness: reg.wantsAwareness ? "Ja" : "Nein",
+      Programmpunkt: reg.programContribution,
+      Küche: reg.wantsKitchenHelp ? "Ja" : "Nein",
+      Allergien: reg.allergies,
+      Fotos: reg.allowsPhotos ? "Ja" : "Nein",
+    }));
+
+    const blob = new Blob([csvContent], { type: "text/csv;charset=utf-8;" });
     const url = URL.createObjectURL(blob);
     const link = document.createElement("a");
     link.href = url;
@@ -441,11 +495,6 @@ export default function RegistrationManager() {
               <span>{selected.days.length}</span>
             </div>
             <div className="flex items-center gap-2">
-              <Euro className="w-4 h-4 text-[#ff9900]" />
-              <span className="font-medium">Preis:</span>
-              <span>{selected.priceOption === 'full' ? 'Voll' : selected.priceOption === 'reduced' ? 'Reduziert' : 'Kostenlos'}</span>
-            </div>
-            <div className="flex items-center gap-2">
               <Bed className="w-4 h-4 text-[#ff9900]" />
               <span className="font-medium">Schlafplatz:</span>
               <span>{selected.sleepingPreference === 'bed' ? 'Bett' : selected.sleepingPreference === 'tent' ? 'Zelt' : 'Auto'}</span>
@@ -461,6 +510,27 @@ export default function RegistrationManager() {
               <span className="whitespace-nowrap overflow-hidden text-ellipsis block">
                 {FESTIVAL_DAYS[selected.days[0]]} – {FESTIVAL_DAYS[selected.days[selected.days.length - 1]]}
               </span>
+            </div>
+            {/* Neue Felder */}
+            <div className="flex items-center gap-2">
+              <AlertTriangle className="w-4 h-4 text-[#ff9900]" />
+              <span className="font-medium">Nüchtern fahren:</span>
+              <span>{selected.canStaySober ? 'Ja' : 'Nein'}</span>
+            </div>
+            <div className="flex items-center gap-2">
+              <Shield className="w-4 h-4 text-[#ff9900]" />
+              <span className="font-medium">Awareness:</span>
+              <span>{selected.wantsAwareness ? 'Ja' : 'Nein'}</span>
+            </div>
+            <div className="flex items-center gap-2">
+              <Camera className="w-4 h-4 text-[#ff9900]" />
+              <span className="font-medium">Fotos:</span>
+              <span>{selected.allowsPhotos ? 'Ja' : 'Nein'}</span>
+            </div>
+            <div className="flex items-center gap-2">
+              <ChefHat className="w-4 h-4 text-[#ff9900]" />
+              <span className="font-medium">Küche:</span>
+              <span>{selected.wantsKitchenHelp ? 'Ja' : 'Nein'}</span>
             </div>
           </div>
         </div>
@@ -536,6 +606,25 @@ export default function RegistrationManager() {
                 </button>
               ) : <span>—</span>}
             </div>
+            <div className="flex items-center gap-2">
+              <AlertTriangle className="w-4 h-4 text-[#ff9900]" />
+              <span className="font-medium">Allergien:</span>
+              {selected.allergies ? (
+                <button
+                  type="button"
+                  className="ml-1 p-1 rounded hover:bg-[#ff9900]/10"
+                  onClick={() => toast((t) => (
+                    <div className="max-w-xs break-words">
+                      <div className="font-semibold mb-1">Allergien & Unverträglichkeiten</div>
+                      <div className="mb-2 whitespace-pre-line">{selected.allergies}</div>
+                      <button onClick={() => toast.dismiss(t.id)} className="text-xs text-[#ff9900] underline">Schließen</button>
+                    </div>
+                  ), { duration: 8000 })}
+                >
+                  <span className="max-w-[80px] truncate inline-block align-bottom">{selected.allergies}</span> <span className="text-[#ff9900]">...</span>
+                </button>
+              ) : <span>—</span>}
+            </div>
           </div>
         </div>
         
@@ -584,13 +673,6 @@ export default function RegistrationManager() {
           </PopoverTrigger>
           <PopoverContent className="bg-white p-4 rounded shadow min-w-[220px]">
             <div className="flex flex-col gap-2">
-              <label className="text-xs font-semibold text-[#460b6c]">Preis</label>
-              <select value={priceFilter} onChange={e => setPriceFilter(e.target.value)} className="border rounded px-2 py-1">
-                <option value="">Alle</option>
-                {priceOptions.map(opt => (
-                  <option key={opt} value={opt}>{opt === 'full' ? 'Voll' : opt === 'reduced' ? 'Reduziert' : 'Kostenlos'}</option>
-                ))}
-              </select>
               <label className="text-xs font-semibold text-[#460b6c]">Schlaf</label>
               <select value={sleepFilter} onChange={e => setSleepFilter(e.target.value)} className="border rounded px-2 py-1">
                 <option value="">Alle</option>

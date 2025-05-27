@@ -29,7 +29,11 @@ import {
   Info,
   Edit,
   ChevronLeft,
-  ChevronRight
+  ChevronRight,
+  AlertTriangle,
+  Shield,
+  Camera,
+  ChefHat
 } from 'lucide-react';
 import type { RegistrationWithId } from './types';
 
@@ -50,12 +54,15 @@ export function RegistrationsTab({
   const [globalFilter, setGlobalFilter] = useState('');
   
   // Registration filters
-  const [priceFilter, setPriceFilter] = useState('');
   const [sleepFilter, setSleepFilter] = useState('');
   const [travelFilter, setTravelFilter] = useState('');
   const [medicFilter, setMedicFilter] = useState(false);
   const [paidFilter, setPaidFilter] = useState('');
   const [checkedInFilter, setCheckedInFilter] = useState('');
+  const [awarenessFilter, setAwarenessFilter] = useState(false);
+  const [soberFilter, setSoberFilter] = useState(false);
+  const [photosFilter, setPhotosFilter] = useState('');
+  const [kitchenFilter, setKitchenFilter] = useState(false);
 
   // Registration DataTable Setup
   const columnHelper = createColumnHelper<RegistrationWithId>();
@@ -77,37 +84,6 @@ export function RegistrationsTab({
         filterFn: (row, columnId, filterValue) =>
           row.getValue<string>(columnId).toLowerCase().includes(filterValue.toLowerCase()),
       }),
-      columnHelper.accessor(row => ({ priceOption: row.priceOption, paid: row.paid }), {
-        id: 'priceOption',
-        header: () => (
-          <Tooltip content="Preisoption">
-            <Euro className="w-5 h-5" />
-          </Tooltip>
-        ),
-        cell: info => {
-          const { priceOption, paid } = info.getValue();
-          if (priceOption === 'full') {
-            return (
-              <Tooltip content={paid ? "Vollpreis (bezahlt)" : "Vollpreis (unbezahlt)"}>
-                <Euro className={`w-5 h-5 ${paid ? 'text-green-500' : 'text-red-500'}`} />
-              </Tooltip>
-            );
-          }
-          if (priceOption === 'reduced') {
-            return (
-              <Tooltip content={paid ? "Reduziert (bezahlt)" : "Reduziert (unbezahlt)"}>
-                <Percent className={`w-5 h-5 ${paid ? 'text-yellow-500' : 'text-red-500'}`} />
-              </Tooltip>
-            );
-          }
-          return (
-            <Tooltip content="Kostenlos">
-              <Gift className="w-5 h-5 text-green-500" />
-            </Tooltip>
-          );
-        },
-        filterFn: (row, columnId, filterValue) => filterValue === '' || row.original.priceOption === filterValue,
-      }),
       columnHelper.accessor('isMedic', {
         header: () => (
           <Tooltip content="Sanitäter">
@@ -120,6 +96,63 @@ export function RegistrationsTab({
           </Tooltip>
         ) : null,
         filterFn: (row, columnId, filterValue) => !filterValue || row.getValue(columnId) === true,
+      }),
+      columnHelper.accessor('canStaySober', {
+        header: () => (
+          <Tooltip content="Nüchtern fahren">
+            <AlertTriangle className="w-5 h-5" />
+          </Tooltip>
+        ),
+        cell: info => info.getValue() ? (
+          <Tooltip content="Kann nüchtern fahren">
+            <AlertTriangle className="w-5 h-5 text-orange-500" />
+          </Tooltip>
+        ) : null,
+        filterFn: (row, columnId, filterValue) => !filterValue || row.getValue(columnId) === true,
+      }),
+      columnHelper.accessor('wantsAwareness', {
+        header: () => (
+          <Tooltip content="Awareness">
+            <Shield className="w-5 h-5" />
+          </Tooltip>
+        ),
+        cell: info => info.getValue() ? (
+          <Tooltip content="Awareness-Team">
+            <Shield className="w-5 h-5 text-purple-500" />
+          </Tooltip>
+        ) : null,
+        filterFn: (row, columnId, filterValue) => !filterValue || row.getValue(columnId) === true,
+      }),
+      columnHelper.accessor('wantsKitchenHelp', {
+        header: () => (
+          <Tooltip content="Küche">
+            <ChefHat className="w-5 h-5" />
+          </Tooltip>
+        ),
+        cell: info => info.getValue() ? (
+          <Tooltip content="Küchen-Hilfe">
+            <ChefHat className="w-5 h-5 text-green-600" />
+          </Tooltip>
+        ) : null,
+        filterFn: (row, columnId, filterValue) => !filterValue || row.getValue(columnId) === true,
+      }),
+      columnHelper.accessor('allowsPhotos', {
+        header: () => (
+          <Tooltip content="Fotos">
+            <Camera className="w-5 h-5" />
+          </Tooltip>
+        ),
+        cell: info => (
+          <Tooltip content={info.getValue() ? "Fotos erlaubt" : "Keine Fotos"}>
+            <Camera className={`w-5 h-5 ${info.getValue() ? 'text-green-500' : 'text-red-500'}`} />
+          </Tooltip>
+        ),
+        filterFn: (row, columnId, filterValue) => {
+          if (!filterValue) return true;
+          if (filterValue === 'allowed') return row.getValue(columnId) === true;
+          if (filterValue === 'notAllowed') return row.getValue(columnId) === false;
+          return true;
+        },
       }),
       columnHelper.accessor('travelType', {
         header: () => (
@@ -266,7 +299,6 @@ export function RegistrationsTab({
   });
 
   // Registration helper functions
-  const priceOptions = useMemo(() => Array.from(new Set(registrations.map(r => r.priceOption))), [registrations]);
   const sleepOptions = useMemo(() => Array.from(new Set(registrations.map(r => r.sleepingPreference))), [registrations]);
   const travelOptions = useMemo(() => Array.from(new Set(registrations.map(r => r.travelType))), [registrations]);
 
@@ -281,10 +313,6 @@ export function RegistrationsTab({
 
   // Effects for registration filters
   useEffect(() => {
-    registrationTable.getColumn('priceOption')?.setFilterValue(priceFilter);
-  }, [priceFilter, registrationTable]);
-  
-  useEffect(() => {
     registrationTable.getColumn('sleepingPreference')?.setFilterValue(sleepFilter);
   }, [sleepFilter, registrationTable]);
   
@@ -295,6 +323,22 @@ export function RegistrationsTab({
   useEffect(() => {
     registrationTable.getColumn('isMedic')?.setFilterValue(medicFilter);
   }, [medicFilter, registrationTable]);
+  
+  useEffect(() => {
+    registrationTable.getColumn('canStaySober')?.setFilterValue(soberFilter);
+  }, [soberFilter, registrationTable]);
+  
+  useEffect(() => {
+    registrationTable.getColumn('wantsAwareness')?.setFilterValue(awarenessFilter);
+  }, [awarenessFilter, registrationTable]);
+  
+  useEffect(() => {
+    registrationTable.getColumn('wantsKitchenHelp')?.setFilterValue(kitchenFilter);
+  }, [kitchenFilter, registrationTable]);
+  
+  useEffect(() => {
+    registrationTable.getColumn('allowsPhotos')?.setFilterValue(photosFilter);
+  }, [photosFilter, registrationTable]);
   
   useEffect(() => {
     registrationTable.getColumn('paid')?.setFilterValue(paidFilter);
@@ -333,13 +377,6 @@ export function RegistrationsTab({
           </PopoverTrigger>
           <PopoverContent className="bg-white p-4 rounded shadow min-w-[220px]">
             <div className="flex flex-col gap-2">
-              <label className="text-xs font-semibold text-[#460b6c]">Preis</label>
-              <select value={priceFilter} onChange={e => setPriceFilter(e.target.value)} className="border rounded px-2 py-1">
-                <option value="">Alle</option>
-                {priceOptions.map(opt => (
-                  <option key={opt} value={opt}>{opt === 'full' ? 'Voll' : opt === 'reduced' ? 'Reduziert' : 'Kostenlos'}</option>
-                ))}
-              </select>
               <label className="text-xs font-semibold text-[#460b6c]">Schlaf</label>
               <select value={sleepFilter} onChange={e => setSleepFilter(e.target.value)} className="border rounded px-2 py-1">
                 <option value="">Alle</option>
@@ -356,6 +393,18 @@ export function RegistrationsTab({
               </select>
               <label className="text-xs font-semibold text-[#460b6c]">Sanitäter</label>
               <input type="checkbox" checked={medicFilter} onChange={e => setMedicFilter(e.target.checked)} />
+              <label className="text-xs font-semibold text-[#460b6c]">Nüchtern fahren</label>
+              <input type="checkbox" checked={soberFilter} onChange={e => setSoberFilter(e.target.checked)} />
+              <label className="text-xs font-semibold text-[#460b6c]">Awareness</label>
+              <input type="checkbox" checked={awarenessFilter} onChange={e => setAwarenessFilter(e.target.checked)} />
+              <label className="text-xs font-semibold text-[#460b6c]">Küche</label>
+              <input type="checkbox" checked={kitchenFilter} onChange={e => setKitchenFilter(e.target.checked)} />
+              <label className="text-xs font-semibold text-[#460b6c]">Fotos</label>
+              <select value={photosFilter} onChange={e => setPhotosFilter(e.target.value)} className="border rounded px-2 py-1">
+                <option value="">Alle</option>
+                <option value="allowed">Erlaubt</option>
+                <option value="notAllowed">Nicht erlaubt</option>
+              </select>
               <label className="text-xs font-semibold text-[#460b6c]">Bezahlstatus</label>
               <select value={paidFilter} onChange={e => setPaidFilter(e.target.value)} className="border rounded px-2 py-1">
                 <option value="">Alle</option>

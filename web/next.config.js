@@ -3,6 +3,33 @@
 const nextConfig = {
   output: 'standalone',
   productionBrowserSourceMaps: false,
+  webpack: (config, { isServer }) => {
+    if (isServer) {
+      // Ignoriere optionale MongoDB-Module, die von Agenda verwendet werden
+      config.externals = config.externals || [];
+      config.externals.push({
+        'snappy': 'commonjs snappy',
+        'aws4': 'commonjs aws4',
+        'mongodb-client-encryption': 'commonjs mongodb-client-encryption',
+        'snappy/package.json': 'commonjs snappy/package.json',
+        'bson-ext': 'commonjs bson-ext',
+        'kerberos': 'commonjs kerberos',
+        '@mongodb-js/zstd': 'commonjs @mongodb-js/zstd'
+      });
+      
+      // Fallback für fehlende Module
+      config.resolve.fallback = {
+        ...config.resolve.fallback,
+        'snappy': false,
+        'aws4': false,
+        'mongodb-client-encryption': false,
+        'bson-ext': false,
+        'kerberos': false,
+        '@mongodb-js/zstd': false
+      };
+    }
+    return config;
+  },
   images: {
     remotePatterns: [
       {

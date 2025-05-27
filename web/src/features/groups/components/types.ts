@@ -17,7 +17,6 @@ export interface RegistrationWithId {
   createdAt: string;
   name: string;
   days: number[];
-  priceOption: 'full' | 'reduced' | 'free';
   isMedic: boolean;
   travelType: 'zug' | 'auto' | 'fahrrad' | 'andere';
   equipment: string;
@@ -27,6 +26,13 @@ export interface RegistrationWithId {
   lineupContribution: string;
   paid: boolean;
   checkedIn: boolean;
+  canStaySober: boolean;
+  wantsAwareness: boolean;
+  programContribution: string;
+  hasConcreteIdea: boolean;
+  wantsKitchenHelp: boolean;
+  allergies: string;
+  allowsPhotos: boolean;
 }
 
 export const FESTIVAL_DAYS = ["31.07.", "01.08.", "02.08.", "03.08."]; 

@@ -9,7 +9,9 @@ import Image from 'next/image';
 import { useUISettings } from '@/shared/contexts/UISettingsContext';
 import { useDeviceContext } from '@/shared/contexts/DeviceContext';
 import { useNetworkStatus } from '@/shared/hooks/useNetworkStatus';
+import { useAppLoading } from '@/shared/hooks/useAppLoading';
 import React, { useState, useEffect } from 'react';
+import SplashScreen from './SplashScreen';
 
 const Starfield = dynamic(() => import('./Starfield'), { ssr: false });
 const OfflineIndicator = dynamic(() => import('./OfflineIndicator').then(mod => ({ default: mod.OfflineIndicator })), { ssr: false });
@@ -36,12 +38,31 @@ export default function PWAContainerClient({ isAdmin, timelineData, infoBoardDat
   const { showStarfield, showMusicNote } = useUISettings();
   const { deviceType } = useDeviceContext();
   const isOnline = useNetworkStatus();
+  
+  // App Loading State
+  const { isLoading, isInitialLoad, loadingProgress, error } = useAppLoading({
+    minDisplayTime: 3000, // Mindestens 3s anzeigen (vorher 1.2s)
+    maxDisplayTime: 6000, // Maximal 6s warten (vorher 4s)
+    dependsOnNetwork: true
+  });
 
   const isMobileLayout = deviceType === 'mobile';
 
   // Hydration-Fix: MusicNote erst nach Mount anzeigen
-   const [hasMounted, setHasMounted] = useState(false);
-    useEffect(() => setHasMounted(true), []);
+  const [hasMounted, setHasMounted] = useState(false);
+  const [splashComplete, setSplashComplete] = useState(false);
+  
+  useEffect(() => setHasMounted(true), []);
+
+  // Markiere App als bereit für Loading-Check
+  useEffect(() => {
+    if (hasMounted && timelineData?.days && !document.querySelector('[data-app-ready]')) {
+      const marker = document.createElement('div');
+      marker.setAttribute('data-app-ready', 'true');
+      marker.style.display = 'none';
+      document.body.appendChild(marker);
+    }
+  }, [hasMounted, timelineData]);
 
   // NEU: Handler für Push-Subscription Änderungen
   const handlePushSubscriptionChange = (isSubscribed: boolean) => {
@@ -50,6 +71,23 @@ export default function PWAContainerClient({ isAdmin, timelineData, infoBoardDat
     console.log('Push subscription changed:', isSubscribed);
   };
 
+  // Splash Screen Handler
+  const handleSplashComplete = () => {
+    setSplashComplete(true);
+  };
+
+  // Zeige Splash Screen während Initial Load
+  if (isLoading || !splashComplete) {
+    return (
+      <SplashScreen 
+        isVisible={isLoading} 
+        onComplete={handleSplashComplete}
+        progress={loadingProgress}
+        error={error}
+      />
+    );
+  }
+
   return (
     <div className="relative min-h-screen bg-[#460b6c] text-[#ff9900] flex flex-col">
       <InstallPrompt />
@@ -57,7 +95,7 @@ export default function PWAContainerClient({ isAdmin, timelineData, infoBoardDat
       <AutoPushPrompt onSubscriptionChange={handlePushSubscriptionChange} />
       {showStarfield && <Starfield />}
       {hasMounted && showMusicNote && mode !== 'admin' && isOnline && (
-        <div className="fixed top-2 right-2 z-[9999] select-none">
+        <div className="fixed top-6 left-2 z-[9999] select-none">
           <MusicNote />
         </div>
       )}

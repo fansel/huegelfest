@@ -44,19 +44,16 @@ const MagicCodeSchema = new Schema<IMagicCode>({
   },
   deviceId: {
     type: String,
-    required: true,
-    index: true
+    required: true
   },
   userId: {
     type: mongoose.Schema.Types.ObjectId,
     ref: 'User',
-    required: true,
-    index: true
+    required: true
   },
   expiresAt: {
     type: Date,
-    required: true,
-    index: true
+    required: true
   },
   isUsed: {
     type: Boolean,
@@ -90,6 +87,10 @@ const MagicCodeSchema = new Schema<IMagicCode>({
 
 // TTL Index - automatisches Löschen nach Ablauf
 MagicCodeSchema.index({ expiresAt: 1 }, { expireAfterSeconds: 0 });
+
+// Explizite Indizes für bessere Performance
+MagicCodeSchema.index({ deviceId: 1 });
+MagicCodeSchema.index({ userId: 1 });
 
 // Instance-Methoden
 MagicCodeSchema.methods.isExpired = function(): boolean {
