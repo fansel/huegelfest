@@ -2,11 +2,11 @@ import { Registration, IRegistration } from '@/lib/db/models/Registration';
 import { User } from '@/lib/db/models/User';
 import { Group } from '@/lib/db/models/Group';
 import { connectDB } from '@/lib/db/connector';
-import { FestivalRegisterData } from '../FestivalRegisterForm';
+import type { FestivalRegisterData } from '../components/steps/types';
 import { logger } from '@/lib/logger';
 import mongoose from 'mongoose';
 
-// Hilfsfunktion um neue deviceId zu generieren
+// Import der einheitlichen Device-ID-Generierung
 function generateDeviceId(): string {
   const chars = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789';
   let result = '';
@@ -281,6 +281,8 @@ export async function getRegistrationByDeviceId(deviceId: string): Promise<{ suc
       wantsKitchenHelp: registration.wantsKitchenHelp || false,
       allergies: registration.allergies || '',
       allowsPhotos: registration.allowsPhotos !== undefined ? registration.allowsPhotos : true,
+      contactType: registration.contactType || 'none',
+      contactInfo: registration.contactInfo || '',
     };
     
     logger.info(`[Registration] Bestehende Registration für ${deviceId} geladen:`, {
@@ -338,5 +340,59 @@ export async function getRegistrationByDeviceId(deviceId: string): Promise<{ suc
   } catch (error) {
     logger.error('[Registration] Fehler beim Laden der Registration:', error);
     return { success: false, error: 'Fehler beim Laden der Registration' };
+  }
+} 
+
+/**
+ * Sichere Prüfung ob User angemeldet ist - gibt nur Status und Namen zurück
+ * NICHT die kompletten Registrierungsdaten!
+ */
+export async function checkRegistrationStatus(deviceId: string): Promise<{ 
+  isRegistered: boolean; 
+  name?: string; 
+  error?: string 
+}> {
+  if (!deviceId) {
+    return { isRegistered: false, error: 'Device ID ist erforderlich' };
+  }
+  
+  await connectDB();
+  
+  try {
+    // Suche nur nach User und prüfe ob Registration verknüpft ist
+    const user = await User.findOne({ deviceId, isActive: true })
+      .select('name registrationId') // Nur diese Felder laden
+      .lean()
+      .exec();
+    
+    if (!user) {
+      // Fallback: Prüfe ob orphan Registration existiert
+      const orphanRegistration = await Registration.findOne({ deviceId })
+        .select('name') // Nur Name
+        .lean()
+        .exec();
+        
+      if (orphanRegistration) {
+        return { 
+          isRegistered: true, 
+          name: orphanRegistration.name 
+        };
+      }
+      
+      return { isRegistered: false };
+    }
+    
+    // User gefunden - prüfe ob Registration verknüpft
+    if (user.registrationId) {
+      return { 
+        isRegistered: true, 
+        name: user.name 
+      };
+    }
+    
+    return { isRegistered: false };
+  } catch (error) {
+    logger.error('[Registration] Fehler bei checkRegistrationStatus:', error);
+    return { isRegistered: false, error: 'Fehler beim Prüfen des Status' };
   }
 } 

@@ -7,10 +7,10 @@ import { useDeviceId } from '@/shared/hooks/useDeviceId';
 import { useDeviceContext } from '@/shared/contexts/DeviceContext';
 import { format, isToday, isTomorrow, isYesterday, startOfDay } from 'date-fns';
 import { de } from 'date-fns/locale';
-import type { ActivityWithCategoryAndTemplate } from '../types';
-import { formatActivityTime, sortActivitiesByTime, getActivityTimeStatus, groupActivitiesByStatus } from '../utils/timeUtils';
+import type { ActivityWithCategoryAndTemplate } from '../../admin/components/activities/types';
+import { formatActivityTime, sortActivitiesByTime, getActivityTimeStatus, groupActivitiesByStatus } from '../../admin/components/activities/utils/timeUtils';
 import useSWR from 'swr';
-import { fetchUserActivitiesAction, type UserActivitiesData } from '../actions/fetchUserActivities';
+import { fetchUserActivitiesAction, type UserActivitiesData } from '../../admin/components/activities/actions/fetchUserActivities';
 import { useGlobalWebSocket } from '@/shared/hooks/useGlobalWebSocket';
 import { useNetworkStatus } from '@/shared/hooks/useNetworkStatus';
 

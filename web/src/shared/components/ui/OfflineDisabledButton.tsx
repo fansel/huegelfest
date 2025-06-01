@@ -2,7 +2,7 @@
 
 import React, { ReactNode } from 'react';
 import { useNetwork } from '@/shared/contexts/NetworkContext';
-import { WifiOff } from 'lucide-react';
+import { WifiOff, ServerCrash } from 'lucide-react';
 
 interface OfflineDisabledProps {
   children: ReactNode;
@@ -16,7 +16,7 @@ interface OfflineDisabledProps {
 
 /**
  * Wrapper-Komponente die Inhalte automatisch im Offline-Modus deaktiviert.
- * Zeigt ein Offline-Icon und verhindert Interaktionen.
+ * Zeigt passende Icons für Browser- oder Server-Offline-Status.
  */
 export function OfflineDisabled({
   children,
@@ -27,7 +27,7 @@ export function OfflineDisabled({
   showIcon = true,
   title
 }: OfflineDisabledProps) {
-  const { isOnline, isInteractiveDisabled } = useNetwork();
+  const { isFullyOnline, isBrowserOnline, isServerOnline, isInteractiveDisabled } = useNetwork();
   const isOfflineDisabled = isInteractiveDisabled(actionType);
   const finalDisabled = disabled || isOfflineDisabled;
   
@@ -36,18 +36,45 @@ export function OfflineDisabled({
     onClick?.();
   };
   
+  // Bestimme das passende Icon und die Nachricht
+  const getOfflineInfo = () => {
+    if (isFullyOnline) return null;
+    
+    if (!isBrowserOnline) {
+      return {
+        icon: WifiOff,
+        message: 'Keine Internetverbindung'
+      };
+    }
+    
+    if (!isServerOnline) {
+      return {
+        icon: ServerCrash,
+        message: 'Server nicht erreichbar'
+      };
+    }
+    
+    return {
+      icon: WifiOff,
+      message: 'Im Offline-Modus nicht verfügbar'
+    };
+  };
+  
+  const offlineInfo = getOfflineInfo();
+  const OfflineIcon = offlineInfo?.icon;
+  
   return (
     <div 
       className={`relative ${className} ${finalDisabled ? 'opacity-50 cursor-not-allowed' : 'cursor-pointer'}`}
       onClick={handleClick}
-      title={title || (isOfflineDisabled ? 'Im Offline-Modus nicht verfügbar' : undefined)}
+      title={title || offlineInfo?.message}
       aria-disabled={finalDisabled}
     >
       {children}
       
-      {isOfflineDisabled && showIcon && (
+      {isOfflineDisabled && showIcon && OfflineIcon && (
         <div className="absolute top-1 right-1 bg-orange-500/80 p-1 rounded-full">
-          <WifiOff size={12} className="text-white" />
+          <OfflineIcon size={12} className="text-white" />
         </div>
       )}
     </div>
@@ -66,12 +93,33 @@ export function OfflineDisabledForm({
   className?: string;
   showOverlay?: boolean;
 }) {
-  const { isInteractiveDisabled } = useNetwork();
+  const { isFullyOnline, isBrowserOnline, isServerOnline, isInteractiveDisabled } = useNetwork();
   const isDisabled = isInteractiveDisabled('write');
   
   if (!isDisabled) {
     return <div className={className}>{children}</div>;
   }
+  
+  // Bestimme die passende Offline-Nachricht
+  const getOfflineMessage = () => {
+    if (!isBrowserOnline) {
+      return 'Keine Internetverbindung - Keine Änderungen möglich';
+    }
+    
+    if (!isServerOnline) {
+      return 'Server nicht erreichbar - Keine Änderungen möglich';
+    }
+    
+    return 'Offline - Keine Änderungen möglich';
+  };
+  
+  const getOfflineIcon = () => {
+    if (!isBrowserOnline) return WifiOff;
+    if (!isServerOnline) return ServerCrash;
+    return WifiOff;
+  };
+  
+  const OfflineIcon = getOfflineIcon();
   
   return (
     <div className={`relative ${className}`}>
@@ -80,8 +128,8 @@ export function OfflineDisabledForm({
       {showOverlay && (
         <div className="absolute inset-0 bg-black/20 flex items-center justify-center rounded">
           <div className="bg-orange-500/90 text-white px-3 py-2 rounded-lg text-sm flex items-center gap-2">
-            <WifiOff size={16} />
-            <span>Offline - Keine Änderungen möglich</span>
+            <OfflineIcon size={16} />
+            <span>{getOfflineMessage()}</span>
           </div>
         </div>
       )}

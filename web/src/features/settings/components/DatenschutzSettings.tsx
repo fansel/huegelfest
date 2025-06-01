@@ -2,6 +2,7 @@ import { useState } from 'react';
 import UserSettingsCard from './UserSettingsCard';
 import { Shield } from 'lucide-react';
 import { Sheet, SheetContent, SheetHeader, SheetTitle } from '@/shared/components/ui/sheet';
+import Link from 'next/link';
 
 const DatenschutzContent = () => (
   <div className="max-w-lg mx-auto text-[#460b6c] mb-8">
@@ -10,27 +11,56 @@ const DatenschutzContent = () => (
       <div>
         <h3 className="text-lg font-semibold mb-2">Datenschutz auf einen Blick</h3>
         <p>
-          Diese Website verwendet Cookies für die Authentifizierung im Admin-Bereich. Diese Cookies werden nur verwendet, um festzustellen, ob Sie als Administrator eingeloggt sind. Es werden keine personenbezogenen Daten gesammelt oder an Dritte weitergegeben.
+          Diese Website verarbeitet personenbezogene Daten ausschließlich für die 
+          Festival-Anmeldung und technische Funktionalität. Alle Daten werden 
+          vertraulich behandelt und nicht an Dritte weitergegeben.
+        </p>
+      </div>
+      <div>
+        <h3 className="text-lg font-semibold mb-2">Festival-Anmeldung</h3>
+        <p className="mb-2">
+          Bei der Anmeldung speichern wir: Name, E-Mail-Adresse, Anmeldedatum 
+          und weitere freiwillige Angaben für die Festival-Organisation.
+        </p>
+      </div>
+      <div>
+        <h3 className="text-lg font-semibold mb-2">Technische Daten</h3>
+        <p className="mb-2">
+          <strong>Device-ID:</strong> Zufällige Kennung zur lokalen Speicherung 
+          Ihrer Einstellungen. Diese ID ist nicht mit Ihrer Person verknüpfbar.
+        </p>
+        <p>
+          <strong>Lokale Einstellungen:</strong> App-Einstellungen werden lokal in Ihrem Browser gespeichert.
+        </p>
+      </div>
+      <div>
+        <h3 className="text-lg font-semibold mb-2">Ihre Rechte</h3>
+        <p>
+          Sie haben Recht auf Auskunft, Berichtigung, Löschung und weitere 
+          DSGVO-Rechte bezüglich Ihrer gespeicherten Daten.
         </p>
       </div>
       <div>
         <h3 className="text-lg font-semibold mb-2">Hosting</h3>
         <p>
-          Diese Website wird auf Servern der netcup GmbH in Nürnberg, Deutschland gehostet. netcup ist ein deutscher Anbieter von Hosting-Diensten. Die Server befinden sich in Deutschland und unterliegen damit der strengen europäischen Datenschutz-Grundverordnung (DSGVO). Weitere Informationen zum Datenschutz bei netcup finden Sie unter: <a href="https://www.netcup.de/kontakt/datenschutzerklaerung.php" className="text-[#ff9900] underline hover:text-[#460b6c]" target="_blank" rel="noopener noreferrer">netcup Datenschutzerklärung</a>
-        </p>
-      </div>
-      <div>
-        <h3 className="text-lg font-semibold mb-2">SoundCloud Integration</h3>
-        <p>
-          Auf dieser Website wird der SoundCloud Player eingebunden. SoundCloud ist ein Dienst der SoundCloud Limited, Rheinsberger Str. 76/77, 10115 Berlin, Deutschland. Wenn Sie eine Seite mit eingebettetem SoundCloud Player besuchen, wird eine Verbindung zu den Servern von SoundCloud hergestellt. SoundCloud kann dadurch Informationen über Ihren Besuch auf dieser Website erhalten. Weitere Informationen zum Datenschutz bei SoundCloud finden Sie unter: <a href="https://soundcloud.com/pages/privacy" className="text-[#ff9900] underline hover:text-[#460b6c]" target="_blank" rel="noopener noreferrer">SoundCloud Datenschutzerklärung</a>
+          Server in Deutschland (netcup GmbH), DSGVO-konform. 
+          <a href="https://www.netcup.de/kontakt/datenschutzerklaerung.php" className="text-[#ff9900] underline hover:text-[#460b6c]" target="_blank" rel="noopener noreferrer">Weitere Infos</a>
         </p>
       </div>
       <div>
         <h3 className="text-lg font-semibold mb-2">Kontakt</h3>
         <p>
-          Bei Fragen zum Datenschutz können Sie uns unter folgender E-Mail-Adresse kontaktieren:
+          Bei Fragen zum Datenschutz:
         </p>
         <p className="mt-2 font-mono">huegelfest@hey.fansel.dev</p>
+      </div>
+      <div className="mt-6 p-4 bg-[#ff9900]/10 rounded-lg border border-[#ff9900]/20">
+        <p className="text-sm text-[#460b6c]/80">
+          📖 Vollständige Datenschutzerklärung auf der{' '}
+          <Link href="/datenschutz" className="text-[#ff9900] underline hover:text-[#460b6c]">
+            Datenschutz-Seite
+          </Link>
+        </p>
       </div>
     </div>
   </div>

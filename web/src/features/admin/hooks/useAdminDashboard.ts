@@ -4,6 +4,7 @@ import { getAllAnnouncementsAction } from '../../announcements/actions/getAllAnn
 import { saveAnnouncementsAction } from '../../announcements/actions/saveAnnouncementAction';
 import { deleteAnnouncementAction } from '../../announcements/actions/deleteAnnouncement';
 import { getWorkingGroupsArrayAction } from '../../workingGroups/actions/getWorkingGroupColors';
+import { WorkingGroup } from '@/features/workingGroups/hooks/useWorkingGroupsWebSocket';
 // Importiere hier die Services, z.B.:
 // import { getAnnouncements, createAnnouncement, updateAnnouncement, deleteAnnouncement } from '../../announcements/services/announcementService';
 // import { getGroups, createGroup, updateGroup, deleteGroup } from '../../workingGroups/services/groupService';

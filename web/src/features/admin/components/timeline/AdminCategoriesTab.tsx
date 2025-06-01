@@ -10,15 +10,13 @@ import toast from 'react-hot-toast';
 import { createCategoryAction } from '@/features/categories/actions/createCategory';
 import { updateCategoryAction } from '@/features/categories/actions/updateCategory';
 import { deleteCategoryAction } from '@/features/categories/actions/deleteCategory';
+import { getCategoriesAction } from '@/features/categories/actions/getCategories';
 import { useDeviceContext } from '@/shared/contexts/DeviceContext';
+import { useGlobalWebSocket } from '@/shared/hooks/useGlobalWebSocket';
 
-// Props-Interface ggf. anpassen
+// Props-Interface - jetzt vereinfacht da wir Hooks verwenden
 interface AdminCategoriesTabProps {
-  categories: any[];
-  setCategories: (cats: any[]) => void;
-  loading: boolean;
-  error: string | null;
-  // ... weitere Props nach Bedarf ...
+  initialCategories?: any[];
 }
 
 function toPascalCase(kebab: string) {
@@ -34,7 +32,13 @@ function sortCategories(cats: any[]) {
   return [...defaults, ...rest];
 }
 
-const AdminCategoriesTab: React.FC<AdminCategoriesTabProps> = ({ categories, setCategories, loading, error }) => {
+const AdminCategoriesTab: React.FC<AdminCategoriesTabProps> = ({ initialCategories = [] }) => {
+  // State Management
+  const [categories, setCategories] = useState<any[]>(initialCategories);
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+  
+  // Modal und Form State
   const [showCategoryModal, setShowCategoryModal] = useState(false);
   const [categoryForm, setCategoryForm] = useState<{ name: string; color: string; icon: string }>({ name: '', color: '#ff9900', icon: '' });
   const [editCategoryId, setEditCategoryId] = useState<string | null>(null);
@@ -42,6 +46,48 @@ const AdminCategoriesTab: React.FC<AdminCategoriesTabProps> = ({ categories, set
   const [iconPage, setIconPage] = useState(0);
   const [confirmDeleteCategory, setConfirmDeleteCategory] = useState<{ id: string; name: string } | null>(null);
   const ICONS_PER_PAGE = 24;
+
+  // WebSocket für Echtzeit-Updates
+  useGlobalWebSocket({
+    topicFilter: [
+      'category-created', 
+      'category-updated', 
+      'category-deleted'
+    ],
+    onMessage: async (message: any) => {
+      console.log('[AdminCategoriesTab] WebSocket message:', message);
+      
+      switch (message.topic) {
+        case 'category-created':
+        case 'category-updated':
+        case 'category-deleted':
+          await reloadCategories();
+          break;
+      }
+    }
+  });
+
+  // Helper: Kategorien neu laden
+  const reloadCategories = async () => {
+    try {
+      setLoading(true);
+      const cats = await getCategoriesAction();
+      setCategories(sortCategories(cats));
+      setError(null);
+    } catch (error) {
+      console.error('Error reloading categories:', error);
+      setError('Fehler beim Laden der Kategorien');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  // Initiale Daten laden falls nicht vorhanden
+  useEffect(() => {
+    if (categories.length === 0) {
+      reloadCategories();
+    }
+  }, []);
 
   const iconList = Object.entries(tags).map(([name, tags]) => ({ name, tags: tags as string[] }));
   const filteredIcons = iconList.filter((icon: { name: string; tags: string[] }) => {

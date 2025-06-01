@@ -2,8 +2,8 @@
 export const APP_VERSION = {
   // Version aus package.json + Build-Zeit
   version: '0.1.0',
-  buildTime: '1748387398340',
-  buildId: 'f558f692c248b9da',
+  buildTime: '1748821706168',
+  buildId: 'f1d733c',
   
   // Development vs Production unterscheiden
   isDevelopment: process.env.NODE_ENV === 'development',
@@ -30,5 +30,6 @@ export const VERSION_STORAGE_KEYS = {
   APP_VERSION: 'huegelfest_app_version',
   LAST_UPDATE_CHECK: 'huegelfest_last_update_check',
   UPDATE_AVAILABLE: 'huegelfest_update_available',
-  USER_UPDATE_DISMISSED: 'huegelfest_user_dismissed_update'
+  USER_UPDATE_DISMISSED: 'huegelfest_user_dismissed_update',
+  LAST_HANDLED_UPDATE: 'huegelfest_last_handled_update'
 }; 

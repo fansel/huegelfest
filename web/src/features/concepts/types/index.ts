@@ -22,4 +22,4 @@ export interface ConceptTable {
   footer?: string;
 }
 
-export type ConceptTab = 'awareness' | 'finances' | 'general'; 
+export type ConceptTab = 'allgemein' | 'kochen-putzen' | 'awareness' | 'feedback' | 'finanzen'; 

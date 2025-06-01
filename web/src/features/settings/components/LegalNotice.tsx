@@ -14,27 +14,60 @@ const DatenschutzContent = () => (
       <div>
         <h3 className="text-lg font-semibold mb-2">Datenschutz auf einen Blick</h3>
         <p>
-          Diese Website verwendet Cookies für die Authentifizierung im Admin-Bereich. Diese Cookies werden nur verwendet, um festzustellen, ob Sie als Administrator eingeloggt sind. Es werden keine personenbezogenen Daten gesammelt oder an Dritte weitergegeben.
+          Diese Website verarbeitet personenbezogene Daten ausschließlich für die 
+          Festival-Anmeldung und technische Funktionalität. Alle Daten werden 
+          vertraulich behandelt und nicht an Dritte weitergegeben.
+        </p>
+      </div>
+      <div>
+        <h3 className="text-lg font-semibold mb-2">Festival-Anmeldung</h3>
+        <p className="mb-2">
+          Bei der Anmeldung speichern wir: Name, E-Mail-Adresse, Anmeldedatum 
+          und weitere freiwillige Angaben.
+        </p>
+        <p className="text-sm text-[#460b6c]/80">
+          <strong>Zweck:</strong> Festival-Organisation und Kommunikation<br/>
+          <strong>Rechtsgrundlage:</strong> Vertragserfüllung (DSGVO Art. 6 Abs. 1 lit. b)
+        </p>
+      </div>
+      <div>
+        <h3 className="text-lg font-semibold mb-2">Technische Daten</h3>
+        <p className="mb-2">
+          <strong>Device-ID:</strong> Zufällige Kennung zur lokalen Speicherung 
+          Ihrer Einstellungen (nicht personenbezogen).
+        </p>
+        <p>
+          <strong>Lokale Einstellungen:</strong> App-Einstellungen werden lokal in Ihrem Browser gespeichert.
+        </p>
+      </div>
+      <div>
+        <h3 className="text-lg font-semibold mb-2">Ihre Rechte</h3>
+        <p>
+          Sie haben Recht auf Auskunft, Berichtigung, Löschung, Einschränkung, 
+          Datenübertragbarkeit und Widerspruch bezüglich Ihrer Daten.
         </p>
       </div>
       <div>
         <h3 className="text-lg font-semibold mb-2">Hosting</h3>
         <p>
-          Diese Website wird auf Servern der netcup GmbH in Nürnberg, Deutschland gehostet. netcup ist ein deutscher Anbieter von Hosting-Diensten. Die Server befinden sich in Deutschland und unterliegen damit der strengen europäischen Datenschutz-Grundverordnung (DSGVO). Weitere Informationen zum Datenschutz bei netcup finden Sie unter: <a href="https://www.netcup.de/kontakt/datenschutzerklaerung.php" className="text-[#ff9900] underline hover:text-[#460b6c]" target="_blank" rel="noopener noreferrer">netcup Datenschutzerklärung</a>
-        </p>
-      </div>
-      <div>
-        <h3 className="text-lg font-semibold mb-2">SoundCloud Integration</h3>
-        <p>
-          Auf dieser Website wird der SoundCloud Player eingebunden. SoundCloud ist ein Dienst der SoundCloud Limited, Rheinsberger Str. 76/77, 10115 Berlin, Deutschland. Wenn Sie eine Seite mit eingebettetem SoundCloud Player besuchen, wird eine Verbindung zu den Servern von SoundCloud hergestellt. SoundCloud kann dadurch Informationen über Ihren Besuch auf dieser Website erhalten. Weitere Informationen zum Datenschutz bei SoundCloud finden Sie unter: <a href="https://soundcloud.com/pages/privacy" className="text-[#ff9900] underline hover:text-[#460b6c]" target="_blank" rel="noopener noreferrer">SoundCloud Datenschutzerklärung</a>
+          Server in Deutschland (netcup GmbH), DSGVO-konform. 
+          <a href="https://www.netcup.de/kontakt/datenschutzerklaerung.php" className="text-[#ff9900] underline hover:text-[#460b6c] ml-1" target="_blank" rel="noopener noreferrer">Mehr Info</a>
         </p>
       </div>
       <div>
         <h3 className="text-lg font-semibold mb-2">Kontakt</h3>
         <p>
-          Bei Fragen zum Datenschutz können Sie uns unter folgender E-Mail-Adresse kontaktieren:
+          Bei Fragen zum Datenschutz:
         </p>
         <p className="mt-2 font-mono">huegelfest@hey.fansel.dev</p>
+      </div>
+      <div className="mt-6 p-4 bg-[#ff9900]/10 rounded-lg border border-[#ff9900]/20">
+        <p className="text-sm text-[#460b6c]/80">
+          📖 Vollständige Datenschutzerklärung auf der{' '}
+          <Link href="/datenschutz" className="text-[#ff9900] underline hover:text-[#460b6c]">
+            Datenschutz-Seite
+          </Link>
+        </p>
       </div>
     </div>
   </div>
@@ -54,22 +87,25 @@ const ImpressumContent = () => (
       <div>
         <h3 className="text-lg font-semibold mb-2">Haftung für Inhalte</h3>
         <p>
-          Als Diensteanbieter sind wir gemäß § 7 Abs.1 TMG für eigene Inhalte auf diesen Seiten nach den allgemeinen Gesetzen verantwortlich. Nach §§ 8 bis 10 TMG sind wir als Diensteanbieter jedoch nicht verpflichtet, übermittelte oder gespeicherte fremde Informationen zu überwachen oder nach Umständen zu forschen, die auf eine rechtswidrige Tätigkeit hinweisen.
-        </p>
-        <p className="mt-2">
-          Verpflichtungen zur Entfernung oder Sperrung der Nutzung von Informationen nach den allgemeinen Gesetzen bleiben hiervon unberührt. Eine diesbezügliche Haftung ist jedoch erst ab dem Zeitpunkt der Kenntnis einer konkreten Rechtsverletzung möglich. Bei Bekanntwerden von entsprechenden Rechtsverletzungen werden wir diese Inhalte umgehend entfernen.
-        </p>
-      </div>
-      <div>
-        <h3 className="text-lg font-semibold mb-2">Haftung für Links</h3>
-        <p>
-          Unser Angebot enthält Links zu externen Websites Dritter, auf deren Inhalte wir keinen Einfluss haben. Deshalb können wir für diese fremden Inhalte auch keine Gewähr übernehmen. Für die Inhalte der verlinkten Seiten ist stets der jeweilige Anbieter oder Betreiber der Seiten verantwortlich. Die verlinkten Seiten wurden zum Zeitpunkt der Verlinkung auf mögliche Rechtsverstöße überprüft. Rechtswidrige Inhalte waren zum Zeitpunkt der Verlinkung nicht erkennbar.
+          Als Diensteanbieter bin ich gemäß § 7 Abs.1 TMG für eigene Inhalte 
+          auf diesen Seiten nach den allgemeinen Gesetzen verantwortlich.
         </p>
       </div>
       <div>
         <h3 className="text-lg font-semibold mb-2">Urheberrecht</h3>
         <p>
-          Die durch die Seitenbetreiber erstellten Inhalte und Werke auf diesen Seiten unterliegen dem deutschen Urheberrecht. Die Vervielfältigung, Bearbeitung, Verbreitung und jede Art der Verwertung außerhalb der Grenzen des Urheberrechtes bedürfen der schriftlichen Zustimmung des jeweiligen Autors bzw. Erstellers. Downloads und Kopien dieser Seite sind nur für den privaten, nicht kommerziellen Gebrauch gestattet.
+          Die durch mich erstellten Inhalte und Werke auf diesen Seiten unterliegen 
+          dem deutschen Urheberrecht. Downloads und Kopien dieser Seite sind nur für 
+          den privaten, nicht kommerziellen Gebrauch gestattet.
+        </p>
+      </div>
+      <div className="mt-6 p-4 bg-[#ff9900]/10 rounded-lg border border-[#ff9900]/20">
+        <p className="text-sm text-[#460b6c]/80">
+          💡 <strong>Tipp:</strong> Besuche die{' '}
+          <Link href="/impressum" className="text-[#ff9900] underline hover:text-[#460b6c]">
+            ausführliche Developer-Seite
+          </Link>{' '}
+          für mehr Infos über diese Website!
         </p>
       </div>
     </div>

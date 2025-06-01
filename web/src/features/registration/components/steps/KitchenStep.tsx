@@ -16,7 +16,7 @@ export function KitchenStep({ form, setForm }: StepProps) {
         onChange={v => setForm(f => ({ ...f, wantsKitchenHelp: v === "ja" }))}
         options={[
           { value: "ja", label: "Ja", icon: <ChefHat className="inline-block w-5 h-5 text-[#ff9900]" /> },
-          { value: "nein", label: "Nein, ich bring mich lieber anderswo ein :)", icon: <X className="inline-block w-5 h-5 text-[#ff9900]" />  },
+          { value: "nein", label: "Nein", icon: <X className="inline-block w-5 h-5 text-[#ff9900]" />  },
         ]}
         id="wantsKitchenHelp"
       />

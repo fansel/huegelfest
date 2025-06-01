@@ -63,7 +63,8 @@ const PacklistManager: React.FC = () => {
 
   if (loading) {
     return (
-      <div className="py-12 text-center text-[#ff9900]/60 text-base font-medium">
+      <div className="py-12 text-center text-[#ff9900]/60 text-lg font-medium">
+        <Loader2 className="w-8 h-8 mx-auto mb-4 animate-spin text-[#ff9900]" />
         Globale Packliste wird geladen...
       </div>
     );
@@ -73,17 +74,13 @@ const PacklistManager: React.FC = () => {
     <div className="py-6 px-2 flex flex-col items-center min-h-[40vh]">
       {/* Header */}
       <div className="w-full max-w-3xl mb-6">
-        <h3 className="text-xl font-bold mb-4 text-[#ff9900] tracking-wide text-center drop-shadow">
-          Globale Packliste verwalten
-        </h3>
-        
-        <div className="bg-[#460b6c]/50 backdrop-blur-sm border border-[#ff9900]/20 rounded-lg p-4 mb-4">
-          <div className="flex items-center gap-3 mb-3">
-            <div className="p-2 bg-[#ff9900]/20 rounded-full">
-              <Users className="h-5 w-5 text-[#ff9900]" />
+        <div className="bg-[#ff9900]/10 backdrop-blur-sm border border-[#ff9900]/30 rounded-xl p-6 mb-6">
+          <div className="flex items-center gap-4 mb-4">
+            <div className="p-3 bg-[#ff9900]/20 rounded-full">
+              <Users className="h-6 w-6 text-[#ff9900]" />
             </div>
             <div>
-              <p className="text-[#ff9900] font-medium">
+              <p className="text-[#ff9900] font-bold text-lg">
                 {items.length} Items für alle Nutzer
               </p>
               <p className="text-[#ff9900]/70 text-sm">
@@ -94,13 +91,13 @@ const PacklistManager: React.FC = () => {
         </div>
 
         {/* Input Form */}
-        <div className="bg-[#460b6c]/50 backdrop-blur-sm border border-[#ff9900]/20 rounded-lg p-4 mb-4">
-          <div className="flex gap-3">
+        <div className="bg-[#ff9900]/5 backdrop-blur-sm border border-[#ff9900]/20 rounded-xl p-6 mb-6">
+          <div className="flex gap-4">
             <input
               type="text"
               value={input}
               onChange={e => setInput(e.target.value)}
-              className="flex-1 bg-[#460b6c]/50 backdrop-blur-sm border border-[#ff9900]/30 focus:border-[#ff9900] rounded-lg px-4 py-3 text-[#ff9900] placeholder:text-[#ff9900]/50 transition-colors outline-none"
+              className="flex-1 bg-[#ff9900]/10 backdrop-blur-sm border border-[#ff9900]/30 focus:border-[#ff9900] rounded-lg px-4 py-3 text-[#ff9900] placeholder:text-[#ff9900]/50 transition-colors outline-none focus:ring-2 focus:ring-[#ff9900]/20"
               placeholder="Neues globales Item hinzufügen..."
               onKeyDown={e => e.key === 'Enter' && handleAdd()}
               disabled={isPending}
@@ -108,12 +105,12 @@ const PacklistManager: React.FC = () => {
             <button
               onClick={handleAdd}
               disabled={!input.trim() || isPending}
-              className="bg-gradient-to-r from-[#ff9900] to-[#ffb347] text-white rounded-lg px-4 py-3 flex items-center gap-2 font-medium hover:scale-105 disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:scale-100 transition-all"
+              className="bg-gradient-to-r from-[#ff9900] to-[#ffb347] text-white rounded-lg px-6 py-3 flex items-center gap-3 font-semibold hover:scale-105 disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:scale-100 transition-all shadow-lg hover:shadow-xl"
             >
               {isPending ? (
-                <Loader2 className="h-4 w-4 animate-spin" />
+                <Loader2 className="h-5 w-5 animate-spin" />
               ) : (
-                <Plus className="h-4 w-4" />
+                <Plus className="h-5 w-5" />
               )}
               <span className="hidden sm:inline">Hinzufügen</span>
             </button>
@@ -122,32 +119,32 @@ const PacklistManager: React.FC = () => {
       </div>
 
       {/* Items List */}
-      <div className="w-full max-w-3xl flex flex-col gap-3">
+      <div className="w-full max-w-3xl flex flex-col gap-4">
         {items.length === 0 ? (
-          <div className="py-12 text-center text-[#ff9900]/60 text-base font-medium">
-            <Package className="h-12 w-12 mx-auto mb-4 opacity-30" />
-            <p className="text-lg font-medium mb-2">Noch keine globalen Items</p>
-            <p className="text-sm">Füge das erste Item zur globalen Packliste hinzu!</p>
+          <div className="bg-[#ff9900]/5 border border-[#ff9900]/20 rounded-xl p-12 text-center">
+            <Package className="h-16 w-16 mx-auto mb-4 text-[#ff9900]/40" />
+            <p className="text-[#ff9900]/60 text-lg font-semibold mb-2">Noch keine globalen Items</p>
+            <p className="text-[#ff9900]/40 text-sm">Füge das erste Item zur globalen Packliste hinzu!</p>
           </div>
         ) : (
           items.map((item, idx) => (
             <div
               key={item.id || idx}
-              className="bg-[#460b6c]/50 backdrop-blur-sm border border-[#ff9900]/20 rounded-lg p-4 transition-all hover:bg-[#460b6c]/60"
+              className="bg-[#ff9900]/5 backdrop-blur-sm border border-[#ff9900]/20 rounded-xl p-6 transition-all hover:bg-[#ff9900]/10 hover:shadow-lg group"
             >
               <div className="flex items-center gap-4">
                 {/* Icon */}
-                <div className="p-2 bg-[#ff9900]/20 rounded-full">
-                  <Package className="h-4 w-4 text-[#ff9900]" />
+                <div className="p-3 bg-[#ff9900]/20 rounded-full group-hover:bg-[#ff9900]/30 transition-colors">
+                  <Package className="h-5 w-5 text-[#ff9900]" />
                 </div>
                 
                 {/* Item Text */}
-                <span className="flex-1 text-[#ff9900] font-medium">
+                <span className="flex-1 text-[#ff9900] font-semibold text-lg">
                   {item.text}
                 </span>
 
                 {/* Badge */}
-                <span className="px-2 py-1 bg-[#ff9900]/20 text-[#ff9900] text-xs rounded-full font-medium">
+                <span className="px-3 py-1.5 bg-[#ff9900]/20 text-[#ff9900] text-sm rounded-full font-medium border border-[#ff9900]/30">
                   Für alle
                 </span>
 
@@ -155,12 +152,12 @@ const PacklistManager: React.FC = () => {
                 <button
                   onClick={() => handleDelete(idx)}
                   disabled={isPending}
-                  className="flex-shrink-0 p-2 text-[#ff9900]/50 hover:text-[#ff9900] hover:bg-[#ff9900]/10 rounded-lg transition-all disabled:opacity-50"
+                  className="flex-shrink-0 p-3 text-red-400 hover:text-red-300 hover:bg-red-500/10 rounded-lg transition-all disabled:opacity-50 group-hover:scale-110"
                 >
                   {isPending ? (
-                    <Loader2 className="h-4 w-4 animate-spin" />
+                    <Loader2 className="h-5 w-5 animate-spin" />
                   ) : (
-                    <Trash2 className="h-4 w-4" />
+                    <Trash2 className="h-5 w-5" />
                   )}
                 </button>
               </div>

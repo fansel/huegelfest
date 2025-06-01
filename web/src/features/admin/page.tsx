@@ -1,11 +1,18 @@
 'use client';
-import React, { useState } from 'react';
-import AdminDashboard from '../admin/dashboard/AdminDashboard';
-import type { AdminTab } from '../admin/types/AdminTab';
+import { useEffect } from 'react';
+import { useRouter } from 'next/navigation';
 
 export default function AdminPage() {
-  const [activeAdminTab, setActiveAdminTab] = useState<AdminTab>('announcements');
+  const router = useRouter();
+  
+  useEffect(() => {
+    // Admin läuft jetzt über PWA-Container - redirect zur Hauptseite
+    router.replace('/');
+  }, [router]);
+
   return (
-    <AdminDashboard activeTab={activeAdminTab} setActiveTab={setActiveAdminTab} />
+    <div className="flex items-center justify-center h-64">
+      Weiterleitung zum Admin-Bereich...
+    </div>
   );
 }

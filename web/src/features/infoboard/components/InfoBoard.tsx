@@ -6,8 +6,7 @@ import { getAllAnnouncementsAction } from '../../announcements/actions/getAllAnn
 import { updateAnnouncementReactionsAction } from '../../announcements/actions/updateAnnouncementReactions';
 import { getAnnouncementReactionsAction } from '../../announcements/actions/getAnnouncementReactions';
 import AnnouncementEventCard from './AnnouncementEventCard';
-import { useWebSocket, WebSocketMessage } from '@/shared/hooks/useWebSocket';
-import { getWebSocketUrl } from '@/shared/utils/getWebSocketUrl';
+import { useGlobalWebSocket, WebSocketMessage } from '@/shared/hooks/useGlobalWebSocket';
 import useSWR from 'swr';
 import { useDeviceId } from '@/shared/hooks/useDeviceId';
 import { useNetworkStatus } from '@/shared/hooks/useNetworkStatus';
@@ -64,20 +63,17 @@ export default function InfoBoard({ isPWA = false, allowClipboard = false, annou
   const reactionsMap = data?.reactionsMap || {};
 
   // WebSocket-Integration: Live-Updates für Announcements
-  useWebSocket(
-    getWebSocketUrl(),
-    {
-      onMessage: (msg: WebSocketMessage) => {
-        if (msg.topic === 'announcement' || msg.topic === 'announcement-reaction') {
-          mutate(); // Daten neu laden
-        }
-      },
-      onError: (err) => {
-        console.error('[InfoBoard] WebSocket-Fehler:', err);
-      },
-      reconnectIntervalMs: 5000,
-    }
-  );
+  useGlobalWebSocket({
+    topicFilter: ['announcement', 'announcement-reaction'],
+    onMessage: (msg: WebSocketMessage) => {
+      if (msg.topic === 'announcement' || msg.topic === 'announcement-reaction') {
+        mutate(); // Daten neu laden
+      }
+    },
+    onError: (err) => {
+      console.error('[InfoBoard] WebSocket-Fehler:', err);
+    },
+  });
 
   // Hilfsfunktion: Hex zu RGBA mit Validierung und Fallback
   const getBackgroundColor = (color: string, opacity: number): string => {

@@ -25,6 +25,23 @@ export class MusicService {
         logger.debug('[MusicService] URL ist eine SoundCloud-URL');
         return true;
       }
+      
+      // Erweiterte SoundCloud URL-Erkennung
+      if (url.includes('soundcloud.com')) {
+        // Prüfe auf unterstützte URL-Formate
+        const supportedPatterns = [
+          /soundcloud\.com\/[^\/]+\/[^\/]+/,  // Standard Track URLs
+          /soundcloud\.com\/[^\/]+\/sets\/[^\/]+/, // Set URLs (Playlists)
+          /on\.soundcloud\.com\//, // Short URLs
+        ];
+        
+        const isSupported = supportedPatterns.some(pattern => pattern.test(url));
+        if (!isSupported) {
+          logger.warn('[MusicService] SoundCloud URL-Format wird möglicherweise nicht unterstützt:', url);
+        }
+        return isSupported;
+      }
+      
       new URL(url);
       logger.debug('[MusicService] URL ist gültig');
       return true;
@@ -57,11 +74,25 @@ export class MusicService {
         url = await this.resolveShortUrl(url);
         logger.info('[MusicService] Aufgelöste URL:', url);
       }
+      
+      // Zusätzliche URL-Validierung vor API-Aufruf
+      if (!url.includes('soundcloud.com')) {
+        throw new Error('Nur SoundCloud URLs werden unterstützt');
+      }
+      
+      logger.debug('[MusicService] Versuche Track-Info von SoundCloud abzurufen...');
       const trackInfo = await scdl.getInfo(url);
       logger.debug('[MusicService] SoundCloud Track-Info erhalten:', trackInfo);
+      
       if (!trackInfo || !trackInfo.title) {
-        throw new Error('Ungültige Track-Informationen von SoundCloud');
+        throw new Error('Ungültige Track-Informationen von SoundCloud - Track möglicherweise privat');
       }
+      
+      // Prüfe ob Track downloadbar ist
+      if (trackInfo.downloadable === false && !trackInfo.streamable) {
+        throw new Error('Track ist nicht streambar - möglicherweise geografisch eingeschränkt oder privat');
+      }
+      
       return {
         title: trackInfo.title,
         author_name: trackInfo.user?.username || 'Unbekannter Künstler',
@@ -73,9 +104,66 @@ export class MusicService {
     } catch (error) {
       logger.error('[MusicService] Fehler beim Abrufen der Track-Info:', error);
       if (error instanceof Error) {
+        // Verbesserte Fehlermeldungen für häufige Probleme
+        if (error.message.includes('404') || error.message.includes('Not Found')) {
+          throw new Error('Track nicht gefunden. Mögliche Gründe:\n• Track ist privat oder unlisted\n• Track wurde gelöscht\n• Geografische Beschränkungen\n• Track ist nur für SoundCloud Go+ verfügbar');
+        }
+        if (error.message.includes('403') || error.message.includes('Forbidden')) {
+          throw new Error('Zugriff verweigert. Track ist wahrscheinlich:\n• Privat\n• Geografisch beschränkt\n• Nur für Premium-Nutzer verfügbar');
+        }
+        if (error.message.includes('401') || error.message.includes('Unauthorized')) {
+          throw new Error('SoundCloud API-Authentifizierung fehlgeschlagen - Client-ID ungültig oder abgelaufen');
+        }
+        if (error.message.includes('429') || error.message.includes('Rate limit')) {
+          throw new Error('SoundCloud API-Limit erreicht - bitte versuche es in ein paar Minuten erneut');
+        }
+        if (error.message.includes('Invalid URL')) {
+          throw new Error('Ungültige SoundCloud URL - unterstützt werden nur direkte Track-Links');
+        }
+        if (error.message.includes('could not find the song')) {
+          throw new Error('Track konnte nicht gefunden werden. Der Track ist möglicherweise:\n• Privat oder unlisted\n• Nur über SoundCloud Go+ verfügbar\n• Geografisch eingeschränkt\n• Von einem Label mit besonderen Rechten');
+        }
         throw new Error(`Fehler beim Abrufen der Track-Informationen: ${error.message}`);
       }
       throw new Error('Unbekannter Fehler beim Abrufen der Track-Informationen');
+    }
+  }
+
+  /**
+   * Prüft ob ein Track verfügbar und downloadbar ist
+   */
+  public static async checkTrackAvailability(url: string): Promise<{ isAvailable: boolean; reason?: string; trackInfo?: any }> {
+    try {
+      const trackInfo = await this.getTrackInfo(url);
+      
+      // Prüfe verschiedene Verfügbarkeitskriterien
+      if (!trackInfo) {
+        return { isAvailable: false, reason: 'Track-Informationen konnten nicht abgerufen werden' };
+      }
+      
+      // Zusätzliche Prüfungen basierend auf SoundCloud API Antwort
+      const fullTrackInfo = await scdl.getInfo(url);
+      
+      if (fullTrackInfo.policy === 'BLOCK') {
+        return { isAvailable: false, reason: 'Track ist durch Richtlinien blockiert', trackInfo };
+      }
+      
+      if (fullTrackInfo.monetization_model === 'TIER_2') {
+        return { isAvailable: false, reason: 'Track ist nur für SoundCloud Go+ verfügbar', trackInfo };
+      }
+      
+      if (!fullTrackInfo.streamable) {
+        return { isAvailable: false, reason: 'Track ist nicht streambar', trackInfo };
+      }
+      
+      return { isAvailable: true, trackInfo };
+      
+    } catch (error) {
+      logger.error('[MusicService] Fehler bei Verfügbarkeitsprüfung:', error);
+      if (error instanceof Error) {
+        return { isAvailable: false, reason: error.message };
+      }
+      return { isAvailable: false, reason: 'Unbekannter Fehler bei der Verfügbarkeitsprüfung' };
     }
   }
 

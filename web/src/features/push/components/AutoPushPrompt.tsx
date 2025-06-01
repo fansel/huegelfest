@@ -28,6 +28,7 @@ export default function AutoPushPrompt({ forceShow = false, onClose, onSubscript
   const [showPrompt, setShowPrompt] = useState(forceShow);
   const [isLoading, setIsLoading] = useState(false);
   const [triggerReason, setTriggerReason] = useState<string>('manual');
+  const [customMessage, setCustomMessage] = useState<string | null>(null);
 
   // Nur bei forceShow oder manuellen Triggers anzeigen
   useEffect(() => {
@@ -39,6 +40,7 @@ export default function AutoPushPrompt({ forceShow = false, onClose, onSubscript
     const handleTriggerPushPrompt = (event: CustomEvent) => {
       console.log('[AutoPushPrompt] Manueller Trigger erhalten:', event.detail);
       setTriggerReason(event.detail?.reason || 'manual');
+      setCustomMessage(event.detail?.message || null);
       setShowPrompt(true);
     };
 
@@ -124,17 +126,12 @@ export default function AutoPushPrompt({ forceShow = false, onClose, onSubscript
     onClose?.();
   };
 
-  const handleLater = () => {
-    setShowPrompt(false);
-    onClose?.();
-  };
-
   if (!showPrompt || !deviceId) return null;
 
   return (
     <Dialog open={showPrompt} onOpenChange={(open) => {
       if (!open) {
-        handleLater();
+        handleDeny();
       }
     }}>
       <DialogContent className="max-w-md">
@@ -144,10 +141,13 @@ export default function AutoPushPrompt({ forceShow = false, onClose, onSubscript
             Benachrichtigungen erlauben?
           </DialogTitle>
           <DialogDescription>
-            {triggerReason === 'device-transfer'
-              ? 'Nach dem Gerätewechsel musst du Push-Benachrichtigungen neu aktivieren.'
-              : 'Möchtest du Benachrichtigungen über wichtige Updates erhalten?'
-            }
+            {customMessage || (
+              triggerReason === 'device-transfer'
+                ? 'Nach dem Gerätewechsel musst du Push-Benachrichtigungen neu aktivieren.'
+                : triggerReason === 'first-start'
+                ? 'Soll die App dir wichtige Updates als Push-Benachrichtigungen senden?'
+                : 'Möchtest du Benachrichtigungen über wichtige Updates erhalten?'
+            )}
           </DialogDescription>
         </DialogHeader>
 
@@ -180,27 +180,15 @@ export default function AutoPushPrompt({ forceShow = false, onClose, onSubscript
               )}
             </Button>
 
-            <div className="flex gap-2">
-              <Button
-                variant="outline"
-                onClick={handleDeny}
-                disabled={isLoading}
-                className="flex-1"
-              >
-                <BellOff className="w-4 h-4 mr-2" />
-                Nein danke
-              </Button>
-              
-              <Button
-                variant="outline"
-                onClick={handleLater}
-                disabled={isLoading}
-                className="flex-1"
-              >
-                <X className="w-4 h-4 mr-2" />
-                Später
-              </Button>
-            </div>
+            <Button
+              variant="outline"
+              onClick={handleDeny}
+              disabled={isLoading}
+              className="w-full"
+            >
+              <BellOff className="w-4 h-4 mr-2" />
+              Nein danke
+            </Button>
           </div>
         </div>
       </DialogContent>

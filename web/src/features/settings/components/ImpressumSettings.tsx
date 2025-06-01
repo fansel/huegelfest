@@ -2,6 +2,7 @@ import { useState } from 'react';
 import UserSettingsCard from './UserSettingsCard';
 import { FileText } from 'lucide-react';
 import { Sheet, SheetContent, SheetHeader, SheetTitle } from '@/shared/components/ui/sheet';
+import Link from 'next/link';
 
 const ImpressumContent = () => (
   <div className="max-w-lg mx-auto text-[#460b6c] mb-8">
@@ -33,6 +34,15 @@ const ImpressumContent = () => (
         <h3 className="text-lg font-semibold mb-2">Urheberrecht</h3>
         <p>
           Die durch die Seitenbetreiber erstellten Inhalte und Werke auf diesen Seiten unterliegen dem deutschen Urheberrecht. Die Vervielfältigung, Bearbeitung, Verbreitung und jede Art der Verwertung außerhalb der Grenzen des Urheberrechtes bedürfen der schriftlichen Zustimmung des jeweiligen Autors bzw. Erstellers. Downloads und Kopien dieser Seite sind nur für den privaten, nicht kommerziellen Gebrauch gestattet.
+        </p>
+      </div>
+      <div className="mt-6 p-4 bg-[#ff9900]/10 rounded-lg border border-[#ff9900]/20">
+        <p className="text-sm text-[#460b6c]/80">
+          🚀 <strong>Lust auf mehr?</strong> Besuche die{' '}
+          <Link href="/impressum" className="text-[#ff9900] underline hover:text-[#460b6c]">
+            Developer-Seite
+          </Link>{' '}
+          und erfahre mehr über diese Website!
         </p>
       </div>
     </div>

@@ -5,6 +5,13 @@ import { getInfoBoardData } from '@/features/infoboard/components/InfoBoardServe
 import { getRidesAction } from '@/features/registration/actions/getRides';
 import { getGlobalPacklistAction } from '@/features/packlist/actions/getGlobalPacklistAction';
 import { PacklistItem } from '@/features/packlist/types/PacklistItem';
+import { getAllAnnouncementsAction } from '@/features/announcements/actions/getAllAnnouncements';
+import { getWorkingGroupsArrayAction } from '@/features/workingGroups/actions/getWorkingGroupColors';
+import { getCategoriesAction } from '@/features/categories/actions/getCategories';
+import { getPendingEventsAction } from '@/features/timeline/actions/getPendingEventsAction';
+import { getAllTracks } from '@/features/music/actions/getAllTracks';
+import { fetchGroupsData } from '@/features/admin/components/groups/actions/fetchGroupsData';
+import { fetchActivitiesData } from '@/features/admin/components/activities/actions/fetchActivitiesData';
 
 interface Ride {
   _id?: string;
@@ -45,6 +52,42 @@ export default async function PWAContainerServer() {
     packlistData = [];
   }
 
+  // Lade Admin-Daten für SSR (nur wenn Admin)
+  let adminData = undefined;
+  if (isAdmin) {
+    try {
+      const [announcementsData, workingGroups, categories, pendingEvents, tracks, groupsData, activitiesData] = await Promise.all([
+        getAllAnnouncementsAction(),
+        getWorkingGroupsArrayAction(), 
+        getCategoriesAction(),
+        getPendingEventsAction(),
+        getAllTracks(),
+        fetchGroupsData(),
+        fetchActivitiesData()
+      ]);
+
+      // Map announcements with group info
+      const announcements = announcementsData.map((a: any) => ({
+        ...a,
+        groupName: a.groupInfo?.name || '',
+        groupColor: a.groupInfo?.color || '',
+      }));
+
+      adminData = {
+        announcements,
+        workingGroups,
+        categories,
+        pendingEvents,
+        tracks,
+        groupsData,
+        activitiesData
+      };
+    } catch (error) {
+      console.error('Fehler beim Laden der Admin-Daten:', error);
+      adminData = undefined;
+    }
+  }
+
   // DeviceId für InfoBoard hinzufügen (kann leer sein da SSR)
   const infoBoardData = {
     ...infoBoardDataRaw,
@@ -58,6 +101,7 @@ export default async function PWAContainerServer() {
       infoBoardData={infoBoardData}
       carpoolData={carpoolData}
       packlistData={packlistData}
+      adminData={adminData}
     />
   );
 } 

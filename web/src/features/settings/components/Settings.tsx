@@ -35,7 +35,7 @@ export default function Settings({
         <StarfieldSettings showStarfield={showStarfield} onToggle={onToggleStarfield} variant="row" />
         <MusicNoteSettings showMusicNote={showMusicNote} onToggle={onToggleMusicNote} variant="row" />
         <UpdateSettings variant="row" />
-        <DeviceTransferSettings />
+        <DeviceTransferSettings variant="row" />
         <AdminSettings variant="row" />
         <DatenschutzSettings variant="row" />
         <ImpressumSettings variant="row" />
@@ -53,7 +53,7 @@ export default function Settings({
         <StarfieldSettings showStarfield={showStarfield} onToggle={onToggleStarfield} variant="tile" />
         <MusicNoteSettings showMusicNote={showMusicNote} onToggle={onToggleMusicNote} variant="tile" />
         <UpdateSettings variant="tile" />
-        <DeviceTransferSettings />
+        <DeviceTransferSettings variant="tile" />
         <AdminSettings variant="tile" />
         <DatenschutzSettings variant="tile" />
         <ImpressumSettings variant="tile" />

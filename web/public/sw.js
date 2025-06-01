@@ -7,14 +7,14 @@ const BUILD_ID = Date.now().toString(); // Dynamische Build-ID
 const CACHE_NAME = `huegelfest-cache-${CACHE_VERSION}-${BUILD_ID}`;
 
 const APP_SHELL = [
-  '/',  // ✅ Root-Seite für Offline-Fallback
+  '/',
   '/android-chrome-192x192.png',
   '/android-chrome-512x512.png',
   '/favicon.ico',
   '/favicon-16x16.png',
   '/favicon-32x32.png',
   '/apple-touch-icon.png',
-  '/logo.svg',
+  '/logo.jpg',
   '/manifest.json'
 ];
 
@@ -31,6 +31,29 @@ const notifyClients = (message) => {
 const isStaticAsset = (pathname) => {
   return pathname.startsWith('/_next/static/') ||
          /\.(png|jpg|jpeg|webp|svg|ico|css|js|woff2|woff|ttf|eot)$/.test(pathname);
+};
+
+// Hilfsfunktion: Verbesserte Cache-Matching-Logik
+const matchCachedPage = async (request) => {
+  const cache = await caches.open(CACHE_NAME);
+  
+  // Versuch 1: Exakter Match
+  let response = await cache.match(request);
+  if (response) return response;
+  
+  // Versuch 2: URL ohne Query-Parameter
+  const url = new URL(request.url);
+  const cleanUrl = url.origin + url.pathname;
+  response = await cache.match(cleanUrl);
+  if (response) return response;
+  
+  // Versuch 3: Root-Seite für SPA-Navigation
+  if (url.pathname !== '/') {
+    response = await cache.match('/');
+    if (response) return response;
+  }
+  
+  return null;
 };
 
 // Message-Handler für Client-Kommunikation
@@ -76,19 +99,45 @@ self.addEventListener('message', (event) => {
 self.addEventListener('install', (event) => {
   console.log('[SW] Installation gestartet für', CACHE_NAME);
   event.waitUntil(
-    caches.open(CACHE_NAME).then((cache) => {
+    caches.open(CACHE_NAME).then(async (cache) => {
       console.log('[SW] Caching App Shell...');
-      return Promise.all(APP_SHELL.map((url) =>
-        fetch(url)
-          .then((response) => {
-            if (!response.ok) throw new Error(`Request for ${url} failed with status ${response.status}`);
-            console.log('[SW] ✅ Cached:', url);
-            return cache.put(url, response);
-          })
-          .catch((err) => {
-            console.warn('[SW] ⚠️ Failed to cache', url, err);
-          })
-      ));
+      
+      // App Shell Items einzeln cachen mit verbesserter Fehlerbehandlung
+      const cachePromises = APP_SHELL.map(async (url) => {
+        try {
+          const response = await fetch(url, {
+            method: 'GET',
+            cache: 'no-cache' // Frische Version holen
+          });
+          
+          if (!response.ok) {
+            throw new Error(`Request for ${url} failed with status ${response.status}`);
+          }
+          
+          // Für HTML-Seiten (insbesondere '/') neue Response mit passenden Headern erstellen
+          if (url === '/' || response.headers.get('content-type')?.includes('text/html')) {
+            const responseClone = response.clone();
+            const body = await responseClone.text();
+            const newResponse = new Response(body, {
+              status: response.status,
+              statusText: response.statusText,
+              headers: {
+                'Content-Type': 'text/html; charset=utf-8',
+                'Cache-Control': 'no-cache'
+              }
+            });
+            await cache.put(url, newResponse);
+          } else {
+            await cache.put(url, response);
+          }
+          
+          console.log('[SW] ✅ Cached:', url);
+        } catch (err) {
+          console.warn('[SW] ⚠️ Failed to cache', url, err);
+        }
+      });
+      
+      await Promise.all(cachePromises);
     }).then(() => {
       console.log('[SW] ✅ Installation abgeschlossen');
       // Clients über neue Version informieren
@@ -128,7 +177,7 @@ self.addEventListener('activate', (event) => {
   );
 });
 
-// Fetch-Event: Statische Assets und Navigation cachen
+// Fetch-Event: Verbesserte Offline-Unterstützung
 self.addEventListener('fetch', (event) => {
   // Nur GET-Anfragen behandeln
   if (event.request.method !== 'GET') return;
@@ -159,97 +208,133 @@ self.addEventListener('fetch', (event) => {
     return;
   }
 
-  // App Shell für Navigation (Offline-Fallback) - VERBESSERT
+  // App Shell für Navigation (Offline-Fallback mit verbessertem Caching)
   if (event.request.mode === 'navigate') {
     console.log('[SW] 🧭 Navigation request:', url.pathname);
     event.respondWith(
-      // Versuche zuerst die spezifische Seite zu laden
-      fetch(event.request).then((response) => {
+      fetch(event.request).then(async (response) => {
+        // Bei erfolgreichem Netzwerk-Request: Response cachen und zurückgeben
         console.log('[SW] ✅ Navigation successful:', url.pathname);
-        // Bei erfolgreichem Netzwerk-Request: Auch cachen für zukünftige Offline-Nutzung
-        if (response.ok) {
-          caches.open(CACHE_NAME).then((cache) => {
-            cache.put(event.request, response.clone());
-            console.log('[SW] 💾 Cached navigation page:', url.pathname);
-          });
-        }
-        return response;
-      }).catch(() => {
-        // Bei Netzwerk-Fehler: Versuche gecachte Version der spezifischen Seite
-        console.log('[SW] 🔄 Network failed, trying cached version of:', url.pathname);
-        return caches.match(event.request).then((cachedPage) => {
-          if (cachedPage) {
-            console.log('[SW] 📱 Serving cached page:', url.pathname);
-            return cachedPage;
-          }
-          
-          // Fallback: Versuche gecachte Root-Seite
-          console.log('[SW] 🔄 No cached page, trying cached root...');
-          return caches.match('/').then((cachedRoot) => {
-            if (cachedRoot) {
-              console.log('[SW] 📱 Serving cached root for:', url.pathname);
-              return cachedRoot;
-            } else {
-              console.log('[SW] ❌ No cached root available');
-              return new Response(`
-                <!DOCTYPE html>
-                <html lang="de">
-                  <head>
-                    <meta charset="utf-8">
-                    <meta name="viewport" content="width=device-width, initial-scale=1">
-                    <title>Hügelfest - Offline</title>
-                    <style>
-                      body { 
-                        font-family: system-ui, -apple-system, sans-serif; 
-                        text-align: center; 
-                        padding: 50px; 
-                        background: linear-gradient(135deg, #460b6c, #2a0845); 
-                        color: #ff9900; 
-                        min-height: 100vh; 
-                        margin: 0;
-                        display: flex;
-                        flex-direction: column;
-                        justify-content: center;
-                        align-items: center;
-                      }
-                      .container { max-width: 400px; }
-                      h1 { font-size: 2.5rem; margin-bottom: 1rem; }
-                      p { margin: 1rem 0; opacity: 0.9; line-height: 1.5; }
-                      button { 
-                        background: #ff9900; 
-                        color: #460b6c; 
-                        border: none; 
-                        padding: 12px 24px; 
-                        border-radius: 8px; 
-                        font-size: 1rem; 
-                        font-weight: bold; 
-                        cursor: pointer; 
-                        margin: 10px;
-                        transition: opacity 0.2s;
-                      }
-                      button:hover { opacity: 0.8; }
-                    </style>
-                  </head>
-                  <body>
-                    <div class="container">
-                      <h1>🎪 Hügelfest</h1>
-                      <p>Du bist offline. Die App wird automatisch neu geladen, sobald du wieder online bist.</p>
-                      <button onclick="location.reload()">↻ Erneut versuchen</button>
-                    </div>
-                    <script>
-                      window.addEventListener('online', () => {
-                        console.log('[Offline Page] Online detected, reloading...');
-                        setTimeout(() => window.location.reload(), 1000);
-                      });
-                    </script>
-                  </body>
-                </html>
-              `, { 
-                headers: { 'Content-Type': 'text/html' },
-                status: 200
-              });
+        
+        // Für wichtige Seiten: Auch im Cache speichern für Offline-Zugriff
+        if (response.ok && response.headers.get('content-type')?.includes('text/html')) {
+          try {
+            const cache = await caches.open(CACHE_NAME);
+            const responseClone = response.clone();
+            const body = await responseClone.text();
+            const cachedResponse = new Response(body, {
+              status: response.status,
+              statusText: response.statusText,
+              headers: {
+                'Content-Type': 'text/html; charset=utf-8',
+                'Cache-Control': 'no-cache'
+              }
+            });
+            
+            // Spezielle Seiten auch cachen (nicht nur Root)
+            if (url.pathname === '/' || url.pathname === '/events' || url.pathname === '/sponsors') {
+              cache.put(url.pathname, cachedResponse.clone());
+              console.log('[SW] 💾 Cached navigation page:', url.pathname);
             }
-          });
+          } catch (err) {
+            console.warn('[SW] Failed to cache navigation page:', err);
+          }
+        }
+        
+        return response;
+      }).catch(async () => {
+        // Bei Netzwerk-Fehler: Versuche gecachte Seite zu finden
+        console.log('[SW] 🔄 Network failed, trying cached pages...');
+        
+        const cachedResponse = await matchCachedPage(event.request);
+        if (cachedResponse) {
+          console.log('[SW] 📱 Serving cached page for:', url.pathname);
+          return cachedResponse;
+        }
+        
+        console.log('[SW] ❌ No cached page available, showing offline page');
+        return new Response(`
+          <!DOCTYPE html>
+          <html lang="de">
+            <head>
+              <meta charset="utf-8">
+              <meta name="viewport" content="width=device-width, initial-scale=1">
+              <title>Hügelfest - Offline</title>
+              <style>
+                body { 
+                  font-family: system-ui, -apple-system, sans-serif; 
+                  text-align: center; 
+                  padding: 50px; 
+                  background: linear-gradient(135deg, #460b6c, #2a0845); 
+                  color: #ff9900; 
+                  min-height: 100vh; 
+                  margin: 0;
+                  display: flex;
+                  flex-direction: column;
+                  justify-content: center;
+                  align-items: center;
+                }
+                .container { max-width: 400px; }
+                h1 { font-size: 2.5rem; margin-bottom: 1rem; }
+                p { margin: 1rem 0; opacity: 0.9; line-height: 1.5; }
+                button { 
+                  background: #ff9900; 
+                  color: #460b6c; 
+                  border: none; 
+                  padding: 12px 24px; 
+                  border-radius: 8px; 
+                  font-size: 1rem; 
+                  font-weight: bold; 
+                  cursor: pointer; 
+                  margin: 10px;
+                  transition: opacity 0.2s;
+                }
+                button:hover { opacity: 0.8; }
+                .debug { 
+                  margin-top: 20px; 
+                  font-size: 0.8rem; 
+                  opacity: 0.6; 
+                  font-family: monospace; 
+                }
+              </style>
+            </head>
+            <body>
+              <div class="container">
+                <h1>🎪 Hügelfest</h1>
+                <p>Du bist offline. Die App versucht automatisch, eine gecachte Version zu laden.</p>
+                <button onclick="location.reload()">↻ Erneut versuchen</button>
+                <button onclick="goHome()">🏠 Zur Startseite</button>
+                <div class="debug">
+                  <p>Angeforderte Seite: ${url.pathname}</p>
+                  <p>Fallback-Modus: Offline-Seite</p>
+                </div>
+              </div>
+              <script>
+                function goHome() {
+                  window.location.href = '/';
+                }
+                
+                window.addEventListener('online', () => {
+                  console.log('[Offline Page] Online detected, reloading...');
+                  setTimeout(() => window.location.reload(), 1000);
+                });
+                
+                // Versuche bei Load nochmal eine gecachte Version zu finden
+                document.addEventListener('DOMContentLoaded', () => {
+                  if ('serviceWorker' in navigator) {
+                    navigator.serviceWorker.ready.then(registration => {
+                      registration.active?.postMessage({
+                        type: 'DEBUG_CACHE'
+                      });
+                    });
+                  }
+                });
+              </script>
+            </body>
+          </html>
+        `, { 
+          headers: { 'Content-Type': 'text/html' },
+          status: 200
         });
       })
     );

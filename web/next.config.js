@@ -28,6 +28,29 @@ const nextConfig = {
         '@mongodb-js/zstd': false
       };
     }
+
+    // Unterdrücke kritische Abhängigkeits-Warnungen von MongoDB
+    config.module = config.module || {};
+    config.module.rules = config.module.rules || [];
+    
+    // Add specific webpack externals for MongoDB dependencies
+    if (isServer) {
+      config.externals.push(/^mongodb-client-encryption$/);
+    }
+
+    // Ignoriere spezifische kritische Abhängigkeits-Warnungen
+    const originalWarnings = config.ignoreWarnings || [];
+    config.ignoreWarnings = [
+      ...originalWarnings,
+      // MongoDB kritische Abhängigkeits-Warnungen unterdrücken
+      /Critical dependency: the request of a dependency is an expression/,
+      // Agenda-spezifische Warnungen
+      /node_modules[\/\\]agenda[\/\\]/,
+      /node_modules[\/\\]mongodb[\/\\]/,
+      // Spezifische MongoDB Utils Warnung
+      /node_modules[\/\\]mongodb[\/\\]lib[\/\\]utils\.js/,
+    ];
+
     return config;
   },
   images: {

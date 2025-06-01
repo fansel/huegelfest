@@ -6,6 +6,7 @@ import useSWR from 'swr';
 import { fetchTimeline } from '@/features/timeline/actions/fetchTimeline';
 import { useWebSocket } from '@/shared/hooks/useWebSocket';
 import { getWebSocketUrl } from '@/shared/utils/getWebSocketUrl';
+import { useNetworkStatus } from '@/shared/hooks/useNetworkStatus';
 
 interface UseFavoritesResult {
   favorites: FavoriteItem[];
@@ -15,18 +16,23 @@ interface UseFavoritesResult {
   // Timeline-Daten für FavoritesList
   timelineData: any;
   isLoading: boolean;
+  isOnline: boolean;
 }
 
 export const useFavorites = (): UseFavoritesResult => {
   const [favorites, setFavorites] = useState<FavoriteItem[]>([]);
+  const { isOnline } = useNetworkStatus();
 
   // SWR für Timeline-Daten (konsistent mit TimelineClient)
   const { data: timelineData, isLoading, mutate } = useSWR(
     'timeline',
-    fetchTimeline,
+    isOnline ? fetchTimeline : null, // Nur online fetchen
     {
       revalidateOnFocus: false,
       revalidateOnReconnect: true,
+      errorRetryInterval: isOnline ? 5000 : 30000,
+      shouldRetryOnError: isOnline,
+      dedupingInterval: 30000,
     }
   );
 
@@ -36,7 +42,9 @@ export const useFavorites = (): UseFavoritesResult => {
       // FavoritesList zeigt Timeline-Daten an, deshalb müssen wir bei Updates revalidieren
       if (msg.topic?.includes('day-') || msg.topic?.includes('event-') || msg.topic?.includes('category-')) {
         console.log('[useFavorites] Timeline-Update empfangen, revalidiere Timeline-Daten:', msg.topic);
-        mutate(); // Timeline-Daten neu laden für aktuelle Anzeige in FavoritesList
+        if (isOnline) {
+          mutate(); // Timeline-Daten neu laden für aktuelle Anzeige in FavoritesList
+        }
       }
     },
   });
@@ -121,6 +129,7 @@ export const useFavorites = (): UseFavoritesResult => {
     removeFavorite, 
     isFavorite,
     timelineData,
-    isLoading 
+    isLoading,
+    isOnline 
   };
 };

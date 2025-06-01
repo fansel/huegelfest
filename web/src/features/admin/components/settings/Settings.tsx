@@ -1,8 +1,10 @@
 import React, { useState } from 'react';
 import FestivalSignupPhaseToggle from './FestivalSignupPhaseToggle';
 import PacklistSheet from './PacklistSheet';
+import FestivalDaysManager from './FestivalDaysManager';
+import SystemDiagnosticsPanel from '../systemDiagnostics/SystemDiagnosticsPanel';
 import { useDeviceContext } from '@/shared/contexts/DeviceContext';
-import { ClipboardList, Settings as SettingsIcon } from 'lucide-react';
+import { ClipboardList, Settings as SettingsIcon, Calendar, Monitor } from 'lucide-react';
 
 /**
  * Admin-Settings: Responsive, modernes Card-Grid für Desktop, einspaltig für Mobile.
@@ -10,9 +12,15 @@ import { ClipboardList, Settings as SettingsIcon } from 'lucide-react';
  */
 const Settings: React.FC = () => {
   const [open, setOpen] = useState(false);
-  const [pushOpen, setPushOpen] = useState(false);
+  const [festivalDaysOpen, setFestivalDaysOpen] = useState(false);
+  const [diagnosticsOpen, setDiagnosticsOpen] = useState(false);
   const { deviceType } = useDeviceContext();
   const isMobile = deviceType === 'mobile';
+
+  // Show diagnostics panel if open
+  if (diagnosticsOpen) {
+    return <SystemDiagnosticsPanel onBack={() => setDiagnosticsOpen(false)} />;
+  }
 
   // Card-Daten für Desktop-Grid
   const cards = [
@@ -22,6 +30,20 @@ const Settings: React.FC = () => {
       description: 'Steuere, ob die Festival-Anmeldung für Nutzer sichtbar ist.',
       content: <FestivalSignupPhaseToggle />,
       action: null,
+    },
+    {
+      icon: <Calendar className="w-8 h-8 text-[#ff9900]" />,
+      title: 'Festival-Tage',
+      description: 'Verwalte die zentralen Festival-Tage für Timeline und andere Bereiche.',
+      content: null,
+      action: (
+        <button
+          onClick={() => setFestivalDaysOpen(true)}
+          className="bg-gradient-to-r from-[#ff9900] to-[#ffb347] text-white px-4 py-2 rounded-lg font-semibold shadow hover:scale-105 hover:from-[#ff9900]/90 hover:to-[#ffb347]/90 transition-all"
+        >
+          Festival-Tage verwalten
+        </button>
+      ),
     },
     {
       icon: <ClipboardList className="w-8 h-8 text-[#ff9900]" />,
@@ -34,6 +56,20 @@ const Settings: React.FC = () => {
           className="bg-gradient-to-r from-[#ff9900] to-[#ffb347] text-white px-4 py-2 rounded-lg font-semibold shadow hover:scale-105 hover:from-[#ff9900]/90 hover:to-[#ffb347]/90 transition-all"
         >
           Packliste verwalten
+        </button>
+      ),
+    },
+    {
+      icon: <Monitor className="w-8 h-8 text-[#ff9900]" />,
+      title: 'System-Diagnose',
+      description: 'Live-Logs, Service-Status und umfassende System-Überwachung.',
+      content: null,
+      action: (
+        <button
+          onClick={() => setDiagnosticsOpen(true)}
+          className="bg-gradient-to-r from-[#ff9900] to-[#ffb347] text-white px-4 py-2 rounded-lg font-semibold shadow hover:scale-105 hover:from-[#ff9900]/90 hover:to-[#ffb347]/90 transition-all"
+        >
+          Diagnose öffnen
         </button>
       ),
     }
@@ -62,6 +98,25 @@ const Settings: React.FC = () => {
             </div>
           </div>
 
+          {/* Mobile Card für Festival-Tage */}
+          <div className="bg-white rounded-2xl shadow-lg border-2 border-[#ff9900]/10 p-6">
+            <div className="flex items-center gap-4 mb-4">
+              <div className="p-3 bg-[#ff9900]/10 rounded-full">
+                <Calendar className="w-6 h-6 text-[#ff9900]" />
+              </div>
+              <div className="flex-1">
+                <h3 className="text-lg font-bold text-[#ff9900] mb-1">Festival-Tage</h3>
+                <p className="text-gray-600 text-sm">Verwalte die zentralen Festival-Tage für Timeline und andere Bereiche.</p>
+              </div>
+            </div>
+            <button
+              onClick={() => setFestivalDaysOpen(true)}
+              className="bg-gradient-to-r from-[#ff9900] to-[#ffb347] text-white px-4 py-3 rounded-lg font-semibold shadow hover:scale-105 hover:from-[#ff9900]/90 hover:to-[#ffb347]/90 transition-all w-full"
+            >
+              Festival-Tage verwalten
+            </button>
+          </div>
+
           {/* Mobile Card für Packliste */}
           <div className="bg-white rounded-2xl shadow-lg border-2 border-[#ff9900]/10 p-6">
             <div className="flex items-center gap-4 mb-4">
@@ -80,9 +135,28 @@ const Settings: React.FC = () => {
               Packliste verwalten
             </button>
           </div>
+
+          {/* Mobile Card für System-Diagnose */}
+          <div className="bg-white rounded-2xl shadow-lg border-2 border-[#ff9900]/10 p-6">
+            <div className="flex items-center gap-4 mb-4">
+              <div className="p-3 bg-[#ff9900]/10 rounded-full">
+                <Monitor className="w-6 h-6 text-[#ff9900]" />
+              </div>
+              <div className="flex-1">
+                <h3 className="text-lg font-bold text-[#ff9900] mb-1">System-Diagnose</h3>
+                <p className="text-gray-600 text-sm">Live-Logs, Service-Status und umfassende System-Überwachung.</p>
+              </div>
+            </div>
+            <button
+              onClick={() => setDiagnosticsOpen(true)}
+              className="bg-gradient-to-r from-[#ff9900] to-[#ffb347] text-white px-4 py-3 rounded-lg font-semibold shadow hover:scale-105 hover:from-[#ff9900]/90 hover:to-[#ffb347]/90 transition-all w-full"
+            >
+              Diagnose öffnen
+            </button>
+          </div>
         </div>
       ) : (
-        <div className="grid grid-cols-3 gap-8 w-full max-w-5xl bg-transparent rounded-3xl p-8 shadow-none">
+        <div className="grid grid-cols-4 gap-8 w-full max-w-6xl bg-transparent rounded-3xl p-8 shadow-none">
           {cards.map((card, idx) => (
             <div
               key={card.title}
@@ -97,10 +171,12 @@ const Settings: React.FC = () => {
           ))}
         </div>
       )}
+      
       {/* Sheets für Details */}
       <PacklistSheet open={open} setOpen={setOpen} />
+      <FestivalDaysManager open={festivalDaysOpen} setOpen={setFestivalDaysOpen} />
     </div>
   );
 };
 
-export default Settings; 
+export default Settings;

@@ -1,19 +1,31 @@
-import React from 'react';
-import { SwatchBook, ChevronLeft, ChevronRight } from 'lucide-react';
-import { FormStep } from './FormComponents';
-import type { StepProps } from './types';
-import { FESTIVAL_DAYS } from './types';
+"use client";
 
-interface TimeRangeStepProps extends StepProps {
+import React from 'react';
+import { ChevronLeft, ChevronRight, SwatchBook } from 'lucide-react';
+import type { FestivalRegisterData } from './types';
+
+// Hardcodierte Festival-Tage - diese ändern sich nie
+const FESTIVAL_DAYS = ["31.07.", "01.08.", "02.08.", "03.08."];
+
+interface TimeRangeStepProps {
+  form: FestivalRegisterData;
+  setForm: React.Dispatch<React.SetStateAction<FestivalRegisterData>>;
   fromDay: number;
   toDay: number;
   setFromDay: (day: number) => void;
   setToDay: (day: number) => void;
 }
 
-export function TimeRangeStep({ form, setForm, fromDay, toDay, setFromDay, setToDay }: TimeRangeStepProps) {
+const TimeRangeStep: React.FC<TimeRangeStepProps> = ({ 
+  form, 
+  setForm, 
+  fromDay, 
+  toDay, 
+  setFromDay, 
+  setToDay 
+}) => {
   return (
-    <FormStep>
+    <div className="flex flex-col items-center gap-4 w-full">
       <div className="flex flex-col gap-2 w-full items-center mb-2">
         <SwatchBook className="inline-block w-7 h-7 text-[#ff9900]" />
         <span className="text-sm text-[#460b6c]/80 text-center">Von wann bis wann bist du da?</span>
@@ -42,6 +54,8 @@ export function TimeRangeStep({ form, setForm, fromDay, toDay, setFromDay, setTo
           </div>
         </div>
       </div>
-    </FormStep>
+    </div>
   );
-} 
+};
+
+export default TimeRangeStep; 

@@ -20,6 +20,8 @@ export interface IRegistration extends Document {
   wantsKitchenHelp: boolean;
   allergies: string;
   allowsPhotos: boolean;
+  contactType: 'phone' | 'telegram' | 'none';
+  contactInfo: string;
 }
 
 const RegistrationSchema = new Schema<IRegistration>({
@@ -42,6 +44,8 @@ const RegistrationSchema = new Schema<IRegistration>({
   wantsKitchenHelp: { type: Boolean, default: false },
   allergies: { type: String, default: '' },
   allowsPhotos: { type: Boolean, default: true },
+  contactType: { type: String, enum: ['phone', 'telegram', 'none'], default: 'none' },
+  contactInfo: { type: String, default: '' }
 });
 
 let Registration: mongoose.Model<IRegistration>;

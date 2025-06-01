@@ -2,12 +2,10 @@
 
 import React, { useRef, useState, useEffect } from 'react';
 import { Disc3, Dices } from 'lucide-react';
-import ReactPlayer from 'react-player';
 import Image from 'next/image';
 import styles from './MusicNote.module.css';
 import { getAllTracks, MusicEntry } from '@/features/music/actions/getAllTracks';
-import { useWebSocket } from '@/shared/hooks/useWebSocket';
-import { getWebSocketUrl } from '@/shared/utils/getWebSocketUrl';
+import { useGlobalWebSocket } from '@/shared/hooks/useGlobalWebSocket';
 
 export interface TrackInfo {
   title: string;
@@ -34,6 +32,7 @@ export default function MusicNote() {
   const [coverError, setCoverError] = useState(false);
   const longPressTimeout = useRef<NodeJS.Timeout | null>(null);
   const mountRef = useRef<HTMLDivElement>(null);
+  const longPressTriggered = useRef(false);
   
   useEffect(() => {   
     const mount = mountRef.current;
@@ -54,7 +53,8 @@ export default function MusicNote() {
   }, []);
 
   // WebSocket: Füge neuen Track hinzu, wenn Topic 'music-new-track'
-  useWebSocket(getWebSocketUrl(), {
+  useGlobalWebSocket({
+    topicFilter: ['music-new-track'],
     onMessage: (msg) => {
       if (msg.topic === 'music-new-track') {
         const newTrack = msg.payload as MusicEntry;
@@ -74,6 +74,14 @@ export default function MusicNote() {
       }
     }
   }, [loading, tracks, error]);
+
+  // Set random track on first load
+  useEffect(() => {
+    if (!loading && tracks.length > 0 && currentTrackIndex === 0) {
+      const randomIndex = Math.floor(Math.random() * tracks.length);
+      setCurrentTrackIndex(randomIndex);
+    }
+  }, [loading, tracks, currentTrackIndex]);
 
   useEffect(() => {
     setCoverError(false);
@@ -101,19 +109,33 @@ export default function MusicNote() {
     }
   };
 
-  const togglePlay = () => {
-    setIsPlaying((prev) => !prev);
+  const handlePressStart = () => {
+    longPressTriggered.current = false;
+    longPressTimeout.current = setTimeout(() => {
+      longPressTriggered.current = true;
+      setIsExpanded(v => !v);
+    }, 600);
   };
   
-  const hasTrack = tracks.length > 0;
-  const currentTrack = hasTrack ? tracks[currentTrackIndex] : undefined;
-
-  const handlePressStart = () => {
-    longPressTimeout.current = setTimeout(() => setIsExpanded(v => !v), 600);
-  };
   const handlePressEnd = () => {
     if (longPressTimeout.current) clearTimeout(longPressTimeout.current);
   };
+
+  // Prevent expand/collapse interaction from affecting play state
+  const handleTogglePlay = (e: React.MouseEvent) => {
+    // Wenn gerade ein Long-Press erfolgreich war, ignoriere den Click
+    if (longPressTriggered.current) {
+      longPressTriggered.current = false; // Reset für nächstes Mal
+      e.preventDefault();
+      e.stopPropagation();
+      return;
+    }
+    e.stopPropagation(); // Prevent event bubbling to long press handlers
+    setIsPlaying((prev) => !prev);
+  };
+
+  const hasTrack = tracks.length > 0;
+  const currentTrack = hasTrack ? tracks[currentTrackIndex] : undefined;
 
   console.log('Render: loading', loading, 'error', error, 'tracks', tracks, 'currentTrackIndex', currentTrackIndex);
 
@@ -129,7 +151,7 @@ export default function MusicNote() {
       onTouchEnd={handlePressEnd}
     >
       <div
-        onClick={togglePlay}
+        onClick={handleTogglePlay}
         className="relative flex items-center justify-center flex-shrink-0"
         style={{ width: 48, height: 48, minWidth: 48 }}
       >
@@ -190,12 +212,13 @@ export default function MusicNote() {
           }}
         />
       </div>
+      
       {isExpanded && hasTrack && (
-        <div className="ml-3 overflow-hidden" style={{ minWidth: 0, flex: 1, maxWidth: 180 }}>
-          <div className={styles.trackTitleMarquee}>
+        <div className="ml-3 overflow-hidden flex-1" style={{ minWidth: 0, maxWidth: 180, display: 'flex', flexDirection: 'column', justifyContent: 'center', color: 'white' }}>
+          <div className={styles.trackTitleMarquee} style={{ fontSize: '0.8rem', fontWeight: '500', marginBottom: '2px' }}>
             <span className={styles.marqueeInner}>{currentTrack?.trackInfo.title}</span>
           </div>
-          <div className={styles.trackArtist} style={{ whiteSpace: 'nowrap' }}>{currentTrack?.trackInfo.author_name}</div>
+          <div className={styles.trackArtist} style={{ fontSize: '0.7rem', opacity: 0.8, whiteSpace: 'nowrap' }}>{currentTrack?.trackInfo.author_name}</div>
         </div>
       )}
       {isExpanded && (
@@ -211,6 +234,7 @@ export default function MusicNote() {
           <Dices strokeWidth={1.5} />
         </button>
       )}
+      
       {hasTrack && (
         <audio
           ref={audioRef}

@@ -3,7 +3,7 @@ import { useEffect, useState } from 'react';
 /**
  * Generiert eine 6-stellige zufällige Device-ID mit A-Z 0-9
  */
-function generateDeviceId(): string {
+export function generateDeviceId(): string {
   const chars = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789';
   let result = '';
   for (let i = 0; i < 6; i++) {
@@ -39,3 +39,4 @@ export function useDeviceId(): string | null {
 
   return deviceId;
 } 
+

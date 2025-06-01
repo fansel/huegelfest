@@ -1,6 +1,8 @@
 import { WorkingGroup } from './models/WorkingGroup';
 import { Category } from './models/Category';
 import { Group } from './models/Group';
+import { FestivalDay } from './models/FestivalDay';
+import { logger } from '../logger';
 
 /**
  * Stellt sicher, dass die Default-Gruppe existiert.
@@ -12,7 +14,44 @@ export async function ensureDefaultWorkingGroup(): Promise<void> {
     await WorkingGroup.create({
       name: 'default',
       color: '#ff9900', // Standardfarbe, ggf. anpassen
-    });
+    },
+    {
+     
+      name: 'Awareness',
+      color: '#DC2626', // Standardfarbe, ggf. anpassen
+    },
+    {
+      name: 'Infrastruktur',
+      color: '#2563EB', // Standardfarbe, ggf. anpassen
+    },
+    {
+      name: 'Küche',
+      color: '#16A34A', // Standardfarbe, ggf. anpassen
+    },
+    {
+      name: 'Technik',
+      color: '#3B82F6', // Standardfarbe, ggf. anpassen
+    },
+    {
+      name: 'Finanzen',
+      color: '#F59E0B', // Standardfarbe, ggf. anpassen
+    },
+    {
+      name: 'Programm',
+      color: '#EAB308', // Standardfarbe, ggf. anpassen
+    },
+    {
+      name: 'Allgemein',
+      color: '#F59E0B', // Standardfarbe, ggf. anpassen
+    },
+    
+    
+
+  
+  
+  );
+  
+    logger.info('[Init] Default-Gruppe erfolgreich erstellt.');
   }
 }
 
@@ -26,7 +65,6 @@ export async function ensureDefaultGroups(): Promise<void> {
     { name: 'Wal', color: '#2563EB' }, // Blau
     { name: 'Frosch', color: '#16A34A' }, // Grün
     { name: 'Tiger', color: '#EA580C' }, // Orange
-    { name: 'Schneehase', color: '#FFFFFF' }, // Weiß
     { name: 'Bär', color: '#92400E' }, // Braun
     { name: 'Flamingo', color: '#EC4899' }, // Rosa
     { name: 'Elefant', color: '#6B7280' }, // Grau
@@ -38,6 +76,7 @@ export async function ensureDefaultGroups(): Promise<void> {
     { name: 'Kolibri', color: '#D946EF' }, // Magenta
     { name: 'Delfin', color: '#1E3A8A' }, // Dunkelblau
     { name: 'Chamäleon', color: '#84CC16' }, // Hellgrün
+    { name: 'Igel', color: '#008000' }, // Dunkelgrün
   ];
 
   for (const groupData of defaultGroups) {
@@ -78,12 +117,12 @@ export async function ensureDefaultCategories(): Promise<void> {
       isDefault: true,
     },
     {
-      name: 'Spiele',
-      label: 'Spiele',
-      value: 'spiele',
-      icon: 'Gamepad2',
+      name: 'Workshops',
+      label: 'Workshops',
+      value: 'workshops',
+      icon: 'Wrench',
       color: '#ff9900',
-      description: 'Spiele & Aktionen',
+      description: 'Workshops & Aktionen',
       isDefault: true,
     },
     {
@@ -103,4 +142,14 @@ export async function ensureDefaultCategories(): Promise<void> {
       await Category.create(cat);
     }
   }
+
 } 
+
+
+// Festival-Tage werden jetzt über die zentrale Verwaltung initialisiert
+// Siehe: /shared/services/festivalDaysService.ts -> initDefaultFestivalDaysIfEmpty()
+
+
+
+
+    

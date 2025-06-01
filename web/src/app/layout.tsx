@@ -14,6 +14,8 @@ import { SWROfflineProvider } from "@/shared/components/SWROfflineProvider";
 import { PWAPreloadData } from "@/shared/components/PWAPreloadData";
 import { NetworkProvider } from "@/shared/contexts/NetworkContext";
 import { OfflineDetector } from "@/shared/components/OfflineDetector";
+import AutoPushActivator from "@/features/push/components/AutoPushActivator";
+import AutoPushPrompt from "@/features/push/components/AutoPushPrompt";
 
 /** 
 export const metadata: Metadata = {
@@ -57,6 +59,8 @@ export default function RootLayout({
                   <UpdateServiceProvider>
                     <SWROfflineProvider>
                       <PWAPreloadData />
+                      <AutoPushActivator />
+                      <AutoPushPrompt />
                       {children}
                       <Toaster 
                         position="top-center"

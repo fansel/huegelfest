@@ -22,6 +22,7 @@ interface AnnouncementCardProps {
   onReact?: (type: ReactionType) => void;
   deviceId?: string;
   className?: string;
+  isOffline?: boolean;
 }
 
 export const AnnouncementCard: React.FC<AnnouncementCardProps> = ({
@@ -37,6 +38,7 @@ export const AnnouncementCard: React.FC<AnnouncementCardProps> = ({
   onReact,
   deviceId,
   className,
+  isOffline = false,
 }) => (
   <div
     className={`bg-white/80 backdrop-blur-md p-3 rounded-xl shadow-[0_2px_8px_0_rgba(70,11,108,0.08)] border border-white/30 flex flex-col gap-2 relative transition-shadow hover:shadow-xl ${className ?? ''}`}
@@ -100,9 +102,19 @@ export const AnnouncementCard: React.FC<AnnouncementCardProps> = ({
             <button
               key={reactionType}
               type="button"
-              className={`flex items-center gap-1 px-2 py-1 rounded-full text-base font-medium border transition-colors ${hasReacted ? 'bg-yellow-100 border-yellow-400' : 'bg-gray-100 border-gray-300 hover:bg-yellow-50'}`}
-              onClick={() => onReact(reactionType)}
+              className={`flex items-center gap-1 px-2 py-1 rounded-full text-base font-medium border transition-colors ${
+                hasReacted 
+                  ? 'bg-yellow-100 border-yellow-400' 
+                  : 'bg-gray-100 border-gray-300 hover:bg-yellow-50'
+              } ${
+                isOffline 
+                  ? 'opacity-50 cursor-not-allowed' 
+                  : 'cursor-pointer'
+              }`}
+              onClick={isOffline ? undefined : () => onReact(reactionType)}
+              disabled={isOffline}
               aria-label={`Reagiere mit ${REACTION_EMOJIS[reactionType]}`}
+              title={isOffline ? 'Offline - Reagieren nicht möglich' : `Reagiere mit ${REACTION_EMOJIS[reactionType]}`}
             >
               <span>{REACTION_EMOJIS[reactionType]}</span>
               <span className="text-xs">{count}</span>

@@ -236,12 +236,16 @@ export async function transferDevice(
         transferredDeviceId, // Die User-Identität
         userName: user.name,
         reason: 'device-transfer',
-        hadPreviousPush: !!oldPushSub
+        hadPreviousPush: !!oldPushSub,
+        // 🚨 NEUE PUSH-STATUS-INFO: Informiere das neue Gerät über den Push-Status
+        pushWasActive: !!oldPushSub // Explizit: ob Push-Nachrichten vorher aktiv waren
       });
       
-      logger.info(`[MagicCode] Push-Aktivierungs-Prompt an neues Gerät gesendet`);
+      logger.info(`[MagicCode] Push-Aktivierungs-Prompt an neues Gerät gesendet (hadPreviousPush: ${!!oldPushSub})`);
       pushSubscriptionInfo.requiresReactivation = true;
-      pushSubscriptionInfo.message = 'Push-Benachrichtigungen werden automatisch eingerichtet';
+      pushSubscriptionInfo.message = !!oldPushSub 
+        ? 'Push-Benachrichtigungen werden automatisch reaktiviert'
+        : 'Push-Benachrichtigungen können aktiviert werden';
     } catch (broadcastError) {
       logger.warn(`[MagicCode] Push-Prompt-Trigger konnte nicht gesendet werden:`, broadcastError);
     }
@@ -263,7 +267,7 @@ export async function transferDevice(
   }
 }
 
-// Hilfsfunktion um neue deviceId zu generieren
+// Import der einheitlichen Device-ID-Generierung
 function generateDeviceId(): string {
   const chars = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789';
   let result = '';

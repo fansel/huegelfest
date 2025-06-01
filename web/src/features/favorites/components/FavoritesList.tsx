@@ -8,7 +8,7 @@ import { FavoriteButton } from './FavoriteButton';
 import * as LucideIcons from 'lucide-react';
 
 export const FavoritesList: React.FC = () => {
-  const { favorites, timelineData, isLoading } = useFavorites();
+  const { favorites, timelineData, isLoading, isOnline } = useFavorites();
 
   // Dynamisches Icon-Mapping wie in Timeline
   const getIconComponent = (iconName: string) => {
@@ -44,7 +44,7 @@ export const FavoritesList: React.FC = () => {
   if (isLoading) {
     return (
       <div className="py-12 text-center text-[#ff9900]/60 text-base font-medium">
-        Lade Favoriten...
+        {isOnline ? 'Lade Favoriten...' : 'Lade Favoriten aus Cache...'}
       </div>
     );
   }

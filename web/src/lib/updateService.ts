@@ -19,6 +19,8 @@ export class UpdateService {
   private onUpdateCallback: (() => void) | null = null;
   private hasShownUpdateNotification = false;
   private isInitialized = false;
+  private backgroundCheckInterval: NodeJS.Timeout | null = null;
+  private storageEventListener: ((e: StorageEvent) => void) | null = null;
 
   static getInstance(): UpdateService {
     if (!UpdateService.instance) {
@@ -35,6 +37,7 @@ export class UpdateService {
     
     try {
       this.startAutoUpdateCheck();
+      this.setupStorageListener();
       logger.info('[UpdateService] Update-Service erfolgreich initialisiert');
     } catch (error) {
       logger.error('[UpdateService] Fehler bei der Initialisierung:', error);
@@ -47,11 +50,41 @@ export class UpdateService {
   destroy() {
     try {
       this.stopAutoUpdateCheck();
+      this.removeStorageListener();
       this.onUpdateCallback = null;
       this.hasShownUpdateNotification = false;
       logger.info('[UpdateService] Update-Service erfolgreich zerstört');
     } catch (error) {
       logger.error('[UpdateService] Fehler beim Zerstören:', error);
+    }
+  }
+
+  /**
+   * Storage-Event-Listener für sofortige Updates der UI
+   */
+  private setupStorageListener() {
+    if (typeof window === 'undefined') return;
+
+    this.storageEventListener = (e: StorageEvent) => {
+      if (e.key === VERSION_STORAGE_KEYS.UPDATE_AVAILABLE) {
+        // Sofortiges Update der UI ohne Reload
+        const hasUpdate = e.newValue === 'true';
+        logger.info('[UpdateService] Storage Update erkannt:', hasUpdate);
+        
+        // Trigger custom event für UI-Updates
+        window.dispatchEvent(new CustomEvent('updateAvailableChange', {
+          detail: { available: hasUpdate }
+        }));
+      }
+    };
+
+    window.addEventListener('storage', this.storageEventListener);
+  }
+
+  private removeStorageListener() {
+    if (this.storageEventListener && typeof window !== 'undefined') {
+      window.removeEventListener('storage', this.storageEventListener);
+      this.storageEventListener = null;
     }
   }
 
@@ -67,11 +100,19 @@ export class UpdateService {
     // Sofortiger Initial-Check
     this.checkForUpdatesInitial();
     
-    logger.info('[UpdateService] Update-Service über bestehende WebSocket-Infrastruktur gestartet');
+    // Automatische Background-Checks alle 30 Sekunden
+    this.startBackgroundUpdateChecks();
+    
+    logger.info('[UpdateService] Update-Service mit automatischen Checks gestartet');
   }
 
   stopAutoUpdateCheck() {
     this.isInitialized = false;
+    // Background-Checks stoppen
+    if (this.backgroundCheckInterval) {
+      clearInterval(this.backgroundCheckInterval);
+      this.backgroundCheckInterval = null;
+    }
     // WebSocket wird vom globalen useWebSocket-Hook verwaltet
   }
 
@@ -94,11 +135,18 @@ export class UpdateService {
         // Update erkannt beim Start
         logger.info('[UpdateService] App-Update beim Start erkannt');
         
+        // Reset des Update-Status und Flags
+        this.hasShownUpdateNotification = false;
+        localStorage.removeItem(VERSION_STORAGE_KEYS.UPDATE_AVAILABLE);
+        localStorage.removeItem(VERSION_STORAGE_KEYS.USER_UPDATE_DISMISSED);
+        
         if (APP_VERSION.shouldForceUpdate()) {
           // Development: Sofort anwenden
           await this.applyUpdatesImmediately({ appUpdate: true });
         } else {
-          // Production: User benachrichtigen
+          // Production: Version sofort aktualisieren, aber trotzdem User informieren
+          localStorage.setItem(VERSION_STORAGE_KEYS.APP_VERSION, currentVersion);
+          
           await this.notifyUserAboutUpdate({ 
             appUpdate: true, 
             assetUpdate: false, 
@@ -113,15 +161,15 @@ export class UpdateService {
   }
 
   /**
-   * Behandelt WebSocket-Events (wird vom globalen WebSocket-Hook aufgerufen)
+   * WebSocket Message Handler - verarbeitet Update-Events vom Server
    */
   handleWebSocketMessage(msg: UpdateWebSocketMessage) {
-    if (!this.isInitialized) return;
-
-    logger.info('[UpdateService] WebSocket-Event empfangen:', msg);
+    logger.info('[UpdateService] WebSocket Update-Message empfangen:', msg);
     
     switch (msg.topic) {
       case 'app-update-available':
+        // Reset Flags für neue Updates
+        this.hasShownUpdateNotification = false;
         this.handleUpdateFound({
           appUpdate: true,
           assetUpdate: msg.payload?.assetUpdate || false,
@@ -129,15 +177,36 @@ export class UpdateService {
         });
         break;
         
+      case 'update-status-initial':
+        // NEU: Initial-Status vom Server beim Connect
+        logger.info('[UpdateService] Initial Update-Status empfangen:', msg.payload);
+        if (msg.payload?.available) {
+          // Update verfügbar - behandeln
+          this.hasShownUpdateNotification = false;
+          this.handleUpdateFound({
+            appUpdate: true,
+            assetUpdate: true,
+            serviceWorkerUpdate: false
+          });
+        } else {
+          // Kein Update - Status synchronisieren
+          localStorage.removeItem(VERSION_STORAGE_KEYS.UPDATE_AVAILABLE);
+          this.triggerUpdateAvailableEvent(false);
+        }
+        break;
+        
       case 'force-update':
-        // Admin-Force-Update
-        logger.info('[UpdateService] Admin-Force-Update empfangen');
-        this.applyUpdatesImmediately(msg.payload || {});
+        // Erzwungene Updates (Critical Updates)
+        logger.info('[UpdateService] Force Update empfangen');
+        this.applyUpdatesImmediately({
+          appUpdate: true,
+          assetUpdate: true,
+          serviceWorkerUpdate: true
+        });
         break;
         
       default:
-        // Ignoriere andere Topics
-        break;
+        logger.warn('[UpdateService] Unbekannte WebSocket-Message:', msg.topic);
     }
   }
 
@@ -151,6 +220,15 @@ export class UpdateService {
   }) {
     logger.info('[UpdateService] Updates via WebSocket erhalten:', updates);
     
+    // Prüfe ob bereits ein Update für diese Version behandelt wurde
+    const currentVersion = APP_VERSION.getAppIdentifier();
+    const lastHandledVersion = localStorage.getItem(VERSION_STORAGE_KEYS.LAST_HANDLED_UPDATE);
+    
+    if (lastHandledVersion === currentVersion && this.hasShownUpdateNotification) {
+      logger.info('[UpdateService] Update für diese Version bereits behandelt');
+      return;
+    }
+    
     if (APP_VERSION.shouldForceUpdate()) {
       // Development: Sofortige Updates
       await this.applyUpdatesImmediately(updates);
@@ -158,6 +236,9 @@ export class UpdateService {
       // Production: User Notification
       await this.notifyUserAboutUpdate(updates);
     }
+    
+    // Markiere Version als behandelt
+    localStorage.setItem(VERSION_STORAGE_KEYS.LAST_HANDLED_UPDATE, currentVersion);
   }
 
   /**
@@ -194,7 +275,7 @@ export class UpdateService {
     const userDismissed = localStorage.getItem(VERSION_STORAGE_KEYS.USER_UPDATE_DISMISSED);
     const currentVersion = APP_VERSION.getAppIdentifier();
     
-    if (userDismissed === currentVersion && !this.hasShownUpdateNotification) {
+    if (userDismissed === currentVersion && this.hasShownUpdateNotification) {
       return; // User hat dieses Update bereits dismissed
     }
     
@@ -223,7 +304,21 @@ export class UpdateService {
     // Set flag für Settings-Integration
     localStorage.setItem(VERSION_STORAGE_KEYS.UPDATE_AVAILABLE, 'true');
     
+    // Sofortiges UI-Update durch Custom Event
+    this.triggerUpdateAvailableEvent(true);
+    
     logger.info('[UpdateService] User über Update benachrichtigt');
+  }
+
+  /**
+   * Trigger Custom Event für sofortige UI-Updates
+   */
+  private triggerUpdateAvailableEvent(available: boolean) {
+    if (typeof window !== 'undefined') {
+      window.dispatchEvent(new CustomEvent('updateAvailableChange', {
+        detail: { available }
+      }));
+    }
   }
 
   /**
@@ -244,7 +339,13 @@ export class UpdateService {
     // 4. Badge entfernen
     this.clearBadge();
     
-    // 5. Reload
+    // 5. Reset Update-Flags
+    this.hasShownUpdateNotification = false;
+    
+    // 6. UI sofort updaten
+    this.triggerUpdateAvailableEvent(false);
+    
+    // 7. Reload
     setTimeout(() => {
       window.location.reload();
     }, 1500);
@@ -287,8 +388,11 @@ export class UpdateService {
     
     localStorage.setItem(VERSION_STORAGE_KEYS.APP_VERSION, currentVersion);
     localStorage.setItem(VERSION_STORAGE_KEYS.LAST_UPDATE_CHECK, Date.now().toString());
+    localStorage.setItem(VERSION_STORAGE_KEYS.LAST_HANDLED_UPDATE, currentVersion);
     localStorage.removeItem(VERSION_STORAGE_KEYS.UPDATE_AVAILABLE);
     localStorage.removeItem(VERSION_STORAGE_KEYS.USER_UPDATE_DISMISSED);
+    
+    logger.info('[UpdateService] Storage-Versionen aktualisiert:', currentVersion);
   }
 
   /**
@@ -344,27 +448,77 @@ export class UpdateService {
   }
 
   /**
-   * Public API für manuelle Updates (Settings)
-   */
-  async checkForUpdatesManual(): Promise<boolean> {
-    toast.loading('Prüfe auf Updates...', { duration: 1000 });
-    
-    // Simuliere Update-Check (in echter App würde hier Server Action aufgerufen)
-    const hasUpdate = Math.random() > 0.7; // 30% Chance
-    
-    if (hasUpdate) {
-      localStorage.setItem(VERSION_STORAGE_KEYS.UPDATE_AVAILABLE, 'true');
-    }
-    
-    return hasUpdate;
-  }
-
-  /**
    * Erzwinge Update (für Settings)
    */
   async forceUpdate() {
     toast.loading('Update wird erzwungen...', { duration: 2000 });
     await this.applyUpdate();
+  }
+
+  /**
+   * Startet automatische Background-Update-Checks
+   */
+  private startBackgroundUpdateChecks() {
+    // Checks alle 30 Sekunden im Hintergrund
+    this.backgroundCheckInterval = setInterval(async () => {
+      try {
+        await this.performAutomaticUpdateCheck();
+      } catch (error) {
+        logger.warn('[UpdateService] Background-Check Fehler:', error);
+      }
+    }, 30000); // 30 Sekunden
+
+    logger.info('[UpdateService] Automatische Background-Checks gestartet (alle 30s)');
+  }
+
+  /**
+   * Automatischer Update-Check im Hintergrund
+   */
+  private async performAutomaticUpdateCheck() {
+    if (!this.isInitialized) return;
+
+    try {
+      // 1. Service Worker Updates prüfen
+      const registration = await navigator.serviceWorker?.getRegistration();
+      if (registration?.waiting) {
+        logger.info('[UpdateService] Service Worker Update automatisch erkannt');
+        this.handleWebSocketMessage({
+          topic: 'app-update-available',
+          payload: {
+            serviceWorkerUpdate: true,
+            appUpdate: false,
+            assetUpdate: true
+          }
+        });
+        return;
+      }
+
+      // 2. App-Version prüfen (für den Fall dass buildTime sich geändert hat)
+      const currentVersion = APP_VERSION.getAppIdentifier();
+      const storedVersion = localStorage.getItem(VERSION_STORAGE_KEYS.APP_VERSION);
+      
+      if (storedVersion && storedVersion !== currentVersion) {
+        logger.info('[UpdateService] App-Version Update automatisch erkannt');
+        this.handleWebSocketMessage({
+          topic: 'app-update-available',
+          payload: {
+            serviceWorkerUpdate: false,
+            appUpdate: true,
+            assetUpdate: true
+          }
+        });
+        return;
+      }
+
+      // 3. Prüfe ob Service Worker sich neu registriert hat
+      if (registration) {
+        registration.update(); // Force Service Worker Update Check
+      }
+
+    } catch (error) {
+      // Stille Fehler im Background-Check
+      logger.debug('[UpdateService] Background-Check silent error:', error);
+    }
   }
 }
 

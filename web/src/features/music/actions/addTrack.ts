@@ -4,9 +4,20 @@ import { MusicService } from '../service/MusicService';
 import { logger } from '@/lib/logger';
 import { MusicEntry } from './getAllTracks';
 import { broadcast } from '@/lib/websocket/broadcast';
+import { checkTrackAvailability } from './checkTrackAvailability';
 
 export async function addTrack(url: string): Promise<MusicEntry> {
   try {
+    // Erst Verfügbarkeit prüfen
+    logger.info('[addTrack] Prüfe Track-Verfügbarkeit für:', url);
+    const availability = await checkTrackAvailability(url);
+    
+    if (!availability.isAvailable) {
+      logger.warn('[addTrack] Track ist nicht verfügbar:', availability.reason);
+      throw new Error(`Track kann nicht hinzugefügt werden: ${availability.reason}`);
+    }
+    
+    logger.info('[addTrack] Track ist verfügbar, starte Download...');
     const result = await MusicService.addMusic(url);
     const allTracks = await MusicService.getAllMusic();
     const newTrack = allTracks.find(t => t.url === result.url);

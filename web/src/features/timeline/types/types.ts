@@ -47,12 +47,14 @@ export interface Event {
 }
 
 export interface Day {
-  _id?: { $oid: string };
+  _id?: { $oid: string } | string;
   title: string;
+  timelineCustomTitle?: string;
   description: string;
   date: Date;
   events: Event[];
   formattedDate?: string;
+  isActive?: boolean;
 }
 
 export interface TimelineData {

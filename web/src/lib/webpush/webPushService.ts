@@ -45,9 +45,8 @@ class WebPushService {
         vapidPrivateKey
       );
       this.initialized = true;
-      console.log('WebPush-Service erfolgreich initialisiert');
     } catch (error) {
-      console.error('Fehler bei der WebPush-Initialisierung:', error);
+      console.error('[INFO] [Init] Fehler bei der WebPush-Initialisierung:', error);
       throw error;
     }
   }
@@ -116,6 +115,15 @@ class WebPushService {
         return { success: false, error: 'Push-Subscription abgelaufen und entfernt' };
       }
       
+      if ((error as any).statusCode === 404) {
+        logger.warn('[WebPush] Ungültiger Push-Endpoint, entferne Subscription', { 
+          deviceId,
+          errorCode: (error as any).statusCode
+        });
+        await Subscriber.findOneAndDelete({ deviceId }).exec();
+        return { success: false, error: 'Push-Subscription ungültig und entfernt' };
+      }
+      
       logger.error('[WebPush] Fehler beim Senden der Benachrichtigung an Gerät', {
         deviceId,
         error: (error as Error).message,
@@ -180,6 +188,14 @@ class WebPushService {
               });
               return Subscriber.findByIdAndDelete(subscriber._id).exec();
             }
+            if (error.statusCode === 404) {
+              logger.warn('[WebPush] Ungültiger Push-Endpoint, entferne Subscription', { 
+                deviceId: subscriber.deviceId,
+                endpoint: subscriber.endpoint.substring(0, 50) + '...',
+                errorCode: error.statusCode
+              });
+              return Subscriber.findByIdAndDelete(subscriber._id).exec();
+            }
             logger.error('[WebPush] Fehler beim Senden der Benachrichtigung', {
               deviceId: subscriber.deviceId,
               error: error.message,
@@ -216,6 +232,50 @@ class WebPushService {
       keyLength: key.length
     });
     return key;
+  }
+
+  /**
+   * Bereinigt ungültige Push-Subscriptions aus der Datenbank
+   * Kann regelmäßig aufgerufen werden, um Datenbankgröße zu reduzieren
+   */
+  async cleanupInvalidSubscriptions(): Promise<{ removed: number; total: number }> {
+    if (!this.initialized) {
+      logger.warn('[WebPush] Service nicht initialisiert - Cleanup übersprungen');
+      return { removed: 0, total: 0 };
+    }
+
+    try {
+      const subscribers = await Subscriber.find().exec();
+      const total = subscribers.length;
+      let removed = 0;
+
+      logger.info(`[WebPush] Cleanup: Prüfe ${total} Subscriptions`);
+
+      for (const subscriber of subscribers) {
+        try {
+          // Test mit minimaler Payload
+          const testPayload = { title: 'Test', body: 'Validierung', silent: true };
+          const subscription = {
+            endpoint: subscriber.endpoint,
+            keys: subscriber.keys
+          };
+          
+          await this.sendNotification(subscription, testPayload);
+        } catch (error: any) {
+          if (error.statusCode === 404 || error.statusCode === 410) {
+            logger.info(`[WebPush] Cleanup: Entferne ungültige Subscription für ${subscriber.deviceId}`);
+            await Subscriber.findByIdAndDelete(subscriber._id).exec();
+            removed++;
+          }
+        }
+      }
+
+      logger.info(`[WebPush] Cleanup abgeschlossen: ${removed}/${total} Subscriptions entfernt`);
+      return { removed, total };
+    } catch (error) {
+      logger.error('[WebPush] Fehler beim Cleanup:', error);
+      return { removed: 0, total: 0 };
+    }
   }
 }
 

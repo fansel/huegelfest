@@ -5,6 +5,7 @@ import { Switch } from "@/shared/components/ui/switch";
 import { Button } from "@/shared/components/ui/button";
 import { useDeviceId } from '@/shared/hooks/useDeviceId';
 import { useNetworkStatus } from '@/shared/hooks/useNetworkStatus';
+import { useServerStatus } from '@/shared/hooks/useServerStatus';
 import UserSettingsCard from './UserSettingsCard';
 import { Bell, AlertCircle, Settings, WifiOff } from 'lucide-react';
 import { usePushSubscription } from '@/features/push/hooks/usePushSubscription';
@@ -16,49 +17,34 @@ interface PushNotificationSettingsProps {
 
 export default function PushNotificationSettings({ variant = 'row' }: PushNotificationSettingsProps) {
   const deviceId = useDeviceId();
-  const isOnline = useNetworkStatus();
+  const { isServerOnline, isBrowserOnline, isFullyOnline, forceCheck } = useServerStatus();
   const {
     isSubscribed,
     isLoading,
     isSupported,
     error,
     subscribe,
-    unsubscribe
+    unsubscribe,
+    autoActivateIfPermissionGranted
   } = usePushSubscription();
 
   // Browser-Permission Status
-  const browserPermission = typeof window !== 'undefined' ? Notification.permission : 'default';
+  const browserPermission = typeof window !== 'undefined' && 'Notification' in window 
+    ? Notification.permission 
+    : 'default';
 
   const handleSubscribe = async () => {
-    if (isLoading || !isSupported || isSubscribed || !deviceId || !isOnline) return;
+    if (isLoading || !isSupported || isSubscribed || !deviceId) return;
 
-    try {
-      const success = await subscribe();
-      if (success) {
-        toast.success('Push-Benachrichtigungen aktiviert! 🔔');
-      } else {
-        toast.error('Fehler beim Aktivieren der Push-Benachrichtigungen');
-      }
-    } catch (error) {
-      console.error('Fehler beim Abonnieren:', error);
-      toast.error('Fehler beim Aktivieren der Push-Benachrichtigungen');
-    }
+    // Keine eigene Toast-Benachrichtigung mehr - der Hook macht das
+    await subscribe();
   };
 
   const handleUnsubscribe = async () => {
-    if (isLoading || !isSupported || !isSubscribed || !isOnline) return;
+    if (isLoading || !isSupported || !isSubscribed) return;
 
-    try {
-      const success = await unsubscribe();
-      if (success) {
-        toast.success('Push-Benachrichtigungen deaktiviert');
-      } else {
-        toast.error('Fehler beim Deaktivieren der Push-Benachrichtigungen');
-      }
-    } catch (error) {
-      console.error('Fehler beim Abbestellen:', error);
-      toast.error('Fehler beim Deaktivieren der Push-Benachrichtigungen');
-    }
+    // Keine eigene Toast-Benachrichtigung mehr - der Hook macht das
+    await unsubscribe();
   };
 
   const handleOpenBrowserSettings = () => {
@@ -85,18 +71,23 @@ export default function PushNotificationSettings({ variant = 'row' }: PushNotifi
       };
     }
 
-    if (!isOnline) {
+    // Zeige Offline-Status wenn Server ODER Browser offline ist
+    if (!isFullyOnline) {
+      const offlineReason = !isBrowserOnline 
+        ? 'Keine Internetverbindung' 
+        : 'Server nicht erreichbar';
+      
       return {
         type: 'offline',
         icon: <WifiOff className="w-5 h-5 text-gray-400" />,
         title: 'Push-Benachrichtigungen',
-        info: 'Einstellungen werden bei der nächsten Verbindung synchronisiert.',
+        info: `${offlineReason}. Einstellungen werden bei der nächsten Verbindung synchronisiert.`,
         switchElement: (
-          <Switch 
-            checked={isSubscribed} 
-            disabled={true}
-            className="opacity-50"
-          />
+            <Switch 
+              checked={isSubscribed} 
+              disabled={true}
+              className="opacity-50"
+            />
         ),
         disabled: true
       };
@@ -131,7 +122,14 @@ export default function PushNotificationSettings({ variant = 'row' }: PushNotifi
         info: 'Erhalte wichtige Festival-Infos direkt aufs Gerät.',
         switchElement: (
           <Button
-            onClick={handleSubscribe}
+            onClick={async () => {
+              // Versuche erst automatische Aktivierung
+              await autoActivateIfPermissionGranted();
+              // Falls das nicht funktioniert, normaler Subscribe-Prozess
+              if (!isSubscribed) {
+                await handleSubscribe();
+              }
+            }}
             disabled={isLoading || !deviceId}
             size="sm"
             className="bg-[#ff9900] hover:bg-orange-600 text-white"
@@ -163,21 +161,12 @@ export default function PushNotificationSettings({ variant = 'row' }: PushNotifi
   const uiState = getUIState();
 
   return (
-    <>
     <UserSettingsCard
-        icon={uiState.icon}
-        title={uiState.title}
-        switchElement={uiState.switchElement}
-        info={uiState.info}
-        variant={variant}
-      />
-
-      {/* Fehler-Anzeige */}
-      {error && (
-        <div className="mt-2 p-2 bg-red-50 border border-red-200 rounded text-red-700 text-sm">
-          {error}
-        </div>
-      )}
-    </>
+      icon={uiState.icon}
+      title={uiState.title}
+      switchElement={uiState.switchElement}
+      info={uiState.info}
+      variant={variant}
+    />
   );
 }

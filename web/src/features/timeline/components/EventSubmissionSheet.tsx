@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState } from 'react';
+import React, { useState, useMemo } from 'react';
 import type { Category, Event, Day } from '../types/types';
 import { Sheet, SheetContent, SheetHeader, SheetTitle } from '@/shared/components/ui/sheet';
 import { useNetworkStatus } from '@/shared/hooks/useNetworkStatus';
@@ -18,6 +18,7 @@ export interface EventSubmissionSheetProps {
  * Sheet-Komponente für das Einreichen eines neuen Events durch Nutzer.
  * Validiert Eingaben und gibt Fehler/Erfolgsmeldungen aus.
  * Deaktiviert sich automatisch im Offline-Modus.
+ * Zeigt nur aktive Tage an (Setup/Breakdown-Tage mit isActive: false werden ausgeblendet).
  */
 export const EventSubmissionSheet: React.FC<EventSubmissionSheetProps> = ({ open, onClose, categories, days, onSubmit }) => {
   const [title, setTitle] = useState('');
@@ -31,6 +32,15 @@ export const EventSubmissionSheet: React.FC<EventSubmissionSheetProps> = ({ open
   const [loading, setLoading] = useState(false);
   
   const isOnline = useNetworkStatus();
+
+  // Filter only active days for user event submission
+  const activeDays = useMemo(() => {
+    return days.filter(day => {
+      // If isActive property exists, only show active days
+      // If isActive doesn't exist (backward compatibility), show all days
+      return day.isActive !== false;
+    });
+  }, [days]);
 
   const resetForm = () => {
     setTitle('');
@@ -141,10 +151,15 @@ export const EventSubmissionSheet: React.FC<EventSubmissionSheetProps> = ({ open
               disabled={!isOnline}
             >
               <option value="">Bitte wählen...</option>
-              {days.map(day => (
+              {activeDays.map(day => (
                 <option key={String(day._id)} value={String(day._id)}>{day.title}</option>
               ))}
             </select>
+            {activeDays.length === 0 && (
+              <div className="text-sm text-gray-500 mt-1">
+                Aktuell sind keine Tage für Event-Einreichungen verfügbar.
+              </div>
+            )}
             <label className="text-sm font-medium text-gray-700">Uhrzeit* (HH:MM)</label>
             <input
               type="time"
@@ -208,11 +223,11 @@ export const EventSubmissionSheet: React.FC<EventSubmissionSheetProps> = ({ open
               <button
                 type="submit"
                 className={`px-4 py-2 rounded-md font-semibold transition ${
-                  !isOnline 
+                  !isOnline || activeDays.length === 0
                     ? 'bg-gray-300 text-gray-500 cursor-not-allowed' 
                     : 'bg-[#ff9900] text-[#460b6c] hover:bg-[#ff9900]/90'
                 }`}
-                disabled={loading || !isOnline}
+                disabled={loading || !isOnline || activeDays.length === 0}
               >
                 {loading ? 'Wird gesendet...' : 'Event einreichen'}
               </button>

@@ -11,6 +11,7 @@ export interface IEvent extends Document {
   submittedAt: Date;
   submittedByAdmin?: boolean;
   offeredBy?: string;
+  agendaJobId?: string;
   createdAt: Date;
   updatedAt: Date;
 }
@@ -26,6 +27,7 @@ const EventSchema = new Schema<IEvent>({
   submittedAt: { type: Date, required: true },
   submittedByAdmin: { type: Boolean },
   offeredBy: { type: String },
+  agendaJobId: { type: String },
 }, { timestamps: true });
 
 export const Event = mongoose.models.Event || mongoose.model<IEvent>('Event', EventSchema); 

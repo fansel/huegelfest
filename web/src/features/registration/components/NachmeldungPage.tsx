@@ -1,14 +1,15 @@
 'use client';
 
-import React, { useState, useMemo } from 'react';
+import React, { useState, useEffect } from 'react';
 import { AlertCircle, CheckCircle, Copy } from 'lucide-react';
 import { Button } from '@/shared/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/shared/components/ui/card';
 import { Alert, AlertDescription } from '@/shared/components/ui/alert';
 import FestivalRegisterForm from '../FestivalRegisterForm';
 import { submitNachmeldungAction } from '@/features/registration/actions/submitNachmeldung';
-import type { FestivalRegisterData } from '../FestivalRegisterForm';
+import type { FestivalRegisterData } from './steps/types';
 import toast from 'react-hot-toast';
+import { generateDeviceId } from '@/shared/hooks/useDeviceId';
 
 interface NachmeldungResult {
   success: boolean;
@@ -16,26 +17,19 @@ interface NachmeldungResult {
   error?: string;
 }
 
-/**
- * Generiert eine 6-stellige zufällige Device-ID mit A-Z 0-9
- */
-function generateDeviceId(): string {
-  const chars = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789';
-  let result = '';
-  for (let i = 0; i < 6; i++) {
-    result += chars.charAt(Math.floor(Math.random() * chars.length));
-  }
-  return result;
-}
-
 const NachmeldungPage: React.FC = () => {
   const [result, setResult] = useState<NachmeldungResult | null>(null);
   const [isLoading, setIsLoading] = useState(false);
 
   // Generiere einmalig eine temporäre deviceId für diese Nachmeldung
-  const tempDeviceId = useMemo(() => generateDeviceId(), []);
+  const tempDeviceId = generateDeviceId();
 
   const handleSubmit = async (formData: FestivalRegisterData) => {
+    if (!tempDeviceId) {
+      toast.error('Device-ID nicht verfügbar. Bitte lade die Seite neu.');
+      return;
+    }
+    
     setIsLoading(true);
     try {
       // Verwende die temporäre deviceId für die Nachmeldung
@@ -185,7 +179,7 @@ const NachmeldungPage: React.FC = () => {
             onRegister={handleSubmit}
             setCookies={false}
             skipRegistrationCheck={true}
-            customDeviceId={tempDeviceId}
+            customDeviceId={tempDeviceId || undefined}
           />
         </CardContent>
       </Card>

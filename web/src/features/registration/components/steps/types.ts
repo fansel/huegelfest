@@ -1,4 +1,6 @@
 import React from 'react';
+import { getCentralFestivalDays } from '@/shared/services/festivalDaysService';
+import { convertToLegacyFormat } from '@/shared/utils/festivalDaysUtils';
 
 export interface FestivalRegisterData {
   name: string;
@@ -20,6 +22,8 @@ export interface FestivalRegisterData {
   allergies: string; // Allergien und Unverträglichkeiten
   allowsPhotos: boolean; // Erlaubt Fotos und Videos
   wantsLineupContribution: boolean; // Möchte zum Line-Up beitragen
+  contactType: "phone" | "telegram" | "none"; // Art des Kontakts
+  contactInfo: string; // Telefonnummer oder Telegram Handle
 }
 
 export const defaultData: FestivalRegisterData = {
@@ -41,6 +45,8 @@ export const defaultData: FestivalRegisterData = {
   allergies: "",
   allowsPhotos: true,
   wantsLineupContribution: false,
+  contactType: "none",
+  contactInfo: "",
 };
 
 export interface StepProps {
@@ -58,10 +64,76 @@ export interface StepConfig {
 // Maximale Zeichenanzahl für Textareas
 export const MAX_TEXTAREA = 200;
 
-// Festivaldaten
-export const FESTIVAL_DAYS = [
-  "31.07.",
-  "01.08.",
-  "02.08.",
-  "03.08."
-]; 
+export interface PersonalInfoData {
+  name: string;
+  email: string;
+  phone: string;
+  birthday: string;
+  address: {
+    street: string;
+    postalCode: string;
+    city: string;
+  };
+  tShirtSize: string;
+  foodRestrictions: string;
+  emergencyContact: {
+    name: string;
+    phone: string;
+  };
+  motivation: string;
+}
+
+export interface GroupSelectionData {
+  selectedGroup: string | null;
+  newGroupData: {
+    name: string;
+    members: string[];
+  } | null;
+}
+
+export interface AvailabilityData {
+  availability: Record<string, boolean>;
+}
+
+export interface AgreementData {
+  termsAccepted: boolean;
+  dataProcessingAccepted: boolean;
+}
+
+export interface RegistrationStep {
+  id: string;
+  title: string;
+  description: string;
+  component: React.ComponentType<any>;
+  isRequired: boolean;
+}
+
+export interface RegistrationData {
+  personalInfo: PersonalInfoData;
+  groupSelection: GroupSelectionData;
+  availability: AvailabilityData;
+  agreement: AgreementData;
+}
+
+/**
+ * Holt die aktuellen Festival-Tage aus der zentralen Verwaltung
+ * Diese Funktion muss in einer Server-Umgebung aufgerufen werden
+ */
+export async function getFestivalDaysForRegistration(): Promise<string[]> {
+  try {
+    const centralDays = await getCentralFestivalDays();
+    return convertToLegacyFormat(centralDays);
+  } catch (error) {
+    console.error('[getFestivalDaysForRegistration] Fehler beim Laden der Festival-Tage:', error);
+    // Fallback zu hardcoded Werten
+    return ["31.07.", "01.08.", "02.08.", "03.08."];
+  }
+}
+
+// Deprecated: Verwende getFestivalDaysForRegistration() stattdessen
+// export const FESTIVAL_DAYS = [
+//   "31.07.",
+//   "01.08.",
+//   "02.08.",
+//   "03.08."
+// ]; 

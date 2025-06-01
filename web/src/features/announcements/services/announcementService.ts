@@ -9,7 +9,6 @@ import mongoose from 'mongoose';
 import { initServices } from '@/lib/initServices';
 import { broadcast } from '@/lib/websocket/broadcast';
 import Reaction from '@/lib/db/models/Reaction';
-import { User } from '@/lib/db/models/User';
 
 export async function getAllAnnouncements() {
   await initServices();
@@ -162,7 +161,6 @@ export async function saveAnnouncements(announcements: IAnnouncement[]): Promise
 /**
  * Fügt eine Reaction hinzu, entfernt sie (toggle) oder ändert sie für ein Announcement und ein Device.
  * Ein Device kann pro Announcement nur eine Reaction haben.
- * Aktualisiert auch die User-Statistiken.
  */
 export async function updateAnnouncementReaction(
   announcementId: string,
@@ -180,19 +178,8 @@ export async function updateAnnouncementReaction(
       // Toggle off: gleiche Reaction -> löschen
       await existing.deleteOne();
       result = { removed: true };
-      
-      // User-Statistiken aktualisieren (Reaction entfernt)
-      try {
-        const user = await User.findByDeviceId(deviceId);
-        if (user && user.stats.announcementReactions > 0) {
-          user.stats.announcementReactions -= 1;
-          await user.save();
-        }
-      } catch (error) {
-        logger.error('[updateAnnouncementReaction] Fehler beim Aktualisieren der User-Statistiken (remove):', error);
-      }
     } else {
-      // Reaction-Typ ändern (keine Änderung der Statistiken, da Anzahl gleich bleibt)
+      // Reaction-Typ ändern
       existing.type = reactionType;
       await existing.save();
       result = { updated: true };
@@ -201,16 +188,6 @@ export async function updateAnnouncementReaction(
     // Neue Reaction anlegen
     await Reaction.create({ announcementId, deviceId, type: reactionType });
     result = { created: true };
-    
-    // User-Statistiken aktualisieren (neue Reaction)
-    try {
-      const user = await User.findByDeviceId(deviceId);
-      if (user) {
-        await user.incrementReactionCount();
-      }
-    } catch (error) {
-      logger.error('[updateAnnouncementReaction] Fehler beim Aktualisieren der User-Statistiken (create):', error);
-    }
   }
   
   await broadcast('announcement-reaction', { announcementId });

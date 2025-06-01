@@ -1,23 +1,27 @@
 'use client';
 
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useState, useMemo } from 'react';
 import * as LucideIcons from 'lucide-react';
 import { TimelineEventCard } from './TimelineEventCard';
 import { EventSubmissionSheet } from './EventSubmissionSheet';
 import type { Category, Event } from '../types/types';
-import { createEvent } from '../actions/createEvent';
+import { createEventAction } from '../actions/createEventAction';
 import { List } from 'lucide-react';
-import useSWR from 'swr';
-import { useWebSocket } from '@/shared/hooks/useWebSocket';
-import { getDayByIdAction } from '../actions/getDayByIdAction';
+import useSWR, { mutate } from 'swr';
+import { useGlobalWebSocket } from '@/shared/hooks/useGlobalWebSocket';
 import { getEventByIdAction } from '../actions/getEventByIdAction';
 import { HelpCircle } from 'lucide-react';
-import { getWebSocketUrl } from '@/shared/utils/getWebSocketUrl';
 import { useFavorites } from '@/features/favorites/hooks/useFavorites';
 import { fetchTimeline } from '../actions/fetchTimeline';
 import toast from 'react-hot-toast';
 import { formatDateBerlin } from '@/shared/utils/formatDateBerlin';
 import { useNetworkStatus } from '@/shared/hooks/useNetworkStatus';
+import { Calendar, ChevronLeft, ChevronRight, Plus, Bell, Copy, Filter } from 'lucide-react';
+import { Button } from '@/shared/components/ui/button';
+import { Badge } from '@/shared/components/ui/badge';
+import { useDeviceContext } from '@/shared/contexts/DeviceContext';
+import { useFestivalDays } from '@/shared/hooks/useFestivalDays';
+import clsx from 'clsx';
 
 
 interface TimelineDay {
@@ -26,9 +30,10 @@ interface TimelineDay {
   date?: string; // Optionales Datum
   description: string;
   events: Event[];
+  isActive?: boolean; // Added to support filtering active/inactive days
 }
 
-interface TimelineData {
+interface TimelineClientData {
   days: TimelineDay[];
   categories: Category[];
   error?: string;
@@ -77,10 +82,12 @@ type EventSubmission = {
 };
 
 export default function Timeline({ showFavoritesOnly = false, allowClipboard = false, days: initialDays, categories: initialCategories }: TimelineProps) {
-  // SWR holt jetzt die aktuellen Daten über die Server Action (direkter Import, Next.js 15+)
-  const { data, mutate } = useSWR<TimelineData>(
+  const { data, mutate } = useSWR<TimelineClientData>(
     'timeline',
-    fetchTimeline,
+    async () => {
+      const result = await fetchTimeline();
+      return result as any as TimelineClientData;
+    },
     {
       fallbackData: { days: initialDays, categories: initialCategories },
       revalidateOnFocus: true,
@@ -90,50 +97,11 @@ export default function Timeline({ showFavoritesOnly = false, allowClipboard = f
   const { isFavorite } = useFavorites();
   const isOnline = useNetworkStatus();
 
-  useWebSocket(getWebSocketUrl(), {
+  useGlobalWebSocket({
+    topicFilter: ['event-updated', 'event-created', 'event-deleted', 'category-created', 'category-updated', 'category-deleted'],
     onMessage: async (msg: any) => {
       console.log('[WebSocket] Nachricht empfangen (global):', msg);
-      if (msg.topic === 'day-updated') {
-        const updatedDay = await getDayByIdAction(msg.payload.dayId);
-        if (!updatedDay) {
-          console.warn('[WebSocket] day-updated: Tag nicht gefunden', msg.payload.dayId);
-          return;
-        }
-        mutate((current: any) => {
-          console.log('[mutate:day-updated] current:', current);
-          console.log('[mutate:day-updated] current.days:', current?.days);
-          if (!current || !Array.isArray(current.days)) return current;
-          return {
-            ...current,
-            days: current.days.map((d: any) => d && d._id === updatedDay._id ? updatedDay : d)
-          };
-        }, false);
-      } else if (msg.topic === 'day-created') {
-        const newDay = await getDayByIdAction(msg.payload.dayId);
-        if (!newDay) {
-          console.warn('[WebSocket] day-created: Tag nicht gefunden', msg.payload.dayId);
-          return;
-        }
-        mutate((current: any) => {
-          console.log('[mutate:day-created] current:', current);
-          console.log('[mutate:day-created] current.days:', current?.days);
-          if (!current || !Array.isArray(current.days)) return current;
-          return {
-            ...current,
-            days: [...current.days, newDay]
-          };
-        }, false);
-      } else if (msg.topic === 'day-deleted') {
-        mutate((current: any) => {
-          console.log('[mutate:day-deleted] current:', current);
-          console.log('[mutate:day-deleted] current.days:', current?.days);
-          if (!current || !Array.isArray(current.days)) return current;
-          return {
-            ...current,
-            days: current.days.filter((d: any) => d && d._id !== msg.payload.dayId)
-          };
-        }, false);
-      } else if (msg.topic === 'event-updated') {
+      if (msg.topic === 'event-updated') {
         console.log('[WebSocket] event-updated: msg.payload.eventId =', msg.payload.eventId);
         let updatedEvent;
         try {
@@ -226,11 +194,26 @@ export default function Timeline({ showFavoritesOnly = false, allowClipboard = f
 
   const days = data?.days || [];
   const categories = data?.categories || [];
-
   const [selectedDay, setSelectedDay] = useState(0);
   const [selectedCategories, setSelectedCategories] = useState<Set<string>>(new Set());
   const [showSubmissionSheet, setShowSubmissionSheet] = useState(false);
   const [reload, setReload] = useState(0);
+
+  // Filter only active days for user program view
+  const activeDays = useMemo(() => {
+    return days.filter(day => {
+      // If isActive property exists, only show active days
+      // If isActive doesn't exist (backward compatibility), show all days
+      return day.isActive !== false;
+    });
+  }, [days]);
+
+  // Update selectedDay when activeDays change to ensure valid index
+  useEffect(() => {
+    if (selectedDay >= activeDays.length && activeDays.length > 0) {
+      setSelectedDay(0);
+    }
+  }, [activeDays, selectedDay]);
 
   const toggleCategory = (category: string) => {
     const newCategories = new Set(selectedCategories);
@@ -253,20 +236,27 @@ export default function Timeline({ showFavoritesOnly = false, allowClipboard = f
         categoryId: typeof event.categoryId === 'string' ? event.categoryId : (event.categoryId as any)?.$oid || '',
         ...(event.offeredBy ? { offeredBy: event.offeredBy } : {}),
       };
-      await createEvent(eventData);
+      
+      const result = await createEventAction(eventData);
+      
+      if (result.success) {
       setShowSubmissionSheet(false);
       setReload(r => r + 1); // Timeline neu laden
       toast.success('Event wurde eingereicht und wird geprüft.');
+      } else {
+        toast.error(result.error || 'Fehler beim Einreichen des Events');
+      }
     } catch (err: any) {
-      alert('Fehler beim Einreichen des Events: ' + (err?.message || 'Unbekannter Fehler'));
+      console.error('Error submitting event:', err);
+      toast.error('Ein unerwarteter Fehler ist aufgetreten');
     }
   };
 
   // Hinweis bei komplett leeren Tagen
-  const noDays = days.length === 0;
-  const noEvents = !noDays && days[selectedDay]?.events?.length === 0;
+  const noDays = activeDays.length === 0;
+  const noEvents = !noDays && activeDays[selectedDay]?.events?.length === 0;
 
-  const currentDay = days[selectedDay];
+  const currentDay = activeDays[selectedDay];
   const filteredEvents = currentDay?.events?.filter(
     (event) => {
       // Nur bestätigte Events anzeigen
@@ -287,7 +277,7 @@ export default function Timeline({ showFavoritesOnly = false, allowClipboard = f
       <div className="sticky top-0 z-10 bg-[#460b6c]/90 backdrop-blur-sm py-2 px-4">
         {/* Tage-Auswahl für Desktop */}
         <div className="hidden md:grid md:grid-cols-3 lg:grid-cols-4 gap-2 mb-4">
-          {days.map((day, index) => (
+          {activeDays.map((day, index) => (
             <button
               key={day._id || `day-${index}`}
               onClick={() => setSelectedDay(index)}
@@ -304,7 +294,7 @@ export default function Timeline({ showFavoritesOnly = false, allowClipboard = f
 
         {/* Tage-Auswahl für Mobile/PWA */}
         <div className="md:hidden flex space-x-2 overflow-x-auto pb-2 -mx-4 px-4">
-          {days.map((day, index) => (
+          {activeDays.map((day, index) => (
             <button
               key={day._id || `day-${index}`}
               onClick={() => setSelectedDay(index)}
@@ -383,10 +373,16 @@ export default function Timeline({ showFavoritesOnly = false, allowClipboard = f
           className={`flex items-center gap-1 px-2 py-1 rounded text-xs font-medium transition border shadow-none ${
             isOnline 
               ? 'bg-[#ff9900]/20 text-[#ff9900] hover:bg-[#ff9900]/30 border-[#ff9900]/30' 
-              : 'bg-gray-400/20 text-gray-500 border-gray-400/30 cursor-not-allowed'
+              : 'bg-gray-400/20 text-gray-500 border-gray-400/30 cursor-not-allowed opacity-50'
           }`}
           style={{ minHeight: 0, minWidth: 0 }}
-          onClick={() => isOnline && setShowSubmissionSheet(true)}
+          onClick={() => {
+            if (isOnline) {
+              setShowSubmissionSheet(true);
+            } else {
+              toast.error('Event einreichen ist nur online möglich');
+            }
+          }}
           disabled={!isOnline}
           title={!isOnline ? 'Event einreichen ist nur online möglich' : 'Event vorschlagen'}
         >
@@ -395,21 +391,23 @@ export default function Timeline({ showFavoritesOnly = false, allowClipboard = f
         </button>
       </div>
 
-      {/* EventSubmissionSheet */}
-      <EventSubmissionSheet
-        open={showSubmissionSheet}
-        onClose={() => setShowSubmissionSheet(false)}
-        categories={categories}
-        days={days as any[]}
-        onSubmit={handleEventSubmit}
-      />
+      {/* EventSubmissionSheet - nur öffnen wenn online */}
+      {isOnline && (
+        <EventSubmissionSheet
+          open={showSubmissionSheet}
+          onClose={() => setShowSubmissionSheet(false)}
+          categories={categories}
+          days={days as any[]}
+          onSubmit={handleEventSubmit}
+        />
+      )}
       {/* Hinweis bei leeren Tagen/Events */}
       {noDays ? (
         <div className="text-center text-[#ff9900]/80 py-12 text-lg">
           Noch keine Tage oder Events vorhanden.<br />
           Sei der/die Erste, der/die ein Event vorschlägt!
         </div>
-      ) : days[selectedDay]?.events?.length === 0 ? (
+      ) : activeDays[selectedDay]?.events?.length === 0 ? (
         <div className="text-center text-[#ff9900]/80 py-8 text-base">
           Für diesen Tag sind noch keine Events vorhanden.<br />
           Schlage jetzt ein Event vor!
@@ -420,7 +418,7 @@ export default function Timeline({ showFavoritesOnly = false, allowClipboard = f
             <div className="relative px-4">
               <div className="absolute left-4 top-0 bottom-0 w-0.5 bg-[#ff9900]/20" />
               {displayedEvents.map((event) => {
-                const day = days[selectedDay];
+                const day = activeDays[selectedDay];
                 const category = categories.find((c) => c._id === event.categoryId);
                 return (
                   <TimelineEventCard

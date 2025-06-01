@@ -64,9 +64,6 @@ const UserSchema = new Schema<IUser>({
   }
 });
 
-// Eindeutiger Index für deviceId
-UserSchema.index({ deviceId: 1 }, { unique: true });
-
 // Virtuelle Felder für Relationen
 UserSchema.virtual('registration', {
   ref: 'Registration',

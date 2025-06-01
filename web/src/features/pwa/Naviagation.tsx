@@ -1,6 +1,6 @@
 'use client';
 import React, { useRef, useEffect, useState } from 'react';
-import { Calendar, Megaphone, Settings as SettingsIcon, Heart, Shield, Users, Users2, Clock, SlidersHorizontal, Music, ClipboardList, Car, Check, CalendarCheck, BookOpen, Wrench } from 'lucide-react';
+import { Calendar, Megaphone, Settings as SettingsIcon, Heart, Shield, Users, Users2, Clock, SlidersHorizontal, Music, ClipboardList, Car, Check, CalendarCheck, BookOpen, Wrench, HelpCircle } from 'lucide-react';
 import { useNetworkStatus } from '@/shared/hooks/useNetworkStatus';
 import { useGlobalState } from '@/contexts/GlobalStateContext';
 import { useDeviceContext } from '@/shared/contexts/DeviceContext';
@@ -24,7 +24,7 @@ const userTabs: Tab[] = [
   { id: 'home', icon: <Calendar size={24} />, label: 'Timeline' },
   { id: 'carpool', icon: <Car size={24} />, label: 'Mitfahren' },
   { id: 'activities', icon: <Check size={24} />, label: 'Aufgaben' },
-  { id: 'concepts', icon: <BookOpen size={24} />, label: 'Konzepte' },
+  { id: 'concepts', icon: <HelpCircle size={24} />, label: 'FAQ' },
   { id: 'infoboard', icon: <Megaphone size={24} />, label: 'News' },
   { id: 'favorites', icon: <Heart size={24} />, label: 'Favoriten' },
   { id: 'settings', icon: <SettingsIcon size={24} />, label: 'Einstellungen' },
@@ -44,7 +44,7 @@ const signupPhaseTabs: Tab[] = [
   { id: 'signup', icon: <Users size={24} />, label: 'Anmeldung' },
   { id: 'carpool', icon: <Car size={24} />, label: 'Mitfahren' },
   { id: 'packlist', icon: <ClipboardList size={24} />, label: 'Packliste' },
-  { id: 'concepts', icon: <BookOpen size={24} />, label: 'Konzepte' },
+  { id: 'concepts', icon: <HelpCircle size={24} />, label: 'FAQ' },
   { id: 'settings', icon: <SettingsIcon size={24} />, label: 'Einstellungen' },
 ];
 
@@ -92,13 +92,13 @@ const BottomBar: React.FC<BottomBarProps> = ({ mode, activeTab, onTabChange, isA
   if (!isMobileLayout) {
     return (
       <div className="fixed left-0 right-0 top-0 z-50 bg-[#460b6c]/90 backdrop-blur-sm">
-        <div className="flex items-center justify-center max-w-5xl mx-auto h-16 px-8 w-full">
-          <div className="flex gap-16">
+        <div className="flex items-center justify-center max-w-5xl mx-auto h-16 px-4 sm:px-6 lg:px-8 w-full">
+          <div className="flex items-center justify-between w-full max-w-4xl gap-2 sm:gap-4 md:gap-6 lg:gap-8 xl:gap-12">
             {tabs.map(({ id, label }) => (
               <span
                 key={id}
                 onClick={() => onTabChange(id)}
-                className={`cursor-pointer px-2 select-none text-base transition-colors duration-200 text-[#ff9900] 
+                className={`cursor-pointer px-1 sm:px-2 select-none text-sm sm:text-base transition-colors duration-200 text-[#ff9900] whitespace-nowrap
                   ${activeTab === id ? 'font-semibold' : 'hover:font-semibold hover:line-through'}`}
                 aria-label={label}
                 tabIndex={0}
@@ -111,7 +111,7 @@ const BottomBar: React.FC<BottomBarProps> = ({ mode, activeTab, onTabChange, isA
             {showAdminButtonFinal && (
               <span
                 onClick={onAdminToggle}
-                className={`cursor-pointer px-2 select-none text-base transition-colors duration-200 text-[#ff9900] 
+                className={`cursor-pointer px-1 sm:px-2 select-none text-sm sm:text-base transition-colors duration-200 text-[#ff9900] whitespace-nowrap
                   ${isAdminActive ? 'font-semibold underline underline-offset-4' : 'hover:font-semibold hover:line-through'}`}
                 aria-label="Admin-Modus"
                 tabIndex={0}

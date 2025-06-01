@@ -5,8 +5,7 @@ import { Package, Plus, X, Check, Loader2, Trash2, RefreshCw } from 'lucide-reac
 import { PacklistItem } from '../types/PacklistItem';
 import { useNetworkStatus } from '@/shared/hooks/useNetworkStatus';
 import { getGlobalPacklistAction } from '../actions/getGlobalPacklistAction';
-import { useWebSocket, WebSocketMessage } from '@/shared/hooks/useWebSocket';
-import { getWebSocketUrl } from '@/shared/utils/getWebSocketUrl';
+import { useGlobalWebSocket, WebSocketMessage } from '@/shared/hooks/useGlobalWebSocket';
 import useSWR from 'swr';
 import toast from 'react-hot-toast';
 
@@ -61,11 +60,30 @@ interface PacklistClientProps {
 
 export default function PacklistClient({ initialItems }: PacklistClientProps) {
   const [input, setInput] = useState<string>('');
-  const isOnline = useNetworkStatus();
+  const { isOnline } = useNetworkStatus();
 
   // SWR Fetcher-Funktion: Lädt globale Items und merged sie mit lokalen
   const fetchPacklistData = useCallback(async (): Promise<PacklistItem[]> => {
     console.log('[Packlist] SWR Fetcher wird ausgeführt...');
+    
+    // Wenn offline, verwende localStorage + initialItems
+    if (!isOnline) {
+      console.log('[Packlist] Offline-Modus: Verwende localStorage + initialItems');
+      const localRaw = localStorage.getItem(LOCAL_STORAGE_KEY);
+      let localItems: PacklistItem[] = [];
+      
+      if (localRaw) {
+        try {
+          localItems = JSON.parse(localRaw);
+        } catch (e) {
+          console.error('[Packlist] Fehler beim Parsen der lokalen Items:', e);
+          localItems = [];
+        }
+      }
+      
+      const merged = mergePacklists(initialItems, localItems);
+      return merged;
+    }
     
     const globalItems = await getGlobalPacklistAction();
     const localRaw = localStorage.getItem(LOCAL_STORAGE_KEY);
@@ -88,42 +106,61 @@ export default function PacklistClient({ initialItems }: PacklistClientProps) {
     localStorage.setItem(LOCAL_STORAGE_KEY, JSON.stringify(merged));
     
     return merged;
-  }, []);
+  }, [isOnline, initialItems]);
 
-  // SWR für Packlist-Daten
+  // SWR für Packlist-Daten mit besserer Offline-Unterstützung
   const { data: items = [], mutate, isLoading } = useSWR<PacklistItem[]>(
     'packlist-data',
-    fetchPacklistData,
+    isOnline ? fetchPacklistData : null, // Nur online fetchen
     {
-      fallbackData: [],
+      fallbackData: initialItems, // Verwende initialItems als Fallback
       revalidateOnFocus: false,
+      revalidateOnReconnect: true,
       refreshInterval: 0,
+      dedupingInterval: 30000,
     }
   );
 
+  // Offline-Fallback: Wenn offline und keine SWR-Daten, lade aus localStorage
+  useEffect(() => {
+    if (!isOnline && items.length === 0) {
+      console.log('[Packlist] Offline-Fallback: Lade aus localStorage');
+      const localRaw = localStorage.getItem(LOCAL_STORAGE_KEY);
+      if (localRaw) {
+        try {
+          const localItems = JSON.parse(localRaw);
+          const merged = mergePacklists(initialItems, localItems);
+          // Verwende mutate um SWR-Cache zu aktualisieren
+          mutate(merged, false);
+        } catch (e) {
+          console.error('[Packlist] Offline-Fallback Fehler:', e);
+        }
+      }
+    }
+  }, [isOnline, items.length, initialItems, mutate]);
+
   // WebSocket-Integration für Live-Updates (wie InfoBoard)
-  useWebSocket(
-    getWebSocketUrl(),
-    {
-      onMessage: (msg: WebSocketMessage) => {
-        console.log('[Packlist] WebSocket-Message empfangen:', msg);
-        if (msg.topic === 'packlist-updated') {
-          console.log('[Packlist] Packlist-Update erkannt, revalidiere Daten:', msg.payload);
+  useGlobalWebSocket({
+    topicFilter: ['packlist-updated'],
+    onMessage: (msg: WebSocketMessage) => {
+      console.log('[Packlist] WebSocket-Message empfangen:', msg);
+      if (msg.topic === 'packlist-updated') {
+        console.log('[Packlist] Packlist-Update erkannt, revalidiere Daten:', msg.payload);
+        if (isOnline) {
           mutate(); // SWR Daten neu laden
         }
-      },
-      onOpen: () => {
-        console.log('[Packlist] WebSocket verbunden');
-      },
-      onClose: () => {
-        console.log('[Packlist] WebSocket getrennt');
-      },
-      onError: (err) => {
-        console.error('[Packlist] WebSocket-Fehler:', err);
-      },
-      reconnectIntervalMs: 5000,
-    }
-  );
+      }
+    },
+    onOpen: () => {
+      console.log('[Packlist] WebSocket verbunden');
+    },
+    onClose: () => {
+      console.log('[Packlist] WebSocket getrennt');
+    },
+    onError: (err: Event) => {
+      console.error('[Packlist] WebSocket-Fehler:', err);
+    },
+  });
 
   const handleAdd = () => {
     if (input.trim().length === 0) return;

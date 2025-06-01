@@ -30,7 +30,7 @@ function fixImports(dir) {
 const standaloneSrc = path.join(process.cwd(), '.next', 'standalone', 'src');
 if (fs.existsSync(standaloneSrc)) {
   fixImports(standaloneSrc);
-  console.log('✅ Import-Endungen im Standalone-Build auf .js angepasst.');
+  console.log('Import-Endungen im Standalone-Build auf .js angepasst.');
 } else {
-  console.warn('⚠️  Standalone-Output nicht gefunden:', standaloneSrc);
+  console.warn('Standalone-Output nicht gefunden:', standaloneSrc);
 }

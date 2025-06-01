@@ -8,7 +8,7 @@ import { Input } from '@/shared/components/ui/input';
 import { Label } from '@/shared/components/ui/label';
 import { Textarea } from '@/shared/components/ui/textarea';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/shared/components/ui/select';
-import { Car, MapPin, Clock, Users, Phone, Plus, Trash2, Calendar, User, ChevronRight, Filter } from 'lucide-react';
+import { Car, MapPin, Clock, Users, Phone, Plus, Trash2, Calendar, ArrowRight, ArrowLeft, ChevronRight, Filter } from 'lucide-react';
 import { toast } from 'react-hot-toast';
 import { getRidesAction } from '../actions/getRides';
 import { createRideAction } from '../actions/createRide';
@@ -48,18 +48,20 @@ const festivalLocation = 'Hügelfest';
 
 export default function CarpoolClient({ initialRides }: CarpoolClientProps) {
   const { deviceType } = useDeviceContext();
-  const isOnline = useNetworkStatus();
+  const { isOnline } = useNetworkStatus();
   const isMobile = deviceType === 'mobile';
   
-  // SWR für Carpool-Daten mit Offline-Caching
+  // SWR für Carpool-Daten mit verbessertem Offline-Caching
   const { data: rides = [], mutate, isLoading } = useSWR<Ride[]>(
     'carpool-rides',
-    getRidesAction,
+    isOnline ? getRidesAction : null, // Nur online fetchen
     {
-      fallbackData: initialRides,
+      fallbackData: initialRides, // Verwende initialRides als Fallback
       revalidateOnFocus: false,
       revalidateOnReconnect: true,
       dedupingInterval: 30000, // 30 Sekunden
+      errorRetryInterval: isOnline ? 5000 : 30000, // Längere Retry-Zeit offline
+      shouldRetryOnError: isOnline, // Kein Retry offline
     }
   );
   
@@ -201,53 +203,87 @@ export default function CarpoolClient({ initialRides }: CarpoolClientProps) {
   };
 
   return (
-    <div className="min-h-screen p-4">
-      {/* Header */}
-      <div className="text-center mb-6">
-        <div className="flex items-center justify-center gap-2 mb-2">
-          <Car className="h-8 w-8 text-[#ff9900]" />
-          <h1 className="text-2xl font-bold text-[#ff9900]">Mitfahrgelegenheiten</h1>
+    <div className="w-full max-w-4xl mx-auto">
+      {/* Sticky Filter Header im Timeline-Stil */}
+      <div className="sticky top-0 z-10 bg-[#460b6c]/90 backdrop-blur-sm py-2 px-4">
+        {/* Filter-Buttons im Timeline-Stil */}
+        <div className="flex justify-center">
+          <div className="flex space-x-2 overflow-x-auto pb-2 px-4">
+            <button
+              onClick={() => setFilterDirection('all')}
+              className={`flex-shrink-0 p-2.5 rounded-full transition-colors duration-200 ${
+                filterDirection === 'all'
+                  ? 'bg-[#ff9900] text-[#460b6c]'
+                  : 'bg-[#460b6c] text-[#ff9900] border border-[#ff9900]/20'
+              }`}
+              title="Alle Richtungen"
+            >
+              <Car className="text-lg" />
+            </button>
+            <button
+              onClick={() => setFilterDirection('hinfahrt')}
+              className={`flex-shrink-0 px-4 py-2 rounded-full transition-colors duration-200 ${
+                filterDirection === 'hinfahrt'
+                  ? 'bg-[#ff9900] text-[#460b6c]'
+                  : 'bg-[#460b6c] text-[#ff9900] border border-[#ff9900]/20'
+              }`}
+              title="Hinfahrt"
+            >
+              Hinfahrt
+            </button>
+            <button
+              onClick={() => setFilterDirection('rückfahrt')}
+              className={`flex-shrink-0 px-4 py-2 rounded-full transition-colors duration-200 ${
+                filterDirection === 'rückfahrt'
+                  ? 'bg-[#ff9900] text-[#460b6c]'
+                  : 'bg-[#460b6c] text-[#ff9900] border border-[#ff9900]/20'
+              }`}
+              title="Rückfahrt"
+            >
+              Rückfahrt
+            </button>
+          </div>
+        </div>
+
+        {/* Datum-Filter */}
+        <div className="flex justify-center mt-2">
+          <div className="flex space-x-2 overflow-x-auto pb-2 px-4">
+            <button
+              onClick={() => setFilterDate('all')}
+              className={`flex-shrink-0 px-4 py-2 rounded-full transition-colors duration-200 ${
+                filterDate === 'all'
+                  ? 'bg-[#ff9900] text-[#460b6c]'
+                  : 'bg-[#460b6c] text-[#ff9900] border border-[#ff9900]/20'
+              }`}
+            >
+              Alle Tage
+            </button>
+            {festivalDates.map(({ date, label }) => (
+              <button
+                key={date}
+                onClick={() => setFilterDate(date)}
+                className={`flex-shrink-0 px-4 py-2 rounded-full transition-colors duration-200 ${
+                  filterDate === date
+                    ? 'bg-[#ff9900] text-[#460b6c]'
+                    : 'bg-[#460b6c] text-[#ff9900] border border-[#ff9900]/20'
+                }`}
+              >
+                {label.split(' ')[0]} {label.split(' ')[1]}
+              </button>
+            ))}
+          </div>
         </div>
       </div>
 
-      {/* Filter and Create Button */}
-      <div className="mb-6 space-y-4">
-        <div className="flex flex-col sm:flex-row gap-3">
-          <div className="flex gap-2 flex-1">
-            <Select value={filterDirection} onValueChange={setFilterDirection}>
-              <SelectTrigger className="bg-white border-gray-300">
-                <Filter className="h-4 w-4 mr-2" />
-                <SelectValue placeholder="Richtung" />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="all">Alle Richtungen</SelectItem>
-                <SelectItem value="hinfahrt">Hinfahrt</SelectItem>
-                <SelectItem value="rückfahrt">Rückfahrt</SelectItem>
-              </SelectContent>
-            </Select>
-            
-            <Select value={filterDate} onValueChange={setFilterDate}>
-              <SelectTrigger className="bg-white border-gray-300">
-                <Calendar className="h-4 w-4 mr-2" />
-                <SelectValue placeholder="Datum" />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="all">Alle Tage</SelectItem>
-                {festivalDates.map(({ date, label }) => (
-                  <SelectItem key={date} value={date}>{label}</SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-          </div>
-        </div>
-        
+      {/* Create Ride Button */}
+      <div className="px-4 py-4">
         <OfflineDisabled actionType="write" showIcon={false}>
           <Dialog open={showCreateDialog && isOnline} onOpenChange={(open) => isOnline && setShowCreateDialog(open)}>
             <DialogTrigger asChild>
               <Button 
                 className={`w-full font-semibold py-3 text-base ${
                   isOnline 
-                    ? 'bg-gradient-to-r from-[#ff9900] to-orange-600 hover:from-orange-600 hover:to-orange-700 text-white' 
+                    ? 'bg-[#ff9900] hover:bg-[#ff9900]/80 text-[#460b6c]' 
                     : 'bg-gray-400 text-gray-600 cursor-not-allowed'
                 }`}
                 disabled={!isOnline}
@@ -257,111 +293,118 @@ export default function CarpoolClient({ initialRides }: CarpoolClientProps) {
                 {isOnline ? 'Fahrt anbieten' : 'Fahrt anbieten (offline)'}
               </Button>
             </DialogTrigger>
-            <DialogContent className="max-w-md">
+            <DialogContent className="max-w-md bg-[#460b6c] border-[#ff9900]/20">
               <DialogHeader>
-                <DialogTitle className="text-[#460b6c] text-xl text-center">Neue Fahrt erstellen</DialogTitle>
+                <DialogTitle className="text-[#ff9900] text-xl text-center">Neue Fahrt erstellen</DialogTitle>
               </DialogHeader>
               <div className="space-y-4">
                 <div>
-                  <Label className="text-[#460b6c]">Fahrer *</Label>
+                  <Label className="text-[#ff9900]">Fahrer *</Label>
                   <Input
                     value={newRide.driver}
                     onChange={(e) => setNewRide({ ...newRide, driver: e.target.value })}
                     placeholder="Dein Name"
-                    className="mt-1"
+                    className="mt-1 bg-[#460b6c]/50 border-[#ff9900]/30 text-white placeholder:text-white/60"
                   />
                 </div>
                 
                 <div>
-                  <Label className="text-[#460b6c]">Richtung *</Label>
+                  <Label className="text-[#ff9900]">Richtung *</Label>
                   <Select value={newRide.direction} onValueChange={handleDirectionChange}>
-                    <SelectTrigger className="mt-1">
+                    <SelectTrigger className="mt-1 bg-[#460b6c]/50 border-[#ff9900]/30 text-white">
                       <SelectValue />
                     </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="hinfahrt">Hinfahrt (zum Festival)</SelectItem>
-                      <SelectItem value="rückfahrt">Rückfahrt (vom Festival)</SelectItem>
+                    <SelectContent className="bg-[#460b6c] border-[#ff9900]/30">
+                      <SelectItem value="hinfahrt" className="text-white hover:bg-[#ff9900]/20">Hinfahrt (zum Festival)</SelectItem>
+                      <SelectItem value="rückfahrt" className="text-white hover:bg-[#ff9900]/20">Rückfahrt (vom Festival)</SelectItem>
                     </SelectContent>
                   </Select>
                 </div>
                 
                 {newRide.direction === 'hinfahrt' ? (
                   <div>
-                    <Label className="text-[#460b6c]">Abfahrtsort *</Label>
+                    <Label className="text-[#ff9900]">Abfahrtsort *</Label>
                     <Input
                       value={newRide.start}
                       onChange={(e) => setNewRide({ ...newRide, start: e.target.value })}
                       placeholder="z.B. München, Bahnhof"
-                      className="mt-1"
+                      className="mt-1 bg-[#460b6c]/50 border-[#ff9900]/30 text-white placeholder:text-white/60"
                     />
                   </div>
                 ) : (
                   <div>
-                    <Label className="text-[#460b6c]">Zielort *</Label>
+                    <Label className="text-[#ff9900]">Zielort *</Label>
                     <Input
                       value={newRide.destination}
                       onChange={(e) => setNewRide({ ...newRide, destination: e.target.value })}
                       placeholder="z.B. München, Bahnhof"
-                      className="mt-1"
+                      className="mt-1 bg-[#460b6c]/50 border-[#ff9900]/30 text-white placeholder:text-white/60"
                     />
                   </div>
                 )}
                 
                 <div>
-                  <Label className="text-[#460b6c]">Erreichbar über / Nachricht *</Label>
+                  <Label className="text-[#ff9900]">Erreichbar über / Nachricht *</Label>
                   <Textarea
                     value={newRide.contact}
                     onChange={(e) => setNewRide({ ...newRide, contact: e.target.value })}
                     placeholder="z.B. WhatsApp: 0171/123456 / Telegram: @username / weitere Infos..."
-                    className="mt-1 min-h-[80px] resize-none"
+                    className="mt-1 min-h-[80px] resize-none bg-[#460b6c]/50 border-[#ff9900]/30 text-white placeholder:text-white/60"
                   />
                 </div>
                 
                 <div className="grid grid-cols-2 gap-4">
                   <div>
-                    <Label className="text-[#460b6c]">Datum *</Label>
+                    <Label className="text-[#ff9900]">Datum *</Label>
                     <Select value={newRide.date} onValueChange={(value) => setNewRide({ ...newRide, date: value })}>
-                      <SelectTrigger className="mt-1">
+                      <SelectTrigger className="mt-1 bg-[#460b6c]/50 border-[#ff9900]/30 text-white">
                         <SelectValue />
                       </SelectTrigger>
-                      <SelectContent>
+                      <SelectContent className="bg-[#460b6c] border-[#ff9900]/30">
                         {festivalDates.map(({ date, label }) => (
-                          <SelectItem key={date} value={date}>{label}</SelectItem>
+                          <SelectItem key={date} value={date} className="text-white hover:bg-[#ff9900]/20">{label}</SelectItem>
                         ))}
                       </SelectContent>
                     </Select>
                   </div>
                   
                   <div>
-                    <Label className="text-[#460b6c]">Zeit *</Label>
+                    <Label className="text-[#ff9900]">Zeit *</Label>
                     <Input
                       type="time"
                       value={newRide.time}
                       onChange={(e) => setNewRide({ ...newRide, time: e.target.value })}
-                      className="mt-1"
+                      className="mt-1 bg-[#460b6c]/50 border-[#ff9900]/30 text-white"
                     />
                   </div>
                 </div>
                 
                 <div>
-                  <Label className="text-[#460b6c]">Plätze</Label>
+                  <Label className="text-[#ff9900]">Plätze</Label>
                   <Select value={newRide.seats.toString()} onValueChange={(value) => setNewRide({ ...newRide, seats: parseInt(value) })}>
-                    <SelectTrigger className="mt-1">
+                    <SelectTrigger className="mt-1 bg-[#460b6c]/50 border-[#ff9900]/30 text-white">
                       <SelectValue />
                     </SelectTrigger>
-                    <SelectContent>
+                    <SelectContent className="bg-[#460b6c] border-[#ff9900]/30">
                       {[1, 2, 3, 4, 5, 6].map(num => (
-                        <SelectItem key={num} value={num.toString()}>{num}</SelectItem>
+                        <SelectItem key={num} value={num.toString()} className="text-white hover:bg-[#ff9900]/20">{num}</SelectItem>
                       ))}
                     </SelectContent>
                   </Select>
                 </div>
                 
                 <div className="flex gap-2 pt-4">
-                  <Button variant="outline" onClick={() => setShowCreateDialog(false)} className="flex-1">
+                  <Button 
+                    variant="outline" 
+                    onClick={() => setShowCreateDialog(false)} 
+                    className="flex-1 border-[#ff9900]/50 text-[#ff9900] hover:bg-[#ff9900]/20"
+                  >
                     Abbrechen
                   </Button>
-                  <Button onClick={handleCreateRide} className="flex-1 bg-[#ff9900] hover:bg-orange-600">
+                  <Button 
+                    onClick={handleCreateRide} 
+                    className="flex-1 bg-[#ff9900] hover:bg-[#ff9900]/80 text-[#460b6c]"
+                  >
                     Erstellen
                   </Button>
                 </div>
@@ -371,179 +414,223 @@ export default function CarpoolClient({ initialRides }: CarpoolClientProps) {
         </OfflineDisabled>
       </div>
 
-      {/* Rides List */}
+      {/* Rides List im Timeline-Card-Stil */}
       {isLoading ? (
         <div className="flex justify-center py-12">
           <div className="animate-spin rounded-full h-12 w-12 border-4 border-[#ff9900] border-t-transparent"></div>
         </div>
       ) : filteredRides.length === 0 ? (
-        <div className="text-center py-12">
-          <div className="w-16 h-16 bg-gray-100 rounded-full flex items-center justify-center mx-auto mb-4">
-            <Car className="h-8 w-8 text-gray-400" />
-          </div>
-          <h3 className="text-lg font-semibold text-gray-700 mb-1">
-            {rides.length === 0 ? 'Noch keine Fahrten' : 'Keine Treffer'}
-          </h3>
-          <p className="text-sm text-gray-500">
-            {rides.length === 0 ? 'Biete die erste Fahrt an!' : 'Versuche andere Filter-Optionen'}
-          </p>
+        <div className="text-center text-[#ff9900]/80 py-12 text-lg px-4">
+          {rides.length === 0 ? (
+            <>
+              Noch keine Fahrten vorhanden.<br />
+              Biete jetzt die erste Fahrt an!
+            </>
+          ) : (
+            <>
+              Keine Fahrten für diese Filter.<br />
+              Versuche andere Optionen!
+            </>
+          )}
         </div>
       ) : (
-        <div className="space-y-4">
-          {filteredRides.map((ride) => (
-            <div
-              key={ride._id}
-              className="bg-white rounded-lg shadow-sm border border-gray-200 my-2 px-3 py-3 flex items-center gap-3"
-            >
-              <div className="w-8 h-8 bg-gradient-to-r from-[#ff9900] to-orange-600 rounded-full flex items-center justify-center flex-shrink-0">
-                <User className="h-4 w-4 text-white" />
-              </div>
-              <div className="flex-1 min-w-0">
-                <div className="flex items-center gap-2">
-                  <span className="font-semibold text-gray-900 text-base truncate flex-1 min-w-0">{ride.driver}</span>
-                  <span className={`inline-block px-2 py-0.5 rounded mr-1 text-xs font-medium ${ride.direction === 'hinfahrt' ? 'bg-blue-100 text-blue-800 border border-blue-200' : 'bg-purple-100 text-purple-800 border border-purple-200'}`}>
-                    {ride.direction === 'hinfahrt' ? 'Hinfahrt' : 'Rückfahrt'}
-                  </span>
-                  <span className={`px-2 py-0.5 rounded text-xs font-medium ${ride.passengers.length >= ride.seats ? 'bg-red-100 text-red-800' : 'bg-green-100 text-green-800'}`}>
-                    {ride.passengers.length >= ride.seats ? 'Voll' : `${ride.seats - ride.passengers.length} frei`}
-                  </span>
-                </div>
-                <div className="flex items-center gap-2 text-xs text-gray-500">
-                  <Phone className="h-3 w-3" />
-                  <span className="truncate break-words">{ride.contact}</span>
-                </div>
-                <div className="flex items-center gap-2 text-xs text-gray-700">
-                  <MapPin className="h-3 w-3 text-[#ff9900]" />
-                  <span className="break-words">{ride.start}</span>
-                  <ChevronRight className="h-3 w-3 text-gray-400" />
-                  <span className="break-words text-gray-600">{ride.destination}</span>
-                </div>
-                <div className="flex items-center gap-3 text-xs text-gray-500 mb-2">
-                  <span className="flex items-center gap-1">
-                    <Calendar className="h-3 w-3" />
-                    <span>{new Date(ride.date).toLocaleDateString('de-DE', { day: 'numeric', month: 'short' })}</span>
-                  </span>
-                  <span className="flex items-center gap-1">
-                    <Clock className="h-3 w-3" />
-                    <span>{ride.time}</span>
-                  </span>
-                </div>
-                {ride.passengers.length > 0 && (
-                  <div className="flex flex-wrap gap-1">
-                    {ride.passengers.map((passenger, index) => (
-                      <span
-                        key={index}
-                        className="inline-flex items-center gap-1 px-2 py-1 bg-blue-100 text-blue-800 rounded-full text-xs border border-blue-200 cursor-pointer hover:bg-blue-200"
-                        onClick={() => passenger.contact && setShowPassengerContact(passenger)}
-                      >
-                        {passenger.name}
-                        <button
-                          onClick={(e) => { 
-                            e.stopPropagation(); 
-                            handleRemovePassenger(ride._id!, passenger.name); 
-                          }}
-                          className="hover:text-red-600 transition-colors"
-                        >
-                          <Trash2 className="h-3 w-3" />
-                        </button>
-                      </span>
-                    ))}
-                  </div>
-                )}
-                <div className="flex gap-2 mt-1">
-                  {ride.passengers.length < ride.seats && (
-                    <OfflineDisabled actionType="write" showIcon={false}>
-                      <Dialog open={showPassengerDialog === ride._id && isOnline} onOpenChange={(open) => isOnline && setShowPassengerDialog(open ? ride._id! : null)}>
-                        <DialogTrigger asChild>
-                          <Button 
-                            variant="outline" 
-                            size="sm" 
-                            className={`text-xs ${
-                              isOnline 
-                                ? 'border-[#ff9900] text-[#ff9900] hover:bg-[#ff9900] hover:text-white' 
-                                : 'border-gray-400 text-gray-500 cursor-not-allowed'
-                            }`}
-                            disabled={!isOnline}
-                            title={!isOnline ? 'Mitfahren ist nur online möglich' : undefined}
-                          >
-                            {isOnline ? 'Mitfahren' : 'Mitfahren (offline)'}
-                          </Button>
-                        </DialogTrigger>
-                        <DialogContent className="max-w-sm">
-                          <DialogHeader>
-                            <DialogTitle className="text-[#460b6c] text-base sm:text-xl text-center">
-                              Mitfahren
-                            </DialogTitle>
-                          </DialogHeader>
-                          <div className="space-y-3">
-                            <div>
-                              <Label className="text-[#460b6c]">Dein Name</Label>
-                              <Input
-                                value={passengerName}
-                                onChange={(e) => setPassengerName(e.target.value)}
-                                placeholder="Wie soll dich der Fahrer nennen?"
-                                className="mt-1"
-                              />
-                            </div>
-                            <div>
-                              <Label className="text-[#460b6c]">Erreichbar über / Nachricht (optional)</Label>
-                              <Textarea
-                                value={passengerContact}
-                                onChange={(e) => setPassengerContact(e.target.value)}
-                                placeholder="z.B. Telegram: @user123 / WhatsApp: Max / Nachricht an den Fahrer ..."
-                                className="mt-1 min-h-[48px] resize-none"
-                              />
-                            </div>
-                            <div className="flex gap-2">
-                              <Button variant="outline" onClick={() => setShowPassengerDialog(null)} className="flex-1" size="sm">
-                                Abbrechen
-                              </Button>
-                              <Button onClick={() => handleJoinRide(ride._id!)} className="flex-1 bg-[#ff9900] hover:bg-orange-600" size="sm">
-                                Anmelden
-                              </Button>
-                            </div>
-                          </div>
-                        </DialogContent>
-                      </Dialog>
-                    </OfflineDisabled>
-                  )}
-                </div>
-              </div>
-              <OfflineDisabled actionType="delete" showIcon={false}>
-                <Button
-                  variant="destructive"
-                  size="sm"
-                  onClick={() => isOnline && handleDeleteRide(ride._id!)}
-                  className={`text-xs px-3 ml-2 self-start ${
-                    isOnline 
-                      ? 'bg-red-100 border-red-200 text-red-700 hover:bg-red-500 hover:text-white' 
-                      : 'bg-gray-200 border-gray-300 text-gray-500 cursor-not-allowed'
-                  }`}
-                  disabled={!isOnline}
-                  title={!isOnline ? 'Löschen ist nur online möglich' : undefined}
+        <div className="px-4">
+          <div className="relative">
+            <div className="absolute left-4 top-0 bottom-0 w-0.5 bg-[#ff9900]/20" />
+            <div className="space-y-4">
+              {filteredRides.map((ride) => (
+                <div
+                  key={ride._id}
+                  className="bg-[#460b6c]/50 backdrop-blur-sm border border-[#ff9900]/20 rounded-lg p-4 relative ml-8"
                 >
-                  <Trash2 className="h-3 w-3" />
-                </Button>
-              </OfflineDisabled>
+                  {/* Icon Badge wie bei Timeline */}
+                  <div className="absolute -left-12 top-4 p-2 bg-[#ff9900]/20 rounded-full">
+                    <Car className="text-[#ff9900] text-lg" />
+                  </div>
+
+                  {/* Header mit Fahrer und Status */}
+                  <div className="flex items-start justify-between mb-3">
+                    <div className="flex items-center space-x-3">
+                      <div>
+                        <h3 className="text-[#ff9900] font-medium text-lg">{ride.driver}</h3>
+                        <div className="flex items-center gap-2 mt-1">
+                          <span className={`inline-block px-2 py-1 rounded-full text-xs font-medium ${
+                            ride.direction === 'hinfahrt' 
+                              ? 'bg-blue-500/20 text-blue-300 border border-blue-500/30' 
+                              : 'bg-purple-500/20 text-purple-300 border border-purple-500/30'
+                          }`}>
+                            {ride.direction === 'hinfahrt' ? 'Hinfahrt' : 'Rückfahrt'}
+                          </span>
+                        </div>
+                      </div>
+                    </div>
+                    <div className="flex items-center space-x-2">
+                      <div className="text-[#ff9900] text-sm">
+                        {new Date(ride.date).toLocaleDateString('de-DE', { day: '2-digit', month: '2-digit' })} • {ride.time}
+                      </div>
+                      <span className={`px-2 py-1 rounded-full text-xs font-medium ${
+                        ride.passengers.length >= ride.seats 
+                          ? 'bg-red-500/20 text-red-300 border border-red-500/30' 
+                          : 'bg-green-500/20 text-green-300 border border-green-500/30'
+                      }`}>
+                        {ride.passengers.length >= ride.seats ? 'Voll' : `${ride.seats - ride.passengers.length} frei`}
+                      </span>
+                    </div>
+                  </div>
+
+                  {/* Route Information */}
+                  <div className="flex items-center gap-2 text-white/80 text-sm mb-2">
+                    <MapPin className="h-4 w-4 text-[#ff9900]" />
+                    <span>{ride.start}</span>
+                    <ChevronRight className="h-4 w-4 text-[#ff9900]/60" />
+                    <span>{ride.destination}</span>
+                  </div>
+
+                  {/* Contact Information */}
+                  <div className="flex items-center gap-2 text-white/80 text-sm mb-3">
+                    <Phone className="h-4 w-4 text-[#ff9900]" />
+                    <span className="truncate">{ride.contact}</span>
+                  </div>
+
+                  {/* Passengers */}
+                  {ride.passengers.length > 0 && (
+                    <div className="mb-3">
+                      <div className="text-white/80 text-sm mb-2">Mitfahrer:</div>
+                      <div className="flex flex-wrap gap-2">
+                        {ride.passengers.map((passenger, index) => (
+                          <span
+                            key={index}
+                            className="inline-flex items-center gap-1 px-2 py-1 bg-[#ff9900]/20 text-[#ff9900] rounded-full text-xs border border-[#ff9900]/30 cursor-pointer hover:bg-[#ff9900]/30"
+                            onClick={() => passenger.contact && setShowPassengerContact(passenger)}
+                          >
+                            <Users className="h-3 w-3" />
+                            {passenger.name}
+                            <button
+                              onClick={(e) => { 
+                                e.stopPropagation(); 
+                                handleRemovePassenger(ride._id!, passenger.name); 
+                              }}
+                              className="hover:text-red-300 transition-colors"
+                            >
+                              <Trash2 className="h-3 w-3" />
+                            </button>
+                          </span>
+                        ))}
+                      </div>
+                    </div>
+                  )}
+
+                  {/* Action Buttons */}
+                  <div className="flex gap-2">
+                    {ride.passengers.length < ride.seats && (
+                      <OfflineDisabled actionType="write" showIcon={false}>
+                        <Dialog open={showPassengerDialog === ride._id && isOnline} onOpenChange={(open) => isOnline && setShowPassengerDialog(open ? ride._id! : null)}>
+                          <DialogTrigger asChild>
+                            <Button 
+                              variant="outline" 
+                              size="sm" 
+                              className={`${
+                                isOnline 
+                                  ? 'border-[#ff9900] text-[#ff9900] hover:bg-[#ff9900] hover:text-[#460b6c]' 
+                                  : 'border-gray-400 text-gray-500 cursor-not-allowed'
+                              }`}
+                              disabled={!isOnline}
+                              title={!isOnline ? 'Mitfahren ist nur online möglich' : undefined}
+                            >
+                              {isOnline ? 'Mitfahren' : 'Mitfahren (offline)'}
+                            </Button>
+                          </DialogTrigger>
+                          <DialogContent className="max-w-sm bg-[#460b6c] border-[#ff9900]/20">
+                            <DialogHeader>
+                              <DialogTitle className="text-[#ff9900] text-base sm:text-xl text-center">
+                                Mitfahren
+                              </DialogTitle>
+                            </DialogHeader>
+                            <div className="space-y-3">
+                              <div>
+                                <Label className="text-[#ff9900]">Dein Name</Label>
+                                <Input
+                                  value={passengerName}
+                                  onChange={(e) => setPassengerName(e.target.value)}
+                                  placeholder="Wie soll dich der Fahrer nennen?"
+                                  className="mt-1 bg-[#460b6c]/50 border-[#ff9900]/30 text-white placeholder:text-white/60"
+                                />
+                              </div>
+                              <div>
+                                <Label className="text-[#ff9900]">Erreichbar über / Nachricht (optional)</Label>
+                                <Textarea
+                                  value={passengerContact}
+                                  onChange={(e) => setPassengerContact(e.target.value)}
+                                  placeholder="z.B. Telegram: @user123 / WhatsApp: Max / Nachricht an den Fahrer ..."
+                                  className="mt-1 min-h-[48px] resize-none bg-[#460b6c]/50 border-[#ff9900]/30 text-white placeholder:text-white/60"
+                                />
+                              </div>
+                              <div className="flex gap-2">
+                                <Button 
+                                  variant="outline" 
+                                  onClick={() => setShowPassengerDialog(null)} 
+                                  className="flex-1 border-[#ff9900]/50 text-[#ff9900] hover:bg-[#ff9900]/20" 
+                                  size="sm"
+                                >
+                                  Abbrechen
+                                </Button>
+                                <Button 
+                                  onClick={() => handleJoinRide(ride._id!)} 
+                                  className="flex-1 bg-[#ff9900] hover:bg-[#ff9900]/80 text-[#460b6c]" 
+                                  size="sm"
+                                >
+                                  Anmelden
+                                </Button>
+                              </div>
+                            </div>
+                          </DialogContent>
+                        </Dialog>
+                      </OfflineDisabled>
+                    )}
+                    
+                    <OfflineDisabled actionType="delete" showIcon={false}>
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        onClick={() => isOnline && handleDeleteRide(ride._id!)}
+                        className={`${
+                          isOnline 
+                            ? 'border-red-500/50 text-red-300 hover:bg-red-500 hover:text-white' 
+                            : 'border-gray-400 text-gray-500 cursor-not-allowed'
+                        }`}
+                        disabled={!isOnline}
+                        title={!isOnline ? 'Löschen ist nur online möglich' : undefined}
+                      >
+                        <Trash2 className="h-4 w-4" />
+                      </Button>
+                    </OfflineDisabled>
+                  </div>
+                </div>
+              ))}
             </div>
-          ))}
+          </div>
         </div>
       )}
 
       {/* Contact Dialog */}
       {showPassengerContact && (
         <Dialog open={!!showPassengerContact} onOpenChange={() => setShowPassengerContact(null)}>
-          <DialogContent className="max-w-sm">
+          <DialogContent className="max-w-sm bg-[#460b6c] border-[#ff9900]/20">
             <DialogHeader>
-              <DialogTitle className="text-[#460b6c] text-base sm:text-xl text-center">
+              <DialogTitle className="text-[#ff9900] text-base sm:text-xl text-center">
                 Kontakt / Nachricht von {showPassengerContact.name}
               </DialogTitle>
             </DialogHeader>
-            <div className="py-2 text-sm sm:text-base whitespace-pre-line text-gray-800 text-center">
+            <div className="py-2 text-sm sm:text-base whitespace-pre-line text-white/90 text-center">
               {showPassengerContact.contact || 'Keine Nachricht hinterlegt.'}
             </div>
             <div className="flex justify-end mt-2">
-              <Button onClick={() => setShowPassengerContact(null)} variant="outline" size="sm">
+              <Button 
+                onClick={() => setShowPassengerContact(null)} 
+                variant="outline" 
+                size="sm"
+                className="border-[#ff9900] text-[#ff9900] hover:bg-[#ff9900] hover:text-[#460b6c]"
+              >
                 Schließen
               </Button>
             </div>

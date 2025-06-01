@@ -1,35 +1,136 @@
-import { useEffect, useState, useCallback } from 'react';
+import { useEffect, useState, useCallback, useRef } from 'react';
 
-/**
- * React-Hook zur Überwachung des Netzwerkstatus (online/offline).
- * Erkennt auch "verbunden, aber kein Internet" Situationen durch Health-Checks.
- * SSR-safe: Startet mit true für Server-Rendering.
- */
-export function useNetworkStatus(): boolean {
-  // Starte mit null für SSR-Kompatibilität, dann echter Wert
-  const [isOnline, setIsOnline] = useState<boolean>(true); // Default online für SSR
-  const [isHydrated, setIsHydrated] = useState(false);
-  const [lastHealthCheckTime, setLastHealthCheckTime] = useState(0);
-  
-  // Tatsächliche Internetverbindung prüfen (nicht nur WiFi-Verbindung)
-  const checkInternetConnection = useCallback(async () => {
-    // Nur alle 10 Sekunden prüfen, um Performance-Probleme zu vermeiden
+// Global singleton network manager
+class NetworkStatusManager {
+  private static instance: NetworkStatusManager;
+  private listeners: Set<(status: NetworkStatus) => void> = new Set();
+  private status: NetworkStatus = {
+    isOnline: true,
+    isServerOnline: true,
+    isBrowserOnline: true
+  };
+  private lastHealthCheckTime = 0;
+  private healthCheckInterval?: NodeJS.Timeout;
+  private aggressiveHealthCheckRef?: NodeJS.Timeout;
+  private isInitialized = false;
+
+  static getInstance(): NetworkStatusManager {
+    if (!NetworkStatusManager.instance) {
+      NetworkStatusManager.instance = new NetworkStatusManager();
+    }
+    return NetworkStatusManager.instance;
+  }
+
+  subscribe(listener: (status: NetworkStatus) => void): () => void {
+    this.listeners.add(listener);
+    
+    // Initialize on first subscription
+    if (!this.isInitialized && typeof window !== 'undefined') {
+      this.initialize();
+    }
+    
+    // Send current status immediately
+    listener(this.status);
+    
+    return () => {
+      this.listeners.delete(listener);
+      // Cleanup if no more listeners
+      if (this.listeners.size === 0) {
+        this.cleanup();
+      }
+    };
+  }
+
+  private initialize() {
+    if (this.isInitialized || typeof window === 'undefined') return;
+    
+    this.isInitialized = true;
+    
+    // Set initial browser status
+    this.status.isBrowserOnline = navigator.onLine;
+    this.notifyListeners();
+    
+    // Initial health check
+    this.checkServerConnection();
+
+    // Event listeners
+    window.addEventListener('online', this.handleOnline);
+    window.addEventListener('offline', this.handleOffline);
+    window.addEventListener('focus', this.handleFocus);
+    document.addEventListener('visibilitychange', this.handleVisibilityChange);
+
+    // Regular health checks (30 seconds)
+    this.healthCheckInterval = setInterval(() => {
+      if (navigator.onLine) {
+        this.checkServerConnection();
+      } else {
+        this.updateServerStatus(false);
+      }
+    }, 30000);
+  }
+
+  private cleanup() {
+    if (!this.isInitialized) return;
+    
+    this.isInitialized = false;
+    
+    window.removeEventListener('online', this.handleOnline);
+    window.removeEventListener('offline', this.handleOffline);
+    window.removeEventListener('focus', this.handleFocus);
+    document.removeEventListener('visibilitychange', this.handleVisibilityChange);
+    
+    if (this.healthCheckInterval) {
+      clearInterval(this.healthCheckInterval);
+      this.healthCheckInterval = undefined;
+    }
+    
+    if (this.aggressiveHealthCheckRef) {
+      clearInterval(this.aggressiveHealthCheckRef);
+      this.aggressiveHealthCheckRef = undefined;
+    }
+  }
+
+  private handleOnline = () => {
+    console.log('[Network] Browser meldet Online - prüfe Server-Verbindung');
+    this.status.isBrowserOnline = true;
+    this.notifyListeners();
+    this.forceHealthCheck();
+  };
+
+  private handleOffline = () => {
+    console.log('[Network] Browser meldet Offline');
+    this.status.isBrowserOnline = false;
+    this.status.isServerOnline = false;
+    this.status.isOnline = false;
+    this.notifyListeners();
+  };
+
+  private handleFocus = () => {
+    if (navigator.onLine) {
+      this.forceHealthCheck();
+    }
+  };
+
+  private handleVisibilityChange = () => {
+    if (!document.hidden && navigator.onLine) {
+      this.forceHealthCheck();
+    }
+  };
+
+  private async checkServerConnection() {
+    // Rate limiting: minimum 10 seconds between checks
     const now = Date.now();
-    if (now - lastHealthCheckTime < 10000) {
+    if (now - this.lastHealthCheckTime < 10000) {
       return;
     }
     
-    setLastHealthCheckTime(now);
+    this.lastHealthCheckTime = now;
     
     try {
-      // Prüfen mit Cachebuster-Parameter um Cache zu vermeiden
       const cacheBuster = `?cb=${Date.now()}`;
-      // Optimiert für schnelle Antwort und minimale Bandbreite
       const response = await fetch(`/api/health${cacheBuster}`, { 
         method: 'HEAD',
-        // Abbrechen nach 3 Sekunden
         signal: AbortSignal.timeout(3000),
-        // Cache verhindern
         cache: 'no-store',
         headers: {
           'Cache-Control': 'no-cache, no-store, must-revalidate',
@@ -38,63 +139,128 @@ export function useNetworkStatus(): boolean {
         }
       });
       
-      // Wenn der Server antwortet, haben wir Internet
       if (response.ok) {
-        if (!isOnline) {
-          console.log('[Network] Internetverbindung wieder hergestellt');
-          setIsOnline(true);
+        if (!this.status.isServerOnline) {
+          console.log('[Network] ✅ Server wieder erreichbar');
         }
+        this.updateServerStatus(true);
       } else {
-        console.warn('[Network] Gesundheitscheck fehlgeschlagen mit Status:', response.status);
-        setIsOnline(false);
+        console.warn('[Network] ❌ Server-Health-Check fehlgeschlagen:', response.status);
+        this.updateServerStatus(false);
       }
     } catch (error) {
-      // Bei Timeout oder Netzwerkfehler: Offline
-      console.warn('[Network] Kein Internet trotz Browser-Online-Status:', error);
-      setIsOnline(false);
+      console.warn('[Network] ❌ Server nicht erreichbar:', error);
+      this.updateServerStatus(false);
     }
-  }, [isOnline, lastHealthCheckTime]);
+  }
+
+  private updateServerStatus(isOnline: boolean) {
+    const wasOnline = this.status.isServerOnline;
+    this.status.isServerOnline = isOnline;
+    this.status.isOnline = this.status.isBrowserOnline && this.status.isServerOnline;
+    
+    if (wasOnline !== isOnline) {
+      this.notifyListeners();
+    }
+  }
+
+  private notifyListeners() {
+    this.listeners.forEach(listener => listener(this.status));
+  }
+
+  async forceHealthCheck() {
+    this.lastHealthCheckTime = 0; // Reset rate limiting
+    await this.checkServerConnection();
+    
+    // Start moderate aggressive checking for 60 seconds
+    if (this.aggressiveHealthCheckRef) {
+      clearInterval(this.aggressiveHealthCheckRef);
+    }
+    
+    let checksCount = 0;
+    this.aggressiveHealthCheckRef = setInterval(async () => {
+      checksCount++;
+      await this.checkServerConnection();
+      
+      if (checksCount >= 6) { // 6 checks = 60 seconds
+        if (this.aggressiveHealthCheckRef) {
+          clearInterval(this.aggressiveHealthCheckRef);
+          this.aggressiveHealthCheckRef = undefined;
+        }
+      }
+    }, 10000);
+  }
+
+  getCurrentStatus(): NetworkStatus {
+    return { ...this.status };
+  }
+}
+
+interface NetworkStatus {
+  isOnline: boolean;
+  isServerOnline: boolean;
+  isBrowserOnline: boolean;
+}
+
+/**
+ * React-Hook zur Überwachung des Netzwerkstatus (online/offline).
+ * Erkennt auch "verbunden, aber kein Internet" Situationen durch Health-Checks.
+ * SSR-safe: Startet mit true für Server-Rendering.
+ */
+export function useNetworkStatus(): { 
+  isOnline: boolean; 
+  isServerOnline: boolean;
+  isBrowserOnline: boolean;
+  forceHealthCheck: () => Promise<void> 
+} {
+  const [status, setStatus] = useState<NetworkStatus>({
+    isOnline: true,
+    isServerOnline: true,
+    isBrowserOnline: true
+  });
+  const [isHydrated, setIsHydrated] = useState(false);
 
   useEffect(() => {
-    // Nach Hydration: Echten Navigator-Status setzen
-    setIsOnline(navigator.onLine);
     setIsHydrated(true);
     
-    // Sofort einen Health-Check durchführen
-    checkInternetConnection();
+    const manager = NetworkStatusManager.getInstance();
+    const unsubscribe = manager.subscribe(setStatus);
+    
+    return unsubscribe;
+  }, []);
 
-    const handleOnline = () => {
-      console.log('[Network] Browser meldet Online');
-      // Browser sagt online, aber wir prüfen echte Verbindung
-      checkInternetConnection();
-    };
-    
-    const handleOffline = () => {
-      console.log('[Network] Browser meldet Offline');
-      setIsOnline(false);
-    };
-    
-    // Regelmäßig prüfen (alle 30 Sekunden)
-    const healthCheckInterval = setInterval(() => {
-      if (navigator.onLine) {
-        checkInternetConnection();
+  const forceHealthCheck = useCallback(async () => {
+    if (typeof window !== 'undefined') {
+      const manager = NetworkStatusManager.getInstance();
+      await manager.forceHealthCheck();
       }
-    }, 30000);
-
-    window.addEventListener('online', handleOnline);
-    window.addEventListener('offline', handleOffline);
-
-    return () => {
-      window.removeEventListener('online', handleOnline);
-      window.removeEventListener('offline', handleOffline);
-      clearInterval(healthCheckInterval);
-    };
-  }, [checkInternetConnection]);
+  }, []);
 
   // Während SSR und vor Hydration: Immer online annehmen
   if (!isHydrated) {
-    return true;
+    return { 
+      isOnline: true, 
+      isServerOnline: true, 
+      isBrowserOnline: true, 
+      forceHealthCheck: async () => {} 
+    };
   }
 
+  return { 
+    isOnline: status.isOnline, 
+    isServerOnline: status.isServerOnline, 
+    isBrowserOnline: status.isBrowserOnline, 
+    forceHealthCheck 
+  };
+}
+
+// Vereinfachte Version für Backward-Kompatibilität
+export function useNetworkStatusSimple(): boolean {
+  const { isOnline } = useNetworkStatus();
   return isOnline;
+}
+
+// Zusätzlicher Export für direkte Boolean-Verwendung (Backward-Kompatibilität)
+export function useOnlineStatus(): boolean {
+  return useNetworkStatusSimple();
 } 

@@ -12,7 +12,7 @@ export function UpdateServiceProvider({ children }: UpdateServiceProviderProps) 
   
   // Globaler WebSocket-Hook mit Topic-Filter für Update-Events
   useGlobalWebSocket({
-    topicFilter: ['app-update-available', 'force-update'],
+    topicFilter: ['app-update-available', 'force-update', 'update-status-initial'],
     onMessage: (msg: WebSocketMessage) => {
       // Konvertiere zu UpdateWebSocketMessage
       const updateMsg: UpdateWebSocketMessage = {

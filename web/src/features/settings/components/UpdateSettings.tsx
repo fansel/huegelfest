@@ -6,8 +6,8 @@ import UserSettingsCard from "./UserSettingsCard";
 import { updateService } from '@/lib/updateService';
 import { APP_VERSION, VERSION_STORAGE_KEYS } from '@/lib/config/appVersion';
 import { toast } from 'react-hot-toast';
-import { checkForUpdatesAction, getAppInfoAction } from '../actions/updateActions';
-import { RefreshCw } from 'lucide-react';
+import { getAppInfoAction } from '../actions/updateActions';
+import { RefreshCw, Check } from 'lucide-react';
 import { useNetworkStatus } from '@/shared/hooks/useNetworkStatus';
 
 interface UpdateSettingsProps {
@@ -15,7 +15,6 @@ interface UpdateSettingsProps {
 }
 
 export function UpdateSettings({ variant = 'tile' }: UpdateSettingsProps) {
-  const [isChecking, setIsChecking] = useState(false);
   const [updateAvailable, setUpdateAvailable] = useState(false);
   const [lastCheckTime, setLastCheckTime] = useState<string | null>(null);
   const [versionInfo, setVersionInfo] = useState({
@@ -24,10 +23,27 @@ export function UpdateSettings({ variant = 'tile' }: UpdateSettingsProps) {
   });
   const isOnline = useNetworkStatus();
 
-  // Check Update-Status beim Mount
+  // Real-time Update-Status mit Custom Events
   useEffect(() => {
     checkUpdateStatus();
     loadVersionInfo();
+    
+    // Sofortige Reaktion auf Storage-Änderungen
+    const handleUpdateChange = (event: any) => {
+      setUpdateAvailable(event.detail.available);
+      checkUpdateStatus(); // Auch andere Daten neu laden
+    };
+
+    // Custom Event Listener für sofortige Updates
+    window.addEventListener('updateAvailableChange', handleUpdateChange);
+    
+    // Automatische Status-Updates alle 2 Sekunden (reduziert von 5s)
+    const interval = setInterval(checkUpdateStatus, 2000);
+    
+    return () => {
+      window.removeEventListener('updateAvailableChange', handleUpdateChange);
+      clearInterval(interval);
+    };
   }, []);
 
   const loadVersionInfo = async () => {
@@ -50,44 +66,6 @@ export function UpdateSettings({ variant = 'tile' }: UpdateSettingsProps) {
     setLastCheckTime(lastCheck ? new Date(parseInt(lastCheck)).toLocaleString('de-DE') : null);
   };
 
-  const handleCheckForUpdates = async () => {
-    if (!isOnline) {
-      toast.error('Update-Prüfung ist nur online möglich');
-      return;
-    }
-    
-    setIsChecking(true);
-    
-    try {
-      // Nutze WebSocket-basierte Update-Prüfung über UpdateService
-      const hasUpdate = await updateService.checkForUpdatesManual();
-      
-      // Zusätzlich: Server Action für genauere Prüfung
-      const serverResult = await checkForUpdatesAction();
-      
-      if (serverResult.hasUpdate && serverResult.updateInfo) {
-        localStorage.setItem(VERSION_STORAGE_KEYS.UPDATE_AVAILABLE, 'true');
-        setUpdateAvailable(true);
-        
-        toast.success('Update verfügbar! Klicke auf "Update anwenden"', {
-          duration: 5000,
-          icon: '🎉'
-        });
-      } else if (!hasUpdate && !serverResult.hasUpdate) {
-        toast.success('Du hast bereits die neueste Version!', {
-          duration: 3000,
-          icon: '✅'
-        });
-      }
-      
-      checkUpdateStatus(); // Status neu laden
-    } catch (error) {
-      toast.error('Fehler beim Prüfen auf Updates');
-    } finally {
-      setIsChecking(false);
-    }
-  };
-
   const handleApplyUpdate = async () => {
     if (!isOnline) {
       toast.error('Update-Installation ist nur online möglich');
@@ -101,10 +79,8 @@ export function UpdateSettings({ variant = 'tile' }: UpdateSettingsProps) {
     }
   };
 
-  // Switch-Element: Button für Update-Check oder Update-Apply
-  const switchElement = (
-    <div className="flex gap-2">
-      {updateAvailable ? (
+  // Switch-Element: Update-Apply Button oder Checkmark
+  const switchElement = updateAvailable ? (
         <Button 
           variant="default" 
           size="sm"
@@ -123,38 +99,25 @@ export function UpdateSettings({ variant = 'tile' }: UpdateSettingsProps) {
           {isOnline ? 'Update anwenden' : 'Update anwenden (offline)'}
         </Button>
       ) : (
-        <Button 
-          variant="outline" 
-          size="sm"
-          onClick={(e) => {
-            e.stopPropagation();
-            handleCheckForUpdates();
-          }}
-          disabled={isChecking || !isOnline}
-          className={`text-xs ${
-            !isOnline ? 'border-gray-400 text-gray-500 cursor-not-allowed' : ''
-          }`}
-          title={!isOnline ? 'Update-Prüfung ist nur online möglich' : undefined}
-        >
-          {isChecking ? 'Prüfe...' : (isOnline ? 'Prüfen' : 'Prüfen (offline)')}
-        </Button>
-      )}
+    <div className="text-xs text-green-600 px-3 py-1 flex items-center gap-1.5">
+      <Check className="h-3 w-3" />
+      <span>Aktuell</span>
     </div>
   );
 
   // Info-Text für Tooltip
   const infoText = (
     <div className="space-y-2">
-      <p>Überprüfe und installiere App-Updates für neue Funktionen und Verbesserungen.</p>
+      <p>Automatisches Update-System - Updates werden automatisch erkannt und angezeigt.</p>
       <div className="space-y-1">
-        <p><strong>WebSocket Update-System:</strong></p>
+        <p><strong>Vollautomatisches System:</strong></p>
         <ul className="list-disc list-inside space-y-1 text-sm">
-          <li><strong>Development:</strong> Sofortige Updates via WebSocket</li>
-          <li><strong>Production:</strong> Kontrollierte Updates mit Benachrichtigung</li>
-          <li>Echte Push-Updates ohne Polling</li>
-          <li>Server Actions für Update-Management</li>
-          <li>Service Worker Updates für Offline-Funktionen</li>
-          <li>PWA-Badge für Update-Benachrichtigungen</li>
+          <li><strong>Keine manuelle Prüfung nötig:</strong> Updates werden automatisch erkannt</li>
+          <li><strong>WebSocket Push-Updates:</strong> Sofortige Benachrichtigung bei neuen Versionen</li>
+          <li><strong>Background-Checks:</strong> Automatische Prüfung alle 30 Sekunden</li>
+          <li><strong>Service Worker Integration:</strong> Erkennt Asset-Updates automatisch</li>
+          <li><strong>Development:</strong> Sofortige Updates ohne User-Eingriff</li>
+          <li><strong>Production:</strong> Kontrollierte Updates mit einem Klick</li>
         </ul>
       </div>
       <div className="mt-2 pt-2 border-t space-y-1 text-xs text-gray-600">
@@ -164,6 +127,11 @@ export function UpdateSettings({ variant = 'tile' }: UpdateSettingsProps) {
         {updateAvailable && (
           <div className="text-[#ff9900] font-medium">
             ⚡ Update verfügbar!
+          </div>
+        )}
+        {!updateAvailable && (
+          <div className="text-green-600 font-medium">
+            ✅ Du hast die neueste Version
           </div>
         )}
       </div>

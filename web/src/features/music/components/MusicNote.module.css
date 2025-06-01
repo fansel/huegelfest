@@ -195,7 +195,7 @@
   text-overflow: ellipsis;
   position: relative;
   width: 100%;
-  animation: marquee 10s linear infinite;
+  animation: marquee 8s linear infinite;
 }
 
 .trackTitle:hover {
@@ -203,8 +203,8 @@
 }
 
 @keyframes marquee {
-  0% {
-    transform: translateX(100%);
+  0%, 20% {
+    transform: translateX(0%);
   }
   100% {
     transform: translateX(-100%);
@@ -233,13 +233,13 @@
 .marqueeInner {
   display: inline-block;
   white-space: nowrap;
-  animation: marquee-scroll 10s linear infinite;
+  animation: marquee-scroll 8s linear infinite;
   padding-right: 2em;
 }
 
 @keyframes marquee-scroll {
-  0% {
-    transform: translateX(100%);
+  0%, 20% {
+    transform: translateX(0%);
   }
   100% {
     transform: translateX(-100%);

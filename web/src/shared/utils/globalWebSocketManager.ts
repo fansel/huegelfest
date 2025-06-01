@@ -1,6 +1,7 @@
 'use client';
 
 import { getWebSocketUrl } from './getWebSocketUrl';
+import { getOrCreateDeviceId } from '@/shared/hooks/useDeviceId';
 
 // Event-Handler Types
 type MessageHandler = (data: any) => void;
@@ -48,12 +49,8 @@ class GlobalWebSocketManager {
   initialize() {
     if (typeof window === 'undefined') return;
     
-    // Device-ID aus localStorage oder generieren
-    this.deviceId = localStorage.getItem('huegelfest_device_id');
-    if (!this.deviceId) {
-      this.deviceId = `device_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
-      localStorage.setItem('huegelfest_device_id', this.deviceId);
-    }
+    // Verwende die einheitliche Device-ID aus useDeviceId Hook
+    this.deviceId = getOrCreateDeviceId();
 
     // Nur verbinden wenn noch keine Verbindung existiert
     if (!this.ws || this.ws.readyState === WebSocket.CLOSED) {

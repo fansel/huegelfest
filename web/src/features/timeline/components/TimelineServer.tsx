@@ -1,7 +1,5 @@
 import React from 'react';
-import { fetchDays } from '../actions/fetchDays';
-import { getCategoriesAction } from '@/features/categories/actions/getCategories';
-import { fetchApprovedEventsByDay } from '@/features/timeline/actions/fetchApprovedEventsByDay';
+import { fetchTimeline } from '../actions/fetchTimeline';
 import type { Category, Day, Event } from '../types/types';
 import TimelineClient from './TimelineClient';
 
@@ -12,21 +10,12 @@ interface TimelineServerProps {
 
 /**
  * Server-Komponente: Lädt alle Daten für die Timeline serverseitig und übergibt sie an die Client-Komponente.
+ * Now uses the central festival days system.
  */
 const TimelineServer: React.FC<TimelineServerProps> = async ({ showFavoritesOnly = false, allowClipboard = false }) => {
   try {
-    const daysRaw = await fetchDays();
-    const categories = await getCategoriesAction();
-    // Events für jeden Tag laden
-    const days: Day[] = await Promise.all(
-      daysRaw.map(async (day: any) => {
-        const events: Event[] = await fetchApprovedEventsByDay(day._id);
-        return {
-          ...day,
-          events,
-        };
-      })
-    );
+    const { days, categories } = await fetchTimeline();
+    
     return (
       <TimelineClient
         days={days}
@@ -43,16 +32,5 @@ const TimelineServer: React.FC<TimelineServerProps> = async ({ showFavoritesOnly
 export default TimelineServer;
 
 export async function getTimelineData() {
-  const daysRaw = await fetchDays();
-  const categories = await getCategoriesAction();
-  const days = await Promise.all(
-    daysRaw.map(async (day: any) => {
-      const events: Event[] = await fetchApprovedEventsByDay(day._id);
-      return {
-        ...day,
-        events,
-      };
-    })
-  );
-  return { days, categories };
+  return await fetchTimeline();
 } 

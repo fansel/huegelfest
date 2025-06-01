@@ -1,6 +1,6 @@
 "use server";
-import { createRegistration, getRegistrationByDeviceId } from '../services/registrationService';
-import { FestivalRegisterData } from '../FestivalRegisterForm';
+import { createRegistration, checkRegistrationStatus } from '../services/registrationService';
+import type { FestivalRegisterData } from '../components/steps/types';
 
 export async function registerFestival(data: FestivalRegisterData): Promise<{ success: boolean; error?: string }> {
   try {
@@ -11,14 +11,19 @@ export async function registerFestival(data: FestivalRegisterData): Promise<{ su
   }
 }
 
+
+
 /**
- * Lädt bestehende Registration-Daten für einen User
- * Verwendet nach Device Transfer um zu prüfen ob User bereits registriert ist
+ * Sichere Prüfung des Registrierungsstatus - gibt nur Status und Namen zurück
  */
-export async function getExistingRegistration(deviceId: string): Promise<{ success: boolean; data?: any; error?: string }> {
+export async function checkRegistrationStatusAction(deviceId: string): Promise<{ 
+  isRegistered: boolean; 
+  name?: string; 
+  error?: string 
+}> {
   try {
-    return await getRegistrationByDeviceId(deviceId);
+    return await checkRegistrationStatus(deviceId);
   } catch (error: any) {
-    return { success: false, error: error?.message || 'Unbekannter Fehler' };
+    return { isRegistered: false, error: error?.message || 'Unbekannter Fehler' };
   }
 } 

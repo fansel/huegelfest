@@ -20,10 +20,9 @@ import {
   transferDeviceAction, 
   checkActiveMagicCodeAction 
 } from '../actions/magicCodeActions';
-import { getUserWithRegistrationAction } from '@/features/auth/actions/userActions';
+import { checkRegistrationStatusAction } from '@/features/registration/actions/register';
 import { toast } from 'react-hot-toast';
-import { useWebSocket, WebSocketMessage } from '@/shared/hooks/useWebSocket';
-import { getWebSocketUrl } from '@/shared/utils/getWebSocketUrl';
+import { useGlobalWebSocket, WebSocketMessage } from '@/shared/hooks/useGlobalWebSocket';
 import UserSettingsCard from '../../settings/components/UserSettingsCard';
 import { useNetworkStatus } from '@/shared/hooks/useNetworkStatus';
 
@@ -46,7 +45,7 @@ interface UserInfo {
 
 export default function DeviceTransferSettings({ variant = 'row' }: DeviceTransferSettingsProps) {
   const deviceId = useDeviceId();
-  const isOnline = useNetworkStatus();
+  const { isOnline } = useNetworkStatus();
   const [isOpen, setIsOpen] = useState(false);
   const [currentStep, setCurrentStep] = useState<TransferStep>('initial');
   const [isLoading, setIsLoading] = useState(false);
@@ -60,84 +59,99 @@ export default function DeviceTransferSettings({ variant = 'row' }: DeviceTransf
   const [showDebug, setShowDebug] = useState(false);
 
   // NEU: WebSocket-Listener für Transfer-Bestätigungen
-  useWebSocket(
-    getWebSocketUrl(),
-    {
-      onMessage: (msg: WebSocketMessage) => {
-        if (msg.topic === 'device-transfer-confirmation') {
-          const payload = msg.payload as any;
-          // Prüfe ob die Nachricht für dieses Gerät ist (ALTES Gerät)
-          if (payload.oldDeviceId === deviceId) {
-            console.log('[DeviceTransferSettings] Transfer-Bestätigung erhalten:', payload);
-            
-            // Zeige erfolgreiche Bestätigung
-            toast.success(payload.message || 'Gerätewechsel erfolgreich!', {
-              duration: 5000,
-              icon: '✅'
-            });
-            
-            // WICHTIG: Dialog schließen - Transfer ist abgeschlossen!
-            setIsOpen(false);
-            setCurrentStep('initial');
-            setGeneratedCode(null);
-            setInputCode('');
-            setError(null);
-            setTransferredUser(null);
-            setTransferResult(null);
-            
-            // Toast mit weiteren Infos
-            setTimeout(() => {
-              toast.success(
-                'Dein Account ist jetzt auf dem neuen Gerät verfügbar. Dieses Gerät wird resettet.',
-                { duration: 7000, icon: '📱' }
-              );
-            }, 1000);
-            
-            // ✨ WICHTIG: Setze neue deviceId für dieses (alte) Gerät im localStorage
-            // Das alte Gerät bekommt eine neue Identität
-            if (payload.newFreshDeviceId) {
-              localStorage.setItem('deviceId', payload.newFreshDeviceId);
-              console.log(`[DeviceTransferSettings] Neue deviceId für altes Gerät gesetzt: ${payload.newFreshDeviceId}`);
-            }
-            
-            // Nach kurzer Verzögerung die Seite neu laden (für kompletten Reset)
-            setTimeout(() => {
-              window.location.reload();
-            }, 3000);
-          }
-        } else if (msg.topic === 'device-transfer-push-prompt') {
-          const payload = msg.payload as any;
-          // Prüfe ob die Nachricht für dieses Gerät ist (NEUES Gerät)
-          if (payload.deviceId === deviceId) {
-            console.log('[DeviceTransferSettings] Push-Prompt erhalten:', payload);
-            
-            // ✨ WICHTIG: Setze übertragene deviceId für dieses (neue) Gerät
-            // Das neue Gerät übernimmt die Identität des alten Geräts
-            if (payload.transferredDeviceId) {
-              localStorage.setItem('deviceId', payload.transferredDeviceId);
-              console.log(`[DeviceTransferSettings] Übertragene deviceId für neues Gerät gesetzt: ${payload.transferredDeviceId}`);
-            }
-            
-            // Push-Prompt wird von AutoPushPrompt automatisch gehandhabt 
-            // - kein manueller Code hier nötig
+  useGlobalWebSocket({
+    topicFilter: ['device-transfer-confirmation', 'device-transfer-push-prompt'],
+    onMessage: (msg: WebSocketMessage) => {
+      if (msg.topic === 'device-transfer-confirmation') {
+        const payload = msg.payload as any;
+        // Prüfe ob die Nachricht für dieses Gerät ist (ALTES Gerät)
+        if (payload.oldDeviceId === deviceId) {
+          console.log('[DeviceTransferSettings] Transfer-Bestätigung erhalten:', payload);
+          
+          // Zeige erfolgreiche Bestätigung
+          toast.success(payload.message || 'Gerätewechsel erfolgreich!', {
+            duration: 5000,
+            icon: '✅'
+          });
+          
+          // WICHTIG: Dialog schließen - Transfer ist abgeschlossen!
+          setIsOpen(false);
+          setCurrentStep('initial');
+          setGeneratedCode(null);
+          setInputCode('');
+          setError(null);
+          setTransferredUser(null);
+          setTransferResult(null);
+          
+          // Toast mit weiteren Infos
+          setTimeout(() => {
             toast.success(
-              `Willkommen zurück, ${payload.userName}! Die App wird neu geladen...`,
-              { duration: 4000, icon: '🔔' }
+              'Dein Account ist jetzt auf dem neuen Gerät verfügbar. Dieses Gerät wird resettet.',
+              { duration: 7000, icon: '📱' }
             );
-            
-            // Reload nach deviceId-Update
-            setTimeout(() => {
-              window.location.reload();
-            }, 2000);
+          }, 1000);
+          
+          // ✨ WICHTIG: Setze neue deviceId für dieses (alte) Gerät im localStorage
+          // Das alte Gerät bekommt eine neue Identität
+          if (payload.newFreshDeviceId) {
+            localStorage.setItem('deviceId', payload.newFreshDeviceId);
+            console.log(`[DeviceTransferSettings] Neue deviceId für altes Gerät gesetzt: ${payload.newFreshDeviceId}`);
           }
+          
+          // Nach kurzer Verzögerung die Seite neu laden (für kompletten Reset)
+          setTimeout(() => {
+            window.location.reload();
+          }, 3000);
         }
-      },
-      onError: (err) => {
-        console.error('[DeviceTransferSettings] WebSocket-Fehler:', err);
-      },
-      reconnectIntervalMs: 5000,
-    }
-  );
+      } else if (msg.topic === 'device-transfer-push-prompt') {
+        const payload = msg.payload as any;
+        // Prüfe ob die Nachricht für dieses Gerät ist (NEUES Gerät)
+        if (payload.deviceId === deviceId) {
+          console.log('[DeviceTransferSettings] Push-Prompt erhalten:', payload);
+          
+          // ✨ WICHTIG: Setze übertragene deviceId für dieses (neue) Gerät
+          // Das neue Gerät übernimmt die Identität des alten Geräts
+          if (payload.transferredDeviceId) {
+            localStorage.setItem('deviceId', payload.transferredDeviceId);
+            console.log(`[DeviceTransferSettings] Übertragene deviceId für neues Gerät gesetzt: ${payload.transferredDeviceId}`);
+          }
+          
+          // 🔔 WICHTIG: Setze Flag für automatische Push-Erkennung
+          localStorage.setItem('device-transfer-completed', 'true');
+          console.log('[DeviceTransferSettings] Device-Transfer Flag gesetzt für Push-Aktivierung');
+          
+          // 🚨 NEUE PUSH-STATUS-SPEICHERUNG: Informiere das Push-System über vorherigen Status
+          if (payload.pushWasActive) {
+            // Push-Nachrichten waren auf dem alten Gerät aktiv - soll automatisch reaktiviert werden
+            localStorage.setItem(`push-was-active-before-transfer-${payload.transferredDeviceId}`, 'true');
+            localStorage.setItem(`push-was-active-timestamp-${payload.transferredDeviceId}`, Date.now().toString());
+            console.log('[DeviceTransferSettings] Push war vorher aktiv - automatische Reaktivierung markiert');
+          } else {
+            // Push-Nachrichten waren nicht aktiv - soll nachgefragt werden
+            console.log('[DeviceTransferSettings] Push war vorher nicht aktiv - wird nachgefragt');
+          }
+          
+          // Trigger Device-Transfer Event für Push-Hook
+          window.dispatchEvent(new CustomEvent('device-transfer-completed'));
+          
+          // Push-Prompt wird von AutoPushPrompt automatisch gehandhabt 
+          // - kein manueller Code hier nötig
+          toast.success(
+            `Willkommen zurück, ${payload.userName}! Die App wird neu geladen...`,
+            { duration: 4000, icon: '🔔' }
+          );
+          
+          // Reload nach deviceId-Update
+          setTimeout(() => {
+            window.location.reload();
+          }, 2000);
+        }
+      }
+    },
+    onError: (err) => {
+      console.error('[DeviceTransferSettings] WebSocket-Fehler:', err);
+    },
+  });
 
   // Lade User-Informationen
   const loadUserInfo = async () => {
@@ -149,19 +163,19 @@ export default function DeviceTransferSettings({ variant = 'row' }: DeviceTransf
     console.log('[DeviceTransferSettings] Lade User-Info für deviceId:', deviceId);
     
     try {
-      const user = await getUserWithRegistrationAction(deviceId);
-      console.log('[DeviceTransferSettings] User-Daten erhalten:', user);
+      const status = await checkRegistrationStatusAction(deviceId);
+      console.log('[DeviceTransferSettings] Registration-Status erhalten:', status);
       
-      if (user) {
+      if (status && !status.error) {
         const userInfo = {
-          name: user.name,
-          hasRegistration: !!user.registrationId,
+          name: status.name || 'Nicht angemeldet',
+          hasRegistration: status.isRegistered,
           deviceId: deviceId
         };
         console.log('[DeviceTransferSettings] Setting userInfo:', userInfo);
         setUserInfo(userInfo);
       } else {
-        console.log('[DeviceTransferSettings] Kein User gefunden - setze Standard-Werte');
+        console.log('[DeviceTransferSettings] Kein Registration-Status gefunden - setze Standard-Werte');
         setUserInfo({
           name: 'Nicht angemeldet',
           hasRegistration: false,
@@ -169,7 +183,7 @@ export default function DeviceTransferSettings({ variant = 'row' }: DeviceTransf
         });
       }
     } catch (error) {
-      console.error('[DeviceTransferSettings] Fehler beim Laden der User-Info:', error);
+      console.error('[DeviceTransferSettings] Fehler beim Laden des Registration-Status:', error);
       setUserInfo({
         name: 'Nicht angemeldet',
         hasRegistration: false,
@@ -317,6 +331,21 @@ export default function DeviceTransferSettings({ variant = 'row' }: DeviceTransf
           console.log(`[DeviceTransferSettings] Neue Identität übernommen: ${result.transferredDeviceId}`);
         }
         
+        // 🔔 WICHTIG: Setze Flag für automatische Push-Erkennung
+        localStorage.setItem('device-transfer-completed', 'true');
+        console.log('[DeviceTransferSettings] Device-Transfer Flag gesetzt für Push-Aktivierung');
+        
+        // 🚨 NEUE PUSH-STATUS-SPEICHERUNG: Informiere das Push-System über vorherigen Status
+        if (result.pushSubscriptionInfo?.hadPushSubscription && result.transferredDeviceId) {
+          // Push-Nachrichten waren auf dem alten Gerät aktiv - soll automatisch reaktiviert werden
+          localStorage.setItem(`push-was-active-before-transfer-${result.transferredDeviceId}`, 'true');
+          localStorage.setItem(`push-was-active-timestamp-${result.transferredDeviceId}`, Date.now().toString());
+          console.log('[DeviceTransferSettings] Push war vorher aktiv - automatische Reaktivierung markiert');
+        } else {
+          // Push-Nachrichten waren nicht aktiv - soll nachgefragt werden  
+          console.log('[DeviceTransferSettings] Push war vorher nicht aktiv - wird nachgefragt');
+        }
+        
         // Reset Push-Permissions - entferne lokale Push-Daten
         try {
           localStorage.removeItem('push-subscription');
@@ -327,6 +356,9 @@ export default function DeviceTransferSettings({ variant = 'row' }: DeviceTransf
         }
         
         setTransferResult(result);
+        
+        // Trigger Device-Transfer Event für Push-Hook
+        window.dispatchEvent(new CustomEvent('device-transfer-completed'));
         
         // Automatisches Reload nach erfolgreichem Transfer
         // WebSocket-Handler übernimmt Push-Einrichtung automatisch

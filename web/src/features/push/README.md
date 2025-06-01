@@ -1,24 +1,100 @@
 # Push-Notification-System
 
-Ein einfaches und zuverlässiges Push-Notification-System für die Huegelfest PWA.
+Ein intelligentes und benutzerfreundliches Push-Notification-System für die Huegelfest PWA.
 
 ## Architektur
 
 ### Komponenten
 
-1. **`usePushSubscription` Hook** - Zentraler Hook für Push-Subscription-Management
+1. **`usePushSubscription` Hook** - Zentraler Hook für Push-Subscription-Management mit intelligentem Tracking
 2. **`PushNotificationSettings`** - UI-Komponente für Push-Einstellungen
-3. **`AutoPushPrompt`** - Dialog für Push-Permission-Anfragen
-4. **Push Actions** - Server-Actions für API-Kommunikation
+3. **`AutoPushPrompt`** - Dialog für Push-Permission-Anfragen mit kontextueller Nachrichtenwahl
+4. **`AutoPushActivator`** - Automatische Push-Aktivierung nach Gerätewechsel
+5. **Push Actions** - Server-Actions für API-Kommunikation
 
-### Einfacher Ansatz
+### Intelligente Push-Verwaltung
 
-Das System folgt einem direkten, unkomplizierten Ansatz:
+Das System unterscheidet zwischen verschiedenen Nutzerszenarien:
 
-- **Keine komplexe Caching-Logik** - Direkte Browser-API und Server-Abfragen
-- **Keine automatischen Popups** - Nur manuelle Triggers oder bei Device-Transfer
-- **Klare Zustandsverwaltung** - Ein Hook, ein State, eine Quelle der Wahrheit
-- **Standard React-Patterns** - Keine custom Event-Systeme oder komplexe Refs
+- **Automatische Aktivierung**: Nur wenn Browser-Permission vorhanden UND nie manuell deaktiviert
+- **Gerätewechsel-Logik**: Berücksichtigt vorherigen Push-Status auf altem Gerät
+- **Manuelle Deaktivierung**: Verhindert unerwünschte automatische Reaktivierung
+- **Kontextuelle Nachfragen**: Angepasste Nachrichten je nach Situation
+
+## Push-Notification-Verhalten im Detail
+
+### 1. Erster App-Start
+
+**Automatisches Nachfragen:**
+- ✅ Browser-Permission ist `default` (noch nie gefragt)
+- ✅ App wurde noch nie gestartet auf diesem Gerät
+- 🔔 **Sofortiger Push-Prompt** mit "Ja" / "Nein" Optionen
+
+### 2. Normale App-Nutzung (ohne Gerätewechsel)
+
+**Automatische Aktivierung:**
+- ✅ Browser-Permission bereits `granted` 
+- ✅ Push-Nachrichten wurden NIE manuell deaktiviert
+- ❌ Push-Nachrichten wurden manuell deaktiviert → KEINE automatische Aktivierung
+
+**Manueller Benutzer-Eingriff:**
+- **Aktivierung:** Setzt `manually-disabled` Flag zurück
+- **Deaktivierung:** Setzt `manually-disabled` Flag (verhindert zukünftige Auto-Aktivierung)
+
+### 3. Gerätewechsel (Device Transfer)
+
+**VEREINFACHT: Keine Push-Nachfragen auf dem alten Gerät!**
+
+Das neue Gerät entscheidet selbst über Push-Benachrichtigungen basierend auf dem normalen "Erster App-Start" Verhalten. Keine komplizierte Übertragung von Push-Status oder Nachfragen auf dem alten Gerät.
+
+### 4. Tracking-System
+
+Das System verwendet localStorage für geräte-spezifisches Tracking:
+
+```typescript
+// Manuelle Deaktivierung
+`push-manually-disabled-${deviceId}` = 'true'
+`push-manually-disabled-timestamp-${deviceId}` = timestamp
+
+// Erster App-Start
+`push-asked-before-${deviceId}` = 'true'
+```
+
+### 5. Wann werden Nachfragen angezeigt?
+
+**In der gesamten App erscheinen Push-Prompts bei:**
+
+1. **Erster App-Start**
+   - Trigger: Browser-Permission ist `default` + noch nie gefragt
+   - Ort: Automatisch via `AutoPushPrompt` 
+   - Grund: `first-start`
+   - Optionen: **Nur "Ja" / "Nein"**
+
+2. **Manuelle Anfrage über Settings**
+   - Trigger: Benutzer klickt "Erlauben" Button
+   - Ort: `PushNotificationSettings` Komponente
+   - Grund: `manual`
+   - Optionen: **Nur "Ja" / "Nein"**
+
+### 6. Aktivierungs-Flow Übersicht
+
+```mermaid
+flowchart TD
+    A[App Start] --> B{Erster Start?}
+    B -->|Ja| C[Push-Prompt zeigen]
+    B -->|Nein| D{Browser Permission?}
+    
+    D -->|granted| E{Manuell deaktiviert?}
+    D -->|default| F[Nichts tun]
+    D -->|denied| G[Browser-Settings Dialog]
+    
+    E -->|Nein| H[Automatisch aktivieren]
+    E -->|Ja| F
+    
+    C --> I[Nur Ja/Nein Optionen]
+    H --> J[Push aktiv]
+    F --> K[Push inaktiv]
+```
 
 ## Verwendung
 
@@ -35,7 +111,8 @@ function MyComponent() {
     error,
     subscribe,
     unsubscribe,
-    refreshStatus
+    refreshStatus,
+    autoActivateIfPermissionGranted
   } = usePushSubscription();
 
   return (
@@ -49,50 +126,64 @@ function MyComponent() {
 }
 ```
 
-### Manueller Push-Prompt
+### Manueller Push-Prompt mit custom Message
 
 ```typescript
-// Event dispatchen um Push-Prompt anzuzeigen
+// Event dispatchen um Push-Prompt mit eigener Nachricht anzuzeigen
 window.dispatchEvent(new CustomEvent('triggerPushPrompt', {
-  detail: { reason: 'device-transfer' }
+  detail: { 
+    reason: 'device-transfer-ask',
+    message: 'Benutzerdefinierte Nachricht hier'
+  }
 }));
 ```
 
-### PushNotificationSettings Komponente
+### AutoPushActivator Integration
 
 ```typescript
-import PushNotificationSettings from '@/features/settings/components/PushNotificationSettings';
-
-function Settings() {
-  return (
-    <div>
-      <PushNotificationSettings variant="row" />
-    </div>
-  );
-}
+// In layout.tsx eingebunden - läuft automatisch
+<AutoPushActivator />
+<AutoPushPrompt />
 ```
 
 ## Funktionsweise
 
 ### 1. Status-Prüfung
 
-Der Hook prüft den Push-Status in drei Schritten:
+Der Hook prüft den Push-Status in mehreren Schritten:
 
 1. **Browser-Permission** - `Notification.permission`
 2. **Browser-Subscription** - `pushManager.getSubscription()`
-3. **Server-Status** - API-Call zu `/api/push/check`
+3. **Server-Subscription** - API-Aufruf an Backend
+4. **Tracking-Status** - localStorage für manuelle Deaktivierung
+5. **Transfer-Status** - localStorage für Device-Transfer-Info
 
-### 2. Subscribe-Prozess
+### 2. Automatische Aktivierung
 
-1. Permission anfordern: `Notification.requestPermission()`
-2. Service Worker registrieren
-3. Push-Subscription erstellen
-4. Subscription an Server senden
+Erfolgt nur wenn ALLE Bedingungen erfüllt sind:
+- ✅ Browser unterstützt Push
+- ✅ Browser-Permission = `granted`
+- ✅ Keine manuelle Deaktivierung in der Vergangenheit
+- ✅ Online-Verbindung verfügbar
 
-### 3. Unsubscribe-Prozess
+### 3. Device Transfer Integration
 
-1. Browser-Subscription entfernen
-2. Server über Unsubscribe informieren
+- **Server-seitig**: `magicCodeService.ts` sendet Push-Status-Info
+- **Client-seitig**: `DeviceTransferSettings.tsx` empfängt und speichert Status
+- **Push-System**: `usePushSubscription.ts` entscheidet basierend auf gespeicherten Daten
+
+## Fehlerbehandlung
+
+- **Offline-Modus**: Lokale Deaktivierung funktioniert, Server-Sync später
+- **Server-Fehler**: Stumme Behandlung, keine störenden Error-Toasts
+- **Browser-Inkompatibilität**: Graceful Degradation mit informativen Nachrichten
+
+## Besonderheiten
+
+- **Geräte-spezifisches Tracking**: Jede deviceId hat eigene Push-Historie
+- **Zeitstempel-Logging**: Für Debugging und potentielle Cleanup-Jobs
+- **Event-basierte Kommunikation**: Lose Kopplung zwischen Komponenten
+- **Kontextuelle UX**: Nachrichten passen sich der Situation an
 
 ## Konfiguration
 

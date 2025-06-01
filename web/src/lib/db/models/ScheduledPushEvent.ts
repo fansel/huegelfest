@@ -11,6 +11,7 @@ export interface IScheduledPushEvent extends Document {
   createdAt: Date;
   updatedAt: Date;
   sendToAll?: boolean;
+  groupId?: mongoose.Types.ObjectId; // For dynamic group-based push notifications
 }
 
 const scheduledPushEventSchema = new mongoose.Schema<IScheduledPushEvent>({
@@ -22,6 +23,7 @@ const scheduledPushEventSchema = new mongoose.Schema<IScheduledPushEvent>({
   subscribers: [{ type: mongoose.Schema.Types.ObjectId, ref: 'Subscriber', default: [] }],
   agendaJobId: { type: String },
   sendToAll: { type: Boolean, default: false },
+  groupId: { type: mongoose.Schema.Types.ObjectId, ref: 'Group' }, // For dynamic group resolution
 }, {
   timestamps: true,
   toJSON: {

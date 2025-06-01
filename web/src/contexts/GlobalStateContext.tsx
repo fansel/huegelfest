@@ -2,8 +2,7 @@
 
 import React, { createContext, useContext, useEffect, useState, ReactNode } from 'react';
 import { getSignupOpen, setSignupOpen as setSignupOpenAction } from '@/features/globalState/actions/globalStateActions';
-import { useWebSocket, WebSocketMessage } from '@/shared/hooks/useWebSocket';
-import { getWebSocketUrl } from '@/shared/utils/getWebSocketUrl';
+import { useGlobalWebSocket, WebSocketMessage } from '@/shared/hooks/useGlobalWebSocket';
 
 interface GlobalStateContextProps {
   signupOpen: boolean;
@@ -21,17 +20,14 @@ export const GlobalStateProvider: React.FC<{ children: ReactNode }> = ({ childre
   }, []);
 
   // WebSocket-Updates
-  useWebSocket(
-    getWebSocketUrl(),
-    {
-      onMessage: (msg: WebSocketMessage) => {
-        if (msg.topic === 'globalState' && typeof (msg.payload as any).signupOpen === 'boolean') {
-          setSignupOpenState((msg.payload as { signupOpen: boolean }).signupOpen);
-        }
-      },
-      reconnectIntervalMs: 5000,
-    }
-  );
+  useGlobalWebSocket({
+    topicFilter: ['globalState'],
+    onMessage: (msg: WebSocketMessage) => {
+      if (msg.topic === 'globalState' && typeof (msg.payload as any).signupOpen === 'boolean') {
+        setSignupOpenState((msg.payload as { signupOpen: boolean }).signupOpen);
+      }
+    },
+  });
 
   // Setter, der auch die Action triggert
   const setSignupOpen = async (open: boolean) => {

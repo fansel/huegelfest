@@ -1,6 +1,6 @@
 export { IntroStep } from './IntroStep';
 export { NameStep } from './NameStep';
-export { TimeRangeStep } from './TimeRangeStep';
+export { default as TimeRangeStep } from './TimeRangeStep';
 export { FinanceStep } from './FinanceStep';
 export { TravelStep } from './TravelStep';
 export { SoberDrivingStep } from './SoberDrivingStep';
@@ -15,6 +15,7 @@ export { SleepingStep } from './SleepingStep';
 export { MedicStep } from './MedicStep';
 export { ConcernsStep } from './ConcernsStep';
 export { SummaryStep } from './SummaryStep';
+export { ContactStep } from './ContactStep';
 
 export * from './types';
 export * from './FormComponents';
