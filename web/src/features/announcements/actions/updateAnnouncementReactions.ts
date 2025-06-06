@@ -1,12 +1,18 @@
 "use server";
 
 import { updateAnnouncementReaction } from '../services/announcementService';
+import { broadcast } from '@/lib/websocket/broadcast';
 import { ReactionType } from '@/shared/types/types';
 
 export async function updateAnnouncementReactionsAction(
   announcementId: string,
-  reactionType: ReactionType,
-  deviceId: string
+  reactionType: ReactionType
 ) {
-  return await updateAnnouncementReaction(announcementId, reactionType, deviceId);
+  // Update in DB - Service verwendet nun Session-basierte Auth
+  const result = await updateAnnouncementReaction(announcementId, reactionType);
+  
+  // WebSocket-Broadcast für alle Clients
+  await broadcast('announcement-reaction-updated', { announcementId });
+  
+  return result;
 } 

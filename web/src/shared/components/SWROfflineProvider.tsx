@@ -3,6 +3,10 @@
 import { SWRConfig } from 'swr';
 import { ReactNode } from 'react';
 import { useNetworkStatus } from '@/shared/hooks/useNetworkStatus';
+import { useEffect, useCallback } from 'react';
+
+// Debug nur in Entwicklung aktivieren
+const DEBUG = process.env.NODE_ENV === 'development' && false;
 
 /**
  * Konfiguriert SWR für optimale Offline-Funktionalität:
@@ -13,6 +17,21 @@ import { useNetworkStatus } from '@/shared/hooks/useNetworkStatus';
 export function SWROfflineProvider({ children }: { children: ReactNode }) {
   const { isOnline } = useNetworkStatus();
   
+  // Cache aus localStorage laden
+  useEffect(() => {
+    try {
+      const storedCache = localStorage.getItem('swr-cache');
+      if (storedCache) {
+        const parsedCache = JSON.parse(storedCache);
+        if (DEBUG) {
+          console.log('[SWR] Cache aus localStorage geladen:', Object.keys(parsedCache));
+        }
+      }
+    } catch (error) {
+      console.error('[SWR] Fehler beim Laden des Cache:', error);
+    }
+  }, []);
+
   return (
     <SWRConfig
       value={{
@@ -30,7 +49,9 @@ export function SWROfflineProvider({ children }: { children: ReactNode }) {
                 Object.keys(parsedCache).forEach(key => {
                   cache.set(key, parsedCache[key]);
                 });
-                console.log('[SWR] Cache aus localStorage geladen:', Object.keys(parsedCache));
+                if (DEBUG) {
+                  console.log('[SWR] Cache aus localStorage geladen:', Object.keys(parsedCache));
+                }
               }
             } catch (error) {
               console.error('[SWR] Fehler beim Laden des Caches:', error);
@@ -44,7 +65,9 @@ export function SWROfflineProvider({ children }: { children: ReactNode }) {
                   cacheObj[key] = value;
                 }
                 localStorage.setItem('swr-cache', JSON.stringify(cacheObj));
-                console.log('[SWR] Cache in localStorage gespeichert:', Object.keys(cacheObj));
+                if (DEBUG) {
+                  console.log('[SWR] Cache in localStorage gespeichert:', Object.keys(cacheObj));
+                }
               } catch (error) {
                 console.error('[SWR] Fehler beim Speichern des Caches:', error);
               }
@@ -86,13 +109,15 @@ export function SWROfflineProvider({ children }: { children: ReactNode }) {
           console.warn(`[SWR] Fehler beim Laden von "${key}"`, error);
           
           if (!isOnline) {
-            console.log('[SWR] Offline-Modus: Verwende Cache-Daten für', key);
+            if (DEBUG) {
+              console.log('[SWR] Offline-Modus: Verwende Cache-Daten für', key);
+            }
           }
         },
         
         // Bessere Cache-Nutzung im Offline-Modus
         onSuccess: (data, key) => {
-          if (isOnline) {
+          if (isOnline && DEBUG) {
             console.log(`[SWR] Erfolgreich geladen: "${key}"`);
           }
         },

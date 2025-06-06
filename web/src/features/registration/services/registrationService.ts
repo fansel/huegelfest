@@ -5,129 +5,123 @@ import { connectDB } from '@/lib/db/connector';
 import type { FestivalRegisterData } from '../components/steps/types';
 import { logger } from '@/lib/logger';
 import mongoose from 'mongoose';
+import { verifySession } from '@/features/auth/actions/userAuth';
+import { registerUser } from '@/features/auth/services/authService';
 
-// Import der einheitlichen Device-ID-Generierung
-function generateDeviceId(): string {
-  const chars = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789';
-  let result = '';
-  for (let i = 0; i < 6; i++) {
-    result += chars.charAt(Math.floor(Math.random() * chars.length));
+/**
+ * Modernisierter Registration Service - verwendet das neue Auth-System
+ */
+
+/**
+ * Erstellt eine neue Registration für die Nachmeldung (ohne Auth-Check)
+ */
+export async function createLateRegistration(data: FestivalRegisterData & { username: string, password: string }) {
+  await connectDB();
+  
+  try {
+    logger.info(`[LateRegistration] Starte Nachmeldung für ${data.name}`);
+
+    // 1. Erstelle einen neuen User Account
+    const user = await registerUser(
+      data.name,
+      data.username,
+      data.password,
+      'user',
+      data.email || undefined
+    );
+    logger.info(`[LateRegistration] User-Account erstellt: ${user._id}`);
+
+    // 2. Erstelle die Registration
+    const registrationData = {
+      name: data.name,
+      days: data.days,
+      isMedic: data.isMedic,
+      travelType: data.travelType,
+      equipment: data.equipment,
+      concerns: data.concerns,
+      wantsToOfferWorkshop: data.wantsToOfferWorkshop,
+      sleepingPreference: data.sleepingPreference,
+      lineupContribution: data.lineupContribution,
+      canStaySober: data.canStaySober,
+      wantsAwareness: data.wantsAwareness,
+      programContribution: data.programContribution,
+      hasConcreteIdea: data.hasConcreteIdea,
+      wantsKitchenHelp: data.wantsKitchenHelp,
+      allergies: data.allergies,
+      allowsPhotos: data.allowsPhotos,
+      wantsLineupContribution: data.wantsLineupContribution,
+      contactType: data.contactType,
+      contactInfo: data.contactInfo,
+    };
+
+    const registration = new Registration(registrationData);
+    await registration.save();
+    logger.info(`[LateRegistration] Registration erstellt: ${registration._id}`);
+
+    // 3. Verknüpfe Registration mit User
+    user.registrationId = registration._id as mongoose.Types.ObjectId;
+    await user.save();
+    logger.info(`[LateRegistration] User ${user._id} mit Registration ${registration._id} verknüpft`);
+
+    return registration;
+  } catch (error) {
+    logger.error('[LateRegistration] Fehler bei Nachmeldung:', error);
+    throw error;
   }
-  return result;
 }
 
 export async function createRegistration(data: FestivalRegisterData) {
   await connectDB();
   
   try {
-    // NEUE LOGIK: Prüfe deviceID-Konflikte und generiere neue deviceID wenn nötig
-    let finalDeviceId = data.deviceId;
-    
-    if (data.deviceId && data.name.trim()) {
-      const existingUser = await User.findByDeviceId(data.deviceId);
-      
-      if (existingUser && existingUser.name.trim() !== data.name.trim()) {
-        // DeviceID wird bereits von einem anderen User verwendet!
-        // Generiere neue deviceID für diese Anmeldung
-        let newDeviceId;
-        let attempts = 0;
-        const maxAttempts = 10;
-        
-        do {
-          newDeviceId = generateDeviceId();
-          attempts++;
-          const conflict = await User.findByDeviceId(newDeviceId);
-          if (!conflict) break;
-        } while (attempts < maxAttempts);
-        
-        if (attempts >= maxAttempts) {
-          throw new Error('Konnte keine freie Device ID generieren');
-        }
-        
-        finalDeviceId = newDeviceId;
-        logger.info(`[Registration] DeviceID-Konflikt erkannt! ${data.deviceId} bereits von ${existingUser.name} verwendet. Neue deviceID generiert: ${finalDeviceId}`);
-      }
+    // Prüfe ob User authentifiziert ist
+    const sessionData = await verifySession();
+    if (!sessionData) {
+      throw new Error('Benutzer muss angemeldet sein um sich zu registrieren');
     }
     
-    // Erstelle die Registration mit der finalen deviceID
+    logger.info(`[Registration] Starte Registrierung für User ${sessionData.userId} (${sessionData.email})`);
+    
+    // Prüfe ob User bereits eine Registration hat
+    const existingUser = await User.findById(sessionData.userId);
+    if (!existingUser) {
+      throw new Error('Benutzer nicht gefunden');
+    }
+    
+    if (existingUser.registrationId) {
+      throw new Error('Benutzer ist bereits registriert');
+    }
+    
     const registrationData = {
       ...data,
-      deviceId: finalDeviceId
     };
     
     const reg = new Registration(registrationData);
     await reg.save();
-    logger.info(`[Registration] Registration erstellt: ${reg._id} mit deviceId: ${finalDeviceId}`);
+    logger.info(`[Registration] Registration erstellt: ${reg._id} für User: ${sessionData.userId}`);
     
-    // Wenn deviceId vorhanden ist, erstelle automatisch einen User
-    if (finalDeviceId && data.name.trim()) {
-      logger.info(`[Registration] Versuche User-Erstellung für deviceId: ${finalDeviceId}, name: ${data.name}`);
-      
-      try {
-        // Prüfe ob bereits ein User mit dieser deviceId existiert
-        const existingUser = await User.findByDeviceId(finalDeviceId);
-        
-        if (existingUser) {
-          logger.info(`[Registration] Bestehender User gefunden: ${existingUser._id}`);
-          // Aktualisiere bestehenden User mit neuer Registration
-          existingUser.name = data.name;
-          existingUser.registrationId = reg._id as mongoose.Types.ObjectId;
-          await existingUser.save();
-          
-          // Automatische Gruppenzuweisung für bestehende User ohne Gruppe
-          if (!existingUser.groupId) {
-            try {
-              const randomGroup = await Group.getRandomAssignableGroup();
-              if (randomGroup) {
-                await existingUser.assignToGroup(randomGroup._id as mongoose.Types.ObjectId);
-                logger.info(`[Registration] Bestehender User ${existingUser._id} automatisch zu Gruppe ${randomGroup.name} zugewiesen`);
-              }
-            } catch (groupError) {
-              logger.warn('[Registration] Fehler bei automatischer Gruppenzuweisung für bestehenden User:', groupError);
-            }
-          }
-          
-          logger.info(`[Registration] Bestehender User aktualisiert: ${existingUser._id}`);
-        } else {
-          logger.info(`[Registration] Kein existierender User gefunden, erstelle neuen User`);
-          
-          // Erstelle neuen User
-          const newUser = await User.create({
-            name: data.name,
-            deviceId: finalDeviceId,
-            registrationId: reg._id,
-            isActive: true
-          });
-          
-          logger.info(`[Registration] Neuer User erfolgreich erstellt: ${newUser._id} für Device: ${finalDeviceId}`);
-          
-          // Automatische Gruppenzuweisung für neue User
-          try {
-            const randomGroup = await Group.getRandomAssignableGroup();
-            if (randomGroup) {
-              await newUser.assignToGroup(randomGroup._id as mongoose.Types.ObjectId);
-              logger.info(`[Registration] Neuer User ${newUser._id} automatisch zu Gruppe ${randomGroup.name} zugewiesen`);
-            } else {
-              logger.info(`[Registration] Neuer User ${newUser._id} erstellt - keine verfügbare Gruppe für automatische Zuweisung`);
-            }
-          } catch (groupError) {
-            logger.warn('[Registration] Fehler bei automatischer Gruppenzuweisung für neuen User:', groupError);
-          }
-        }
-      } catch (userError) {
-        // User-Erstellung sollte die Registration nicht verhindern
-        logger.error('[Registration] Fehler bei User-Erstellung:', userError);
-        // Werfe den Fehler nicht weiter, aber logge alle Details
-        console.error('[Registration] Detaillierter User-Erstellungsfehler:', {
-          error: userError,
-          deviceId: finalDeviceId,
-          name: data.name,
-          registrationId: reg._id
-        });
-      }
-    } else {
-      logger.warn(`[Registration] User-Erstellung übersprungen - deviceId: ${finalDeviceId}, name: "${data.name}"`);
+    // Verknüpfe Registration mit User
+    existingUser.registrationId = reg._id as mongoose.Types.ObjectId;
+    // Aktualisiere Name falls geändert
+    if (data.name.trim()) {
+      existingUser.name = data.name;
     }
+    await existingUser.save();
+    
+    // Automatische Gruppenzuweisung falls noch keine Gruppe
+    if (!existingUser.groupId) {
+      try {
+        const randomGroup = await Group.getRandomAssignableGroup();
+        if (randomGroup) {
+          await existingUser.assignToGroup(randomGroup._id as mongoose.Types.ObjectId);
+          logger.info(`[Registration] User ${existingUser._id} automatisch zu Gruppe ${randomGroup.name} zugewiesen`);
+        }
+      } catch (groupError) {
+        logger.warn('[Registration] Fehler bei automatischer Gruppenzuweisung:', groupError);
+      }
+    }
+    
+    logger.info(`[Registration] User ${sessionData.userId} erfolgreich mit Registration ${reg._id} verknüpft`);
     
     return reg;
   } catch (error) {
@@ -137,6 +131,12 @@ export async function createRegistration(data: FestivalRegisterData) {
 }
 
 export async function getRegistrations() {
+  // Prüfe Admin-Berechtigung
+  const sessionData = await verifySession();
+  if (!sessionData || sessionData.role !== 'admin') {
+    throw new Error('Admin-Berechtigung erforderlich');
+  }
+  
   const docs = await Registration.find().sort({ createdAt: -1 }).lean().exec();
   return docs.map((doc) => ({
     ...doc,
@@ -146,6 +146,12 @@ export async function getRegistrations() {
 }
 
 export async function updateRegistrationStatus(id: string, updates: { paid?: boolean; checkedIn?: boolean }) {
+  // Prüfe Admin-Berechtigung
+  const sessionData = await verifySession();
+  if (!sessionData || sessionData.role !== 'admin') {
+    throw new Error('Admin-Berechtigung erforderlich');
+  }
+  
   const doc = await Registration.findByIdAndUpdate(id, updates, { new: true }).lean().exec();
   if (!doc) return null;
   return {
@@ -156,6 +162,12 @@ export async function updateRegistrationStatus(id: string, updates: { paid?: boo
 }
 
 export async function deleteRegistration(id: string): Promise<boolean> {
+  // Prüfe Admin-Berechtigung
+  const sessionData = await verifySession();
+  if (!sessionData || sessionData.role !== 'admin') {
+    throw new Error('Admin-Berechtigung erforderlich');
+  }
+  
   const res = await Registration.findByIdAndDelete(id);
   return !!res;
 }
@@ -163,6 +175,12 @@ export async function deleteRegistration(id: string): Promise<boolean> {
 export async function updateRegistration(id: string, updates: Partial<IRegistration>): Promise<{ success: boolean; data?: any; error?: string }> {
   if (!id) {
     return { success: false, error: 'ID ist erforderlich' };
+  }
+  
+  // Prüfe Admin-Berechtigung
+  const sessionData = await verifySession();
+  if (!sessionData || sessionData.role !== 'admin') {
+    return { success: false, error: 'Admin-Berechtigung erforderlich' };
   }
   
   await connectDB();
@@ -193,66 +211,22 @@ export async function updateRegistration(id: string, updates: Partial<IRegistrat
 } 
 
 /**
- * Lädt Registration-Daten für einen User basierend auf deviceId
- * Wird verwendet um nach Device Transfer die bestehende Registration zu laden
+ * Lädt Registration-Daten für den aktuell eingeloggten User
  */
-export async function getRegistrationByDeviceId(deviceId: string): Promise<{ success: boolean; data?: any; error?: string }> {
-  if (!deviceId) {
-    return { success: false, error: 'Device ID ist erforderlich' };
+export async function getCurrentUserRegistration(): Promise<{ success: boolean; data?: any; error?: string }> {
+  const sessionData = await verifySession();
+  if (!sessionData) {
+    return { success: false, error: 'Nicht angemeldet' };
   }
   
   await connectDB();
   
   try {
-    // Finde User mit Registration
-    let user = await User.findOne({ deviceId, isActive: true })
+    // Lade User mit Registration
+    const user = await User.findById(sessionData.userId)
       .populate('registrationId')
       .lean()
       .exec();
-    
-    if (!user || !user.registrationId) {
-      // NEUE LOGIK: Suche auch nach Registration ohne User-Verknüpfung
-      // Das kann passieren wenn Registration existiert aber User fehlt
-      const orphanRegistration = await Registration.findOne({ deviceId }).lean().exec();
-      
-      if (orphanRegistration) {
-        logger.info(`[Registration] Orphan Registration gefunden für ${deviceId}, erstelle User`);
-        
-        try {
-          // Erstelle User für bestehende Registration
-          const newUser = await User.create({
-            name: orphanRegistration.name,
-            deviceId: deviceId,
-            registrationId: orphanRegistration._id,
-            isActive: true
-          });
-          
-          // Automatische Gruppenzuweisung
-          try {
-            const randomGroup = await Group.getRandomAssignableGroup();
-            if (randomGroup) {
-              await newUser.assignToGroup(randomGroup._id as mongoose.Types.ObjectId);
-              logger.info(`[Registration] User ${newUser._id} automatisch zu Gruppe ${randomGroup.name} zugewiesen`);
-            }
-          } catch (groupError) {
-            logger.warn('[Registration] Fehler bei automatischer Gruppenzuweisung:', groupError);
-          }
-          
-          // Lade den neu erstellten User mit populated Registration
-          user = await User.findById(newUser._id)
-            .populate('registrationId')
-            .lean()
-            .exec();
-            
-          logger.info(`[Registration] User für bestehende Registration erstellt: ${newUser._id}`);
-        } catch (userError) {
-          logger.error('[Registration] Fehler beim Erstellen des Users für bestehende Registration:', userError);
-          return { success: false, error: 'Fehler beim Erstellen des Benutzers' };
-        }
-      } else {
-        return { success: false, error: 'Keine Registration gefunden' };
-      }
-    }
     
     if (!user || !user.registrationId) {
       return { success: false, error: 'Keine Registration gefunden' };
@@ -272,7 +246,6 @@ export async function getRegistrationByDeviceId(deviceId: string): Promise<{ suc
       wantsToOfferWorkshop: registration.wantsToOfferWorkshop || '',
       sleepingPreference: registration.sleepingPreference || 'bed',
       lineupContribution: registration.lineupContribution || '',
-      deviceId: deviceId,
       // Neue Felder
       canStaySober: registration.canStaySober || false,
       wantsAwareness: registration.wantsAwareness || false,
@@ -285,14 +258,7 @@ export async function getRegistrationByDeviceId(deviceId: string): Promise<{ suc
       contactInfo: registration.contactInfo || '',
     };
     
-    logger.info(`[Registration] Bestehende Registration für ${deviceId} geladen:`, {
-      name: registrationData.name,
-      days: registrationData.days,
-    });
-    
-    // Debug: Logge alle Details der geladenen Registration
-    console.log('[RegistrationService] Raw registration from DB:', registration);
-    console.log('[RegistrationService] Converted registrationData:', registrationData);
+    logger.info(`[Registration] Registration für User ${sessionData.userId} geladen`);
     
     // Serialisiere die vollständige Registration korrekt
     const serializedRegistration = {
@@ -344,42 +310,29 @@ export async function getRegistrationByDeviceId(deviceId: string): Promise<{ suc
 } 
 
 /**
- * Sichere Prüfung ob User angemeldet ist - gibt nur Status und Namen zurück
- * NICHT die kompletten Registrierungsdaten!
+ * Prüfung ob der aktuelle User bereits registriert ist
  */
-export async function checkRegistrationStatus(deviceId: string): Promise<{ 
+export async function checkCurrentUserRegistrationStatus(): Promise<{ 
   isRegistered: boolean; 
   name?: string; 
   error?: string 
 }> {
-  if (!deviceId) {
-    return { isRegistered: false, error: 'Device ID ist erforderlich' };
+  const sessionData = await verifySession();
+  if (!sessionData) {
+    return { isRegistered: false, error: 'Nicht angemeldet' };
   }
   
   await connectDB();
   
   try {
-    // Suche nur nach User und prüfe ob Registration verknüpft ist
-    const user = await User.findOne({ deviceId, isActive: true })
+    // Suche User und prüfe ob Registration verknüpft ist
+    const user = await User.findById(sessionData.userId)
       .select('name registrationId') // Nur diese Felder laden
       .lean()
       .exec();
     
     if (!user) {
-      // Fallback: Prüfe ob orphan Registration existiert
-      const orphanRegistration = await Registration.findOne({ deviceId })
-        .select('name') // Nur Name
-        .lean()
-        .exec();
-        
-      if (orphanRegistration) {
-        return { 
-          isRegistered: true, 
-          name: orphanRegistration.name 
-        };
-      }
-      
-      return { isRegistered: false };
+      return { isRegistered: false, error: 'Benutzer nicht gefunden' };
     }
     
     // User gefunden - prüfe ob Registration verknüpft
@@ -392,7 +345,7 @@ export async function checkRegistrationStatus(deviceId: string): Promise<{
     
     return { isRegistered: false };
   } catch (error) {
-    logger.error('[Registration] Fehler bei checkRegistrationStatus:', error);
+    logger.error('[Registration] Fehler bei checkCurrentUserRegistrationStatus:', error);
     return { isRegistered: false, error: 'Fehler beim Prüfen des Status' };
   }
 } 

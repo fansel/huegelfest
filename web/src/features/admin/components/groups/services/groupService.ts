@@ -62,7 +62,7 @@ export async function createGroup(data: CreateGroupData): Promise<{ success: boo
     await group.save();
     
     const groupData: GroupData = {
-      id: group._id.toString(),
+      id: String(group._id),
       name: group.name,
       color: group.color,
       isAssignable: group.isAssignable,
@@ -113,7 +113,7 @@ export async function updateGroup(
     }
     
     const groupData: GroupData = {
-      id: group._id.toString(),
+      id: String(group._id),
       name: group.name,
       color: group.color,
       isAssignable: group.isAssignable,
@@ -177,9 +177,8 @@ export async function getGroupMembers(groupId: string): Promise<{ success: boole
     .exec();
     
     const members: GroupMember[] = users.map(user => ({
-      userId: user._id.toString(),
+      userId: String(user._id),
       name: user.name,
-      deviceId: user.deviceId,
       isRegistered: !!user.registrationId,
       registrationDate: user.registrationId ? user.createdAt.toISOString() : undefined,
       joinedGroupAt: user.updatedAt.toISOString()
@@ -196,13 +195,13 @@ export async function getGroupMembers(groupId: string): Promise<{ success: boole
  * Weist einen Benutzer einer Gruppe zu
  */
 export async function assignUserToGroup(
-  deviceId: string, 
+  userId: string, 
   groupId: string
 ): Promise<{ success: boolean; error?: string }> {
   await connectDB();
   
   try {
-    const user = await User.findOne({ deviceId });
+    const user = await User.findById(userId);
     if (!user) {
       return { success: false, error: 'Benutzer nicht gefunden' };
     }
@@ -222,7 +221,7 @@ export async function assignUserToGroup(
       }
     }
     
-    await user.assignToGroup(new mongoose.Types.ObjectId(groupId));
+    await user.assignToGroup(new mongoose.Types.ObjectId(String(group._id)));
     
     logger.info(`[GroupService] Benutzer ${user.name} zu Gruppe ${group.name} zugewiesen`);
     return { success: true };
@@ -235,11 +234,11 @@ export async function assignUserToGroup(
 /**
  * Entfernt einen Benutzer aus seiner Gruppe
  */
-export async function removeUserFromGroup(deviceId: string): Promise<{ success: boolean; error?: string }> {
+export async function removeUserFromGroup(userId: string): Promise<{ success: boolean; error?: string }> {
   await connectDB();
   
   try {
-    const user = await User.findOne({ deviceId });
+    const user = await User.findById(userId);
     if (!user) {
       return { success: false, error: 'Benutzer nicht gefunden' };
     }
@@ -258,11 +257,11 @@ export async function removeUserFromGroup(deviceId: string): Promise<{ success: 
 /**
  * Weist einen Benutzer automatisch einer zufälligen Gruppe zu
  */
-export async function assignUserToRandomGroup(deviceId: string): Promise<{ success: boolean; groupName?: string; error?: string }> {
+export async function assignUserToRandomGroup(userId: string): Promise<{ success: boolean; groupName?: string; error?: string }> {
   await connectDB();
   
   try {
-    const user = await User.findOne({ deviceId });
+    const user = await User.findById(userId);
     if (!user) {
       return { success: false, error: 'Benutzer nicht gefunden' };
     }
@@ -273,7 +272,7 @@ export async function assignUserToRandomGroup(deviceId: string): Promise<{ succe
       return { success: true }; // Kein Fehler, nur keine Gruppe verfügbar
     }
     
-    await user.assignToGroup(randomGroup._id as mongoose.Types.ObjectId);
+    await user.assignToGroup(new mongoose.Types.ObjectId(String(randomGroup._id)));
     
     logger.info(`[GroupService] Benutzer ${user.name} automatisch zu Gruppe ${randomGroup.name} zugewiesen`);
     return { success: true, groupName: randomGroup.name };
@@ -319,10 +318,11 @@ export async function assignAllUnassignedUsers(): Promise<{ success: boolean; as
   await connectDB();
   
   try {
-    // Finde alle User ohne Gruppe
+    // Finde alle User ohne Gruppe UND nicht Shadow-User
     const unassignedUsers = await User.find({ 
       isActive: true, 
-      groupId: { $exists: false } 
+      groupId: { $exists: false },
+      isShadowUser: { $ne: true }
     });
     
     if (unassignedUsers.length === 0) {

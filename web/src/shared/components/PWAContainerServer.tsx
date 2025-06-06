@@ -88,10 +88,9 @@ export default async function PWAContainerServer() {
     }
   }
 
-  // DeviceId für InfoBoard hinzufügen (kann leer sein da SSR)
+  // InfoBoard-Daten für Client bereitstellen
   const infoBoardData = {
     ...infoBoardDataRaw,
-    deviceId: '', // Wird client-side gesetzt
   };
 
   return (

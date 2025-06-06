@@ -1,11 +1,11 @@
 'use client';
 
-import React, { useState, useEffect, useRef } from 'react';
-import { Plus, Calendar, Clock, Users, Bell, Trash2, Pencil, AlertCircle, Crown } from 'lucide-react';
+import React, { useState, useEffect, useRef, useCallback, useMemo } from 'react';
+import { Plus, Calendar, Clock, Users, Bell, Trash2, Pencil, AlertCircle, Crown, Edit } from 'lucide-react';
 import * as LucideIcons from 'lucide-react';
 import toast from 'react-hot-toast';
 import { useDeviceContext } from '@/shared/contexts/DeviceContext';
-import { useDeviceId } from '@/shared/hooks/useDeviceId';
+import { useAuth } from '@/features/auth/AuthContext';
 import { Sheet, SheetContent, SheetHeader, SheetTitle } from '@/shared/components/ui/sheet';
 import { Button } from '@/shared/components/ui/button';
 import { Input } from '@/shared/components/ui/input';
@@ -19,38 +19,223 @@ import { createActivityAction } from './actions/createActivity';
 import { updateActivityAction } from './actions/updateActivity';
 import { deleteActivityAction } from './actions/deleteActivity';
 import { sendReminderAction } from './actions/sendReminder';
-import type { ActivityWithCategoryAndTemplate, CreateActivityData } from './types';
+import type { ActivityWithCategoryAndTemplate, CreateActivityData, ActivityCategory, ActivityTemplate, FestivalDay } from './types';
 import { Badge } from '@/shared/components/ui/badge';
 import { fetchGroupUsersAction } from './actions/fetchActivitiesData';
 import type { GroupUser, ActivitiesData } from './actions/fetchActivitiesData';
-import { formatActivityTime } from './utils/timeUtils';
+import { formatActivityTime, getActivityTimeStatus } from './utils/timeUtils';
 import { useCentralFestivalDays } from '@/shared/hooks/useCentralFestivalDays';
+import type { CentralFestivalDay } from '@/shared/services/festivalDaysService';
 
 interface ActivityManagerProps {
   initialData: ActivitiesData;
 }
 
-interface FestivalDay {
-  date: Date;
-  label: string;
-  activities: ActivityWithCategoryAndTemplate[];
+interface BaseActivity {
+  id: string;
+  name: string;
+  date: string;
+  description?: string;
+  startTime?: string;
+  endTime?: string;
+  categoryId?: string;
+  templateId?: string;
+  customName?: string;
+  groupId?: string;
+  responsibleUsers?: string[];
 }
+
+interface ExtendedFestivalDay {
+  _id: string;
+  label: string;
+  date: string;
+  dayStart: string;
+  dayEnd: string;
+  activities: ActivityWithCategoryAndTemplate[];
+  activitiesCount: number;
+  isActive: boolean;
+  order: number;
+  description?: string;
+}
+
+const DEBUG = true;
 
 const ActivityManagerClient: React.FC<ActivityManagerProps> = ({ initialData }) => {
   const { deviceType } = useDeviceContext();
-  const deviceId = useDeviceId();
+  const { user } = useAuth();
   const isMobile = deviceType === 'mobile';
+
+  // Debug: Log initial data
+  if (DEBUG) {
+    console.log('[ActivityManagerClient] Received initial data:', {
+      activitiesCount: initialData?.activities?.length || 0,
+      categoriesCount: initialData?.categories?.length || 0,
+      templatesCount: initialData?.templates?.length || 0,
+      groupsCount: initialData?.groups?.length || 0,
+      activities: initialData?.activities,
+      categories: initialData?.categories,
+      templates: initialData?.templates,
+      groups: initialData?.groups
+    });
+  }
 
   // Use central festival days instead of hardcoded days
   const { data: centralFestivalDays, loading: festivalDaysLoading } = useCentralFestivalDays();
 
   // Use realtime hook with initial data
   const { data, loading, connected, refreshData } = useActivitiesRealtime(initialData);
-  const { activities, categories, templates, groups } = data;
+
+  // Debug: Log realtime data
+  if (DEBUG) {
+    console.log('[ActivityManagerClient] Realtime data updated:', {
+      activitiesCount: data?.activities?.length || 0,
+      categoriesCount: data?.categories?.length || 0,
+      templatesCount: data?.templates?.length || 0,
+      groupsCount: data?.groups?.length || 0,
+      activities: data?.activities,
+      categories: data?.categories,
+      templates: data?.templates,
+      groups: data?.groups,
+      loading,
+      connected
+    });
+  }
+
+  const { activities = [], categories = [], templates = [], groups = [] } = data || {};
+
+  // Convert activities to include dates
+  const activitiesWithDates = useMemo(() => {
+    const result = activities.map(activity => ({
+      ...activity,
+      parsedDate: new Date(activity.date).toISOString(),
+      dateString: new Date(activity.date).toDateString()
+    }));
+
+    if (DEBUG) {
+      console.log('[ActivityManagerClient] All activities with dates:', result);
+    }
+
+    return result;
+  }, [activities]);
+
+  // Convert central festival days
+  const convertedFestivalDays = useMemo(() => {
+    if (!centralFestivalDays) return [];
+
+    return centralFestivalDays.map(day => {
+      const dateObj = new Date(day.date);
+      if (DEBUG) {
+        console.log('[ActivityManagerClient] Converting festival day:', {
+          originalDay: {
+            _id: day._id,
+            label: day.label,
+            date: day.date,
+            isActive: day.isActive,
+            order: day.order
+          },
+          dateObj,
+          isoString: dateObj.toISOString()
+        });
+      }
+      return {
+        _id: day._id || '',
+        label: day.label,
+        date: dateObj.toISOString(),
+        dayStart: dateObj.toISOString(),
+        dayEnd: dateObj.toISOString(),
+        activities: [],
+        activitiesCount: 0,
+        isActive: day.isActive,
+        order: day.order,
+        description: day.description
+      } as ExtendedFestivalDay;
+    });
+  }, [centralFestivalDays]);
+
+  // Organize activities by day with improved date comparison
+  const organizeActivitiesByDay = useCallback((activities: ActivityWithCategoryAndTemplate[], days: ExtendedFestivalDay[]) => {
+    if (DEBUG) {
+      console.log('[ActivityManagerClient] Organizing activities:', { 
+        activitiesCount: activities.length, 
+        daysCount: days.length,
+        activities: activities.map(a => ({
+          id: a._id,
+          name: a.template?.name || a.customName,
+          date: a.date,
+          parsedDate: new Date(a.date).toISOString()
+        })),
+        days: days.map(d => ({
+          label: d.label,
+          date: d.date,
+          parsedDate: new Date(d.date).toISOString()
+        }))
+      });
+    }
+
+    return days.map(day => {
+      const dayDate = new Date(day.date);
+      const dayActivities = activities.filter(activity => {
+        const activityDate = new Date(activity.date);
+        
+        // Compare only the date parts (year, month, day)
+        const isSameDate = 
+          dayDate.getFullYear() === activityDate.getFullYear() &&
+          dayDate.getMonth() === activityDate.getMonth() &&
+          dayDate.getDate() === activityDate.getDate();
+
+        if (DEBUG) {
+          console.log('[ActivityManagerClient] Date comparison:', {
+            activity: activity.template?.name || activity.customName,
+            activityDate: activityDate.toISOString(),
+            dayDate: dayDate.toISOString(),
+            isSameDate
+          });
+        }
+
+        return isSameDate;
+      });
+
+      if (DEBUG) {
+        console.log('[ActivityManagerClient] Day activities:', {
+          dayLabel: day.label,
+          dayDate: dayDate.toISOString(),
+          activitiesCount: dayActivities.length,
+          activities: dayActivities.map(a => ({
+            name: a.template?.name || a.customName,
+            date: a.date
+          }))
+        });
+      }
+
+      return {
+        ...day,
+        activities: dayActivities,
+        activitiesCount: dayActivities.length
+      };
+    });
+  }, []);
+
+  // Organize activities by day
+  const [festivalDays, setFestivalDays] = useState<ExtendedFestivalDay[]>([]);
+
+  useEffect(() => {
+    if (!convertedFestivalDays.length) {
+      if (DEBUG) {
+        console.log('[ActivityManagerClient] No festival days to display');
+      }
+      return;
+    }
+
+    // Always organize days, even if there are no activities
+    const organized = organizeActivitiesByDay(activitiesWithDates || [], convertedFestivalDays);
+    if (DEBUG) {
+      console.log('[ActivityManagerClient] Organized festival days:', organized);
+    }
+    setFestivalDays(organized);
+  }, [convertedFestivalDays, activitiesWithDates, organizeActivitiesByDay]);
 
   // State
   const [selectedDay, setSelectedDay] = useState(0);
-  const [festivalDays, setFestivalDays] = useState<FestivalDay[]>([]);
   const [showActivityModal, setShowActivityModal] = useState(false);
   const [editingActivity, setEditingActivity] = useState<ActivityWithCategoryAndTemplate | null>(null);
   const [confirmDelete, setConfirmDelete] = useState<string | null>(null);
@@ -70,41 +255,39 @@ const ActivityManagerClient: React.FC<ActivityManagerProps> = ({ initialData }) 
     responsibleUsers: [],
   });
 
-  // Convert central festival days to activity festival days
+  // Debug: Log all activities with their dates
+  if (DEBUG) {
+    console.log('[ActivityManagerClient] All activities with dates:', activities.map(activity => ({
+      id: activity._id,
+      name: activity.template?.name || activity.customName,
+      date: activity.date,
+      parsedDate: new Date(activity.date).toISOString(),
+      dateString: new Date(activity.date).toDateString(),
+      startTime: activity.startTime,
+      endTime: activity.endTime
+    })));
+  }
+
+  // Debug: Log current day info
   useEffect(() => {
-    if (centralFestivalDays) {
-      const convertedDays: FestivalDay[] = centralFestivalDays
-        .filter(day => day.isActive) // Only show active days
-        .map(day => ({
-          date: day.date,
-          label: day.label,
-          activities: []
-        }));
-      setFestivalDays(convertedDays);
-      
-      // Reset selectedDay if it's out of bounds
-      if (selectedDay >= convertedDays.length) {
-        setSelectedDay(0);
+    if (festivalDays.length > selectedDay) {
+      const currentDay = festivalDays[selectedDay];
+      if (DEBUG) {
+        console.log('[ActivityManagerClient] Current day info:', {
+          label: currentDay.label,
+          date: currentDay.date,
+          dayStart: currentDay.dayStart,
+          dayEnd: currentDay.dayEnd,
+          activitiesCount: currentDay.activities.length,
+          activities: currentDay.activities.map(a => ({
+            name: a.template?.name || a.customName,
+            date: a.date,
+            time: a.startTime
+          }))
+        });
       }
     }
-  }, [centralFestivalDays, selectedDay]);
-
-  // Organize activities by day
-  useEffect(() => {
-    const updatedDays = festivalDays.map(day => {
-      const dayActivities = activities.filter((activity) => {
-        const activityDate = new Date(activity.date);
-        return activityDate.toDateString() === day.date.toDateString();
-      });
-
-      return {
-        ...day,
-        activities: dayActivities
-      };
-    });
-
-    setFestivalDays(updatedDays);
-  }, [activities]);
+  }, [festivalDays, selectedDay]);
 
   // Load group users when group is selected OR when editing activity
   useEffect(() => {
@@ -135,7 +318,9 @@ const ActivityManagerClient: React.FC<ActivityManagerProps> = ({ initialData }) 
           
           previousGroupIdRef.current = activityForm.groupId;
         } catch (error) {
-          console.error('Error loading group users:', error);
+          if (DEBUG) {
+            console.error('Error loading group users:', error);
+          }
           setGroupUsers([]);
         }
       } else {
@@ -174,10 +359,10 @@ const ActivityManagerClient: React.FC<ActivityManagerProps> = ({ initialData }) 
 
   const populateForm = (activity: ActivityWithCategoryAndTemplate) => {
     setActivityForm({
-      date: activity.date ? new Date(activity.date) : new Date(),
+      date: activity.date,
       startTime: activity.startTime || '',
       endTime: activity.endTime || '',
-      categoryId: activity.categoryId,
+      categoryId: activity.categoryId || '',
       templateId: activity.templateId || '',
       customName: activity.customName || '',
       description: activity.description || '',
@@ -199,8 +384,8 @@ const ActivityManagerClient: React.FC<ActivityManagerProps> = ({ initialData }) 
       return;
     }
 
-    if (!deviceId) {
-      toast.error('Device ID nicht verfügbar');
+    if (!user) {
+      toast.error('Benutzer nicht angemeldet');
       return;
     }
 
@@ -229,7 +414,7 @@ const ActivityManagerClient: React.FC<ActivityManagerProps> = ({ initialData }) 
           toast.error(result.error || 'Fehler beim Aktualisieren der Aktivität');
         }
       } else {
-        // Create new activity
+        // Create new activity - userId wird server-side aus Session extrahiert
         const result = await createActivityAction({
           date: selectedDate,
           startTime: activityForm.startTime,
@@ -240,7 +425,7 @@ const ActivityManagerClient: React.FC<ActivityManagerProps> = ({ initialData }) 
           description: activityForm.description || undefined,
           groupId: activityForm.groupId || undefined,
           responsibleUsers: activityForm.responsibleUsers || undefined,
-        }, deviceId);
+        });
 
         if (result.success) {
           toast.success('Aktivität erstellt');
@@ -251,41 +436,50 @@ const ActivityManagerClient: React.FC<ActivityManagerProps> = ({ initialData }) 
         }
       }
     } catch (error) {
-      console.error('Error creating/updating activity:', error);
+      if (DEBUG) {
+        console.error('Error creating/updating activity:', error);
+      }
       toast.error('Ein unerwarteter Fehler ist aufgetreten');
     }
   };
 
   const handleEditActivity = (activity: ActivityWithCategoryAndTemplate) => {
     setEditingActivity(activity);
-    populateForm(activity);
+    setActivityForm({
+      date: activity.date,
+      startTime: activity.startTime,
+      endTime: activity.endTime || '',
+      categoryId: activity.categoryId,
+      templateId: activity.templateId || '',
+      customName: activity.customName || '',
+      description: activity.description || '',
+      groupId: activity.groupId || '',
+      responsibleUsers: activity.responsibleUsers || []
+    });
     setShowActivityModal(true);
   };
 
   const handleDeleteActivity = async (activityId: string) => {
     try {
-      const result = await deleteActivityAction(activityId);
-      if (result.success) {
-        toast.success('Aktivität gelöscht');
-      } else {
-        toast.error((result as any).error || 'Fehler beim Löschen der Aktivität');
-      }
+      await deleteActivityAction(activityId);
+      await refreshData();
+      setConfirmDelete(null);
     } catch (error) {
-      toast.error('Fehler beim Löschen der Aktivität');
+      console.error('Error deleting activity:', error);
     }
-    setConfirmDelete(null);
   };
 
   const handleSendReminder = async (activityId: string) => {
     try {
       const result = await sendReminderAction(activityId);
       if (result.success) {
-        toast.success(`Erinnerung an ${result.sent} Teilnehmer gesendet`);
+        toast.success('Erinnerung gesendet');
       } else {
-        toast.error((result as any).error || 'Fehler beim Senden der Erinnerung');
+        toast.error('Fehler beim Senden der Erinnerung');
       }
-    } catch (error) {
-      toast.error('Fehler beim Senden der Erinnerung');
+    } catch (error: any) {
+      console.error('Error sending reminder:', error);
+      toast.error(error.message || 'Fehler beim Senden der Erinnerung');
     }
   };
 
@@ -296,10 +490,30 @@ const ActivityManagerClient: React.FC<ActivityManagerProps> = ({ initialData }) 
 
   const currentDay = festivalDays[selectedDay];
 
+  useEffect(() => {
+    const loadInitialData = async () => {
+      try {
+        // Immer die Daten neu laden, um sicherzustellen, dass die Festival-Tage verfügbar sind
+        await refreshData();
+      } catch (error) {
+        console.error('[ActivityManagerClient] Error loading initial data:', error);
+        toast.error('Fehler beim Laden der Festival-Tage');
+      }
+    };
+    loadInitialData();
+  }, []);
+
+  // Setze selectedDay zurück wenn sich die Festival-Tage ändern
+  useEffect(() => {
+    if (festivalDays && festivalDays.length > 0 && selectedDay >= festivalDays.length) {
+      setSelectedDay(0);
+    }
+  }, [festivalDays, selectedDay]);
+
   if (loading) {
     return (
       <div className="w-full max-w-4xl mx-auto">
-        <div className="sticky top-0 z-10 bg-[#460b6c]/90 backdrop-blur-sm py-4 px-4">
+        <div className={`sticky ${!isMobile ? 'top-16' : 'top-0'} z-10 bg-[#460b6c]/90 backdrop-blur-sm py-4 px-4`}>
           <div className="flex items-center gap-3">
             <Calendar className="h-6 w-6 text-[#ff9900]" />
             <h2 className="text-xl font-bold text-[#ff9900]">Aufgaben verwalten</h2>
@@ -315,7 +529,7 @@ const ActivityManagerClient: React.FC<ActivityManagerProps> = ({ initialData }) 
   return (
     <div className="w-full max-w-4xl mx-auto">
       {/* Header */}
-      <div className="sticky top-0 z-10 bg-[#460b6c]/90 backdrop-blur-sm py-4 px-4">
+      <div className={`sticky ${!isMobile ? 'top-16' : 'top-0'} z-10 bg-[#460b6c]/90 backdrop-blur-sm py-4 px-4`}>
         <div className="flex items-center gap-3">
           <Calendar className="h-6 w-6 text-[#ff9900]" />
           <h2 className="text-xl font-bold text-[#ff9900]">Aufgaben verwalten</h2>
@@ -442,7 +656,10 @@ const ActivityManagerClient: React.FC<ActivityManagerProps> = ({ initialData }) 
                                 size="icon"
                                 onClick={() => handleSendReminder(activity._id)}
                                 className="h-8 w-8 text-[#ff9900]/70 hover:text-[#ff9900] hover:bg-[#ff9900]/10"
-                                title="Erinnerung senden"
+                                title={getActivityTimeStatus(activity).hasStarted 
+                                  ? "Erinnerung senden" 
+                                  : "Erinnerungen können erst nach Beginn der Aufgabe gesendet werden"}
+                                disabled={!getActivityTimeStatus(activity).hasStarted}
                               >
                                 <Bell className="h-4 w-4" />
                               </Button>
@@ -454,7 +671,7 @@ const ActivityManagerClient: React.FC<ActivityManagerProps> = ({ initialData }) 
                               className="h-8 w-8 text-[#ff9900]/70 hover:text-[#ff9900] hover:bg-[#ff9900]/10"
                               title="Bearbeiten"
                             >
-                              <Pencil className="h-4 w-4" />
+                              <Edit className="h-4 w-4" />
                             </Button>
                             <Button
                               variant="ghost"
@@ -596,7 +813,7 @@ const ActivityManagerClient: React.FC<ActivityManagerProps> = ({ initialData }) 
                 <SelectContent>
                   <SelectItem value="none">Keine Gruppe</SelectItem>
                   {groups.map((group: any) => (
-                    <SelectItem key={group._id || group.id} value={group._id || group.id}>
+                    <SelectItem key={group.id} value={group.id}>
                       <div className="flex items-center gap-2">
                         <div 
                           className="w-3 h-3 rounded-full"

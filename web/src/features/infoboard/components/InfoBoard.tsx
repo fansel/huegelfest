@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect, useRef, ReactNode } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { IAnnouncement, ReactionType, REACTION_EMOJIS } from '../../../shared/types/types';
 import { getAllAnnouncementsAction } from '../../announcements/actions/getAllAnnouncements';
 import { updateAnnouncementReactionsAction } from '../../announcements/actions/updateAnnouncementReactions';
@@ -8,7 +8,7 @@ import { getAnnouncementReactionsAction } from '../../announcements/actions/getA
 import AnnouncementEventCard from './AnnouncementEventCard';
 import { useGlobalWebSocket, WebSocketMessage } from '@/shared/hooks/useGlobalWebSocket';
 import useSWR from 'swr';
-import { useDeviceId } from '@/shared/hooks/useDeviceId';
+import { useAuth } from '@/features/auth/AuthContext';
 import { useNetworkStatus } from '@/shared/hooks/useNetworkStatus';
 
 const REACTION_TYPES: ReactionType[] = ['thumbsUp', 'clap', 'laugh', 'surprised', 'heart'];
@@ -30,26 +30,27 @@ interface Reaction {
 
 
 export default function InfoBoard({ isPWA = false, allowClipboard = false, announcements: initialAnnouncements = [], reactionsMap: initialReactionsMap = {} }: InfoBoardProps) {
-  const deviceId = useDeviceId();
+  const { user, isAuthenticated } = useAuth();
   const boardRef = useRef<HTMLDivElement>(null);
   const [isVisible, setIsVisible] = useState(false);
   const isOnline = useNetworkStatus();
 
-  // SWR für Announcements + Reactions
+  // SWR für Announcements + Reactions - jetzt auth-basiert
   const { data, mutate } = useSWR(
-    ['infoboard', deviceId],
+    ['infoboard', user?.id || 'anonymous'],
     async () => {
-      if (!deviceId) return { announcements: initialAnnouncements, reactionsMap: initialReactionsMap };
       const loadedAnnouncements = await getAllAnnouncementsAction();
       const mapped = loadedAnnouncements.map((a: any) => ({
         ...a,
         groupName: a.groupName ?? a.groupInfo?.name ?? '',
         groupColor: a.groupColor ?? a.groupInfo?.color ?? '#cccccc',
       }));
+      
       const reactionsObj: Record<string, { counts: Record<ReactionType, number>; userReaction?: ReactionType }> = {};
       await Promise.all(mapped.map(async (a) => {
-        reactionsObj[a.id] = await getAnnouncementReactionsAction(a.id, deviceId);
+        reactionsObj[a.id] = await getAnnouncementReactionsAction(a.id);
       }));
+      
       return { announcements: mapped, reactionsMap: reactionsObj };
     },
     {
@@ -115,10 +116,12 @@ export default function InfoBoard({ isPWA = false, allowClipboard = false, annou
     return () => observer.unobserve(currentRef);
   }, []);
 
-  // Reaktion-Handler mit Optimistic Update und Fehlerbehandlung
   const handleReaction = async (announcementId: string, type: ReactionType) => {
     try {
-      if (!deviceId || !isOnline) return; // Offline: keine neuen Reaktionen möglich
+      if (!isAuthenticated || !isOnline) {
+        console.log('[InfoBoard] Reaktion abgelehnt: Nicht authentifiziert oder offline');
+        return;
+      }
       
       // Optimistic Update: Sofort UI aktualisieren
       const currentReactions = reactionsMap[announcementId] || { counts: {}, userReaction: undefined };
@@ -160,8 +163,7 @@ export default function InfoBoard({ isPWA = false, allowClipboard = false, annou
         false // Kein Revalidate
       );
       
-      // Server-Update im Hintergrund
-      await updateAnnouncementReactionsAction(announcementId, type, deviceId);
+      await updateAnnouncementReactionsAction(announcementId, type);
       
       // Nach Server-Update: Daten neu laden für Konsistenz
       mutate();
@@ -189,7 +191,7 @@ export default function InfoBoard({ isPWA = false, allowClipboard = false, annou
                 important={announcement.important}
                 createdAt={announcement.createdAt}
                 reactions={reactionsMap[announcement.id]}
-                onReact={isOnline ? (type) => handleReaction(announcement.id, type) : undefined}
+                onReact={isAuthenticated && isOnline ? (type) => handleReaction(announcement.id, type) : undefined}
                 isOffline={!isOnline}
               />
             ))

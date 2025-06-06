@@ -120,7 +120,6 @@ const ResetAppDataSettings: React.FC<ResetAppDataSettingsProps> = ({ variant = '
       // Explizit alle bekannten Keys löschen (für den Fall dass clear() nicht funktioniert)
       const knownKeys = [
         'swr-cache',
-        'deviceId', 
         'festival-registration',
         'packlist-items',
         'favorites',
@@ -131,7 +130,6 @@ const ResetAppDataSettings: React.FC<ResetAppDataSettingsProps> = ({ variant = '
         'last-update-check', 
         'last-handled-update',
         'update-available',
-        'device-transfer-completed',
         // Push-spezifische Keys
         'push-subscription',
         'push-permission-state'

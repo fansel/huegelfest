@@ -36,7 +36,6 @@ interface PWAContainerClientProps {
   infoBoardData: {
     announcements: any[];
     reactionsMap: Record<string, any>;
-    deviceId: string;
   };
   carpoolData: any[];
   packlistData: any[];
@@ -50,6 +49,8 @@ interface PWAContainerClientProps {
     activitiesData: any;
   };
 }
+
+const DEBUG = false;
 
 export default function PWAContainerClient({ isAdmin, timelineData, infoBoardData, carpoolData, packlistData, adminData: initialAdminData }: PWAContainerClientProps) {
   const { mode, activeTab, adminActiveTab, handleAdminToggle, handleTabChange } = useNavigation(isAdmin);
@@ -92,7 +93,9 @@ export default function PWAContainerClient({ isAdmin, timelineData, infoBoardDat
     
     setLoadingAdminData(true);
     try {
-      console.log('[PWA] Lade frische Admin-Daten...');
+      if (DEBUG) {
+        console.log('[PWA] Lade frische Admin-Daten...');
+      }
       
       const [announcementsData, workingGroups, categories, pendingEvents, tracks, groupsData, activitiesData] = await Promise.all([
         getAllAnnouncementsAction(),
@@ -122,7 +125,9 @@ export default function PWAContainerClient({ isAdmin, timelineData, infoBoardDat
       };
       
       setAdminData(freshAdminData);
-      console.log('[PWA] Admin-Daten erfolgreich aktualisiert');
+      if (DEBUG) {
+        console.log('[PWA] Admin-Daten erfolgreich aktualisiert');
+      }
     } catch (error) {
       console.error('[PWA] Fehler beim Laden der Admin-Daten:', error);
       // Keep existing data on error
@@ -140,9 +145,11 @@ export default function PWAContainerClient({ isAdmin, timelineData, infoBoardDat
 
   // NEU: Handler für Push-Subscription Änderungen
   const handlePushSubscriptionChange = (isSubscribed: boolean) => {
+    if (DEBUG) {
+      console.log('[PWA] Push subscription changed:', isSubscribed);
+    }
     // Zusätzliche Aktionen bei Subscription-Änderung falls nötig
     // Z.B. State Updates, Analytics, etc.
-    console.log('Push subscription changed:', isSubscribed);
   };
 
   // Splash Screen Handler
@@ -199,15 +206,21 @@ export default function PWAContainerClient({ isAdmin, timelineData, infoBoardDat
         </div>
       )}
 
-
-      {activeTab !== 'signup' && (
-        <div className="flex flex-col items-center justify-center gap-2 pt-4">
-          <div className="flex items-center justify-center w-full">
-            <Image src="/logo.svg" alt="Hügelfest Logo" width={48} height={48} />
+      {/* Main content container with proper top padding for desktop topbar */}
+      <div className={`flex flex-col ${!isMobileLayout ? 'pt-16' : ''}`}>
+        {activeTab !== 'signup' && (
+          <div className="flex flex-col items-center justify-center gap-2 pt-4">
+            <div className="flex items-center justify-center w-full">
+              <Image 
+                src="/logo.svg" 
+                alt="Hügelfest Logo" 
+                width={48} 
+                height={48} 
+              />
+            </div>
           </div>
-        </div>
-      )}
-      
+        )}
+        
         <MainContent
           mode={mode}
           activeTab={activeTab}
@@ -220,6 +233,8 @@ export default function PWAContainerClient({ isAdmin, timelineData, infoBoardDat
           adminData={adminData}
           loadingAdminData={loadingAdminData}
         />    
+      </div>
+      
       <BottomBar
         mode={mode}
         activeTab={mode === 'admin' ? adminActiveTab : activeTab}

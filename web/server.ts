@@ -12,20 +12,22 @@ const app = next({ dev });
 const handle = app.getRequestHandler();
 
 // Export connection maps for diagnostics
-export const deviceConnections = new Map<string, WebSocket>(); // deviceId -> WebSocket
-export const activeConnections = new Map<WebSocket, string>(); // WebSocket -> deviceId
+export const userConnections = new Map<string, WebSocket>(); // User-basierte Verbindungen
+export const anonymousConnections = new Set<WebSocket>(); // Anonyme Verbindungen
+export const activeConnections = new Map<WebSocket, { id: string | null; type: 'user' | 'anonymous' }>();
 
 // Function to get current WebSocket statistics
 export function getWebSocketStats() {
-  const connectionsByDevice = new Map<string, number>();
-  const activeDevices: Array<{deviceId: string, connected: boolean, readyState: number}> = [];
+  const connectionsByUser = new Map<string, number>();
+  const activeUsers: Array<{userId: string, connected: boolean, readyState: number}> = [];
   
-  for (const [deviceId, ws] of deviceConnections) {
-    const count = connectionsByDevice.get(deviceId) || 0;
-    connectionsByDevice.set(deviceId, count + 1);
+  // User connections
+  for (const [userId, ws] of userConnections) {
+    const count = connectionsByUser.get(userId) || 0;
+    connectionsByUser.set(userId, count + 1);
     
-    activeDevices.push({
-      deviceId,
+    activeUsers.push({
+      userId,
       connected: ws.readyState === WebSocket.OPEN,
       readyState: ws.readyState
     });
@@ -33,9 +35,10 @@ export function getWebSocketStats() {
   
   return {
     totalConnections: activeConnections.size,
-    totalDevices: deviceConnections.size,
-    devicesList: activeDevices,
-    connectionsByDevice: Object.fromEntries(connectionsByDevice)
+    totalUsers: userConnections.size,
+    totalAnonymous: anonymousConnections.size,
+    usersList: activeUsers,
+    connectionsByUser: Object.fromEntries(connectionsByUser)
   };
 }
 
@@ -83,56 +86,65 @@ app
     const wss = new WebSocketServer({ noServer: true });
     setWebSocketServer(wss);
 
-    // Verbessertes Client-Management mit Device-ID-Tracking
+    // Moderner Client-Management mit User-ID und anonymen Verbindungen
     console.log('[WebSocket] Initialisiere WebSocket-Server auf /ws …');
     wss.on('connection', ws => {
-      let deviceId: string | null = null;
+      let connectionId: string | null = null;
+      let connectionType: 'user' | 'anonymous' = 'anonymous';
       
       console.log('[WebSocket] Neue Verbindung eingegangen');
+
+      // Erstmal als anonyme Verbindung registrieren
+      anonymousConnections.add(ws);
+      activeConnections.set(ws, { id: null, type: 'anonymous' });
 
       ws.on('message', message => {
         try {
           const data = JSON.parse(message.toString());
           
-          // Prüfe auf Device-ID Registration
-          if (data.type === 'DEVICE_REGISTRATION' && data.deviceId && typeof data.deviceId === 'string') {
-            const registeredDeviceId = data.deviceId; // String-Typ gesichert
-            deviceId = registeredDeviceId;
+          // Prüfe auf User-ID Registration
+          if (data.type === 'USER_REGISTRATION' && data.userId && typeof data.userId === 'string') {
+            const registeredUserId = data.userId;
             
-            // Prüfe ob Device bereits verbunden ist
-            const existingConnection = deviceConnections.get(registeredDeviceId);
+            // Von anonymer zu authentifizierter Verbindung wechseln
+            anonymousConnections.delete(ws);
+            
+            // Prüfe ob User bereits verbunden ist
+            const existingConnection = userConnections.get(registeredUserId);
             if (existingConnection && existingConnection.readyState === WebSocket.OPEN) {
-              console.log(`[WebSocket] Device ${registeredDeviceId} bereits verbunden - schließe alte Verbindung`);
+              console.log(`[WebSocket] User ${registeredUserId} bereits verbunden - schließe alte Verbindung`);
               existingConnection.close();
             }
             
-            // Registriere neue Verbindung
-            deviceConnections.set(registeredDeviceId, ws);
-            activeConnections.set(ws, registeredDeviceId);
+            // Registriere neue User-Verbindung
+            connectionId = registeredUserId;
+            connectionType = 'user';
+            userConnections.set(registeredUserId, ws);
+            activeConnections.set(ws, { id: registeredUserId, type: 'user' });
             
-            console.log(`[WebSocket] Device ${registeredDeviceId} registriert`);
+            console.log(`[WebSocket] User ${registeredUserId} registriert`);
             ws.send(JSON.stringify({ 
-              type: 'DEVICE_REGISTERED', 
-              deviceId: registeredDeviceId,
-              message: `Willkommen zurück, ${registeredDeviceId}!`
+              type: 'USER_REGISTERED', 
+              userId: registeredUserId,
+              message: `Willkommen zurück!`
             }));
             
-            // NEU: Sofort aktuellen Update-Status senden
             sendInitialUpdateStatus(ws);
             return;
           }
           
           // Fallback: Legacy Chat-Support
           const text = message.toString();
-          const senderId = deviceId || 'Anonymous';
-          console.log(`${senderId} sagt:`, text);
+          const senderId = connectionId || 'Anonymous';
+          console.log(`${senderId} (${connectionType}) sagt:`, text);
           
           // Broadcast an alle aktiven Verbindungen
-          for (const [client, clientDeviceId] of activeConnections) {
+          for (const [client, clientInfo] of activeConnections) {
             if (client.readyState === WebSocket.OPEN) {
               client.send(JSON.stringify({ 
                 type: 'chat', 
-                sender: senderId, 
+                sender: senderId,
+                senderType: connectionType,
                 text 
               }));
             }
@@ -141,14 +153,15 @@ app
         } catch (error) {
           // Fallback für nicht-JSON Nachrichten
           const text = message.toString();
-          const senderId = deviceId || 'Anonymous';
-          console.log(`${senderId} sagt:`, text);
+          const senderId = connectionId || 'Anonymous';
+          console.log(`${senderId} (${connectionType}) sagt:`, text);
           
           for (const [client] of activeConnections) {
             if (client.readyState === WebSocket.OPEN) {
               client.send(JSON.stringify({ 
                 type: 'chat', 
-                sender: senderId, 
+                sender: senderId,
+                senderType: connectionType,
                 text 
               }));
             }
@@ -157,11 +170,12 @@ app
       });
 
       ws.on('close', () => {
-        if (deviceId) {
-          console.log(`[WebSocket] Device ${deviceId} getrennt`);
-          deviceConnections.delete(deviceId);
+        if (connectionType === 'user' && connectionId) {
+          console.log(`[WebSocket] User ${connectionId} getrennt`);
+          userConnections.delete(connectionId);
         } else {
           console.log('[WebSocket] Anonyme Verbindung getrennt');
+          anonymousConnections.delete(ws);
         }
         activeConnections.delete(ws);
       });
@@ -169,7 +183,7 @@ app
       // Sende Initial-Message
       ws.send(JSON.stringify({ 
         type: 'system', 
-        text: 'Verbunden! Sende Device-Registrierung...' 
+        text: 'Verbunden! Sende optional Benutzer-Registrierung...' 
       }));
     });
 

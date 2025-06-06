@@ -1,13 +1,26 @@
 import { initServices } from '@/lib/initServices';
 import { User } from '@/lib/db/models/User';
 import { Group } from '@/lib/db/models/Group';
+import { verifySession } from '@/features/auth/actions/userAuth';
 import type { UserStatus } from '../types/ActivityTypes';
 
-export async function getUserStatus(deviceId: string): Promise<UserStatus> {
+/**
+ * Lädt den Status des aktuell eingeloggten Benutzers
+ * SICHERHEIT: userId wird aus der Session extrahiert, nicht vom Client gesendet
+ */
+export async function getUserStatus(): Promise<UserStatus> {
   await initServices();
   
   try {
-    const user = await User.findByDeviceId(deviceId);
+    // Session validieren und userId extrahieren
+    const sessionData = await verifySession();
+    if (!sessionData) {
+      return {
+        isRegistered: false
+      };
+    }
+
+    const user = await User.findById(sessionData.userId);
     
     if (!user) {
       return {

@@ -6,9 +6,12 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/shared/components/ui
 import ConceptCard from './ConceptCard';
 import { conceptsData } from '../data/conceptsData';
 import type { ConceptTab } from '../types';
+import { useDeviceContext } from '@/shared/contexts/DeviceContext';
 
 export default function ConceptsClient() {
   const [activeTab, setActiveTab] = useState<ConceptTab>('allgemein');
+  const { deviceType } = useDeviceContext();
+  const isMobile = deviceType === 'mobile';
 
   const getConceptsByTab = (tab: ConceptTab) => {
     switch (tab) {
@@ -30,7 +33,7 @@ export default function ConceptsClient() {
   return (
     <div className="w-full max-w-4xl mx-auto">
       {/* Header */}
-      <div className="sticky top-0 z-10 bg-[#460b6c]/90 backdrop-blur-sm py-4 px-4">
+      <div className={`sticky ${!isMobile ? 'top-16' : 'top-0'} z-10 bg-[#460b6c]/90 backdrop-blur-sm py-4 px-4`}>
         <div className="flex items-center gap-3">
           <HelpCircle className="h-6 w-6 text-[#ff9900]" />
           <h2 className="text-xl font-bold text-[#ff9900]">FAQ</h2>

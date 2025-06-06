@@ -1,7 +1,7 @@
 "use server";
 
 import { cookies } from 'next/headers';
-import { verifyToken as verifyTokenService } from '../services/authService';
+import { verifySession } from './userAuth';
 
 export interface VerifyTokenResult {
   success: boolean;
@@ -11,16 +11,11 @@ export interface VerifyTokenResult {
 
 export async function verifyToken(): Promise<VerifyTokenResult> {
   try {
-    const cookieStore = await cookies();
-    const token = cookieStore.get('authToken')?.value;
-    if (!token) {
-      return { success: false, error: 'Kein Token gefunden' };
+    const session = await verifySession();
+    if (!session) {
+      return { success: false, error: 'Kein gültiger Token gefunden' };
     }
-    const payload = await verifyTokenService(token);
-    if (!payload) {
-      return { success: false, error: 'Token ungültig' };
-    }
-    return { success: true, isAdmin: !!payload.isAdmin };
+    return { success: true, isAdmin: session.role === 'admin' };
   } catch (error: any) {
     return { success: false, error: error.message || 'Fehler bei der Token-Prüfung' };
   }

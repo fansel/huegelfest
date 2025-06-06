@@ -1,5 +1,5 @@
 import mongoose from 'mongoose';
-import { SystemUser } from './models/SystemUser';
+import { User } from './models/User';
 // Passe ggf. logger-Import an, z.B. aus web/src/lib/logger
 
 declare const window: Window & typeof globalThis | undefined;
@@ -46,16 +46,22 @@ const state: ConnectionState = {
 
 async function initializeDatabase() {
   try {
-    const userCount = await SystemUser.countDocuments();
+    const userCount = await User.countDocuments();
     if (userCount === 0) {
       // logger.info('[Auth] Datenbank ist leer, erstelle Admin-Benutzer');
-      // Passe ggf. getAuthConfig-Import an
       const adminUsername = process.env.ADMIN_USERNAME || 'admin';
       const adminPassword = process.env.ADMIN_PASSWORD || 'admin';
-      await SystemUser.create({
-        systemUsername: adminUsername,
+      const adminEmail = process.env.ADMIN_EMAIL || 'admin@huegelfest.de';
+      
+      await User.create({
+        name: 'Administrator',
+        username: adminUsername,
+        email: adminEmail,
         password: adminPassword,
-        role: 'admin'
+        role: 'admin',
+        isActive: true,
+        isShadowUser: true,
+        emailVerified: true
       });
       // logger.info('[Auth] Admin-Benutzer erfolgreich erstellt');
     }

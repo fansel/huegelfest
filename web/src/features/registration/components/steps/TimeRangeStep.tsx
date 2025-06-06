@@ -24,6 +24,38 @@ const TimeRangeStep: React.FC<TimeRangeStepProps> = ({
   setFromDay, 
   setToDay 
 }) => {
+  // Handler für die Änderung des Start-Tages
+  const handleFromDayChange = (newFromDay: number) => {
+    const fromDayNum = Number(newFromDay);
+    setFromDay(fromDayNum);
+    // Wenn der neue Start-Tag nach dem End-Tag liegt, setze End-Tag auf Start-Tag
+    if (fromDayNum > toDay) {
+      setToDay(fromDayNum);
+    }
+    // Aktualisiere die Tage im Formular
+    const newDays: number[] = [];
+    for (let i = fromDayNum; i <= toDay; i++) {
+      newDays.push(i);
+    }
+    setForm(prev => ({ ...prev, days: newDays }));
+  };
+
+  // Handler für die Änderung des End-Tages
+  const handleToDayChange = (newToDay: number) => {
+    const toDayNum = Number(newToDay);
+    setToDay(toDayNum);
+    // Wenn der neue End-Tag vor dem Start-Tag liegt, setze Start-Tag auf End-Tag
+    if (toDayNum < fromDay) {
+      setFromDay(toDayNum);
+    }
+    // Aktualisiere die Tage im Formular
+    const newDays: number[] = [];
+    for (let i = fromDay; i <= toDayNum; i++) {
+      newDays.push(i);
+    }
+    setForm(prev => ({ ...prev, days: newDays }));
+  };
+
   return (
     <div className="flex flex-col items-center gap-4 w-full">
       <div className="flex flex-col gap-2 w-full items-center mb-2">
@@ -35,24 +67,69 @@ const TimeRangeStep: React.FC<TimeRangeStepProps> = ({
           <div className="flex flex-col items-center">
             <span className="text-xs mb-1">Von</span>
             <div className="flex items-center gap-1">
-              <button type="button" disabled={fromDay === 0} onClick={() => setFromDay(Math.max(0, fromDay - 1))} className="p-1"><ChevronLeft /></button>
-              <select value={fromDay} onChange={e => setFromDay(Number(e.target.value))} className="rounded border px-2 py-1">
-                {FESTIVAL_DAYS.map((d, i) => i <= toDay && <option key={d} value={i}>{d}</option>)}
+              <button 
+                type="button" 
+                disabled={fromDay === 0} 
+                onClick={() => handleFromDayChange(Math.max(0, fromDay - 1))} 
+                className="p-1 disabled:opacity-50"
+              >
+                <ChevronLeft />
+              </button>
+              <select 
+                value={fromDay} 
+                onChange={e => handleFromDayChange(Number(e.target.value))} 
+                className="rounded border px-2 py-1"
+              >
+                {FESTIVAL_DAYS.map((d, i) => (
+                  <option key={d} value={i}>{d}</option>
+                ))}
               </select>
-              <button type="button" disabled={fromDay === toDay} onClick={() => setFromDay(Math.min(toDay, fromDay + 1))} className="p-1"><ChevronRight /></button>
+              <button 
+                type="button" 
+                disabled={fromDay === FESTIVAL_DAYS.length - 1} 
+                onClick={() => handleFromDayChange(Math.min(FESTIVAL_DAYS.length - 1, fromDay + 1))} 
+                className="p-1 disabled:opacity-50"
+              >
+                <ChevronRight />
+              </button>
             </div>
           </div>
           <div className="flex flex-col items-center">
             <span className="text-xs mb-1">Bis</span>
             <div className="flex items-center gap-1">
-              <button type="button" disabled={toDay === fromDay} onClick={() => setToDay(Math.max(fromDay, toDay - 1))} className="p-1"><ChevronLeft /></button>
-              <select value={toDay} onChange={e => setToDay(Number(e.target.value))} className="rounded border px-2 py-1">
-                {FESTIVAL_DAYS.map((d, i) => i >= fromDay && <option key={d} value={i}>{d}</option>)}
+              <button 
+                type="button" 
+                disabled={toDay === 0} 
+                onClick={() => handleToDayChange(Math.max(0, toDay - 1))} 
+                className="p-1 disabled:opacity-50"
+              >
+                <ChevronLeft />
+              </button>
+              <select 
+                value={toDay} 
+                onChange={e => handleToDayChange(Number(e.target.value))} 
+                className="rounded border px-2 py-1"
+              >
+                {FESTIVAL_DAYS.map((d, i) => (
+                  <option key={d} value={i}>{d}</option>
+                ))}
               </select>
-              <button type="button" disabled={toDay === FESTIVAL_DAYS.length - 1} onClick={() => setToDay(Math.min(FESTIVAL_DAYS.length - 1, toDay + 1))} className="p-1"><ChevronRight /></button>
+              <button 
+                type="button" 
+                disabled={toDay === FESTIVAL_DAYS.length - 1} 
+                onClick={() => handleToDayChange(Math.min(FESTIVAL_DAYS.length - 1, toDay + 1))} 
+                className="p-1 disabled:opacity-50"
+              >
+                <ChevronRight />
+              </button>
             </div>
           </div>
         </div>
+      </div>
+      
+      {/* Zeige ausgewählte Tage an */}
+      <div className="mt-4 text-sm text-[#460b6c]/80">
+        Ausgewählte Tage: {form.days.map(d => FESTIVAL_DAYS[d]).join(", ")}
       </div>
     </div>
   );

@@ -1,59 +1,44 @@
 'use server';
 
-import { createRegistration } from '../services/registrationService';
-import { MagicCode } from '@/lib/db/models/MagicCode';
 import { connectDB } from '@/lib/db/connector';
 import { logger } from '@/lib/logger';
-import type { FestivalRegisterData } from '../FestivalRegisterForm';
+import type { FestivalRegisterData } from '../components/steps/types';
+import { createLateRegistration } from '../services/registrationService';
 
 export interface NachmeldungResult {
   success: boolean;
-  magicCode?: string;
   error?: string;
 }
 
 /**
  * Server Action für Nachmeldungen
- * Erstellt eine Registration erstellt und generiert einen Magic Code
+ * Erstellt eine neue Registration und einen neuen Account
+ * OHNE automatischen Login
  */
-export async function submitNachmeldungAction(formData: FestivalRegisterData): Promise<NachmeldungResult> {
+export async function submitNachmeldungAction(formData: FestivalRegisterData & { username?: string, password?: string }): Promise<NachmeldungResult> {
   try {
     await connectDB();
 
-    // Verwende die bereits übergebene deviceId (wurde bereits in der NachmeldungPage generiert)
-    const deviceId = formData.deviceId;
-    
-    if (!deviceId) {
-      throw new Error('Keine Device ID vorhanden');
-    }
-    
-    logger.info(`[Nachmeldung] Starte Nachmeldung für ${formData.name} mit deviceId: ${deviceId}`);
+    logger.info(`[Nachmeldung] Starte Nachmeldung für ${formData.name}`);
 
-    // Erstelle Registration (das erstellt automatisch auch den User)
-    const registration = await createRegistration(formData);
-    
-    if (!registration) {
+    // Prüfe ob username und password vorhanden sind
+    if (!formData.username || !formData.password) {
       return {
         success: false,
-        error: 'Fehler beim Erstellen der Anmeldung'
+        error: 'Username und Passwort sind erforderlich'
       };
     }
 
-    // Erstelle Magic Code für Nachmeldung
-    const magicCode = await MagicCode.createForNachmeldung(deviceId);
-    
-    if (!magicCode) {
-      return {
-        success: false,
-        error: 'Fehler beim Erstellen des Anmeldecodes'
-      };
-    }
-
-    logger.info(`[Nachmeldung] Nachmeldung erfolgreich für ${formData.name}, Magic Code: ${magicCode.code}`);
+    // Erstelle Registration und User Account
+    const registration = await createLateRegistration({
+      ...formData,
+      username: formData.username,
+      password: formData.password
+    });
+    logger.info(`[Nachmeldung] Registration erstellt: ${registration._id}`);
 
     return {
-      success: true,
-      magicCode: magicCode.code
+      success: true
     };
 
   } catch (error) {

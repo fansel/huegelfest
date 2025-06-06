@@ -1,31 +1,27 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { Switch } from "@/shared/components/ui/switch";
-import { Button } from "@/shared/components/ui/button";
-import { useDeviceId } from '@/shared/hooks/useDeviceId';
-import { useNetworkStatus } from '@/shared/hooks/useNetworkStatus';
 import { useServerStatus } from '@/shared/hooks/useServerStatus';
 import UserSettingsCard from './UserSettingsCard';
 import { Bell, AlertCircle, Settings, WifiOff } from 'lucide-react';
 import { usePushSubscription } from '@/features/push/hooks/usePushSubscription';
 import { toast } from 'react-hot-toast';
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/shared/components/ui/dialog";
 
 interface PushNotificationSettingsProps {
   variant?: 'row' | 'tile';
 }
 
 export default function PushNotificationSettings({ variant = 'row' }: PushNotificationSettingsProps) {
-  const deviceId = useDeviceId();
-  const { isServerOnline, isBrowserOnline, isFullyOnline, forceCheck } = useServerStatus();
+  const { isServerOnline, isBrowserOnline, isFullyOnline } = useServerStatus();
   const {
     isSubscribed,
     isLoading,
     isSupported,
     error,
     subscribe,
-    unsubscribe,
-    autoActivateIfPermissionGranted
+    unsubscribe
   } = usePushSubscription();
 
   // Browser-Permission Status
@@ -33,140 +29,154 @@ export default function PushNotificationSettings({ variant = 'row' }: PushNotifi
     ? Notification.permission 
     : 'default';
 
-  const handleSubscribe = async () => {
-    if (isLoading || !isSupported || isSubscribed || !deviceId) return;
+  // Status-Dialog
+  const [showStatusDetails, setShowStatusDetails] = useState(false);
+  const [lastSync, setLastSync] = useState<Date | null>(null);
 
-    // Keine eigene Toast-Benachrichtigung mehr - der Hook macht das
-    await subscribe();
+  // Hole Pending Changes Status
+  const pendingChanges = typeof window !== 'undefined' 
+    ? JSON.parse(localStorage.getItem('push-pending-changes') || '[]')
+    : [];
+  const hasPendingChanges = pendingChanges.length > 0;
+
+  // Aktualisiere lastSync wenn Änderungen synchronisiert wurden
+  useEffect(() => {
+    if (!hasPendingChanges && lastSync === null) {
+      setLastSync(new Date());
+    }
+  }, [hasPendingChanges]);
+
+  const handleToggle = async (checked: boolean) => {
+    try {
+      if (isLoading || !isSupported) return;
+
+      if (checked) {
+        // Nur aktivieren wenn Berechtigung bereits erteilt wurde oder neu angefragt wird
+        if (browserPermission === 'granted') {
+          await subscribe();
+        } else {
+          const permission = await Notification.requestPermission();
+          if (permission === 'granted') {
+            await subscribe();
+          } else {
+            toast.error('Bitte erlaube Push-Benachrichtigungen in den Browser-Einstellungen');
+          }
+        }
+      } else {
+        await unsubscribe();
+      }
+    } catch (err) {
+      // Ignoriere userId-bezogene Fehler, da diese normal sind wenn der User nicht eingeloggt ist
+      if (err instanceof Error && !err.message.includes('userId') && !err.message.includes('user.id')) {
+        toast.error('Fehler bei Push-Benachrichtigungen: ' + err.message);
+      }
+    }
   };
 
-  const handleUnsubscribe = async () => {
-    if (isLoading || !isSupported || !isSubscribed) return;
+  // Status Details Dialog
+  const StatusDetailsDialog = () => (
+    <Dialog open={showStatusDetails} onOpenChange={setShowStatusDetails}>
+      <DialogContent className="max-w-md">
+        <DialogHeader>
+          <DialogTitle className="flex items-center gap-2">
+            <Bell className="h-5 w-5 text-[#ff9900]" />
+            Push-Benachrichtigungen Status
+          </DialogTitle>
+        </DialogHeader>
+        
+        <div className="space-y-4">
+          <div className="space-y-2">
+            <h4 className="font-medium">System Status</h4>
+            <div className="grid grid-cols-2 gap-2 text-sm">
+              <span className="text-gray-500">Browser Support:</span>
+              <span>{isSupported ? '✅' : '❌'}</span>
+              
+              <span className="text-gray-500">Browser Online:</span>
+              <span>{isBrowserOnline ? '✅' : '❌'}</span>
+              
+              <span className="text-gray-500">Server Online:</span>
+              <span>{isServerOnline ? '✅' : '❌'}</span>
+              
+              <span className="text-gray-500">Browser Permission:</span>
+              <span>{browserPermission}</span>
+            </div>
+          </div>
 
-    // Keine eigene Toast-Benachrichtigung mehr - der Hook macht das
-    await unsubscribe();
+          <div className="space-y-2">
+            <h4 className="font-medium">Subscription Status</h4>
+            <div className="grid grid-cols-2 gap-2 text-sm">
+              <span className="text-gray-500">Aktiv:</span>
+              <span>{isSubscribed ? '✅' : '❌'}</span>
+              
+              <span className="text-gray-500">Ausstehende Änderungen:</span>
+              <span>{hasPendingChanges ? `Ja (${pendingChanges.length})` : 'Nein'}</span>
+              
+              {lastSync && (
+                <>
+                  <span className="text-gray-500">Letzte Synchronisation:</span>
+                  <span>{lastSync.toLocaleString()}</span>
+                </>
+              )}
+            </div>
+          </div>
+
+          {error && !error.includes('userId') && (
+            <div className="space-y-2">
+              <h4 className="font-medium text-red-500">Fehler</h4>
+              <p className="text-sm text-red-500">{error}</p>
+            </div>
+          )}
+        </div>
+      </DialogContent>
+    </Dialog>
+  );
+
+  // Icon basierend auf Status
+  const getIcon = () => {
+    if (!isSupported) return <AlertCircle className="h-5 w-5 text-[#ff9900]" />;
+    if (isLoading) return <Settings className="h-5 w-5 text-[#ff9900] animate-spin" />;
+    if (!isFullyOnline) return <WifiOff className="h-5 w-5 text-[#ff9900]" />;
+    if (hasPendingChanges) return <Settings className="h-5 w-5 text-[#ff9900]" />;
+    if (isSubscribed) return <Bell className="h-5 w-5 text-[#ff9900]" />;
+    return <Bell className="h-5 w-5 text-[#ff9900]" />;
   };
 
-  const handleOpenBrowserSettings = () => {
-    toast.error(
-      'Push-Benachrichtigungen wurden blockiert.\n\n' +
-      'So aktivierst du sie:\n' +
-      '1. Klicke auf das Schloss-Symbol neben der URL\n' +
-      '2. Setze "Benachrichtigungen" auf "Zulassen"\n' +
-      '3. Lade die Seite neu',
-      { duration: 10000 }
-    );
-  };
-
-  // UI-Zustand bestimmen
-  const getUIState = () => {
-    if (!isSupported) {
-      return {
-        type: 'unsupported',
-        icon: <AlertCircle className="w-5 h-5 text-gray-400" />,
-        title: 'Push-Benachrichtigungen',
-        info: 'Dein Browser unterstützt keine Push-Benachrichtigungen.',
-        switchElement: null,
-        disabled: true
-      };
-    }
-
-    // Zeige Offline-Status wenn Server ODER Browser offline ist
-    if (!isFullyOnline) {
-      const offlineReason = !isBrowserOnline 
-        ? 'Keine Internetverbindung' 
-        : 'Server nicht erreichbar';
-      
-      return {
-        type: 'offline',
-        icon: <WifiOff className="w-5 h-5 text-gray-400" />,
-        title: 'Push-Benachrichtigungen',
-        info: `${offlineReason}. Einstellungen werden bei der nächsten Verbindung synchronisiert.`,
-        switchElement: (
-            <Switch 
-              checked={isSubscribed} 
-              disabled={true}
-              className="opacity-50"
-            />
-        ),
-        disabled: true
-      };
-    }
-
-    if (browserPermission === 'denied') {
-      return {
-        type: 'denied',
-        icon: <AlertCircle className="w-5 h-5 text-red-500" />,
-        title: 'Push-Benachrichtigungen',
-        info: 'Push-Benachrichtigungen wurden in den Browser-Einstellungen blockiert.',
-        switchElement: (
-          <Button
-            variant="outline"
-            size="sm"
-            onClick={handleOpenBrowserSettings}
-            className="text-xs"
-          >
-            <Settings className="w-3 h-3 mr-1" />
-            Einstellungen
-          </Button>
-        ),
-        disabled: false
-      };
-    }
-
-    if (browserPermission === 'default') {
-      return {
-        type: 'default',
-        icon: <Bell className="w-5 h-5 text-[#ff9900]" />,
-        title: 'Push-Benachrichtigungen',
-        info: 'Erhalte wichtige Festival-Infos direkt aufs Gerät.',
-        switchElement: (
-          <Button
-            onClick={async () => {
-              // Versuche erst automatische Aktivierung
-              await autoActivateIfPermissionGranted();
-              // Falls das nicht funktioniert, normaler Subscribe-Prozess
-              if (!isSubscribed) {
-                await handleSubscribe();
-              }
-            }}
-            disabled={isLoading || !deviceId}
-            size="sm"
-            className="bg-[#ff9900] hover:bg-orange-600 text-white"
-          >
-            {isLoading ? 'Aktiviere...' : 'Erlauben'}
-          </Button>
-        ),
-        disabled: false
-      };
-    }
-
-    // browserPermission === 'granted'
-    return {
-      type: 'granted',
-      icon: <Bell className="w-5 h-5 text-[#ff9900]" />,
-      title: 'Push-Benachrichtigungen',
-      info: 'Erhalte wichtige Festival-Infos direkt aufs Gerät.',
-      switchElement: (
-        <Switch
-          checked={isSubscribed}
-          onCheckedChange={isSubscribed ? handleUnsubscribe : handleSubscribe}
-          disabled={isLoading || !deviceId}
-        />
-      ),
-      disabled: false
-    };
-  };
-
-  const uiState = getUIState();
+  // Info Text mit Status Details Button
+  const info = (
+    <div className="space-y-2">
+      <p>Push-Benachrichtigungen ermöglichen es dir, wichtige Updates zum Festival direkt zu erhalten, auch wenn die App geschlossen ist.</p>
+      <p>Du kannst sie jederzeit aktivieren oder deaktivieren.</p>
+      <button 
+        onClick={() => setShowStatusDetails(true)}
+        className="text-[#ff9900] hover:text-[#ff9900]/80 underline text-sm"
+      >
+        Status Details anzeigen
+      </button>
+    </div>
+  );
 
   return (
-    <UserSettingsCard
-      icon={uiState.icon}
-      title={uiState.title}
-      switchElement={uiState.switchElement}
-      info={uiState.info}
-      variant={variant}
-    />
+    <>
+      <UserSettingsCard
+        icon={getIcon()}
+        title="Push-Benachrichtigungen"
+        switchElement={
+          <Switch
+            checked={isSubscribed}
+            onCheckedChange={handleToggle}
+            disabled={!isSupported || isLoading}
+          />
+        }
+        info={info}
+        variant={variant}
+      >
+        {browserPermission === 'denied' && (
+          <div className="text-sm text-red-500 mt-2">
+            Push-Benachrichtigungen sind blockiert
+          </div>
+        )}
+      </UserSettingsCard>
+      <StatusDetailsDialog />
+    </>
   );
 }

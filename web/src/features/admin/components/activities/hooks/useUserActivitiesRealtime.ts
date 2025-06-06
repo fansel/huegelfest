@@ -4,12 +4,14 @@ import { useGlobalWebSocket } from '@/shared/hooks/useGlobalWebSocket';
 import { globalWebSocketManager } from '@/shared/utils/globalWebSocketManager';
 import { fetchUserActivitiesAction, type UserActivitiesData } from '../actions/fetchUserActivities';
 import { useNetworkStatus } from '@/shared/hooks/useNetworkStatus';
+import { useAuth } from '@/features/auth/AuthContext';
 
 /**
  * Hook für Echtzeit-Synchronisation der Benutzer-Aufgaben über das globale WebSocket-System
- * Folgt dem exakten Pattern von useGroupsWebSocket
+ * Modernisiert für session-basierte Authentifizierung
  */
-export function useUserActivitiesRealtime(deviceId: string | null) {
+export function useUserActivitiesRealtime() {
+  const { isAuthenticated, isLoading: authLoading } = useAuth();
   const [data, setData] = useState<UserActivitiesData>({
     activities: [],
     userStatus: { isRegistered: false }
@@ -33,11 +35,11 @@ export function useUserActivitiesRealtime(deviceId: string | null) {
 
   // Initiale Daten laden
   const loadInitialData = useCallback(async () => {
-    if (!deviceId) return;
+    if (!isAuthenticated || authLoading) return;
     
     setLoading(true);
     try {
-      const initialData = await fetchUserActivitiesAction(deviceId);
+      const initialData = await fetchUserActivitiesAction();
       setData(initialData);
     } catch (error) {
       console.error('[useUserActivitiesRealtime] Fehler beim Laden der Benutzer-Aufgaben:', error);
@@ -47,48 +49,40 @@ export function useUserActivitiesRealtime(deviceId: string | null) {
     } finally {
       setLoading(false);
     }
-  }, [deviceId, isOnline]);
+  }, [isAuthenticated, authLoading, isOnline]);
 
-  // Daten vollständig neu laden (fallback)
+  // Refresh-Funktion für manuelles Aktualisieren
   const refreshData = useCallback(async () => {
-    if (!deviceId) return;
+    if (!isAuthenticated) return;
     
+    console.log('[useUserActivitiesRealtime] Lade Benutzer-Aufgaben neu...');
     try {
-      const freshData = await fetchUserActivitiesAction(deviceId);
+      const freshData = await fetchUserActivitiesAction();
       setData(freshData);
+      console.log('[useUserActivitiesRealtime] Benutzer-Aufgaben erfolgreich aktualisiert');
     } catch (error) {
-      console.error('[useUserActivitiesRealtime] Fehler beim Aktualisieren der Benutzer-Aufgaben:', error);
+      console.error('[useUserActivitiesRealtime] Fehler beim Neuladen der Benutzer-Aufgaben:', error);
       if (isOnline) {
         toast.error('Fehler beim Aktualisieren der Aufgaben');
       }
     }
-  }, [deviceId, isOnline]);
+  }, [isAuthenticated, isOnline]);
 
-  // WebSocket Message Handler - verwendet globales System
-  const handleWebSocketMessage = useCallback((msg: any) => {
-    console.log('[useUserActivitiesRealtime] WebSocket-Nachricht empfangen:', msg);
-
-    // Only handle events relevant to the user's group or general activity events
-    if (msg.topic === 'ACTIVITY_CREATED' || 
-        msg.topic === 'ACTIVITY_UPDATED' || 
-        msg.topic === 'ACTIVITY_DELETED' ||
-        msg.topic === 'group-updated' ||
-        msg.topic === 'user-assigned' ||
-        msg.topic === 'user-removed') {
+  // WebSocket Message Handler
+  const handleWebSocketMessage = useCallback((message: any) => {
+    console.log('[useUserActivitiesRealtime] WebSocket-Message erhalten:', message);
+    
+    if (message.topic === 'ACTIVITY_CREATED' || 
+        message.topic === 'ACTIVITY_UPDATED' || 
+        message.topic === 'ACTIVITY_DELETED' ||
+        message.topic === 'group-updated' ||
+        message.topic === 'user-assigned' ||
+        message.topic === 'user-removed') {
       
-      console.log('[useUserActivitiesRealtime] User Activities-Update erkannt, lade Daten neu');
+      console.log('[useUserActivitiesRealtime] Relevante Activity-Änderung erkannt, lade Daten neu');
       refreshData();
-
-      // Show user-friendly notifications
-      if (msg.topic === 'ACTIVITY_CREATED' && data.userStatus.groupId) {
-        toast.success('Neue Aufgabe für deine Gruppe!');
-      } else if (msg.topic === 'ACTIVITY_UPDATED' && data.userStatus.groupId) {
-        toast.success('Aufgabe wurde aktualisiert');
-      } else if (msg.topic === 'ACTIVITY_DELETED') {
-        toast.success('Aufgabe wurde entfernt');
-      }
     }
-  }, [refreshData, data.userStatus.groupId]);
+  }, [refreshData]);
 
   // Globales WebSocket-System verwenden
   useGlobalWebSocket({
@@ -116,7 +110,7 @@ export function useUserActivitiesRealtime(deviceId: string | null) {
     ]
   });
 
-  // Initiale Daten beim Mount laden
+  // Initiale Daten beim Mount oder Auth-Change laden
   useEffect(() => {
     loadInitialData();
   }, [loadInitialData]);

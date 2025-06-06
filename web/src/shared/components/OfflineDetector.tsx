@@ -3,6 +3,8 @@
 import { useEffect, useRef } from 'react';
 import { useNetwork } from '@/shared/contexts/NetworkContext';
 
+const DEBUG = false;
+
 /**
  * Komponente zur stillen Offline-Erkennung ohne Toast-Benachrichtigungen.
  * Wird einmal in der App eingebunden und trackt nur den Status.
@@ -22,10 +24,13 @@ export function OfflineDetector() {
     // Nur bei Statusänderung loggen (keine Toasts)
     if (prevOnlineRef.current !== isOnline) {
       if (isOnline) {
-        console.log('[Network] Wieder online - Daten werden aktualisiert');
-        // Auto-Reload von Daten wird durch SWR übernommen
+        if (DEBUG) {
+          console.log('[Network] Wieder online - Daten werden aktualisiert');
+        }
       } else {
-        console.log('[Network] Offline - Lokale Daten werden verwendet');
+        if (DEBUG) {
+          console.log('[Network] Offline - Lokale Daten werden verwendet');
+        }
       }
     }
     

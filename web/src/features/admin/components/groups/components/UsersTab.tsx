@@ -6,9 +6,9 @@ import { Input } from "@/shared/components/ui/input";
 import { Select, SelectTrigger, SelectValue, SelectContent, SelectItem } from '@/shared/components/ui/select';
 import { toast } from "react-hot-toast";
 import { useDeviceContext } from '@/shared/contexts/DeviceContext';
-import { Trash2, Search, Loader2 } from 'lucide-react';
+import { Trash2, Search, Loader2, Shield, Users } from 'lucide-react';
 import { assignUserToGroupAction, removeUserFromGroupAction } from '../actions/groupActions';
-import AdminMagicCodeButton from '../../../../magic-codes/components/AdminMagicCodeButton';
+import { UserManagementActions } from '../../users/UserManagementActions';
 import type { GroupData } from '../types';
 import type { User } from './types';
 
@@ -19,6 +19,7 @@ interface UsersTabProps {
   setSearchTerm: (term: string) => void;
   onDeleteUser: (userId: string) => void;
   onRefreshData: () => void;
+  onShowUserRegistration?: (userId: string, userName: string) => void;
 }
 
 export function UsersTab({
@@ -27,21 +28,26 @@ export function UsersTab({
   searchTerm,
   setSearchTerm,
   onDeleteUser,
-  onRefreshData
+  onRefreshData,
+  onShowUserRegistration
 }: UsersTabProps) {
   const { deviceType } = useDeviceContext();
   const isMobile = deviceType === 'mobile';
   const [loadingUsers, setLoadingUsers] = useState<Set<string>>(new Set());
 
+  const handleRefreshData = () => {
+    onRefreshData();
+  };
+
   const filteredUsers = users.filter(user => 
     user.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-    user.deviceId.toLowerCase().includes(searchTerm.toLowerCase())
+    user.email.toLowerCase().includes(searchTerm.toLowerCase())
   );
 
-  const handleAssignToGroup = async (deviceId: string, groupId: string) => {
-    setLoadingUsers(prev => new Set(prev).add(deviceId));
+  const handleAssignToGroup = async (userId: string, groupId: string) => {
+    setLoadingUsers(prev => new Set(prev).add(userId));
     try {
-      const result = await assignUserToGroupAction(deviceId, groupId);
+      const result = await assignUserToGroupAction(userId, groupId);
       if (result.success) {
         toast.success('Benutzer zur Gruppe hinzugefügt');
         onRefreshData();
@@ -53,16 +59,16 @@ export function UsersTab({
     } finally {
       setLoadingUsers(prev => {
         const newSet = new Set(prev);
-        newSet.delete(deviceId);
+        newSet.delete(userId);
         return newSet;
       });
     }
   };
 
-  const handleRemoveFromGroup = async (deviceId: string, groupId: string) => {
-    setLoadingUsers(prev => new Set(prev).add(deviceId));
+  const handleRemoveFromGroup = async (userId: string, groupId: string) => {
+    setLoadingUsers(prev => new Set(prev).add(userId));
     try {
-      const result = await removeUserFromGroupAction(deviceId);
+      const result = await removeUserFromGroupAction(userId);
       if (result.success) {
         toast.success('Benutzer aus Gruppe entfernt');
         onRefreshData();
@@ -74,7 +80,7 @@ export function UsersTab({
     } finally {
       setLoadingUsers(prev => {
         const newSet = new Set(prev);
-        newSet.delete(deviceId);
+        newSet.delete(userId);
         return newSet;
       });
     }
@@ -98,26 +104,50 @@ export function UsersTab({
   if (isMobile) {
     return (
       <div className="space-y-4">
-        {/* Mobile Search Bar */}
-        <div className="relative">
-          <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 w-4 h-4" />
-          <Input
-            placeholder="Benutzer suchen..."
-            value={searchTerm}
-            onChange={(e) => setSearchTerm(e.target.value)}
-            className="pl-10"
-          />
+        {/* Mobile Header with Search and Password Reset Toggle */}
+        <div className="space-y-3">
+          {/* Mobile Search Bar */}
+          <div className="relative">
+            <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 w-4 h-4" />
+            <Input
+              placeholder="Benutzer suchen..."
+              value={searchTerm}
+              onChange={(e) => setSearchTerm(e.target.value)}
+              className="pl-10"
+            />
+          </div>
         </div>
+
+        {/* Integrated User Management Section - Mobile */}
+        <UserManagementActions 
+          users={users.map(user => ({
+            _id: user._id,
+            name: user.name,
+            email: user.email,
+            username: `@${user.name.toLowerCase().replace(/\s+/g, '')}`, // Fallback username
+            role: user.role,
+            emailVerified: true, // E-Mail-Verifizierung nicht mehr erforderlich
+            isShadowUser: user.isShadowUser || false, // Shadow User Status
+            lastLogin: user.lastActivity,
+            createdAt: user.createdAt
+          }))}
+          onRefreshUsers={handleRefreshData}
+          onShowUserRegistration={onShowUserRegistration}
+        />
 
         {/* Mobile Users Cards */}
         <div className="space-y-3">
+          <div className="flex items-center gap-2 mb-2">
+            <Users className="w-4 h-4 text-gray-600" />
+            <h3 className="text-base font-medium text-gray-900">Normale Benutzer ({filteredUsers.length})</h3>
+          </div>
           {filteredUsers.map(user => {
             const userGroup = getUserGroup(user);
-            const isLoading = loadingUsers.has(user.deviceId);
+            const isLoading = loadingUsers.has(user._id);
             
             return (
               <div
-                key={user.deviceId}
+                key={user._id}
                 className="border border-gray-200 rounded-lg p-3 space-y-3"
               >
                 {/* User Info */}
@@ -130,17 +160,11 @@ export function UsersTab({
                   />
                   <div className="min-w-0 flex-1">
                     <div className="font-medium text-sm truncate">{user.name}</div>
-                    <div className="text-xs text-gray-500 font-mono truncate">{user.deviceId}</div>
+                    <div className="text-xs text-gray-500 font-mono truncate">{user.email}</div>
                   </div>
                   <div className="flex items-center gap-1">
-                    <AdminMagicCodeButton
-                      deviceId={user.deviceId}
-                      userName={user.name}
-                      variant="outline"
-                      size="sm"
-                    />
                     <button
-                      onClick={() => onDeleteUser(user.deviceId)}
+                      onClick={() => onDeleteUser(user._id)}
                       className="p-1.5 text-red-600 hover:bg-red-50 rounded"
                     >
                       <Trash2 className="w-3 h-3" />
@@ -172,10 +196,10 @@ export function UsersTab({
                     onValueChange={async (value) => {
                       if (value === "NONE") {
                         if (user.groupId) {
-                          await handleRemoveFromGroup(user.deviceId, user.groupId);
+                          await handleRemoveFromGroup(user._id, user.groupId);
                         }
                       } else {
-                        await handleAssignToGroup(user.deviceId, value);
+                        await handleAssignToGroup(user._id, value);
                       }
                     }}
                     disabled={isLoading}
@@ -246,9 +270,9 @@ export function UsersTab({
 
   // Desktop Layout (Original)
   return (
-    <div>
-      {/* Search Bar */}
-      <div className="mb-6 flex items-center justify-between">
+    <div className="space-y-6">
+      {/* Header with Search Bar and Toggles */}
+      <div className="flex items-center justify-between gap-4">
         <div className="relative flex-1 max-w-md">
           <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 w-4 h-4" />
           <Input
@@ -260,22 +284,37 @@ export function UsersTab({
         </div>
       </div>
 
-      {/* Users List */}
+      {/* Integrated User Management Section - Desktop */}
+      <UserManagementActions 
+        users={users.map(user => ({
+          _id: user._id,
+          name: user.name,
+          email: user.email,
+          username: `@${user.name.toLowerCase().replace(/\s+/g, '')}`, // Fallback username
+          role: user.role,
+          emailVerified: true, // E-Mail-Verifizierung nicht mehr erforderlich
+          isShadowUser: user.isShadowUser || false, // Shadow User Status
+          lastLogin: user.lastActivity,
+          createdAt: user.createdAt
+        }))}
+        onRefreshUsers={handleRefreshData}
+        onShowUserRegistration={onShowUserRegistration}
+      />
+
+      {/* Regular Users List */}
       <div className="space-y-2">
+        <div className="flex items-center gap-2 mb-4">
+          <Users className="w-5 h-5 text-gray-600" />
+          <h3 className="text-lg font-medium text-gray-900">Normale Benutzer ({filteredUsers.length})</h3>
+        </div>
+        
         {filteredUsers.map(user => {
           const userGroup = getUserGroup(user);
-          const isLoading = loadingUsers.has(user.deviceId);
-          
-          // Debug logging
-          console.log(`[UsersTab] User ${user.name}:`, {
-            groupId: user.groupId,
-            userGroup: userGroup?.name,
-            selectValue: user.groupId || "NONE"
-          });
+          const isLoading = loadingUsers.has(user._id);
           
           return (
             <div
-              key={user.deviceId}
+              key={user._id}
               className="flex items-center justify-between p-4 border border-gray-200 rounded-lg hover:bg-gray-50"
             >
               <div className="flex items-center gap-3">
@@ -286,7 +325,7 @@ export function UsersTab({
                   }}
                 />
                 <span className="font-medium">{user.name}</span>
-                <span className="text-sm text-gray-500 font-mono">{user.deviceId}</span>
+                <span className="text-sm text-gray-500 font-mono">{user.email}</span>
                 {userGroup && (
                   <span className={`text-xs px-2 py-1 rounded ${
                     userGroup.isAssignable 
@@ -305,10 +344,10 @@ export function UsersTab({
                   onValueChange={async (value) => {
                     if (value === "NONE") {
                       if (user.groupId) {
-                        await handleRemoveFromGroup(user.deviceId, user.groupId);
+                        await handleRemoveFromGroup(user._id, user.groupId);
                       }
                     } else {
-                      await handleAssignToGroup(user.deviceId, value);
+                      await handleAssignToGroup(user._id, value);
                     }
                   }}
                   disabled={isLoading}
@@ -369,17 +408,10 @@ export function UsersTab({
                   </SelectContent>
                 </Select>
 
-                <AdminMagicCodeButton
-                  deviceId={user.deviceId}
-                  userName={user.name}
-                  variant="outline"
-                  size="sm"
-                />
-
                 <Button
                   size="sm"
                   variant="outline"
-                  onClick={() => onDeleteUser(user.deviceId)}
+                  onClick={() => onDeleteUser(user._id)}
                   className="text-red-600 hover:bg-red-50"
                 >
                   <Trash2 className="w-4 h-4" />

@@ -1,33 +1,24 @@
 'use server';
 
 import { createActivity } from '../services/activityService';
-import { connectDB } from '@/lib/db/connector';
-import { initActivityDefaults } from '@/lib/db/initActivityDefaults';
+import { verifySession } from '@/features/auth/actions/userAuth';
 import type { CreateActivityData } from '../types';
 
-export async function createActivityAction(data: CreateActivityData, createdBy: string) {
+export async function createActivityAction(data: CreateActivityData) {
+  // Session validieren und userId extrahieren
+  const sessionData = await verifySession();
+  if (!sessionData) {
+    return { success: false, error: 'Nicht authentifiziert' };
+  }
+
   try {
-    await connectDB();
-    await initActivityDefaults(); // Ensure defaults exist
-
-    if (!data.categoryId) {
-      throw new Error('Kategorie ist erforderlich');
-    }
-
-    if (!data.description?.trim()) {
-      throw new Error('Beschreibung ist erforderlich');
-    }
-
-    const result = await createActivity(data, createdBy);
-    return {
-      success: true,
-      activity: result,
-    };
-  } catch (error: any) {
-    console.error('[createActivityAction]', error);
-    return {
-      success: false,
-      error: error.message || 'Unbekannter Fehler beim Erstellen der Aktivität.',
+    const result = await createActivity(data, sessionData.userId);
+    return { success: true, data: result };
+  } catch (error) {
+    console.error('Error creating activity:', error);
+    return { 
+      success: false, 
+      error: error instanceof Error ? error.message : 'Unbekannter Fehler beim Erstellen der Aktivität' 
     };
   }
 } 

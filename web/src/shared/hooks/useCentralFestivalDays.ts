@@ -2,13 +2,14 @@
 
 import { useEffect, useState, useCallback } from 'react';
 import { toast } from 'react-hot-toast';
-import { useWebSocket, WebSocketMessage } from '@/shared/hooks/useWebSocket';
-import { getWebSocketUrl } from '@/shared/utils/getWebSocketUrl';
+import { useGlobalWebSocket, WebSocketMessage } from '@/shared/hooks/useGlobalWebSocket';
 import { getCentralFestivalDaysAction, getAllCentralFestivalDaysAction } from '../actions/festivalDaysActions';
 import { globalWebSocketManager } from '@/shared/utils/globalWebSocketManager';
 import type { CentralFestivalDay } from '../services/festivalDaysService';
 
 type FestivalDaysWebSocketEventType = 'festival-day';
+
+const DEBUG = false;
 
 /**
  * Hook für Echtzeit-Synchronisation der zentralen Festival-Tage über WebSockets
@@ -17,19 +18,6 @@ export function useCentralFestivalDays(includeInactive: boolean = false) {
   const [data, setData] = useState<CentralFestivalDay[]>([]);
   const [loading, setLoading] = useState(true);
   const [connected, setConnected] = useState(false);
-
-  // Echten WebSocket-Status vom globalen Manager abfragen
-  const updateConnectionStatus = useCallback(() => {
-    const status = globalWebSocketManager.getStatus();
-    setConnected(status.connected);
-  }, []);
-
-  // Status-Updates alle 2 Sekunden prüfen
-  useEffect(() => {
-    updateConnectionStatus();
-    const interval = setInterval(updateConnectionStatus, 2000);
-    return () => clearInterval(interval);
-  }, [updateConnectionStatus]);
 
   // Initiale Daten laden
   const loadInitialData = useCallback(async () => {
@@ -55,66 +43,66 @@ export function useCentralFestivalDays(includeInactive: boolean = false) {
 
   // Daten vollständig neu laden
   const refreshData = useCallback(async () => {
-    try {
+    if (DEBUG) {
       console.log('[useCentralFestivalDays] Starte Datenaktualisierung...');
-      // Loading state während refresh nicht setzen, da das die UI blockiert
-      const result = includeInactive 
-        ? await getAllCentralFestivalDaysAction()
-        : await getCentralFestivalDaysAction();
+    }
+    
+    try {
+      const response = await fetch('/api/festival-days');
+      const newData = await response.json();
       
-      if (result.success) {
+      if (DEBUG) {
         console.log('[useCentralFestivalDays] Neue Daten erhalten:', {
-          daysCount: result.days.length,
-          includeInactive
+          daysCount: newData?.length || 0,
+          days: newData?.map((d: any) => ({
+            id: d._id,
+            label: d.label,
+            date: d.date,
+            isActive: d.isActive
+          }))
         });
-        setData(result.days);
-        // Loading explizit auf false setzen nach erfolgreichem refresh
-        setLoading(false);
-      } else {
-        console.error('[useCentralFestivalDays] Fehler beim Laden:', result.error);
-        setLoading(false); // Auch bei Fehlern loading beenden
       }
+      
+      setData(newData);
     } catch (error) {
-      console.error('[useCentralFestivalDays] Fehler beim Aktualisieren der Daten:', error);
-      toast.error('Fehler beim Aktualisieren der Festival-Tage');
-      setLoading(false); // Auch bei Exceptions loading beenden
+      console.error('[useCentralFestivalDays] Fehler beim Aktualisieren:', error);
+    } finally {
+      setLoading(false);
     }
-  }, [includeInactive]);
+  }, []);
 
-  // WebSocket Message Handler - Nur Updates, keine Toast-Messages
-  const handleWebSocketMessage = useCallback((msg: WebSocketMessage) => {
-    console.log('[useCentralFestivalDays] WebSocket-Nachricht empfangen:', msg);
+  // WebSocket-Verbindung mit globalem WebSocket System
+  useGlobalWebSocket({
+    onMessage: (msg: WebSocketMessage) => {
+      if (DEBUG) {
+        console.log('[useCentralFestivalDays] WebSocket-Nachricht empfangen:', msg);
+      }
 
-    // Prüfe auf festival-day-bezogene Topics
-    if (msg.topic === 'festival-day') {
-      console.log('[useCentralFestivalDays] Festival-Days-Update erkannt, lade Daten neu');
-      refreshData();
-
-      // Keine Toast-Messages bei WebSocket-Updates von anderen Admins
-      // Toast-Messages werden nur in den Dialog-Callbacks gezeigt
-    }
-  }, [refreshData]);
-
-  // WebSocket-Verbindung mit bestehender Infrastruktur
-  useWebSocket(
-    getWebSocketUrl(),
-    {
-      onMessage: handleWebSocketMessage,
-      onOpen: () => {
-        updateConnectionStatus();
+      if (msg.topic === 'festival-days-update') {
+        if (DEBUG) {
+          console.log('[useCentralFestivalDays] Festival-Days-Update erkannt, lade Daten neu');
+        }
+        refreshData();
+      }
+    },
+    onOpen: () => {
+      setConnected(true);
+      if (DEBUG) {
         console.log('[useCentralFestivalDays] WebSocket verbunden');
-      },
-      onClose: () => {
-        updateConnectionStatus();
+      }
+    },
+    onClose: () => {
+      setConnected(false);
+      if (DEBUG) {
         console.log('[useCentralFestivalDays] WebSocket getrennt');
-      },
-      onError: (err: any) => {
-        console.error('[useCentralFestivalDays] WebSocket-Fehler:', err);
-        updateConnectionStatus();
-      },
-      reconnectIntervalMs: 5000,
-    }
-  );
+      }
+    },
+    onError: (err) => {
+      console.error('[useCentralFestivalDays] WebSocket-Fehler:', err);
+      setConnected(false);
+    },
+    topicFilter: ['festival-days-update']
+  });
 
   // Initiale Daten beim Mount laden
   useEffect(() => {

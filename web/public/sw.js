@@ -1,5 +1,9 @@
+const DEBUG = false;
+
 // Service Worker für App-Updates und statische Assets - SWR macht das Daten-Caching
-console.log('Service Worker wird geladen...');
+if (DEBUG) {
+  console.log('Service Worker wird geladen...');
+}
 
 // Dynamische Cache-Versionierung - wird bei Build-Zeit ersetzt
 const CACHE_VERSION = 'v0.1.0';
@@ -75,7 +79,9 @@ self.addEventListener('message', (event) => {
       const oldCaches = cacheNames.filter(name => name !== CACHE_NAME);
       return Promise.all(oldCaches.map(name => caches.delete(name)));
     }).then(() => {
-      console.log('[SW] Alte Caches nach App-Update gelöscht');
+      if (DEBUG) {
+        console.log('[SW] Alte Caches nach App-Update gelöscht');
+      }
     });
   }
   if (event.data && event.data.type === 'DEBUG_CACHE') {
@@ -188,19 +194,25 @@ self.addEventListener('fetch', (event) => {
     event.respondWith(
       caches.match(event.request).then((cachedResponse) => {
         if (cachedResponse) {
-          console.log('[SW] 📦 Serving cached asset:', url.pathname);
+          if (DEBUG) {
+            console.log('[SW] 📦 Serving cached asset:', url.pathname);
+          }
           return cachedResponse;
         }
         return fetch(event.request).then((response) => {
           return caches.open(CACHE_NAME).then((cache) => {
             if (response.ok) {
               cache.put(event.request, response.clone());
-              console.log('[SW] 💾 Cached new asset:', url.pathname);
+              if (DEBUG) {
+                console.log('[SW] 💾 Cached new asset:', url.pathname);
+              }
             }
             return response;
           });
         }).catch(() => {
-          console.warn('[SW] ❌ Asset fetch failed:', url.pathname);
+          if (DEBUG) {
+            console.warn('[SW] ❌ Asset fetch failed:', url.pathname);
+          }
           return new Response('Asset not available offline', { status: 404 });
         });
       })
@@ -210,11 +222,15 @@ self.addEventListener('fetch', (event) => {
 
   // App Shell für Navigation (Offline-Fallback mit verbessertem Caching)
   if (event.request.mode === 'navigate') {
-    console.log('[SW] 🧭 Navigation request:', url.pathname);
+    if (DEBUG) {
+      console.log('[SW] 🧭 Navigation request:', url.pathname);
+    }
     event.respondWith(
       fetch(event.request).then(async (response) => {
         // Bei erfolgreichem Netzwerk-Request: Response cachen und zurückgeben
-        console.log('[SW] ✅ Navigation successful:', url.pathname);
+        if (DEBUG) {
+          console.log('[SW] ✅ Navigation successful:', url.pathname);
+        }
         
         // Für wichtige Seiten: Auch im Cache speichern für Offline-Zugriff
         if (response.ok && response.headers.get('content-type')?.includes('text/html')) {
@@ -234,25 +250,35 @@ self.addEventListener('fetch', (event) => {
             // Spezielle Seiten auch cachen (nicht nur Root)
             if (url.pathname === '/' || url.pathname === '/events' || url.pathname === '/sponsors') {
               cache.put(url.pathname, cachedResponse.clone());
-              console.log('[SW] 💾 Cached navigation page:', url.pathname);
+              if (DEBUG) {
+                console.log('[SW] 💾 Cached navigation page:', url.pathname);
+              }
             }
           } catch (err) {
-            console.warn('[SW] Failed to cache navigation page:', err);
+            if (DEBUG) {
+              console.warn('[SW] Failed to cache navigation page:', err);
+            }
           }
         }
         
         return response;
       }).catch(async () => {
         // Bei Netzwerk-Fehler: Versuche gecachte Seite zu finden
-        console.log('[SW] 🔄 Network failed, trying cached pages...');
+        if (DEBUG) {
+          console.log('[SW] 🔄 Network failed, trying cached pages...');
+        }
         
         const cachedResponse = await matchCachedPage(event.request);
         if (cachedResponse) {
-          console.log('[SW] 📱 Serving cached page for:', url.pathname);
+          if (DEBUG) {
+            console.log('[SW] 📱 Serving cached page for:', url.pathname);
+          }
           return cachedResponse;
         }
         
-        console.log('[SW] ❌ No cached page available, showing offline page');
+        if (DEBUG) {
+          console.log('[SW] ❌ No cached page available, showing offline page');
+        }
         return new Response(`
           <!DOCTYPE html>
           <html lang="de">
@@ -392,4 +418,7 @@ self.addEventListener('notificationclick', function(event) {
   );
 });
 
-console.log('[SW] Service Worker ready - Fokus: App-Updates und statische Assets, SWR macht Daten-Caching');
+// Service Worker ready message
+if (DEBUG) {
+  console.log('[SW] Service Worker ready - Fokus: App-Updates und statische Assets, SWR macht Daten-Caching');
+}

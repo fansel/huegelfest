@@ -1,55 +1,111 @@
 "use server";
 
-import { createEvent } from '@/features/timeline/services/eventService';
-import { Types } from 'mongoose';
+import { Event, IEvent } from '@/lib/db/models/Event';
+import { Category } from '@/lib/db/models/Category';
+import { FestivalDay } from '@/lib/db/models/FestivalDay';
 import { sendPushNotificationAction } from '@/features/push/actions/sendPushNotification';
+import { logger } from '@/lib/logger';
+import { initServices } from '@/lib/initServices';
+import { webPushService } from '@/lib/webpush/webPushService';
 
-export type EventSubmission = {
+interface EventSubmission {
   dayId: string;
   time: string;
   title: string;
   description: string;
   categoryId: string;
+  status?: 'pending' | 'approved';
+  submittedByAdmin?: boolean;
   offeredBy?: string;
-};
+}
+
+interface EventCreationError extends Error {
+  code: 'VALIDATION_ERROR' | 'DATABASE_ERROR' | 'PUSH_NOTIFICATION_ERROR';
+  details?: unknown;
+}
 
 /**
  * Event-Vorschlag (User-Formular): legt ein neues Event mit Status 'pending' an.
  * Rückgabetyp ist any, da .lean() kein echtes IEvent liefert.
  */
-export async function submitEvent(data: Record<string, any>): Promise<any> {
+export async function submitEvent(data: EventSubmission): Promise<IEvent> {
   try {
-    // Admin-Events: status/submittedByAdmin werden direkt übernommen, User-Events bekommen defaults
-    const isAdmin = data.status === 'approved' && data.submittedByAdmin === true;
-    const eventData = {
-      dayId: new Types.ObjectId(data.dayId),
-      time: data.time,
-      title: data.title,
-      description: data.description,
-      categoryId: new Types.ObjectId(data.categoryId),
+    // Validiere die Eingabedaten
+    const { dayId, categoryId, ...rest } = data;
+    
+    // Prüfe ob die Referenzen existieren
+    const [day, category] = await Promise.all([
+      FestivalDay.findById(dayId),
+      Category.findById(categoryId)
+    ]);
+    
+    if (!day) throw new Error(`Festival day ${dayId} not found`);
+    if (!category) throw new Error(`Category ${categoryId} not found`);
+
+    // Nur submittedByAdmin prüfen, nicht den Status
+    const isAdmin = data.submittedByAdmin === true;
+    
+    const event = await Event.create({
+      ...rest,
+      dayId,
+      categoryId,
       status: isAdmin ? 'approved' : 'pending',
       submittedAt: new Date(),
-      submittedByAdmin: isAdmin,
-      ...(data.offeredBy ? { offeredBy: data.offeredBy } : {}),
-    };
-    const event = await createEvent(eventData);
-    // event kann Array oder Objekt sein
-    const eventObj = Array.isArray(event) ? event[0] : event;
-    // Push-Benachrichtigung nur für Admin-Events
-    if (isAdmin && eventObj?.title) {
-      await sendPushNotificationAction({
-        title: 'Neues Event veröffentlicht',
-        body: eventObj.title,
-        icon: '/icon-192x192.png',
-        badge: '/badge-96x96.png',
-        data: { type: 'timeline-event', eventId: eventObj._id }
-      });
+      submittedByAdmin: isAdmin
+    });
+
+    // Push-Benachrichtigung für direkt von Admins erstellte Events
+    if (isAdmin && event.title) {
+      try {
+        // Stelle sicher, dass Services initialisiert sind
+        await initServices();
+        
+        // Prüfe ob WebPush-Service verfügbar ist
+        if (!webPushService.isInitialized()) {
+          logger.warn('[submitEvent] WebPush-Service ist nicht initialisiert, keine Push-Benachrichtigung gesendet', {
+            eventId: event._id,
+            title: event.title
+          });
+        } else {
+          await sendPushNotificationAction({
+            title: 'Neues Event veröffentlicht',
+            body: event.title,
+            icon: '/icon-192x192.png',
+            badge: '/badge-96x96.png',
+            data: { type: 'timeline-event', eventId: event._id.toString() }
+          });
+          logger.info('[submitEvent] Push notification sent for admin-created event', { 
+            eventId: event._id,
+            title: event.title
+          });
+        }
+      } catch (error) {
+        logger.error('[submitEvent] Push notification failed for admin-created event', { 
+          eventId: event._id,
+          error 
+        });
+        // Fehler nicht weiterwerfen - Event wurde trotzdem erstellt
+      }
     }
-    // Serialisiere alle ObjectIds zu Strings (rekursiv)
-    return deepObjectIdToString(event);
+
+    return event;
   } catch (error) {
-    console.error('Fehler beim Erstellen des Events:', error);
-    throw new Error('Event konnte nicht erstellt werden.');
+    const eventError = new Error('Event konnte nicht erstellt werden.') as EventCreationError;
+    
+    if (error instanceof Error) {
+      eventError.code = 'VALIDATION_ERROR';
+      eventError.details = error.message;
+    } else {
+      eventError.code = 'DATABASE_ERROR';
+      eventError.details = error;
+    }
+    
+    logger.error('[submitEvent] Failed to create event', { 
+      error: eventError,
+      input: data 
+    });
+    
+    throw eventError;
   }
 }
 

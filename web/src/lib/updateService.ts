@@ -1,6 +1,7 @@
 import { APP_VERSION, VERSION_STORAGE_KEYS } from './config/appVersion';
 import { logger } from './logger';
 import toast from 'react-hot-toast';
+import { globalWebSocketManager } from '@/shared/utils/globalWebSocketManager';
 
 // Interface für WebSocket-Messages (ohne Hook-Dependencies)
 export interface UpdateWebSocketMessage {
@@ -10,9 +11,9 @@ export interface UpdateWebSocketMessage {
 
 /**
  * WebSocket-basierter Update-Service
- * - Nutzt bestehende WebSocket-Infrastruktur
- * - Lauscht auf broadcast-Events
- * - Intelligente Reconnection
+ * - Nutzt globales WebSocket-System
+ * - Lauscht auf Update-Events
+ * - Intelligente Reconnection über globalWebSocketManager
  */
 export class UpdateService {
   private static instance: UpdateService;
@@ -36,6 +37,21 @@ export class UpdateService {
     if (this.isInitialized) return;
     
     try {
+      // Registriere WebSocket-Handler beim globalen Manager
+      globalWebSocketManager.addListeners({
+        onMessage: this.handleWebSocketMessage.bind(this),
+        onOpen: () => {
+          logger.info('[UpdateService] WebSocket verbunden');
+          this.checkForUpdatesInitial();
+        },
+        onClose: () => {
+          logger.info('[UpdateService] WebSocket getrennt');
+        },
+        onError: (err) => {
+          logger.error('[UpdateService] WebSocket-Fehler:', err);
+        }
+      });
+
       this.startAutoUpdateCheck();
       this.setupStorageListener();
       logger.info('[UpdateService] Update-Service erfolgreich initialisiert');
@@ -49,6 +65,14 @@ export class UpdateService {
    */
   destroy() {
     try {
+      // Entferne WebSocket-Handler vom globalen Manager
+      globalWebSocketManager.removeListeners({
+        onMessage: this.handleWebSocketMessage.bind(this),
+        onOpen: () => {},
+        onClose: () => {},
+        onError: () => {}
+      });
+
       this.stopAutoUpdateCheck();
       this.removeStorageListener();
       this.onUpdateCallback = null;
@@ -163,7 +187,7 @@ export class UpdateService {
   /**
    * WebSocket Message Handler - verarbeitet Update-Events vom Server
    */
-  handleWebSocketMessage(msg: UpdateWebSocketMessage) {
+  private handleWebSocketMessage(msg: UpdateWebSocketMessage) {
     logger.info('[UpdateService] WebSocket Update-Message empfangen:', msg);
     
     switch (msg.topic) {
@@ -178,10 +202,9 @@ export class UpdateService {
         break;
         
       case 'update-status-initial':
-        // NEU: Initial-Status vom Server beim Connect
+        // Initial-Status vom Server beim Connect
         logger.info('[UpdateService] Initial Update-Status empfangen:', msg.payload);
         if (msg.payload?.available) {
-          // Update verfügbar - behandeln
           this.hasShownUpdateNotification = false;
           this.handleUpdateFound({
             appUpdate: true,
@@ -189,7 +212,6 @@ export class UpdateService {
             serviceWorkerUpdate: false
           });
         } else {
-          // Kein Update - Status synchronisieren
           localStorage.removeItem(VERSION_STORAGE_KEYS.UPDATE_AVAILABLE);
           this.triggerUpdateAvailableEvent(false);
         }

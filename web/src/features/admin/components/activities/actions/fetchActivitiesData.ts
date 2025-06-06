@@ -19,7 +19,7 @@ export interface ActivitiesData {
 export interface GroupUser {
   _id: string;
   name: string;
-  deviceId: string;
+  email: string;
 }
 
 /**
@@ -75,7 +75,7 @@ async function loadActivitiesWithPopulatedData(): Promise<any[]> {
       .populate('categoryId', 'name icon color')
       .populate('templateId', 'name defaultDescription')
       .populate('groupId', 'name color')
-      .populate('responsibleUsers', 'name deviceId')
+      .populate('responsibleUsers', 'name email')
       .sort({ date: 1, startTime: 1 })
       .lean();
 
@@ -132,7 +132,7 @@ async function loadActivitiesWithPopulatedData(): Promise<any[]> {
         responsibleUsersData: responsibleUsers?.map(user => ({
           _id: user?._id?.toString(),
           name: user?.name,
-          deviceId: user?.deviceId
+          email: user?.email
         })) || []
       };
     });
@@ -184,14 +184,14 @@ export async function fetchGroupUsersAction(groupId: string): Promise<GroupUser[
       groupId: groupId,
       isActive: true
     })
-    .select('_id name deviceId')
+    .select('_id name email')
     .sort({ name: 1 })
     .lean();
 
     return users.map(user => ({
       _id: user._id.toString(),
       name: user.name,
-      deviceId: user.deviceId
+      email: user.email
     }));
   } catch (error) {
     console.error('Fehler beim Laden der Gruppe-User:', error);

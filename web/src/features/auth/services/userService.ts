@@ -5,76 +5,54 @@ import { Registration } from '@/lib/db/models/Registration';
 import { connectDB } from '@/lib/db/connector';
 import { logger } from '@/lib/logger';
 import mongoose from 'mongoose';
+import { verifySession } from '../actions/userAuth';
 
 /**
- * Findet oder erstellt einen User basierend auf deviceId
+ * Modernisierter User Service - unterscheidet zwischen:
+ * 1. Session-basierte Operationen (für aktuellen User)
+ * 2. Admin-User-Management (für Verwaltung anderer User)
  */
-export async function findOrCreateUser(deviceId: string, name?: string) {
-  if (!deviceId) return null;
+
+// === SESSION-BASIERTE USER-OPERATIONEN ===
+
+/**
+ * Holt User mit Registrierungsdaten basierend auf der aktuellen Session
+ */
+export async function getCurrentUserWithRegistration() {
+  const sessionData = await verifySession();
+  if (!sessionData) return null;
   
   await connectDB();
   
   try {
-    // Versuche existierenden User zu finden
-    let user = await User.findByDeviceId(deviceId);
-    
-    if (user && name && user.name !== name) {
-      // Update Name falls vorhanden und anders
-      user.name = name;
-      await user.save();
-    }
-    
-    // Falls kein User gefunden und Name vorhanden, erstelle neuen
-    if (!user && name) {
-      user = await User.create({
-        deviceId,
-        name,
-        isActive: true
-      });
-      logger.info(`[UserService] Neuer User erstellt: ${user._id} für Device: ${deviceId}`);
-    }
-    
-    return user;
-  } catch (error) {
-    logger.error('[UserService] Fehler bei findOrCreateUser:', error);
-    return null;
-  }
-}
-
-/**
- * Holt User mit Registrierungsdaten
- */
-export async function getUserWithRegistration(deviceId: string) {
-  if (!deviceId) return null;
-  
-  await connectDB();
-  
-  try {
-    const user = await User.findOne({ deviceId, isActive: true })
+    const user = await User.findById(sessionData.userId)
       .populate('registrationId')
       .populate('groupId', 'name description')
-      .lean(); // Wichtig: lean() für plain objects
+      .lean();
     
     if (!user) {
-      logger.info(`[UserService] Kein User gefunden für deviceId: ${deviceId}`);
+      logger.info(`[UserService] Kein User gefunden für userId: ${sessionData.userId}`);
       return null;
     }
     
-    logger.info(`[UserService] User gefunden: ${user.name} (${deviceId})`);
+    logger.info(`[UserService] User gefunden: ${user.name} (${sessionData.email})`);
     
     // Serialisiere die Daten für den Client
     const serializedUser = {
       _id: user._id?.toString(),
-      deviceId: user.deviceId,
       name: user.name,
+      email: user.email,
+      username: user.username,
+      role: user.role,
       isActive: user.isActive,
+      emailVerified: user.emailVerified,
+      
       // Serialisiere registrationId
       registrationId: user.registrationId ? {
         _id: (user.registrationId as any)?._id?.toString(),
         name: (user.registrationId as any)?.name,
         days: (user.registrationId as any)?.days,
         priceOption: (user.registrationId as any)?.priceOption,
-        // Weitere Felder falls nötig
       } : null,
       // Serialisiere groupId
       groupId: user.groupId ? {
@@ -82,61 +60,58 @@ export async function getUserWithRegistration(deviceId: string) {
         name: (user.groupId as any)?.name,
         description: (user.groupId as any)?.description,
       } : null,
-      // Konvertiere Dates zu Strings (mit null-Check)
+      // Konvertiere Dates zu Strings
       createdAt: user.createdAt ? user.createdAt.toISOString() : null,
       updatedAt: user.updatedAt ? user.updatedAt.toISOString() : null,
     };
     
-    logger.info(`[UserService] Serialisierter User:`, {
-      name: serializedUser.name,
-      hasRegistration: !!serializedUser.registrationId,
-      deviceId: serializedUser.deviceId
-    });
-    
     return serializedUser;
   } catch (error) {
-    logger.error('[UserService] Fehler bei getUserWithRegistration:', error);
+    logger.error('[UserService] Fehler bei getCurrentUserWithRegistration:', error);
     return null;
   }
 }
 
 /**
- * Aktualisiert User-Präferenzen (vereinfacht)
+ * Aktualisiert User-Präferenzen für den aktuellen User
  */
-export async function updateUserPreferences(deviceId: string, updates: { name?: string }) {
-  if (!deviceId) return null;
+export async function updateCurrentUserPreferences(updates: { name?: string; username?: string }) {
+  const sessionData = await verifySession();
+  if (!sessionData) throw new Error('Nicht authentifiziert');
   
   await connectDB();
   
   try {
     const user = await User.findOneAndUpdate(
-      { deviceId, isActive: true },
+      { _id: sessionData.userId, isActive: true },
       updates,
       { new: true }
     );
     
     return user;
   } catch (error) {
-    logger.error('[UserService] Fehler bei updateUserPreferences:', error);
+    logger.error('[UserService] Fehler bei updateCurrentUserPreferences:', error);
     return null;
   }
 }
 
 /**
- * Verknüpft einen User mit einer Registration
+ * Verknüpft den aktuellen User mit einer Registration
  */
-export async function linkUserWithRegistration(
-  deviceId: string, 
+export async function linkCurrentUserWithRegistration(
   registrationId: string
 ): Promise<{ success: boolean; error?: string }> {
-  if (!deviceId || !registrationId) {
-    return { success: false, error: 'Fehlende Parameter' };
+  const sessionData = await verifySession();
+  if (!sessionData) return { success: false, error: 'Nicht authentifiziert' };
+  
+  if (!registrationId) {
+    return { success: false, error: 'Registration-ID ist erforderlich' };
   }
   
   await connectDB();
   
   try {
-    const user = await User.findByDeviceId(deviceId);
+    const user = await User.findById(sessionData.userId);
     
     if (!user) {
       return { success: false, error: 'User nicht gefunden' };
@@ -154,76 +129,76 @@ export async function linkUserWithRegistration(
     logger.info(`[UserService] User ${user._id} mit Registration ${registrationId} verknüpft`);
     return { success: true };
   } catch (error) {
-    logger.error('[UserService] Fehler bei linkUserWithRegistration:', error);
+    logger.error('[UserService] Fehler bei linkCurrentUserWithRegistration:', error);
     return { success: false, error: 'Fehler beim Verknüpfen' };
   }
 }
 
 /**
- * Holt User-Statistiken
+ * Holt Statistiken für den aktuellen User
  */
-export async function getUserStats(deviceId: string) {
-  if (!deviceId) return null;
+export async function getCurrentUserStats() {
+  const sessionData = await verifySession();
+  if (!sessionData) return null;
   
   await connectDB();
   
   try {
-    const user = await User.findByDeviceId(deviceId);
+    const user = await User.findById(sessionData.userId);
     
     if (!user) return null;
     
     return {
       name: user.name,
-      deviceId: user.deviceId,
+      email: user.email,
       hasRegistration: !!user.registrationId,
       createdAt: user.createdAt
     };
   } catch (error) {
-    logger.error('[UserService] Fehler bei getUserStats:', error);
+    logger.error('[UserService] Fehler bei getCurrentUserStats:', error);
     return null;
   }
 }
 
+// === ADMIN-USER-MANAGEMENT FUNKTIONEN ===
+
 /**
  * Holt alle aktiven User mit Gruppen- und Registrierungsinformationen
+ * (Admin-Funktion für User-Management)
  */
 export async function getAllUsers() {
+  // Prüfe Admin-Berechtigung des aktuellen Users
+  const sessionData = await verifySession();
+  if (!sessionData || sessionData.role !== 'admin') {
+    throw new Error('Admin-Berechtigung erforderlich');
+  }
+  
   await connectDB();
   
   try {
-    const users = await User.find({ isActive: true })
+    const users = await User.find({ 
+      isActive: true
+    })
       .populate('groupId', 'name description')
       .populate('registrationId', 'name days priceOption')
       .sort({ createdAt: -1 })
       .lean();
     
     const mappedUsers = users.map(user => ({
-      deviceId: user.deviceId,
+      _id: String(user._id),
       name: user.name,
+      email: user.email,
+      role: user.role,
       groupId: user.groupId?._id?.toString() || user.groupId?.toString(),
       groupName: (user.groupId as any)?.name,
       isRegistered: !!user.registrationId,
       registrationId: user.registrationId?.toString(),
       createdAt: user.createdAt,
-      lastActivity: user.updatedAt
+      lastActivity: user.updatedAt,
+      isShadowUser: user.isShadowUser
     }));
     
-    // Debug logging
-    console.log('[UserService] getAllUsers - Gefundene User:', {
-      total: mappedUsers.length,
-      withGroups: mappedUsers.filter(u => u.groupId).length,
-      userSample: mappedUsers.slice(0, 3).map(u => ({ 
-        name: u.name, 
-        deviceId: u.deviceId,
-        groupId: u.groupId,
-        groupName: u.groupName 
-      })),
-      groupIdTypes: mappedUsers.slice(0, 3).map(u => ({ 
-        name: u.name, 
-        groupIdType: typeof u.groupId,
-        groupIdValue: u.groupId
-      }))
-    });
+    logger.info(`[UserService] getAllUsers - Gefundene User: ${mappedUsers.length}`);
     
     return mappedUsers;
   } catch (error) {
@@ -233,32 +208,44 @@ export async function getAllUsers() {
 }
 
 /**
- * Löscht einen User und seine Anmeldung
+ * Löscht einen spezifischen User und seine Anmeldung
+ * (Admin-Funktion für User-Management)
  */
-export async function deleteUser(deviceId: string): Promise<{ success: boolean; error?: string }> {
-  if (!deviceId) {
-    return { success: false, error: 'Device-ID ist erforderlich' };
+export async function deleteUser(userId: string): Promise<{ success: boolean; error?: string }> {
+  // Prüfe Admin-Berechtigung des aktuellen Users
+  const sessionData = await verifySession();
+  if (!sessionData || sessionData.role !== 'admin') {
+    return { success: false, error: 'Admin-Berechtigung erforderlich' };
+  }
+  
+  if (!userId) {
+    return { success: false, error: 'User-ID ist erforderlich' };
   }
   
   await connectDB();
   
   try {
-    const user = await User.findByDeviceId(deviceId);
+    const userToDelete = await User.findById(userId);
     
-    if (!user) {
+    if (!userToDelete) {
       return { success: false, error: 'User nicht gefunden' };
     }
     
+    // Verhindere Selbstlöschung
+    if ((userToDelete._id as mongoose.Types.ObjectId).toString() === sessionData.userId) {
+      return { success: false, error: 'Sie können sich nicht selbst löschen' };
+    }
+    
     // Lösche die Registration falls vorhanden
-    if (user.registrationId) {
-      await Registration.findByIdAndDelete(user.registrationId);
-      logger.info(`[UserService] Registration ${user.registrationId} für User ${user.name} gelöscht`);
+    if (userToDelete.registrationId) {
+      await Registration.findByIdAndDelete(userToDelete.registrationId);
+      logger.info(`[UserService] Registration ${userToDelete.registrationId} für User ${userToDelete.name} gelöscht`);
     }
     
     // Lösche den User
-    await User.findByIdAndDelete(user._id);
+    await User.findByIdAndDelete(userToDelete._id);
     
-    logger.info(`[UserService] User ${user.name} (${deviceId}) und zugehörige Registration gelöscht`);
+    logger.info(`[UserService] User ${userToDelete.name} (${userToDelete.email}) durch Admin ${sessionData.email} gelöscht`);
     return { success: true };
   } catch (error) {
     logger.error('[UserService] Fehler bei deleteUser:', error);

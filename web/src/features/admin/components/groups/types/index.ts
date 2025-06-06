@@ -13,7 +13,6 @@ export interface GroupData {
 export interface GroupMember {
   userId: string;
   name: string;
-  deviceId: string;
   isRegistered: boolean;
   registrationDate?: string;
   joinedGroupAt: string;

@@ -5,7 +5,7 @@ interface AuthConfig {
 }
 
 export function getAuthConfig(): AuthConfig {
-  const jwtSecret = process.env.JWT_SECRET;
+  const jwtSecret = process.env.JWT_SECRET; 
   const adminUsername = process.env.ADMIN_USERNAME;
   const adminPassword = process.env.ADMIN_PASSWORD;
 

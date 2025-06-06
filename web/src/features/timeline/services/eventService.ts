@@ -6,7 +6,25 @@ import { getCentralFestivalDayById } from '@/shared/services/festivalDaysService
 import { fromZonedTime, toZonedTime } from 'date-fns-tz';
 import { format } from 'date-fns';
 
-export async function createEvent(data: any) {
+// Typ für das Event-Objekt, das von createEvent zurückgegeben wird
+type LeanEvent = {
+  _id: Types.ObjectId;
+  dayId: Types.ObjectId;
+  categoryId: Types.ObjectId;
+  title: string;
+  description: string;
+  time: string;
+  status: 'pending' | 'approved' | 'rejected';
+  submittedAt: Date;
+  submittedByAdmin?: boolean;
+  offeredBy?: string;
+  agendaJobId?: string;
+  createdAt: Date;
+  updatedAt: Date;
+  __v: number;
+};
+
+export async function createEvent(data: any): Promise<LeanEvent> {
   const event = new Event(data);
   await event.save();
   await broadcast('event-created', { eventId: event._id.toString(), dayId: event.dayId?.toString() });
@@ -22,7 +40,7 @@ export async function createEvent(data: any) {
     }
   }
 
-  return plain;
+  return plain as LeanEvent;
 }
 
 /**
@@ -54,6 +72,7 @@ async function createScheduledPushForEvent(event: any) {
     schedule: eventDate,
     active: true,
     sendToAll: true,
+    type: 'general'
   });
 
   // Optional: Speichere pushEvent ID im Event für späteren Zugriff

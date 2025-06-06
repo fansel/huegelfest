@@ -1,7 +1,7 @@
 'use client';
 
-import React, { useState, useEffect } from 'react';
-import { AlertCircle, CheckCircle, Copy } from 'lucide-react';
+import React, { useState } from 'react';
+import { AlertCircle, CheckCircle } from 'lucide-react';
 import { Button } from '@/shared/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/shared/components/ui/card';
 import { Alert, AlertDescription } from '@/shared/components/ui/alert';
@@ -9,36 +9,45 @@ import FestivalRegisterForm from '../FestivalRegisterForm';
 import { submitNachmeldungAction } from '@/features/registration/actions/submitNachmeldung';
 import type { FestivalRegisterData } from './steps/types';
 import toast from 'react-hot-toast';
-import { generateDeviceId } from '@/shared/hooks/useDeviceId';
+import { useAuth } from '@/features/auth/AuthContext';
+import { validateEmailAvailability } from '@/features/auth/actions/validateEmail';
 
 interface NachmeldungResult {
   success: boolean;
-  magicCode?: string;
   error?: string;
 }
 
-const NachmeldungPage: React.FC = () => {
+export default function NachmeldungPage() {
+  // Hooks müssen immer in der gleichen Reihenfolge aufgerufen werden
+  const { isLoading: authLoading } = useAuth();
   const [result, setResult] = useState<NachmeldungResult | null>(null);
   const [isLoading, setIsLoading] = useState(false);
 
-  // Generiere einmalig eine temporäre deviceId für diese Nachmeldung
-  const tempDeviceId = generateDeviceId();
-
-  const handleSubmit = async (formData: FestivalRegisterData) => {
-    if (!tempDeviceId) {
-      toast.error('Device-ID nicht verfügbar. Bitte lade die Seite neu.');
-      return;
-    }
-    
+  const handleSubmit = async (formData: FestivalRegisterData & { username?: string, password?: string }) => {
     setIsLoading(true);
     try {
-      // Verwende die temporäre deviceId für die Nachmeldung
-      const formDataWithTempDeviceId = {
-        ...formData,
-        deviceId: tempDeviceId
-      };
-      
-      const result = await submitNachmeldungAction(formDataWithTempDeviceId);
+      // Stelle sicher, dass username und password vorhanden sind
+      if (!formData.username || !formData.password) {
+        setResult({
+          success: false,
+          error: 'Username und Passwort sind erforderlich'
+        });
+        return;
+      }
+
+      // Prüfe E-Mail-Verfügbarkeit wenn eine angegeben wurde
+      if (formData.email?.trim()) {
+        const emailValidation = await validateEmailAvailability(formData.email);
+        if (!emailValidation.isAvailable) {
+          setResult({
+            success: false,
+            error: emailValidation.error || 'Diese E-Mail-Adresse wird bereits verwendet'
+          });
+          return;
+        }
+      }
+
+      const result = await submitNachmeldungAction(formData);
       setResult(result);
       
       if (result.success) {
@@ -57,16 +66,24 @@ const NachmeldungPage: React.FC = () => {
     setIsLoading(false);
   };
 
-  const copyToClipboard = async (text: string) => {
-    try {
-      await navigator.clipboard.writeText(text);
-      toast.success('Code kopiert!');
-    } catch (error) {
-      toast.error('Fehler beim Kopieren');
-    }
-  };
+  // Render loading state
+  if (authLoading || isLoading) {
+    return (
+      <div className="min-h-screen bg-gradient-to-br from-[#460b6c] via-[#5c1a7c] to-[#460b6c] flex items-center justify-center p-4">
+        <Card className="w-full max-w-md">
+          <CardContent className="flex items-center justify-center p-8">
+            <div className="text-center">
+              <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-[#ff9900] mx-auto mb-4"></div>
+              <p className="text-gray-600">Lädt...</p>
+            </div>
+          </CardContent>
+        </Card>
+      </div>
+    );
+  }
 
-  if (result?.success && result.magicCode) {
+  // Success State
+  if (result?.success) {
     return (
       <div className="min-h-screen bg-gradient-to-br from-[#460b6c] via-[#5c1a7c] to-[#460b6c] flex items-center justify-center p-4">
         <Card className="w-full max-w-md">
@@ -83,46 +100,27 @@ const NachmeldungPage: React.FC = () => {
           </CardHeader>
           <CardContent className="space-y-4">
             <Alert>
-              <AlertCircle className="h-4 w-4" />
+              <CheckCircle className="h-4 w-4" />
               <AlertDescription>
-                Du erhältst einen speziellen Code zur Anmeldung. Notiere dir diesen Code gut!
+                Du wurdest erfolgreich für das Festival nachgemeldet! Du kannst diese Seite jetzt schließen.
               </AlertDescription>
             </Alert>
             
-            <div className="border rounded-lg p-4 bg-gray-50">
-              <label className="text-sm font-medium text-gray-700 block mb-2">
-                Dein Anmeldecode:
-              </label>
-              <div className="flex items-center gap-2">
-                <code className="flex-1 text-lg font-mono bg-white px-3 py-2 border rounded">
-                  {result.magicCode}
-                </code>
-                <Button
-                  variant="outline"
-                  size="icon"
-                  onClick={() => copyToClipboard(result.magicCode!)}
-                >
-                  <Copy className="h-4 w-4" />
-                </Button>
-              </div>
-            </div>
-
             <div className="space-y-2 text-sm text-gray-600">
               <p><strong>Nächste Schritte:</strong></p>
-              <ol className="list-decimal list-inside space-y-1">
-                <li>Notiere dir den Code sicher</li>
-                <li>Gehe auf dem Festival-Gerät in die App</li>
-                <li>Nutze die "Gerätewechsel" Funktion</li>
-                <li>Gib den Code ein um deine Anmeldung zu importieren</li>
-              </ol>
+              <ul className="list-disc list-inside space-y-1">
+                <li>Öffne die Hügelfest App</li>
+                <li>Gehe zu "Einstellungen"</li>
+                <li>Logge dich dort mit deinem Account ein</li>
+              </ul>
             </div>
-
           </CardContent>
         </Card>
       </div>
     );
   }
 
+  // Error State
   if (result && !result.success) {
     return (
       <div className="min-h-screen bg-gradient-to-br from-[#460b6c] via-[#5c1a7c] to-[#460b6c] flex items-center justify-center p-4">
@@ -156,6 +154,7 @@ const NachmeldungPage: React.FC = () => {
     );
   }
 
+  // Main Form
   return (
     <div className="min-h-screen bg-gradient-to-br from-[#460b6c] via-[#5c1a7c] to-[#460b6c] flex items-center justify-center p-4">
       <Card className="w-full max-w-md">
@@ -171,7 +170,8 @@ const NachmeldungPage: React.FC = () => {
           <Alert className="mb-6">
             <AlertCircle className="h-4 w-4" />
             <AlertDescription>
-              Die reguläre Anmeldephase ist beendet. Du kannst dich hier nachträglich anmelden und erhältst einen speziellen Code.
+              Die reguläre Anmeldephase ist beendet. Du kannst dich hier nachträglich anmelden. 
+              Ein Account wird automatisch für dich erstellt.
             </AlertDescription>
           </Alert>
           
@@ -179,12 +179,9 @@ const NachmeldungPage: React.FC = () => {
             onRegister={handleSubmit}
             setCookies={false}
             skipRegistrationCheck={true}
-            customDeviceId={tempDeviceId || undefined}
           />
         </CardContent>
       </Card>
     </div>
   );
-};
-
-export default NachmeldungPage; 
+} 

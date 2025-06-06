@@ -4,8 +4,7 @@ import { getAnnouncementReactions as getAnnouncementReactionsService } from '../
 import { ReactionType } from '@/shared/types/types';
 
 export async function getAnnouncementReactionsAction(
-  announcementId: string,
-  deviceId?: string
+  announcementId: string
 ): Promise<{ counts: Record<ReactionType, number>; userReaction?: ReactionType }> {
-  return await getAnnouncementReactionsService(announcementId, deviceId);
+  return await getAnnouncementReactionsService(announcementId);
 } 

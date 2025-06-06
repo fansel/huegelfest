@@ -1,16 +1,10 @@
 'use client';
 
 import { useState, useEffect } from 'react';
-import { 
-  Dialog, 
-  DialogContent, 
-  DialogDescription, 
-  DialogHeader, 
-  DialogTitle 
-} from '@/shared/components/ui/dialog';
+import { useAuth } from '@/features/auth/AuthContext';
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/shared/components/ui/dialog';
 import { Button } from '@/shared/components/ui/button';
-import { Bell, BellOff, X } from 'lucide-react';
-import { useDeviceId } from '@/shared/hooks/useDeviceId';
+import { Bell, X } from 'lucide-react';
 import { subscribePushAction } from '../actions/subscribePush';
 import { env } from 'next-runtime-env';
 import { toast } from 'react-hot-toast';
@@ -20,11 +14,11 @@ const VAPID_PUBLIC_KEY = env('NEXT_PUBLIC_VAPID_PUBLIC_KEY');
 interface AutoPushPromptProps {
   forceShow?: boolean;
   onClose?: () => void;
-  onSubscriptionChange?: (isSubscribed: boolean) => void;
+  onSubscriptionChange?: (subscribed: boolean) => void;
 }
 
 export default function AutoPushPrompt({ forceShow = false, onClose, onSubscriptionChange }: AutoPushPromptProps) {
-  const deviceId = useDeviceId();
+  const { user } = useAuth(); 
   const [showPrompt, setShowPrompt] = useState(forceShow);
   const [isLoading, setIsLoading] = useState(false);
   const [triggerReason, setTriggerReason] = useState<string>('manual');
@@ -52,8 +46,8 @@ export default function AutoPushPrompt({ forceShow = false, onClose, onSubscript
   }, []);
 
   const handleAllow = async () => {
-    if (!deviceId) {
-      toast.error('Device ID nicht verfügbar');
+    if (!user) {
+      toast.error('Benutzer nicht angemeldet');
       return;
     }
 
@@ -89,8 +83,7 @@ export default function AutoPushPrompt({ forceShow = false, onClose, onSubscript
 
         const result = await subscribePushAction({
           endpoint: pushSubscription.endpoint,
-          keys: { p256dh, auth },
-          deviceId
+          keys: { p256dh, auth }
         });
 
         if (result.status === 'success') {
@@ -126,7 +119,7 @@ export default function AutoPushPrompt({ forceShow = false, onClose, onSubscript
     onClose?.();
   };
 
-  if (!showPrompt || !deviceId) return null;
+  if (!showPrompt || !user) return null;
 
   return (
     <Dialog open={showPrompt} onOpenChange={(open) => {
@@ -137,57 +130,31 @@ export default function AutoPushPrompt({ forceShow = false, onClose, onSubscript
       <DialogContent className="max-w-md">
         <DialogHeader>
           <DialogTitle className="flex items-center gap-2">
-            <Bell className="w-5 h-5 text-[#ff9900]" />
-            Benachrichtigungen erlauben?
+            <Bell className="h-5 w-5" />
+            Push-Benachrichtigungen
           </DialogTitle>
-          <DialogDescription>
-            {customMessage || (
-              triggerReason === 'device-transfer'
-                ? 'Nach dem Gerätewechsel musst du Push-Benachrichtigungen neu aktivieren.'
-                : triggerReason === 'first-start'
-                ? 'Soll die App dir wichtige Updates als Push-Benachrichtigungen senden?'
-                : 'Möchtest du Benachrichtigungen über wichtige Updates erhalten?'
-            )}
-          </DialogDescription>
         </DialogHeader>
-
+        
         <div className="space-y-4">
-          <div className="text-sm text-gray-600 space-y-2">
-            <p><strong>Du erhältst Benachrichtigungen über:</strong></p>
-            <ul className="list-disc list-inside space-y-1 pl-2">
-              <li>Neue Ankündigungen</li>
-              <li> Deine Aufgaben</li>
-              <li>Timeline-Updates</li>
-            </ul>
-          </div>
-
-          <div className="flex flex-col gap-2">
+          <p className="text-sm text-gray-600">
+            {customMessage || 'Möchtest du Benachrichtigungen über wichtige Ereignisse erhalten?'}
+          </p>
+          
+          <div className="flex gap-2">
             <Button
               onClick={handleAllow}
               disabled={isLoading}
-              className="w-full bg-[#ff9900] hover:bg-orange-600"
+              className="flex-1"
             >
-              {isLoading ? (
-                <>
-                  <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white mr-2" />
-                  Aktiviere...
-                </>
-              ) : (
-                <>
-                  <Bell className="w-4 h-4 mr-2" />
-                  Ja, Benachrichtigungen erlauben
-                </>
-              )}
+              {isLoading ? 'Aktiviere...' : 'Aktivieren'}
             </Button>
-
             <Button
               variant="outline"
               onClick={handleDeny}
               disabled={isLoading}
-              className="w-full"
+              className="flex-1"
             >
-              <BellOff className="w-4 h-4 mr-2" />
-              Nein danke
+              Nicht jetzt
             </Button>
           </div>
         </div>

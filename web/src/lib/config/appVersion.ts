@@ -2,8 +2,8 @@
 export const APP_VERSION = {
   // Version aus package.json + Build-Zeit
   version: '0.1.0',
-  buildTime: '1748821706168',
-  buildId: 'f1d733c',
+  buildTime: '1749217223070',
+  buildId: 'e298f31',
   
   // Development vs Production unterscheiden
   isDevelopment: process.env.NODE_ENV === 'development',

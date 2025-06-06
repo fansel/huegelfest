@@ -4,6 +4,7 @@ import { convertToLegacyFormat } from '@/shared/utils/festivalDaysUtils';
 
 export interface FestivalRegisterData {
   name: string;
+  email: string; // E-Mail für Account-Erstellung
   days: number[]; // Indizes der gewählten Tage
   isMedic: boolean;
   travelType: "zug" | "auto" | "fahrrad" | "andere";
@@ -12,7 +13,6 @@ export interface FestivalRegisterData {
   wantsToOfferWorkshop: string;
   sleepingPreference: "bed" | "tent" | "car";
   lineupContribution: string;
-  deviceId?: string; // DeviceID für User-Erstellung
   // Neue Felder
   canStaySober: boolean; // Kann nüchtern bleiben für Notfall-Autofahren
   wantsAwareness: boolean; // Möchte Awareness-Schicht übernehmen
@@ -26,8 +26,13 @@ export interface FestivalRegisterData {
   contactInfo: string; // Telefonnummer oder Telegram Handle
 }
 
+export interface FestivalRegisterDataWithStatus extends FestivalRegisterData {
+  isRegistered?: boolean;
+}
+
 export const defaultData: FestivalRegisterData = {
   name: "",
+  email: "",
   days: [0, 1, 2, 3],
   isMedic: false,
   travelType: "zug",

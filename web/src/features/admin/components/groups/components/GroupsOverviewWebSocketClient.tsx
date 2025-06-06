@@ -10,7 +10,7 @@ import { toast } from 'react-hot-toast';
 import { useDeviceContext } from '@/shared/contexts/DeviceContext';
 
 import { GroupsTab } from './GroupsTab';
-import { UsersTab } from './UsersTab';
+import { IntegratedUsersTab } from './IntegratedUsersTab';
 import { RegistrationsTab } from './RegistrationsTab';
 import { CreateGroupDialog } from './dialogs/CreateGroupDialog';
 import { EditGroupDialog } from './dialogs/EditGroupDialog';
@@ -19,7 +19,9 @@ import { AddUserToGroupDialog } from './dialogs/AddUserToGroupDialog';
 import { RegistrationDetailDialog } from './dialogs/RegistrationDetailDialog';
 import { EditRegistrationDialog } from './dialogs/EditRegistrationDialog';
 import { DeleteUserDialog } from './dialogs/DeleteUserDialog';
-import AdminMagicCodeOverview from '../../../../magic-codes/components/AdminMagicCodeOverview';
+import { UserRegistrationDialog } from '../../users/UserRegistrationDialog';
+import { UserManagementActions } from '../../users/UserManagementActions';
+import { UserManagementTab } from './UserManagementTab';
 
 interface GroupsOverviewWebSocketProps {
   initialData: GroupsData;
@@ -34,7 +36,7 @@ export function GroupsOverviewWebSocketClient({ initialData }: GroupsOverviewWeb
   const { data, loading, connected, refreshData } = useGroupsWebSocket(initialData);
   const { deviceType } = useDeviceContext();
   const isMobile = deviceType === 'mobile';
-  const [activeTab, setActiveTab] = useState<TabType>('groups');
+  const [activeTab, setActiveTab] = useState<TabType>('users'); // Start with users tab as default
   const [searchTerm, setSearchTerm] = useState('');
   
   // Dialog states
@@ -46,6 +48,11 @@ export function GroupsOverviewWebSocketClient({ initialData }: GroupsOverviewWeb
   const [selectedRegistration, setSelectedRegistration] = useState<RegistrationWithId | null>(null);
   const [editingRegistration, setEditingRegistration] = useState<RegistrationWithId | null>(null);
   const [deleteUserId, setDeleteUserId] = useState<string | null>(null);
+  
+  // User Registration Dialog states
+  const [showUserRegistration, setShowUserRegistration] = useState(false);
+  const [selectedUserId, setSelectedUserId] = useState<string | null>(null);
+  const [selectedUserName, setSelectedUserName] = useState<string>('');
 
   const handleRegistrationStatusChange = async (field: 'paid' | 'checkedIn', value: boolean) => {
     if (!selectedRegistration) return;
@@ -57,6 +64,12 @@ export function GroupsOverviewWebSocketClient({ initialData }: GroupsOverviewWeb
       toast.success(`${fieldName} aktualisiert`);
       // WebSocket wird das Update automatisch verbreiten
     }
+  };
+
+  const handleShowUserRegistration = (userId: string, userName: string) => {
+    setSelectedUserId(userId);
+    setSelectedUserName(userName);
+    setShowUserRegistration(true);
   };
 
   if (loading) {
@@ -116,16 +129,6 @@ export function GroupsOverviewWebSocketClient({ initialData }: GroupsOverviewWeb
         <div className="border-b border-gray-200 bg-white sticky top-0 z-10">
           <div className="flex overflow-x-auto px-4 space-x-6">
             <button
-              onClick={() => setActiveTab('groups')}
-              className={`py-3 px-2 border-b-2 font-medium text-sm whitespace-nowrap ${
-                activeTab === 'groups'
-                  ? 'border-[#ff9900] text-[#ff9900]'
-                  : 'border-transparent text-gray-500'
-              }`}
-            >
-              Gruppen ({data.groups.length})
-            </button>
-            <button
               onClick={() => setActiveTab('users')}
               className={`py-3 px-2 border-b-2 font-medium text-sm whitespace-nowrap ${
                 activeTab === 'users'
@@ -134,6 +137,16 @@ export function GroupsOverviewWebSocketClient({ initialData }: GroupsOverviewWeb
               }`}
             >
               Benutzer ({data.users.length})
+            </button>
+            <button
+              onClick={() => setActiveTab('groups')}
+              className={`py-3 px-2 border-b-2 font-medium text-sm whitespace-nowrap ${
+                activeTab === 'groups'
+                  ? 'border-[#ff9900] text-[#ff9900]'
+                  : 'border-transparent text-gray-500'
+              }`}
+            >
+              Gruppen ({data.groups.length})
             </button>
             <button
               onClick={() => setActiveTab('registrations')}
@@ -145,21 +158,30 @@ export function GroupsOverviewWebSocketClient({ initialData }: GroupsOverviewWeb
             >
               Anmeldungen ({data.registrations.length})
             </button>
-            <button
-              onClick={() => setActiveTab('magic-codes')}
-              className={`py-3 px-2 border-b-2 font-medium text-sm whitespace-nowrap ${
-                activeTab === 'magic-codes'
-                  ? 'border-[#ff9900] text-[#ff9900]'
-                  : 'border-transparent text-gray-500'
-              }`}
-            >
-              Magic Codes
-            </button>
           </div>
         </div>
 
         {/* Mobile Tab Content with padding */}
         <div className="p-4">
+          {activeTab === 'users' && (
+            <UserManagementTab
+              users={data.users.map(u => ({
+                _id: u._id,
+                name: u.name,
+                email: u.email,
+                username: u.name ? `@${u.name.toLowerCase().replace(/\s+/g, '')}` : undefined,
+                role: u.role,
+                emailVerified: true, // Default, da nicht im Typ vorhanden
+                isShadowUser: u.isShadowUser === true,
+                groupId: u.groupId,
+                lastLogin: u.lastActivity,
+                createdAt: u.createdAt,
+              }))}
+              groups={data.groups}
+              onRefreshUsers={refreshData}
+            />
+          )}
+
           {activeTab === 'groups' && (
             <GroupsTab
               groups={data.groups}
@@ -177,27 +199,12 @@ export function GroupsOverviewWebSocketClient({ initialData }: GroupsOverviewWeb
             />
           )}
 
-          {activeTab === 'users' && (
-            <UsersTab
-              users={data.users}
-              groups={data.groups}
-              searchTerm={searchTerm}
-              setSearchTerm={setSearchTerm}
-              onDeleteUser={setDeleteUserId}
-              onRefreshData={refreshData}
-            />
-          )}
-
           {activeTab === 'registrations' && (
             <RegistrationsTab
               registrations={data.registrations}
               onSelectRegistration={setSelectedRegistration}
               onEditRegistration={setEditingRegistration}
             />
-          )}
-
-          {activeTab === 'magic-codes' && (
-            <AdminMagicCodeOverview />
           )}
         </div>
 
@@ -270,6 +277,19 @@ export function GroupsOverviewWebSocketClient({ initialData }: GroupsOverviewWeb
             toast.success('Benutzer gelöscht');
           }}
         />
+
+        <UserRegistrationDialog
+          userId={selectedUserId}
+          userName={selectedUserName}
+          open={showUserRegistration}
+          onOpenChange={(open) => {
+            if (!open) {
+              setShowUserRegistration(false);
+              setSelectedUserId(null);
+              setSelectedUserName('');
+            }
+          }}
+        />
       </div>
     );
   }
@@ -300,16 +320,6 @@ export function GroupsOverviewWebSocketClient({ initialData }: GroupsOverviewWeb
       <div className="border-b border-gray-200">
         <div className="flex space-x-8 px-6">
           <button
-            onClick={() => setActiveTab('groups')}
-            className={`py-4 px-1 border-b-2 font-medium text-sm ${
-              activeTab === 'groups'
-                ? 'border-[#ff9900] text-[#ff9900]'
-                : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
-            }`}
-          >
-            Gruppen ({data.groups.length})
-          </button>
-          <button
             onClick={() => setActiveTab('users')}
             className={`py-4 px-1 border-b-2 font-medium text-sm ${
               activeTab === 'users'
@@ -318,6 +328,16 @@ export function GroupsOverviewWebSocketClient({ initialData }: GroupsOverviewWeb
             }`}
           >
             Benutzer ({data.users.length})
+          </button>
+          <button
+            onClick={() => setActiveTab('groups')}
+            className={`py-4 px-1 border-b-2 font-medium text-sm ${
+              activeTab === 'groups'
+                ? 'border-[#ff9900] text-[#ff9900]'
+                : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
+            }`}
+          >
+            Gruppen ({data.groups.length})
           </button>
           <button
             onClick={() => setActiveTab('registrations')}
@@ -329,44 +349,30 @@ export function GroupsOverviewWebSocketClient({ initialData }: GroupsOverviewWeb
           >
             Anmeldungen ({data.registrations.length})
           </button>
-          <button
-            onClick={() => setActiveTab('magic-codes')}
-            className={`py-4 px-1 border-b-2 font-medium text-sm ${
-              activeTab === 'magic-codes'
-                ? 'border-[#ff9900] text-[#ff9900]'
-                : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
-            }`}
-          >
-            Magic Codes
-          </button>
         </div>
       </div>
 
       {/* Tab Content */}
       <div className="p-6">
-        {/* Statistics */}
-        {data.statistics && (
-          <div className="grid grid-cols-4 gap-4 mb-6 p-4 bg-gray-50 rounded-lg">
-            <div className="text-center">
-              <div className="text-2xl font-bold text-[#ff9900]">{data.statistics.totalUsers}</div>
-              <div className="text-sm text-gray-600">Gesamt Benutzer</div>
-            </div>
-            <div className="text-center">
-              <div className="text-2xl font-bold text-green-600">{data.statistics.usersWithGroups}</div>
-              <div className="text-sm text-gray-600">In Gruppen</div>
-            </div>
-            <div className="text-center">
-              <div className="text-2xl font-bold text-orange-600">{data.statistics.usersWithoutGroups}</div>
-              <div className="text-sm text-gray-600">Ohne Gruppe</div>
-            </div>
-            <div className="text-center">
-              <div className="text-2xl font-bold text-blue-600">{data.statistics.assignableGroups}</div>
-              <div className="text-sm text-gray-600">Zuweisbare Gruppen</div>
-            </div>
-          </div>
+        {activeTab === 'users' && (
+          <UserManagementTab
+            users={data.users.map(u => ({
+              _id: u._id,
+              name: u.name,
+              email: u.email,
+              username: u.name ? `@${u.name.toLowerCase().replace(/\s+/g, '')}` : undefined,
+              role: u.role,
+              emailVerified: true, // Default, da nicht im Typ vorhanden
+              isShadowUser: u.isShadowUser === true,
+              groupId: u.groupId,
+              lastLogin: u.lastActivity,
+              createdAt: u.createdAt,
+            }))}
+            groups={data.groups}
+            onRefreshUsers={refreshData}
+          />
         )}
 
-        {/* Tab Components */}
         {activeTab === 'groups' && (
           <GroupsTab
             groups={data.groups}
@@ -384,27 +390,12 @@ export function GroupsOverviewWebSocketClient({ initialData }: GroupsOverviewWeb
           />
         )}
 
-        {activeTab === 'users' && (
-          <UsersTab
-            users={data.users}
-            groups={data.groups}
-            searchTerm={searchTerm}
-            setSearchTerm={setSearchTerm}
-            onDeleteUser={setDeleteUserId}
-            onRefreshData={refreshData}
-          />
-        )}
-
         {activeTab === 'registrations' && (
           <RegistrationsTab
             registrations={data.registrations}
             onSelectRegistration={setSelectedRegistration}
             onEditRegistration={setEditingRegistration}
           />
-        )}
-
-        {activeTab === 'magic-codes' && (
-          <AdminMagicCodeOverview />
         )}
       </div>
 
@@ -481,6 +472,19 @@ export function GroupsOverviewWebSocketClient({ initialData }: GroupsOverviewWeb
           setDeleteUserId(null);
           toast.success('Benutzer gelöscht');
           // WebSocket broadcast wird automatisch andere Clients benachrichtigen
+        }}
+      />
+
+      <UserRegistrationDialog
+        userId={selectedUserId}
+        userName={selectedUserName}
+        open={showUserRegistration}
+        onOpenChange={(open) => {
+          if (!open) {
+            setShowUserRegistration(false);
+            setSelectedUserId(null);
+            setSelectedUserName('');
+          }
         }}
       />
     </div>

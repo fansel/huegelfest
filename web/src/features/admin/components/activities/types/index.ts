@@ -100,7 +100,7 @@ export interface ActivityWithCategoryAndTemplate extends Activity {
   responsibleUsersData?: {
     _id: string;
     name: string;
-    deviceId: string;
+    email: string;
   }[];
 }
 

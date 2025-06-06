@@ -69,7 +69,7 @@ export async function getActivitiesByGroup(groupId: string) {
     .populate('categoryId', 'name icon color')
     .populate('templateId', 'name defaultDescription')
     .populate('groupId', 'name color')
-    .populate('responsibleUsers', 'name deviceId')
+    .populate('responsibleUsers', 'name email')
     .sort({ date: 1, startTime: 1 })
     .lean();
 
@@ -132,7 +132,7 @@ export async function createActivity(data: CreateActivityData, createdBy: string
     .populate('categoryId', 'name icon color')
     .populate('templateId', 'name defaultDescription')
     .populate('groupId', 'name color')
-    .populate('responsibleUsers', 'name deviceId')
+    .populate('responsibleUsers', 'name email')
     .lean();
 
   if (!populatedActivity) {
@@ -233,7 +233,7 @@ export async function updateActivity(id: string, data: UpdateActivityData) {
     .populate('categoryId', 'name icon color')
     .populate('templateId', 'name defaultDescription')
     .populate('groupId', 'name color')
-    .populate('responsibleUsers', 'name deviceId')
+    .populate('responsibleUsers', 'name email')
     .lean();
 
   if (!populatedActivity) {
@@ -324,47 +324,45 @@ export async function sendActivityReminder(activityId: string) {
   const activityName = populatedTemplate?.name || activity.customName || 'Unbekannte Aktivität';
   const groupName = populatedGroup?.name || 'Unbekannte Gruppe';
 
-  // Send immediate push notification
-  const { webPushService } = await import('@/lib/webpush/webPushService');
-  const { Subscriber } = await import('@/lib/db/models/Subscriber');
+  // Send push notification using new user-based system
+  const { sendPushNotificationToUser } = await import('@/features/push/services/pushService');
   const { User } = await import('@/lib/db/models/User');
   
-  // First get all users in this group
+  // Get all users in this group with proper typing
   const groupUsers = await User.find({
     groupId: populatedGroup._id
-  }).select('deviceId');
-
-  const groupDeviceIds = groupUsers.map(user => user.deviceId);
-  
-  // Then find subscribers for these deviceIds
-  const subscribers = await Subscriber.find({
-    deviceId: { $in: groupDeviceIds }
-  });
+  }).select('_id').lean() as any[];
 
   const title = `Erinnerung für Gruppe ${groupName}`;
   const body = `Eure Aufgabe "${activityName}" steht an!`;
 
-  for (const subscriber of subscribers) {
-    if (subscriber.endpoint && webPushService.isInitialized()) {
-      try {
-        await webPushService.sendNotification(subscriber, {
-          title,
-          body,
-          icon: '/icon-192x192.png',
-          badge: '/badge-96x96.png',
-          data: { 
-            type: 'activity-reminder', 
-            activityId: activity._id.toString(),
-            groupId: populatedGroup._id.toString()
-          }
-        });
-      } catch (error) {
-        console.error('Failed to send push notification to subscriber:', error);
+  let successCount = 0;
+  const errors = [];
+
+  for (const user of groupUsers) {
+    try {
+      const result = await sendPushNotificationToUser((user._id as any).toString(), {
+        title,
+        body,
+        icon: '/icon-192x192.png',
+        badge: '/badge-96x96.png',
+        data: { 
+          type: 'activity-reminder', 
+          activityId: activity._id.toString(),
+          groupId: populatedGroup._id.toString()
+        }
+      });
+      
+      if (result.success) {
+        successCount++;
       }
+    } catch (error) {
+      console.error('Failed to send push notification to user:', user._id, error);
+      errors.push(error);
     }
   }
 
-  return { success: true, sent: subscribers.length };
+  return { success: true, sent: successCount };
 }
 
 /**
@@ -373,8 +371,7 @@ export async function sendActivityReminder(activityId: string) {
 async function sendResponsibleUserNotification(activity: any) {
   if (!activity.responsibleUsers || activity.responsibleUsers.length === 0) return;
 
-  const { webPushService } = await import('@/lib/webpush/webPushService');
-  const { Subscriber } = await import('@/lib/db/models/Subscriber');
+  const { sendPushNotificationToUser } = await import('@/features/push/services/pushService');
   const { User } = await import('@/lib/db/models/User');
   const { Group } = await import('@/lib/db/models/Group');
 
@@ -382,17 +379,10 @@ async function sendResponsibleUserNotification(activity: any) {
   const group = await Group.findById(activity.groupId).select('name');
   const groupName = group?.name || 'Unbekannte Gruppe';
 
-  // Get responsible users
+  // Get responsible users with proper typing
   const responsibleUsers = await User.find({
     _id: { $in: activity.responsibleUsers }
-  }).select('deviceId name');
-
-  const responsibleDeviceIds = responsibleUsers.map(user => user.deviceId);
-  
-  // Find subscribers for these deviceIds
-  const subscribers = await Subscriber.find({
-    deviceId: { $in: responsibleDeviceIds }
-  });
+  }).select('_id name').lean() as any[];
 
   // Format date with day of week and time
   const activityDate = new Date(activity.date);
@@ -405,22 +395,20 @@ async function sendResponsibleUserNotification(activity: any) {
   const title = `Gruppe ${groupName}`;
   const body = `Du trägst die Hauptverantwortung für Aufgabe "${activityName}" am ${dayName}${timeText}`;
 
-  for (const subscriber of subscribers) {
-    if (subscriber.endpoint && webPushService.isInitialized()) {
-      try {
-        await webPushService.sendNotification(subscriber, {
-          title,
-          body,
-          icon: '/icon-192x192.png',
-          badge: '/badge-96x96.png',
-          data: { 
-            type: 'responsible-assignment', 
-            activityId: activity._id.toString()
-          }
-        });
-      } catch (error) {
-        console.error('Failed to send responsible user notification:', error);
-      }
+  for (const user of responsibleUsers) {
+    try {
+      await sendPushNotificationToUser((user._id as any).toString(), {
+        title,
+        body,
+        icon: '/icon-192x192.png',
+        badge: '/badge-96x96.png',
+        data: { 
+          type: 'responsible-assignment', 
+          activityId: activity._id.toString()
+        }
+      });
+    } catch (error) {
+      console.error('Failed to send responsible user notification:', error);
     }
   }
 }
@@ -472,54 +460,31 @@ async function createActivityPushEvents(activity: any) {
   const group = await Group.findById(activity.groupId).select('name');
   const groupName = group?.name || 'Unbekannte Gruppe';
   
-  // Create group-based push event (will resolve subscribers dynamically at execution time)
-  const pushEvent = await createScheduledPushEvent({
+  // Erstelle den Gruppen-Push-Event
+  const groupPushEvent = await createScheduledPushEvent({
     title: `Gruppe ${groupName}`,
-    body: `Eure Aufgabe "${activityName}" hat begonnen`,
+    body: `Eure Aufgabe "${activityName}" hat begonnen!`,
     repeat: 'once',
     schedule: berlinDate,
     active: true,
-    sendToAll: false,
-    subscribers: [], // Empty - will be resolved dynamically via groupId
-    groupId: activity.groupId, // NEW: Group ID for dynamic resolution
+    type: 'group',
+    groupId: activity.groupId
   });
-
-  // Update activity with agenda job ID
-  activity.agendaJobId = pushEvent.agendaJobId;
-
+  activity.agendaJobId = groupPushEvent.agendaJobId;
+  
   // Handle responsible users separately if needed
   if (activity.responsibleUsers && activity.responsibleUsers.length > 0) {
-    const { Subscriber } = await import('@/lib/db/models/Subscriber');
-    const { User } = await import('@/lib/db/models/User');
-    
-    // Get deviceIds of responsible users
-    const responsibleUsers = await User.find({
-      _id: { $in: activity.responsibleUsers }
-    }).select('deviceId');
-
-    const responsibleDeviceIds = responsibleUsers.map(user => user.deviceId);
-    
-    // Find subscribers with these deviceIds
-    const responsibleSubscribers = await Subscriber.find({
-      deviceId: { $in: responsibleDeviceIds }
-    }).select('_id');
-
-    const responsibleSubscriberIds = responsibleSubscribers.map(sub => sub._id) as mongoose.Types.ObjectId[];
-
-    // Create separate push event for responsible users (static list since it's user-specific)
-    if (responsibleSubscriberIds.length > 0) {
-      const responsiblePushEvent = await createScheduledPushEvent({
-        title: `Gruppe ${groupName}`,
-        body: `Eure Aufgabe "${activityName}" hat begonnen - Du trägst die Hauptverantwortung!`,
-        repeat: 'once',
-        schedule: berlinDate,
-        active: true,
-        sendToAll: false,
-        subscribers: responsibleSubscriberIds,
-      });
-
-      activity.responsiblePushJobId = responsiblePushEvent.agendaJobId;
-    }
+    // Dynamischer Push: Speichere nur activityId und type
+    const responsiblePushEvent = await createScheduledPushEvent({
+      title: `Gruppe ${groupName}`,
+      body: `Eure Aufgabe "${activityName}" hat begonnen - Du trägst die Hauptverantwortung!`,
+      repeat: 'once',
+      schedule: berlinDate,
+      active: true,
+      type: 'user',
+      targetUserId: activity.responsibleUsers[0]
+    });
+    activity.responsiblePushJobId = responsiblePushEvent.agendaJobId;
   }
 
   await activity.save();

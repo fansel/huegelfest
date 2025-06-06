@@ -4,8 +4,7 @@ import { FavoriteItem } from '../types/favorites';
 import { getFavorites, saveFavorites, cleanupDuplicateFavorites } from '../services/favoritesStorage';
 import useSWR from 'swr';
 import { fetchTimeline } from '@/features/timeline/actions/fetchTimeline';
-import { useWebSocket } from '@/shared/hooks/useWebSocket';
-import { getWebSocketUrl } from '@/shared/utils/getWebSocketUrl';
+import { useGlobalWebSocket, WebSocketMessage } from '@/shared/hooks/useGlobalWebSocket';
 import { useNetworkStatus } from '@/shared/hooks/useNetworkStatus';
 
 interface UseFavoritesResult {
@@ -37,8 +36,8 @@ export const useFavorites = (): UseFavoritesResult => {
   );
 
   // WebSocket für Timeline-Updates - FavoritesList braucht aktuelle Timeline-Daten!
-  useWebSocket(getWebSocketUrl(), {
-    onMessage: (msg: any) => {
+  useGlobalWebSocket({
+    onMessage: (msg: WebSocketMessage) => {
       // FavoritesList zeigt Timeline-Daten an, deshalb müssen wir bei Updates revalidieren
       if (msg.topic?.includes('day-') || msg.topic?.includes('event-') || msg.topic?.includes('category-')) {
         console.log('[useFavorites] Timeline-Update empfangen, revalidiere Timeline-Daten:', msg.topic);
@@ -47,6 +46,7 @@ export const useFavorites = (): UseFavoritesResult => {
         }
       }
     },
+    topicFilter: ['day-*', 'event-*', 'category-*'] // Wildcard-Filter für Timeline-bezogene Events
   });
 
   // Favoriten aus localStorage laden und dabei bereinigen

@@ -20,7 +20,6 @@ interface AnnouncementCardProps {
   isLoadingDelete?: boolean;
   reactions?: AnnouncementCardReactions;
   onReact?: (type: ReactionType) => void;
-  deviceId?: string;
   className?: string;
   isOffline?: boolean;
 }
@@ -36,7 +35,6 @@ export const AnnouncementCard: React.FC<AnnouncementCardProps> = ({
   isLoadingDelete,
   reactions,
   onReact,
-  deviceId,
   className,
   isOffline = false,
 }) => (

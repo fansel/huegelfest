@@ -11,11 +11,9 @@ import { DeviceProvider } from "@/shared/contexts/DeviceContext";
 import { UISettingsProvider } from '@/shared/contexts/UISettingsContext';
 import { UpdateServiceProvider } from '@/shared/components/UpdateServiceProvider';
 import { SWROfflineProvider } from "@/shared/components/SWROfflineProvider";
-import { PWAPreloadData } from "@/shared/components/PWAPreloadData";
 import { NetworkProvider } from "@/shared/contexts/NetworkContext";
 import { OfflineDetector } from "@/shared/components/OfflineDetector";
-import AutoPushActivator from "@/features/push/components/AutoPushActivator";
-import AutoPushPrompt from "@/features/push/components/AutoPushPrompt";
+import ClientOnlyWrapper from "@/shared/components/ClientOnlyWrapper";
 
 /** 
 export const metadata: Metadata = {
@@ -47,20 +45,20 @@ export default function RootLayout({
         <link rel="apple-touch-icon" href="/apple-touch-icon.png" />
         <link rel="icon" href="/favicon.ico" />
         <link rel="manifest" href="/manifest.json" />
+        <meta name="viewport" content="width=device-width, initial-scale=1" />
+        <meta name="react-dev" content="off" />
       </head>
       <body className={`${GeistMono.className} antialiased min-h-screen flex flex-col`}>
         <NetworkProvider>
           <UISettingsProvider>
             <DeviceProvider>
-              <GlobalStateProvider>
-                <PWARegister />
-                <OfflineDetector />
-                <AuthProvider>
+              <AuthProvider>
+                <GlobalStateProvider>
+                  <PWARegister />
+                  <OfflineDetector />
                   <UpdateServiceProvider>
                     <SWROfflineProvider>
-                      <PWAPreloadData />
-                      <AutoPushActivator />
-                      <AutoPushPrompt />
+                      <ClientOnlyWrapper />
                       {children}
                       <Toaster 
                         position="top-center"
@@ -76,8 +74,8 @@ export default function RootLayout({
                       />
                     </SWROfflineProvider>
                   </UpdateServiceProvider>
-                </AuthProvider>
-              </GlobalStateProvider>
+                </GlobalStateProvider>
+              </AuthProvider>
             </DeviceProvider>
           </UISettingsProvider>
         </NetworkProvider>

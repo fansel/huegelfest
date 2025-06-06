@@ -53,7 +53,7 @@ export function GroupsTab({
     group.name.toLowerCase().includes(searchTerm.toLowerCase())
   );
 
-  const unassignedUsers = users.filter(user => !user.groupId);
+  const unassignedAssignableUsers = users.filter(u => !u.groupId && !u.isShadowUser);
 
   const loadGroupMembers = async (groupId: string) => {
     try {
@@ -90,9 +90,9 @@ export function GroupsTab({
     setExpandedGroups(newExpanded);
   };
 
-  const handleRemoveFromGroup = async (deviceId: string, groupId: string) => {
+  const handleRemoveFromGroup = async (userId: string, groupId: string) => {
     try {
-      const result = await removeUserFromGroupAction(deviceId);
+      const result = await removeUserFromGroupAction(userId);
       if (result.success) {
         toast.success('Benutzer aus Gruppe entfernt');
         onRefreshData();
@@ -143,14 +143,14 @@ export function GroupsTab({
           </div>
           
           <div className="flex flex-col gap-2">
-            {unassignedUsers.length > 0 && (
+            {unassignedAssignableUsers.length > 0 && (
               <Button
                 onClick={assignAllUnassigned}
                 className="bg-green-600 hover:bg-green-700 text-white w-full"
                 size="sm"
               >
                 <Shuffle className="w-4 h-4 mr-2" />
-                Alle zuweisen ({unassignedUsers.length})
+                Alle zuweisen ({unassignedAssignableUsers.length})
               </Button>
             )}
             <Button
@@ -250,7 +250,7 @@ export function GroupsTab({
                         >
                           <span className="truncate flex-1 mr-2">{member.name}</span>
                           <button
-                            onClick={() => handleRemoveFromGroup(member.deviceId, group.id)}
+                            onClick={() => handleRemoveFromGroup(member.userId, group.id)}
                             className="p-1 text-red-600 hover:bg-red-50 rounded flex-shrink-0"
                           >
                             <Minus className="w-3 h-3" />
@@ -288,13 +288,13 @@ export function GroupsTab({
         </div>
         
         <div className="flex gap-2">
-          {unassignedUsers.length > 0 && (
+          {unassignedAssignableUsers.length > 0 && (
             <Button
               onClick={assignAllUnassigned}
               className="bg-green-600 hover:bg-green-700 text-white"
             >
               <Shuffle className="w-4 h-4 mr-2" />
-              Alle zuweisen ({unassignedUsers.length})
+              Alle zuweisen ({unassignedAssignableUsers.length})
             </Button>
           )}
           <Button
@@ -377,7 +377,7 @@ export function GroupsTab({
                           <Button
                             size="sm"
                             variant="outline"
-                            onClick={() => handleRemoveFromGroup(member.deviceId, group.id)}
+                            onClick={() => handleRemoveFromGroup(member.userId, group.id)}
                             className="text-red-600 hover:bg-red-50"
                           >
                             <Minus className="w-4 h-4" />

@@ -36,11 +36,11 @@ export function AddUserToGroupDialog({
     user.name.toLowerCase().includes(userSearchTerm.toLowerCase())
   );
 
-  const handleAddUser = async (deviceId: string) => {
+  const handleAddUser = async (userId: string) => {
     if (!groupId) return;
     
     try {
-      const result = await assignUserToGroupAction(deviceId, groupId);
+      const result = await assignUserToGroupAction(userId, groupId);
       if (result.success) {
         onUserAdded();
       }
@@ -77,7 +77,7 @@ export function AddUserToGroupDialog({
             <div className="max-h-60 overflow-y-auto border rounded-lg">
               {availableUsers.map(user => (
                 <div
-                  key={user.deviceId}
+                  key={user._id}
                   className="flex items-center justify-between p-3 border-b last:border-b-0 hover:bg-gray-50"
                 >
                   <div className="flex items-center gap-3">
@@ -98,7 +98,7 @@ export function AddUserToGroupDialog({
                   </div>
                   <Button
                     size="sm"
-                    onClick={() => handleAddUser(user.deviceId)}
+                    onClick={() => handleAddUser(user._id)}
                     className="bg-blue-600 hover:bg-blue-700 text-white"
                   >
                     <Plus className="w-4 h-4 mr-1" />

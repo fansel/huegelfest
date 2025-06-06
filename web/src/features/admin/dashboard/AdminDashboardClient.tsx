@@ -1,14 +1,18 @@
 'use client';
-import React from 'react';
+import React, { useState, useEffect } from 'react';
 import BottomBar from '../../pwa/Naviagation';
 import { AnnouncementManagerClient } from '../components/announcements/AnnouncementManagerClient';
 import WorkingGroupManagerClient from '../components/workingGroups/WorkingGroupManagerClient';
 import { TimelineManagerClient } from '../components/timeline/TimelineManagerClient';
 import { MusicManagerClient } from '../components/music/MusicManagerClient';
 import { GroupsOverviewWebSocketClient } from '../components/groups/components/GroupsOverviewWebSocketClient';
-import ActivityManagerClient from '../components/activities/ActivityManagerClient';
+import ActivityManagerWrapper from '../components/activities/ActivityManagerWrapper';
 import type { AdminTab } from '../types/AdminTab';
 import Settings from '@/features/admin/components/settings/Settings';
+import { fetchActivitiesData, type ActivitiesData } from '../components/activities/actions/fetchActivitiesData';
+import { toast } from 'react-hot-toast';
+
+const DEBUG = false;
 
 const TABS: AdminTab[] = ['announcements', 'workingGroups', 'timeline', 'music', 'groups', 'task-manager', 'admin-settings'];
 
@@ -21,7 +25,7 @@ interface AdminDashboardClientProps {
   initialPendingEvents: any[];
   initialTracks: any[];
   initialGroupsData: any;
-  initialActivitiesData: any;
+  initialActivitiesData: ActivitiesData;
 }
 
 export const AdminDashboardClient: React.FC<AdminDashboardClientProps> = ({ 
@@ -33,8 +37,20 @@ export const AdminDashboardClient: React.FC<AdminDashboardClientProps> = ({
   initialPendingEvents,
   initialTracks,
   initialGroupsData,
-  initialActivitiesData
+  initialActivitiesData,
 }) => {
+  if (DEBUG) {
+    console.log('[AdminDashboardClient] Initial Data:', {
+      initialAnnouncements,
+      initialWorkingGroups,
+      initialCategories,
+      initialPendingEvents,
+      initialTracks,
+      initialGroupsData,
+      initialActivitiesData,
+    });
+  }
+
   return (
     <div className="pb-16">
       {activeTab === 'announcements' && (
@@ -49,7 +65,6 @@ export const AdminDashboardClient: React.FC<AdminDashboardClientProps> = ({
       {activeTab === 'timeline' && (
         <TimelineManagerClient 
           initialCategories={initialCategories}
-          initialPendingEvents={initialPendingEvents}
         />
       )}
       {activeTab === 'music' && (
@@ -59,7 +74,7 @@ export const AdminDashboardClient: React.FC<AdminDashboardClientProps> = ({
         <GroupsOverviewWebSocketClient initialData={initialGroupsData} />
       )}
       {activeTab === 'task-manager' && (
-        <ActivityManagerClient initialData={initialActivitiesData} />
+        <ActivityManagerWrapper initialData={initialActivitiesData} />
       )}
       {activeTab === 'admin-settings' && <Settings />}
       <BottomBar

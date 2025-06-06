@@ -12,6 +12,8 @@ export interface IScheduledPushEvent extends Document {
   updatedAt: Date;
   sendToAll?: boolean;
   groupId?: mongoose.Types.ObjectId; // For dynamic group-based push notifications
+  type: 'general' | 'user' | 'group';  // Art der Nachricht
+  targetUserId?: string;               // Für user-spezifische Nachrichten
 }
 
 const scheduledPushEventSchema = new mongoose.Schema<IScheduledPushEvent>({
@@ -24,6 +26,13 @@ const scheduledPushEventSchema = new mongoose.Schema<IScheduledPushEvent>({
   agendaJobId: { type: String },
   sendToAll: { type: Boolean, default: false },
   groupId: { type: mongoose.Schema.Types.ObjectId, ref: 'Group' }, // For dynamic group resolution
+  type: { 
+    type: String, 
+    enum: ['general', 'user', 'group'], 
+    required: true,
+    default: 'general'
+  },
+  targetUserId: { type: String },
 }, {
   timestamps: true,
   toJSON: {
@@ -35,6 +44,10 @@ const scheduledPushEventSchema = new mongoose.Schema<IScheduledPushEvent>({
     }
   }
 });
+
+// Index für schnellere Abfragen
+scheduledPushEventSchema.index({ type: 1, targetUserId: 1 });
+scheduledPushEventSchema.index({ type: 1, groupId: 1 });
 
 const ScheduledPushEvent: Model<IScheduledPushEvent> =
   mongoose.models.ScheduledPushEvent ||

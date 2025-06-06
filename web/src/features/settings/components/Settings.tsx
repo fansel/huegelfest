@@ -1,13 +1,16 @@
 'use client';
 
+import React, { useState } from 'react';
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/shared/components/ui/card";
+import { Button } from "@/shared/components/ui/button";
+import { ArrowLeft, Settings as SettingsIcon } from 'lucide-react';
 import PushNotificationSettings from './PushNotificationSettings';
 import StarfieldSettings from './StarfieldSettings';
-import AdminSettings from './AdminSettings';
+import UserLogin from './UserLogin';
 import ImpressumSettings from './ImpressumSettings';
 import DatenschutzSettings from './DatenschutzSettings';
 import ResetAppDataSettings from './ResetAppDataSettings';
 import MusicNoteSettings from './MusicNoteSettings';
-import DeviceTransferSettings from '@/features/magic-codes/components/DeviceTransferSettings';
 import { useDeviceContext } from '@/shared/contexts/DeviceContext';
 import { UpdateSettings } from './UpdateSettings';
 
@@ -35,8 +38,7 @@ export default function Settings({
         <StarfieldSettings showStarfield={showStarfield} onToggle={onToggleStarfield} variant="row" />
         <MusicNoteSettings showMusicNote={showMusicNote} onToggle={onToggleMusicNote} variant="row" />
         <UpdateSettings variant="row" />
-        <DeviceTransferSettings variant="row" />
-        <AdminSettings variant="row" />
+        <UserLogin variant="row" />
         <DatenschutzSettings variant="row" />
         <ImpressumSettings variant="row" />
         <ResetAppDataSettings variant="row" />
@@ -53,8 +55,7 @@ export default function Settings({
         <StarfieldSettings showStarfield={showStarfield} onToggle={onToggleStarfield} variant="tile" />
         <MusicNoteSettings showMusicNote={showMusicNote} onToggle={onToggleMusicNote} variant="tile" />
         <UpdateSettings variant="tile" />
-        <DeviceTransferSettings variant="tile" />
-        <AdminSettings variant="tile" />
+        <UserLogin variant="tile" />
         <DatenschutzSettings variant="tile" />
         <ImpressumSettings variant="tile" />
         <ResetAppDataSettings variant="tile" />

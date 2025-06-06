@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useEffect, useState, useMemo } from 'react';
+import React, { useEffect, useState, useMemo, useCallback } from 'react';
 import * as LucideIcons from 'lucide-react';
 import { TimelineEventCard } from './TimelineEventCard';
 import { EventSubmissionSheet } from './EventSubmissionSheet';
@@ -23,6 +23,7 @@ import { useDeviceContext } from '@/shared/contexts/DeviceContext';
 import { useFestivalDays } from '@/shared/hooks/useFestivalDays';
 import clsx from 'clsx';
 
+const DEBUG = false;
 
 interface TimelineDay {
   _id?: string;
@@ -96,18 +97,28 @@ export default function Timeline({ showFavoritesOnly = false, allowClipboard = f
 
   const { isFavorite } = useFavorites();
   const isOnline = useNetworkStatus();
+  const { deviceType } = useDeviceContext();
+  const isMobileLayout = deviceType === 'mobile';
 
   useGlobalWebSocket({
     topicFilter: ['event-updated', 'event-created', 'event-deleted', 'category-created', 'category-updated', 'category-deleted'],
     onMessage: async (msg: any) => {
-      console.log('[WebSocket] Nachricht empfangen (global):', msg);
+      if (DEBUG) {
+        console.log('[WebSocket] Nachricht empfangen (global):', msg);
+      }
       if (msg.topic === 'event-updated') {
-        console.log('[WebSocket] event-updated: msg.payload.eventId =', msg.payload.eventId);
+        if (DEBUG) {
+          console.log('[WebSocket] event-updated: msg.payload.eventId =', msg.payload.eventId);
+        }
         let updatedEvent;
         try {
-          console.log('[WebSocket] event-updated: Starte getEventByIdAction');
+          if (DEBUG) {
+            console.log('[WebSocket] event-updated: Starte getEventByIdAction');
+          }
           updatedEvent = await getEventByIdAction(msg.payload.eventId);
-          console.log('[WebSocket] event-updated: Ergebnis von getEventByIdAction:', updatedEvent);
+          if (DEBUG) {
+            console.log('[WebSocket] event-updated: Ergebnis von getEventByIdAction:', updatedEvent);
+          }
         } catch (err) {
           console.error('[WebSocket] Fehler beim Laden des Events:', err, msg.payload.eventId);
           return;
@@ -125,8 +136,10 @@ export default function Timeline({ showFavoritesOnly = false, allowClipboard = f
           return;
         }
         mutate((current: any) => {
-          console.log('[mutate:event-updated] current:', current);
-          console.log('[mutate:event-updated] current.days:', current?.days);
+          if (DEBUG) {
+            console.log('[mutate:event-updated] current:', current);
+            console.log('[mutate:event-updated] current.days:', current?.days);
+          }
           if (!current || !Array.isArray(current.days)) return current;
           const tag = current.days.find((day: any) => day && day._id === updatedEvent.dayId);
           if (!tag) {
@@ -149,8 +162,10 @@ export default function Timeline({ showFavoritesOnly = false, allowClipboard = f
           return;
         }
         mutate((current: any) => {
-          console.log('[mutate:event-created] current:', current);
-          console.log('[mutate:event-created] current.days:', current?.days);
+          if (DEBUG) {
+            console.log('[mutate:event-created] current:', current);
+            console.log('[mutate:event-created] current.days:', current?.days);
+          }
           if (!current || !Array.isArray(current.days)) return current;
           return {
             ...current,
@@ -170,8 +185,10 @@ export default function Timeline({ showFavoritesOnly = false, allowClipboard = f
         }, false);
       } else if (msg.topic === 'event-deleted') {
         mutate((current: any) => {
-          console.log('[mutate:event-deleted] current:', current);
-          console.log('[mutate:event-deleted] current.days:', current?.days);
+          if (DEBUG) {
+            console.log('[mutate:event-deleted] current:', current);
+            console.log('[mutate:event-deleted] current.days:', current?.days);
+          }
           if (!current || !Array.isArray(current.days)) return current;
           return {
             ...current,
@@ -274,7 +291,7 @@ export default function Timeline({ showFavoritesOnly = false, allowClipboard = f
 
   return (
     <div className="w-full max-w-4xl mx-auto">
-      <div className="sticky top-0 z-10 bg-[#460b6c]/90 backdrop-blur-sm py-2 px-4">
+      <div className={`sticky ${!isMobileLayout ? 'top-16' : 'top-0'} z-10 bg-[#460b6c]/90 backdrop-blur-sm py-2 px-4`}>
         {/* Tage-Auswahl für Desktop */}
         <div className="hidden md:grid md:grid-cols-3 lg:grid-cols-4 gap-2 mb-4">
           {activeDays.map((day, index) => (

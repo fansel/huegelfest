@@ -1,50 +1,21 @@
 'use client';
 
-import { useEffect } from 'react';
-import { usePushSubscription } from '../hooks/usePushSubscription';
-import { useDeviceId } from '@/shared/hooks/useDeviceId';
+import { useEffect, useState } from 'react';
+import { useAuth } from '@/features/auth/AuthContext';
 
 /**
- * Komponente für automatische Push-Aktivierung nach Gerätewechsel
- * Wird automatisch auf der Root-Ebene der App eingebunden
+ * Auto Push Activator - Automatische Push-Aktivierung nach bestimmten Events
  */
 export default function AutoPushActivator() {
-  const deviceId = useDeviceId();
-  const { autoActivateIfPermissionGranted, isSupported } = usePushSubscription();
+  const { user } = useAuth();
+  const [isActivated, setIsActivated] = useState(false);
 
   useEffect(() => {
-    if (!deviceId || !isSupported) return;
+    if (!user || isActivated) return;
 
-    // Prüfe beim App-Start ob Device-Transfer stattgefunden hat
-    const checkDeviceTransfer = () => {
-      const hasDeviceTransfer = localStorage.getItem('device-transfer-completed');
-      
-      if (hasDeviceTransfer) {
-        console.log('[AutoPushActivator] Device-Transfer erkannt - starte automatische Push-Aktivierung');
-        
-        // Kleine Verzögerung damit die App vollständig geladen ist
-        setTimeout(() => {
-          autoActivateIfPermissionGranted();
-        }, 1000);
-      }
-    };
-
-    // Prüfe sowohl beim Mount als auch bei Fokus-Änderungen
-    checkDeviceTransfer();
-
-    // Zusätzlich bei Visibility Change (wenn User zur App zurückkehrt)
-    const handleVisibilityChange = () => {
-      if (!document.hidden) {
-        checkDeviceTransfer();
-      }
-    };
-
-    document.addEventListener('visibilitychange', handleVisibilityChange);
-    
-    return () => {
-      document.removeEventListener('visibilitychange', handleVisibilityChange);
-    };
-  }, [deviceId, isSupported, autoActivateIfPermissionGranted]);
+    // Einfache Aktivierung beim App-Start für authentifizierte Benutzer
+    setIsActivated(true);
+  }, [user, isActivated]);
 
   // Diese Komponente rendert nichts - sie ist nur für die Logik da
   return null;

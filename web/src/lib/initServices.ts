@@ -3,6 +3,7 @@ import { logger } from './logger';
 import { ensureDefaultCategories, ensureDefaultWorkingGroup, ensureDefaultGroups } from './db/initDefaults';
 import { initWebpush } from './initWebpush';
 import { webPushService } from './webpush/webPushService';
+import { initDefaultFestivalDaysIfEmpty } from '@/shared/services/festivalDaysService';
 
 export interface InitStatus {
   db: boolean;
@@ -26,20 +27,30 @@ export async function initServices(): Promise<InitStatus> {
   if (initialized) return status;
   status.errors = [];
   logger.info('[Init] Initialisiere Services...');
+  
+  // Datenbank-Initialisierung (nicht-kritisch für lokale Entwicklung)
   try {
     await connectDB();
     status.db = true;
     logger.info('[Init] Datenbank erfolgreich initialisiert.');
-    await ensureDefaultWorkingGroup();
-    logger.info('[Init] Default-Gruppe sichergestellt.');
-    await ensureDefaultGroups();
-    logger.info('[Init] Default-Benutzergruppen sichergestellt.');
-    await ensureDefaultCategories();
-    logger.info('[Init] Default-Kategorien sichergestellt.');
+    
+    // Nur wenn DB-Verbindung erfolgreich ist, Default-Daten sicherstellen
+    try {
+      await ensureDefaultWorkingGroup();
+      logger.info('[Init] Default-Gruppe sichergestellt.');
+      await ensureDefaultGroups();
+      logger.info('[Init] Default-Benutzergruppen sichergestellt.');
+      await ensureDefaultCategories();
+      logger.info('[Init] Default-Kategorien sichergestellt.');
+    } catch (err) {
+      logger.warn('[Init] Fehler bei Default-Daten (nicht kritisch):', err);
+    }
   } catch (err) {
     status.errors.push('DB: ' + (err instanceof Error ? err.message : String(err)));
-    logger.error('[Init] Fehler bei der DB-Initialisierung:', err);
+    logger.warn('[Init] Datenbank nicht verfügbar (ok für lokale Entwicklung):', err);
   }
+  
+  // WebPush-Initialisierung (nicht-kritisch)
   try {
     await initWebpush();
     status.webPush = webPushService.isInitialized();
@@ -47,18 +58,33 @@ export async function initServices(): Promise<InitStatus> {
       logger.info('[Init] WebPush erfolgreich initialisiert.');
     } else {
       status.errors.push('WebPush: Initialisierung fehlgeschlagen');
-      logger.error('[Init] WebPush konnte nicht initialisiert werden.');
+      logger.warn('[Init] WebPush konnte nicht initialisiert werden (nicht kritisch).');
     }
   } catch (err) {
     status.errors.push('WebPush: ' + (err instanceof Error ? err.message : String(err)));
-    logger.error('[Init] Fehler bei der WebPush-Initialisierung:', err);
+    logger.warn('[Init] Fehler bei der WebPush-Initialisierung (nicht kritisch):', err);
   }
+  
+  // Initialize default festival days if none exist
+  try {
+    await initDefaultFestivalDaysIfEmpty();
+  } catch (err) {
+    status.errors.push('Festival Days: ' + (err instanceof Error ? err.message : String(err)));
+    logger.warn('[Init] Fehler bei der Initialisierung der Festival-Tage (nicht kritisch):', err);
+  }
+  
   initialized = true;
-  if (status.errors.length > 0) {
-    logger.error('[Init] Kritische Initialisierungsfehler:', status.errors);
+  
+  // Nur in Produktion sind diese Fehler kritisch
+  const isProduction = process.env.NODE_ENV === 'production';
+  if (status.errors.length > 0 && isProduction) {
+    logger.error('[Init] Kritische Initialisierungsfehler in Produktion:', status.errors);
     throw new Error('Kritische Initialisierungsfehler: ' + status.errors.join('; '));
+  } else if (status.errors.length > 0) {
+    logger.warn('[Init] Service-Initialisierungsfehler (nicht kritisch in Entwicklung):', status.errors);
   }
-  logger.info('[Init] Alle Services initialisiert.');
+  
+  logger.info('[Init] Service-Initialisierung abgeschlossen.');
   return status;
 }
 

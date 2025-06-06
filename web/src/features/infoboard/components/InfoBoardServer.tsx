@@ -5,7 +5,6 @@ import { IAnnouncement, ReactionType } from '../../../shared/types/types';
 
 export async function getInfoBoardData() {
   const announcementsRaw: any[] = await getAllAnnouncementsAction();
-  // Reactions für alle Announcements laden
   const reactionsMap: Record<string, { counts: Record<ReactionType, number>; userReaction?: ReactionType }> = {};
   await Promise.all(
     announcementsRaw.map(async (a) => {

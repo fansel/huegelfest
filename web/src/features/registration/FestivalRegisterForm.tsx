@@ -11,14 +11,18 @@ import {
 } from 'lucide-react';
 import { registerFestival, checkRegistrationStatusAction } from './actions/register';
 import { useDeviceContext } from "@/shared/contexts/DeviceContext";
-import { useDeviceId } from "@/shared/hooks/useDeviceId";
+import { useAuth } from "@/features/auth/AuthContext";
 import Cookies from 'js-cookie';
 import { useFestivalDays } from '@/shared/hooks/useFestivalDays';
+import { ShadowUserBlock } from '@/shared/components/ShadowUserBlock';
+import type { FestivalRegisterData, FestivalRegisterDataWithStatus } from './components/steps/types';
+import { defaultData } from './components/steps/types';
 
 // Import step components
 import {
   IntroStep,
   NameStep,
+  EmailPasswordStep,
   TimeRangeStep,
   FinanceStep,
   TravelStep,
@@ -34,266 +38,56 @@ import {
   MedicStep,
   ConcernsStep,
   SummaryStep,
-  FestivalRegisterData,
-  StepConfig,
-  defaultData,
   useKeyboardVisible,
   useAutoScrollOnFocus,
   ContactStep,
 } from './components/steps';
 
+import type { StepConfig } from './components/steps/types';
+
+import { registerWithAccount } from './actions/registerWithAccount';
+
 export interface FestivalRegisterFormProps {
-  onRegister?: (data: FestivalRegisterData) => void;
+  onRegister?: (data: FestivalRegisterData & { username?: string, password?: string }) => void;
   setCookies?: boolean;
   skipRegistrationCheck?: boolean;
-  customDeviceId?: string;
 }
 
 const LOCAL_STORAGE_KEY = 'festival_register_form';
 
-export default function FestivalRegisterForm({ onRegister, setCookies = true, skipRegistrationCheck = false, customDeviceId }: FestivalRegisterFormProps) {
+export default function FestivalRegisterForm({ onRegister, setCookies = true, skipRegistrationCheck = false }: FestivalRegisterFormProps) {
   const { deviceType } = useDeviceContext();
-  const deviceId = useDeviceId();
+  const { user, isLoading: authLoading } = useAuth();
   const { festivalDays: FESTIVAL_DAYS, loading: festivalDaysLoading } = useFestivalDays();
   const isMobile = deviceType === "mobile";
+  
+  // ✅ Shadow User Check - Shadow Users sehen die Anmeldung nicht, außer bei Nachmeldung
+  if (!skipRegistrationCheck && user && (user as any).isShadowUser) {
+    return <ShadowUserBlock isMobile={isMobile} />;
+  }
+  
   const [form, setForm] = useState<FestivalRegisterData>(defaultData);
   const [loading, setLoading] = useState(false);
   const [step, setStep] = useState(0);
   const [fromDay, setFromDay] = useState(0);
-  const [toDay, setToDay] = useState(0);
+  const [toDay, setToDay] = useState(FESTIVAL_DAYS.length > 0 ? FESTIVAL_DAYS.length - 1 : 0);
   const formRef = useRef<HTMLFormElement>(null);
   const [hasCookie, setHasCookie] = useState(false);
   const contentRef = useRef<HTMLDivElement>(null);
   const isKeyboardVisible = useKeyboardVisible();
   const [isLoaded, setIsLoaded] = useState(false);
-  const [existingRegistration, setExistingRegistration] = useState<any | null>(null);
+  const [existingRegistration, setExistingRegistration] = useState<FestivalRegisterDataWithStatus | null>(null);
+  
+  // Password state for account creation
+  const [password, setPassword] = useState('');
+  const [confirmPassword, setConfirmPassword] = useState('');
+  const [emailPasswordStepValid, setEmailPasswordStepValid] = useState(false);
   
   // ✅ RACE CONDITION FIX: Verhindere mehrfache Registration-Checks
   const hasAlreadyCheckedRef = useRef(false);
   
   // Verwende den Auto-Scroll-Hook
   useAutoScrollOnFocus(contentRef, isKeyboardVisible);
-  
-  // Initialize toDay when FESTIVAL_DAYS loads
-  useEffect(() => {
-    if (FESTIVAL_DAYS.length > 0 && toDay === 0) {
-      setToDay(FESTIVAL_DAYS.length - 1);
-    }
-  }, [FESTIVAL_DAYS, toDay]);
-  
-  // Synchronisiere fromDay/toDay mit form.days wenn Daten geladen werden
-  useEffect(() => {
-    if (form.days && form.days.length > 0) {
-      const minDay = Math.min(...form.days);
-      const maxDay = Math.max(...form.days);
-      
-      // Nur aktualisieren wenn sich die Werte geändert haben
-      if (minDay !== fromDay || maxDay !== toDay) {
-        console.log('[FestivalRegisterForm] Synchronisiere Zeitraumauswahl:', {
-          formDays: form.days,
-          newFromDay: minDay,
-          newToDay: maxDay,
-          currentFromDay: fromDay,
-          currentToDay: toDay
-        });
-        setFromDay(minDay);
-        setToDay(maxDay);
-      }
-    }
-  }, [form.days, fromDay, toDay]);
-  
-  // Debug: Überwache form State Änderungen
-  useEffect(() => {
-    console.log('[FestivalRegisterForm] Form State geändert:', {
-      name: form.name,
-      days: form.days,
-      hasName: !!form.name.trim(),
-      isDefault: form === defaultData
-    });
-  }, [form]);
-  
-  // Disable scrolling on body
-  useEffect(() => {
-    if (isMobile) {
-      document.body.style.overflow = 'hidden';
-      document.documentElement.style.overflow = 'hidden';
-      document.body.style.position = 'fixed';
-      document.body.style.width = '100%';
-      document.body.style.height = '100%';
-      
-      return () => {
-        document.body.style.overflow = '';
-        document.documentElement.style.overflow = '';
-        document.body.style.position = '';
-        document.body.style.width = '';
-        document.body.style.height = '';
-      };
-    }
-  }, [isMobile]);
-
-  // NEU: Kombinierter Check - Cookie DANN DB-Check
-  useEffect(() => {
-    const checkRegistrationStatus = async () => {
-      // Frühe Rückkehr wenn Registration-Check übersprungen werden soll
-      if (skipRegistrationCheck) {
-        console.log('[FestivalRegisterForm] Registration-Check übersprungen (skipRegistrationCheck=true)');
-        setIsLoaded(true);
-        hasAlreadyCheckedRef.current = true;
-        return;
-      }
-
-      // ✅ RACE CONDITION FIX: Wenn bereits gecheckt und Registration geladen, dann abbrechen
-      if (hasAlreadyCheckedRef.current && existingRegistration) {
-        console.log('[FestivalRegisterForm] Registration bereits geladen - überspringe Check');
-        return;
-      }
-      
-      console.log('[FestivalRegisterForm] Starte Registration-Check für deviceId:', deviceId);
-      
-      // 1. ERST: Cookie-Check (synchron)
-      const hasCookieSet = !!Cookies.get('festival_registered');
-      console.log('[FestivalRegisterForm] Cookie-Status:', hasCookieSet);
-      
-      // 2. SOFORT: localStorage Check für Offline-Fallback
-      let localStorageData = null;
-      try {
-        const saved = localStorage.getItem(LOCAL_STORAGE_KEY);
-        if (saved) {
-          const parsed = JSON.parse(saved);
-          if (parsed && typeof parsed === 'object') {
-            localStorageData = parsed;
-            console.log('[FestivalRegisterForm] localStorage-Daten gefunden:', localStorageData);
-          }
-        }
-      } catch (e) {
-        console.error('[FestivalRegisterForm] localStorage-Parse-Fehler:', e);
-      }
-      
-      // 3. Netzwerk-Check: Verwende sicheren Status-Check statt vollständiger Daten
-      if (deviceId) {
-        try {
-          console.log('[FestivalRegisterForm] Prüfe Registrierungsstatus für deviceId:', deviceId);
-          
-          const statusResult = await checkRegistrationStatusAction(deviceId);
-          console.log('[FestivalRegisterForm] Registrierungsstatus:', statusResult);
-          
-          if (statusResult.isRegistered && statusResult.name) {
-            console.log('[FestivalRegisterForm] User ist angemeldet:', statusResult.name);
-            
-            // Setze nur den Namen - keine vollständigen Formulardaten mehr!
-            setForm(prev => ({ 
-              ...prev, 
-              name: statusResult.name || 'Angemeldet' 
-            }));
-            
-            // Setze Cookie falls noch nicht vorhanden
-            if (setCookies && !hasCookieSet) {
-              Cookies.set('festival_registered', 'true', { expires: 365 });
-            }
-            setHasCookie(true);
-            setStep(steps.length - 1); // Direkt zur Bestätigungsseite
-            
-            // Fake Registration Objekt für UI-Kompatibilität
-            setExistingRegistration({ 
-              name: statusResult.name,
-              isRegistered: true 
-            });
-            
-            hasAlreadyCheckedRef.current = true;
-          } else {
-            console.log('[FestivalRegisterForm] User nicht angemeldet');
-            
-            // Wenn Cookie existiert aber nicht angemeldet, dann Cookie ungültig machen
-            if (hasCookieSet) {
-              console.log('[FestivalRegisterForm] Cookie vorhanden aber nicht angemeldet - entferne Cookie');
-              if (setCookies) Cookies.remove('festival_registered');
-              setHasCookie(false);
-            }
-            
-            // Fallback: localStorage verwenden falls vorhanden (nur für Offline-Modus)
-            if (localStorageData) {
-              console.log('[FestivalRegisterForm] Verwende localStorage als Fallback für Offline-Modus');
-              setForm({ ...defaultData, ...localStorageData });
-              if (hasCookieSet) {
-                setHasCookie(true);
-                setStep(steps.length - 1); // Zur Bestätigungsseite wenn Cookie da war
-              }
-            }
-            
-            hasAlreadyCheckedRef.current = true;
-          }
-        } catch (error) {
-          console.error('[FestivalRegisterForm] Fehler beim Status-Check (vermutlich offline):', error);
-          console.error('[FestivalRegisterForm] Error Stack:', (error as any)?.stack);
-          
-          // 🚨 OFFLINE-MODUS: Status-Check-Fehler → localStorage verwenden
-          console.log('[FestivalRegisterForm] 🚨 OFFLINE-MODUS: Verwende localStorage');
-          
-          if (localStorageData) {
-            console.log('[FestivalRegisterForm] OFFLINE: localStorage-Daten gefunden, lade Formular');
-            setForm({ ...defaultData, ...localStorageData });
-            
-            // Wenn Cookie da war, zur Bestätigungsseite
-            if (hasCookieSet) {
-              setHasCookie(true);
-              setStep(steps.length - 1);
-              setExistingRegistration({ 
-                name: localStorageData.name || 'Offline-Modus',
-                isRegistered: true 
-              });
-            }
-          } else {
-            console.log('[FestivalRegisterForm] OFFLINE: Kein localStorage verfügbar - zeige leeres Formular');
-            
-            // Wenn Cookie da war aber keine Daten, Cookie entfernen
-            if (hasCookieSet) {
-              console.log('[FestivalRegisterForm] OFFLINE: Cookie entfernen da keine Daten');
-              if (setCookies) Cookies.remove('festival_registered');
-              setHasCookie(false);
-            }
-          }
-          
-          hasAlreadyCheckedRef.current = true;
-        }
-      } else {
-        console.log('[FestivalRegisterForm] Keine deviceId verfügbar');
-        
-        // Auch ohne deviceId localStorage checken
-        if (localStorageData) {
-          console.log('[FestivalRegisterForm] Keine deviceId aber localStorage verfügbar');
-          setForm({ ...defaultData, ...localStorageData });
-        }
-        
-        hasAlreadyCheckedRef.current = true; // ✅ Markiere als gecheckt
-      }
-      
-      setIsLoaded(true);
-      console.log('[FestivalRegisterForm] checkRegistrationStatus beendet');
-    };
-
-    checkRegistrationStatus();
-  }, [deviceId, setCookies, skipRegistrationCheck]); // hasCookie nicht in Dependencies!
-
-  // LocalStorage: Nach erfolgreichem Absenden NICHT mehr löschen!
-  // LocalStorage wird erst beim Klick auf "Neue Anmeldung" gelöscht
-  const handleNewRegistration = () => {
-    // Alle State-Updates synchron durchführen um Flackern zu vermeiden
-    setIsLoaded(false);
-    setForm(defaultData);
-    setStep(0);
-    setFromDay(0);
-    setToDay(FESTIVAL_DAYS.length > 0 ? FESTIVAL_DAYS.length - 1 : 0);
-    if (setCookies) Cookies.remove('festival_registered');
-    setHasCookie(false);
-    setExistingRegistration(null);
-    try { localStorage.removeItem(LOCAL_STORAGE_KEY); } catch (e) { /* ignore */ }
-    
-    // ✅ RACE CONDITION FIX: Reset Check-Flag für neue Registration
-    hasAlreadyCheckedRef.current = false;
-    
-    // Sofort wieder als geladen markieren, da wir eine neue Anmeldung starten
-    setIsLoaded(true);
-  };
 
   // Steps-Definition mit neuen Komponenten
   const steps: StepConfig[] = [
@@ -307,6 +101,36 @@ export default function FestivalRegisterForm({ onRegister, setCookies = true, sk
       content: <NameStep form={form} setForm={setForm} />,
       isValid: !!form.name.trim(),
     },
+    // Email und Passwort immer bei Nachmeldung, sonst nur wenn nicht eingeloggt
+    ...(skipRegistrationCheck ? [{
+      label: 'Email und Passwort',
+      content: (
+        <EmailPasswordStep 
+          form={form} 
+          setForm={setForm} 
+          password={password} 
+          setPassword={setPassword} 
+          confirmPassword={confirmPassword} 
+          setConfirmPassword={setConfirmPassword}
+          setIsValid={setEmailPasswordStepValid}
+        />
+      ),
+      isValid: emailPasswordStepValid,
+    }] : !user ? [{
+      label: 'Email und Passwort',
+      content: (
+        <EmailPasswordStep 
+          form={form} 
+          setForm={setForm} 
+          password={password} 
+          setPassword={setPassword} 
+          confirmPassword={confirmPassword} 
+          setConfirmPassword={setConfirmPassword}
+          setIsValid={setEmailPasswordStepValid}
+        />
+      ),
+      isValid: emailPasswordStepValid,
+    }] : []),
     {
       label: 'Kontakt',
       content: <ContactStep form={form} setForm={setForm} />,
@@ -406,18 +230,267 @@ export default function FestivalRegisterForm({ onRegister, setCookies = true, sk
       isValid: true,
     },
   ];
+  
+  // Ensure step stays within valid bounds
+  useEffect(() => {
+    if (steps.length > 0 && (step < 0 || step >= steps.length)) {
+      console.log('[FestivalRegisterForm] Korrigiere ungültigen Step-Index:', { step, stepsLength: steps.length });
+      setStep(Math.min(Math.max(0, step), steps.length - 1));
+    }
+  }, [step, steps.length]);
+
+  // Initialize toDay when FESTIVAL_DAYS loads
+  useEffect(() => {
+    if (FESTIVAL_DAYS.length > 0 && toDay === 0) {
+      setToDay(FESTIVAL_DAYS.length - 1);
+    }
+  }, [FESTIVAL_DAYS, toDay]);
+  
+  // Synchronisiere fromDay/toDay mit form.days wenn Daten geladen werden
+  useEffect(() => {
+    if (form.days && form.days.length > 0) {
+      const minDay = Math.min(...form.days);
+      const maxDay = Math.max(...form.days);
+      
+      // Nur aktualisieren wenn sich die Werte geändert haben
+      if (minDay !== fromDay || maxDay !== toDay) {
+        console.log('[FestivalRegisterForm] Synchronisiere Zeitraumauswahl:', {
+          formDays: form.days,
+          newFromDay: minDay,
+          newToDay: maxDay,
+          currentFromDay: fromDay,
+          currentToDay: toDay
+        });
+        setFromDay(minDay);
+        setToDay(maxDay);
+      }
+    }
+  }, [form.days, fromDay, toDay]);
+  
+  // Debug: Überwache form State Änderungen
+  useEffect(() => {
+    console.log('[FestivalRegisterForm] Form State geändert:', {
+      name: form.name,
+      days: form.days,
+      hasName: !!form.name.trim(),
+      isDefault: form === defaultData
+    });
+  }, [form]);
+  
+  // Disable scrolling on body
+  useEffect(() => {
+    if (isMobile) {
+      document.body.style.overflow = 'hidden';
+      document.documentElement.style.overflow = 'hidden';
+      document.body.style.position = 'fixed';
+      document.body.style.width = '100%';
+      document.body.style.height = '100%';
+      
+      return () => {
+        document.body.style.overflow = '';
+        document.documentElement.style.overflow = '';
+        document.body.style.position = '';
+        document.body.style.width = '';
+        document.body.style.height = '';
+      };
+    }
+  }, [isMobile]);
+
+  // NEU: Session-basierter Registration-Check
+  useEffect(() => {
+    const checkRegistrationStatus = async () => {
+      // Frühe Rückkehr wenn Registration-Check übersprungen werden soll
+      if (skipRegistrationCheck) {
+        console.log('[FestivalRegisterForm] Registration-Check übersprungen (skipRegistrationCheck=true)');
+        setIsLoaded(true);
+        hasAlreadyCheckedRef.current = true;
+        return;
+      }
+
+      // Warte auf Auth-Loading
+      if (authLoading) {
+        console.log('[FestivalRegisterForm] Warte auf Auth-Loading...');
+        return;
+      }
+
+      // ✅ RACE CONDITION FIX: Wenn bereits gecheckt und Registration geladen, dann abbrechen
+      if (hasAlreadyCheckedRef.current && existingRegistration) {
+        console.log('[FestivalRegisterForm] Registration bereits geladen - überspringe Check');
+        return;
+      }
+      
+      console.log('[FestivalRegisterForm] Starte Registration-Check für User:', user?.id);
+      
+      // 1. ERST: Cookie-Check (synchron)
+      const hasCookieSet = !!Cookies.get('festival_registered');
+      console.log('[FestivalRegisterForm] Cookie-Status:', hasCookieSet);
+      
+      // 2. SOFORT: localStorage Check für Offline-Fallback
+      let localStorageData = null;
+      try {
+        const saved = localStorage.getItem(LOCAL_STORAGE_KEY);
+        if (saved) {
+          const parsed = JSON.parse(saved);
+          if (parsed && typeof parsed === 'object') {
+            localStorageData = parsed;
+            console.log('[FestivalRegisterForm] localStorage-Daten gefunden:', localStorageData);
+          }
+        }
+      } catch (e) {
+        console.error('[FestivalRegisterForm] localStorage-Parse-Fehler:', e);
+      }
+      
+      // 3. Netzwerk-Check: Session-basierte Prüfung
+      if (user) {
+        try {
+          console.log('[FestivalRegisterForm] Prüfe Registrierungsstatus für User:', user.id);
+          
+          const statusResult = await checkRegistrationStatusAction();
+          console.log('[FestivalRegisterForm] Registrierungsstatus:', statusResult);
+          
+          if (statusResult.isRegistered && statusResult.name) {
+            console.log('[FestivalRegisterForm] User ist angemeldet:', statusResult.name);
+            
+            // Setze nur den Namen - keine vollständigen Formulardaten mehr!
+            setForm(prev => ({ 
+              ...prev, 
+              name: statusResult.name || 'Angemeldet' 
+            }));
+            
+            // Setze Cookie falls noch nicht vorhanden
+            if (setCookies && !hasCookieSet) {
+              Cookies.set('festival_registered', 'true', { expires: 365 });
+            }
+            setHasCookie(true);
+            setStep(steps.length - 1); // Direkt zur Bestätigungsseite
+            
+            // Fake Registration Objekt für UI-Kompatibilität
+            setExistingRegistration({ 
+              ...defaultData,
+              name: statusResult.name || 'Angemeldet',
+              isRegistered: true 
+            });
+            
+            hasAlreadyCheckedRef.current = true;
+          } else {
+            console.log('[FestivalRegisterForm] User nicht angemeldet');
+            
+            // Wenn Cookie existiert aber nicht angemeldet, dann Cookie ungültig machen
+            if (hasCookieSet) {
+              console.log('[FestivalRegisterForm] Cookie vorhanden aber nicht angemeldet - entferne Cookie');
+              if (setCookies) Cookies.remove('festival_registered');
+              setHasCookie(false);
+            }
+            
+            // Fallback: localStorage verwenden falls vorhanden (nur für Offline-Modus)
+            if (localStorageData) {
+              console.log('[FestivalRegisterForm] Verwende localStorage als Fallback für Offline-Modus');
+              const typedData = localStorageData as Partial<FestivalRegisterData>;
+              setForm({ ...defaultData, ...typedData });
+              
+              // Wenn Cookie da war, zur Bestätigungsseite
+              if (hasCookieSet) {
+                setHasCookie(true);
+                setStep(steps.length - 1);
+                setExistingRegistration({ 
+                  ...defaultData,
+                  name: typeof typedData.name === 'string' ? typedData.name : 'Offline-Modus',
+                  isRegistered: true 
+                });
+              }
+            }
+            
+            hasAlreadyCheckedRef.current = true;
+          }
+        } catch (error) {
+          console.error('[FestivalRegisterForm] Fehler beim Status-Check (vermutlich offline):', error);
+          console.error('[FestivalRegisterForm] Error Stack:', (error as any)?.stack);
+          
+          // 🚨 OFFLINE-MODUS: Status-Check-Fehler → localStorage verwenden
+          console.log('[FestivalRegisterForm] 🚨 OFFLINE-MODUS: Verwende localStorage');
+          
+          if (localStorageData) {
+            console.log('[FestivalRegisterForm] OFFLINE: localStorage-Daten gefunden, lade Formular');
+            const typedData = localStorageData as Partial<FestivalRegisterData>;
+            setForm({ ...defaultData, ...typedData });
+            
+            // Wenn Cookie da war, zur Bestätigungsseite
+            if (hasCookieSet) {
+              setHasCookie(true);
+              setStep(steps.length - 1);
+              setExistingRegistration({ 
+                ...defaultData,
+                name: typeof typedData.name === 'string' ? typedData.name : 'Offline-Modus',
+                isRegistered: true 
+              });
+            }
+          } else {
+            console.log('[FestivalRegisterForm] OFFLINE: Kein localStorage verfügbar - zeige leeres Formular');
+            
+            // Wenn Cookie da war aber keine Daten, Cookie entfernen
+            if (hasCookieSet) {
+              console.log('[FestivalRegisterForm] OFFLINE: Cookie entfernen da keine Daten');
+              if (setCookies) Cookies.remove('festival_registered');
+              setHasCookie(false);
+            }
+          }
+          
+          hasAlreadyCheckedRef.current = true;
+        }
+      } else if (!authLoading) {
+        console.log('[FestivalRegisterForm] Kein User angemeldet');
+        
+        // Auch ohne User localStorage checken
+        if (localStorageData) {
+          console.log('[FestivalRegisterForm] Kein User aber localStorage verfügbar');
+          const typedData = localStorageData as Partial<FestivalRegisterData>;
+          setForm({ ...defaultData, ...typedData });
+        }
+        
+        hasAlreadyCheckedRef.current = true; // ✅ Markiere als gecheckt
+      }
+      
+      setIsLoaded(true);
+      console.log('[FestivalRegisterForm] checkRegistrationStatus beendet');
+    };
+
+    checkRegistrationStatus();
+  }, [user, authLoading, setCookies, skipRegistrationCheck]); // user und authLoading in Dependencies!
+
+  // LocalStorage: Nach erfolgreichem Absenden NICHT mehr löschen!
+  // LocalStorage wird erst beim Klick auf "Neue Anmeldung" gelöscht
+  const handleNewRegistration = () => {
+    // Alle State-Updates synchron durchführen um Flackern zu vermeiden
+    setIsLoaded(false);
+    setForm(defaultData);
+    setStep(0);
+    setFromDay(0);
+    setToDay(FESTIVAL_DAYS.length > 0 ? FESTIVAL_DAYS.length - 1 : 0);
+    if (setCookies) Cookies.remove('festival_registered');
+    setHasCookie(false);
+    setExistingRegistration(null);
+    try { localStorage.removeItem(LOCAL_STORAGE_KEY); } catch (e) { /* ignore */ }
+    
+    // ✅ RACE CONDITION FIX: Reset Check-Flag für neue Registration
+    hasAlreadyCheckedRef.current = false;
+    
+    // Sofort wieder als geladen markieren, da wir eine neue Anmeldung starten
+    setIsLoaded(true);
+  };
 
   const handleNext = () => {
-    if (steps[step].onNext) steps[step].onNext();
-    setStep(s => Math.min(steps.length - 1, s + 1));
-    
-    // Keyboard schließen bei Weiter
-    if (document.activeElement instanceof HTMLElement) {
-      document.activeElement.blur();
+    if (step >= 0 && step < steps.length) {
+      if (steps[step].onNext) steps[step].onNext();
+      setStep(s => Math.min(steps.length - 1, s + 1));
+      
+      // Keyboard schließen bei Weiter
+      if (document.activeElement instanceof HTMLElement) {
+        document.activeElement.blur();
+      }
+      
+      // Nach oben scrollen
+      contentRef.current?.scrollTo({ top: 0, behavior: 'smooth' });
     }
-    
-    // Nach oben scrollen
-    contentRef.current?.scrollTo({ top: 0, behavior: 'smooth' });
   };
   
   const handlePrev = () => {
@@ -434,6 +507,12 @@ export default function FestivalRegisterForm({ onRegister, setCookies = true, sk
 
   const handleFinalSubmit = async (e: React.FormEvent | React.MouseEvent) => {
     if (e) e.preventDefault();
+    
+    // Prevent multiple submissions
+    if (loading) {
+      return;
+    }
+    
     if (!form.name.trim()) {
       toast.error("Bitte gib einen gültigen Namen ein.");
       return;
@@ -441,34 +520,122 @@ export default function FestivalRegisterForm({ onRegister, setCookies = true, sk
     
     setLoading(true);
     try {
-      // DeviceID zu den Formulardaten hinzufügen
-      const formDataWithDevice = {
-        ...form,
-        deviceId: customDeviceId || deviceId || undefined
-      };
+      // Bei Nachmeldung: Übergebe username und password an onRegister
+      if (skipRegistrationCheck && onRegister) {
+        if (password.length < 8) {
+          toast.error("Bitte gib ein Passwort mit mindestens 8 Zeichen ein.");
+          setLoading(false);
+          return;
+        }
+        if (password !== confirmPassword) {
+          toast.error("Passwörter stimmen nicht überein.");
+          setLoading(false);
+          return;
+        }
+        if (!(form as any).username?.trim()) {
+          toast.error("Bitte gib einen gültigen Username ein.");
+          setLoading(false);
+          return;
+        }
+        // Email-Validierung nur wenn eine angegeben wurde
+        if (form.email && !form.email.trim().match(/^[^\s@]+@[^\s@]+\.[^\s@]+$/)) {
+          toast.error("Bitte gib eine gültige E-Mail-Adresse ein oder lasse das Feld leer.");
+          setLoading(false);
+          return;
+        }
+
+        onRegister({
+          ...form,
+          username: (form as any).username,
+          password: password
+        });
+        return;
+      }
+
+      let result;
       
-      const result = await registerFestival(formDataWithDevice);
-      if (result.success) {
-        toast.success("Anmeldung erfolgreich gespeichert!");
+      // Unterscheide zwischen Nachmeldung und normaler Registrierung
+      if (skipRegistrationCheck) {
+        // Bei Nachmeldung: Verwende registerWithAccount ohne Rücksicht auf eingeloggten User
+        if (password.length < 8) {
+          toast.error("Bitte gib ein Passwort mit mindestens 8 Zeichen ein.");
+          setLoading(false);
+          return;
+        }
+        if (password !== confirmPassword) {
+          toast.error("Passwörter stimmen nicht überein.");
+          setLoading(false);
+          return;
+        }
+        // Email-Validierung nur wenn eine angegeben wurde
+        if (form.email && !form.email.trim().match(/^[^\s@]+@[^\s@]+\.[^\s@]+$/)) {
+          toast.error("Bitte gib eine gültige E-Mail-Adresse ein oder lasse das Feld leer.");
+          setLoading(false);
+          return;
+        }
         
-        // ✨ Custom Event für andere Komponenten dispatchen
-        window.dispatchEvent(new CustomEvent('registration-updated', {
-          detail: { deviceId: customDeviceId || deviceId, registrationData: formDataWithDevice }
-        }));
-        window.dispatchEvent(new CustomEvent('user-logged-in', {
-          detail: { deviceId: customDeviceId || deviceId, userName: formDataWithDevice.name }
-        }));
-        
-        if (onRegister) onRegister(formDataWithDevice);
-        if (setCookies) Cookies.set('festival_registered', 'true', { expires: 365 });
-        setStep(steps.length - 1);
-        setHasCookie(true);
-        try { localStorage.setItem(LOCAL_STORAGE_KEY, JSON.stringify(formDataWithDevice)); } catch (e) { /* ignore */ }
+        result = await registerWithAccount(form as FestivalRegisterData & { username: string }, password);
+      } else if (user) {
+        // Normale Registrierung mit eingeloggtem User
+        result = await registerFestival(form);
       } else {
+        // Normale Registrierung ohne User - erstelle Account
+        if (password.length < 8) {
+          toast.error("Bitte gib ein Passwort mit mindestens 8 Zeichen ein.");
+          setLoading(false);
+          return;
+        }
+        if (password !== confirmPassword) {
+          toast.error("Passwörter stimmen nicht überein.");
+          setLoading(false);
+          return;
+        }
+        // Email-Validierung nur wenn eine angegeben wurde
+        if (form.email && !form.email.trim().match(/^[^\s@]+@[^\s@]+\.[^\s@]+$/)) {
+          toast.error("Bitte gib eine gültige E-Mail-Adresse ein oder lasse das Feld leer.");
+          setLoading(false);
+          return;
+        }
+        
+        result = await registerWithAccount(form as FestivalRegisterData & { username: string }, password);
+      }
+      
+      if (result.success) {
+        // Sofort UI-Feedback geben
+        toast.success(`${skipRegistrationCheck ? 'Nachmeldung' : (user ? 'Anmeldung' : 'Account und Anmeldung')} erfolgreich gespeichert!`);
+        
+        // Sofort zur Bestätigungsseite wechseln
+        setStep(steps.length - 1);
+        
+        // ✨ Custom Event für andere Komponenten dispatchen - nur bei normaler Registrierung
+        if (!skipRegistrationCheck) {
+          // Dispatch registration-updated event
+          window.dispatchEvent(new CustomEvent('registration-updated', {
+            detail: { userId: (result as any).user?.id || user?.id, registrationData: form }
+          }));
+          
+          // Dispatch user-logged-in event with complete user data
+          window.dispatchEvent(new CustomEvent('user-logged-in', {
+            detail: { 
+              userId: (result as any).user?.id || user?.id, 
+              userName: form.name,
+              user: (result as any).user || null
+            }
+          }));
+        }
+        
+        if (onRegister) onRegister(form);
+        if (setCookies) Cookies.set('festival_registered', 'true', { expires: 365 });
+        setHasCookie(true);
+        try { localStorage.setItem(LOCAL_STORAGE_KEY, JSON.stringify(form)); } catch (e) { /* ignore */ }
+      } else {
+        // Sofort Fehlermeldung anzeigen
         toast.error(result.error || "Fehler beim Speichern der Anmeldung.");
+        // Form nicht zurücksetzen bei Fehler
       }
     } catch (err) {
-      toast.error("Fehler beim Speichern der Anmeldung.");
+      console.error('Fehler bei der Registrierung:', err);
+      toast.error(err instanceof Error ? err.message : "Fehler beim Speichern der Anmeldung.");
     } finally {
       setLoading(false);
     }
@@ -480,7 +647,7 @@ export default function FestivalRegisterForm({ onRegister, setCookies = true, sk
       if (target.tagName === 'TEXTAREA') return;
       if (step < steps.length - 1) {
         e.preventDefault();
-        if (steps[step].isValid) handleNext();
+        if (step >= 0 && step < steps.length && steps[step].isValid) handleNext();
       }
     }
   };
@@ -529,7 +696,9 @@ export default function FestivalRegisterForm({ onRegister, setCookies = true, sk
                   ))}
                 </div>
                 {/* Step Label */}
-                <h2 className="font-semibold text-center text-lg text-[#460b6c]">{steps[step].label}</h2>
+                <h2 className="font-semibold text-center text-lg text-[#460b6c]">
+                  {step >= 0 && step < steps.length ? steps[step].label : 'Laden...'}
+                </h2>
               </div>
             </div>
           )}
@@ -551,7 +720,7 @@ export default function FestivalRegisterForm({ onRegister, setCookies = true, sk
               </div>
               {!isSummaryStep && (
               <div className="fixed right-0 top-0 bottom-0 z-30 pointer-events-none flex items-center">
-                {steps[step].isValid && (
+                {step >= 0 && step < steps.length && steps[step].isValid && (
                   <Button
                     type="button"
                     onClick={handleNext}
@@ -566,7 +735,7 @@ export default function FestivalRegisterForm({ onRegister, setCookies = true, sk
             </>
           )}
           
-          {/* Scroll-Container für den Formular-Inhalt */}
+          {/* Main Content */}
           <div 
             ref={contentRef}
             className={`flex-1 overflow-auto flex items-center justify-center px-4 py-6 ${!isConfirmationStep ? 'pb-56' : 'pb-6'} ${!isMobile ? 'pt-8' : ''}`}
@@ -574,14 +743,14 @@ export default function FestivalRegisterForm({ onRegister, setCookies = true, sk
             <div className="w-full max-w-md mx-auto flex flex-col items-center justify-center">
               {isConfirmationStep ? (
                 // Final screen - keine Form mehr nötig
-                steps[step].content
+                step >= 0 && step < steps.length ? steps[step].content : null
               ) : (
                 <form 
                   ref={formRef} 
                   onSubmit={handleFinalSubmit}
                   onKeyDown={handleFormKeyDown}
                 >
-                  {steps[step].content}
+                  {step >= 0 && step < steps.length ? steps[step].content : null}
                   
                   {/* Bestätigungsknopf auf der Zusammenfassungsseite - Grün und mit Checkmark */}
                   {isSummaryStep && isMobile && (
@@ -595,7 +764,7 @@ export default function FestivalRegisterForm({ onRegister, setCookies = true, sk
                         {loading ? "Wird gespeichert..." : (
                           <>
                             <Check size={20} />
-                            Bestätigen
+                            {user ? 'Bestätigen' : 'Account erstellen & Bestätigen'}
                           </>
                         )}
                       </Button>
@@ -631,7 +800,7 @@ export default function FestivalRegisterForm({ onRegister, setCookies = true, sk
                     {loading ? "Wird gespeichert..." : (
                       <>
                         <Check size={20} />
-                        Bestätigen
+                        {user ? 'Bestätigen' : 'Account erstellen & Bestätigen'}
                       </>
                     )}
                   </Button>
@@ -639,7 +808,7 @@ export default function FestivalRegisterForm({ onRegister, setCookies = true, sk
                   <Button
                     type="button"
                     onClick={handleNext}
-                    disabled={!steps[step].isValid}
+                    disabled={!(step >= 0 && step < steps.length && steps[step].isValid)}
                     className={`flex-1 bg-[#ff9900] text-white rounded-lg font-medium h-12`}
                   >
                     Weiter

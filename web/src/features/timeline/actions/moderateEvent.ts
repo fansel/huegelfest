@@ -108,6 +108,7 @@ async function createScheduledPushForApprovedEvent(event: any) {
         schedule: eventDate,
         active: true,
         sendToAll: true,
+        type: 'general'
       });
       
       console.log('[createScheduledPushForApprovedEvent] Push event created with agendaJobId:', pushEvent.agendaJobId);

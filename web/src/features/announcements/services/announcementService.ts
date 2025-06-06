@@ -9,6 +9,7 @@ import mongoose from 'mongoose';
 import { initServices } from '@/lib/initServices';
 import { broadcast } from '@/lib/websocket/broadcast';
 import Reaction from '@/lib/db/models/Reaction';
+import { verifySession } from '@/features/auth/actions/userAuth';
 
 export async function getAllAnnouncements() {
   await initServices();
@@ -122,11 +123,11 @@ export async function saveAnnouncements(announcements: IAnnouncement[]): Promise
         date: announcement.date,
         time: announcement.time,
         reactions: announcement.reactions || {
-          thumbsUp: { count: 0, deviceReactions: {} },
-          clap: { count: 0, deviceReactions: {} },
-          laugh: { count: 0, deviceReactions: {} },
-          surprised: { count: 0, deviceReactions: {} },
-          heart: { count: 0, deviceReactions: {} }
+          thumbsUp: { count: 0, userReactions: {} },
+          clap: { count: 0, userReactions: {} },
+          laugh: { count: 0, userReactions: {} },
+          surprised: { count: 0, userReactions: {} },
+          heart: { count: 0, userReactions: {} }
         },
         createdAt: new Date(),
         updatedAt: new Date()
@@ -159,18 +160,26 @@ export async function saveAnnouncements(announcements: IAnnouncement[]): Promise
 }
 
 /**
- * Fügt eine Reaction hinzu, entfernt sie (toggle) oder ändert sie für ein Announcement und ein Device.
- * Ein Device kann pro Announcement nur eine Reaction haben.
+ * Fügt eine Reaction hinzu, entfernt sie (toggle) oder ändert sie für ein Announcement und einen User.
+ * Ein User kann pro Announcement nur eine Reaction haben.
+ * SICHERHEIT: userId wird aus der Session extrahiert, nicht vom Client gesendet
  */
 export async function updateAnnouncementReaction(
   announcementId: string,
-  reactionType: ReactionType,
-  deviceId: string
+  reactionType: ReactionType
 ) {
   await initServices();
   
-  // Prüfe, ob es schon eine Reaction für dieses Announcement und Device gibt
-  const existing = await Reaction.findOne({ announcementId, deviceId });
+  // Session validieren und userId extrahieren
+  const sessionData = await verifySession();
+  if (!sessionData) {
+    throw new Error('Nicht authentifiziert');
+  }
+  
+  const userId = sessionData.userId;
+  
+  // Prüfe, ob es schon eine Reaction für dieses Announcement und User gibt
+  const existing = await Reaction.findOne({ announcementId, userId });
   let result;
   
   if (existing) {
@@ -186,7 +195,7 @@ export async function updateAnnouncementReaction(
     }
   } else {
     // Neue Reaction anlegen
-    await Reaction.create({ announcementId, deviceId, type: reactionType });
+    await Reaction.create({ announcementId, userId, type: reactionType });
     result = { created: true };
   }
   
@@ -197,16 +206,21 @@ export async function updateAnnouncementReaction(
 /**
  * Aggregiert alle Reactions für ein Announcement und liefert:
  * - counts: wie oft jeder Typ vergeben wurde
- * - userReaction: welchen Typ das aktuelle Device vergeben hat (falls vorhanden)
+ * - userReaction: welchen Typ der aktuelle User vergeben hat (falls vorhanden)
+ * SICHERHEIT: userId wird aus der Session extrahiert
  */
 export async function getAnnouncementReactions(
-  announcementId: string,
-  deviceId?: string
+  announcementId: string
 ): Promise<{
   counts: Record<ReactionType, number>;
   userReaction?: ReactionType;
 }> {
   await initServices();
+  
+  // Session validieren und userId extrahieren
+  const sessionData = await verifySession();
+  const userId = sessionData?.userId; // Kann auch null sein (nicht angemeldet)
+  
   const reactions = await Reaction.find({ announcementId });
   const counts: Record<ReactionType, number> = {
     thumbsUp: 0,
@@ -216,11 +230,13 @@ export async function getAnnouncementReactions(
     heart: 0
   };
   let userReaction: ReactionType | undefined = undefined;
+  
   for (const reaction of reactions) {
     counts[reaction.type]++;
-    if (deviceId && reaction.deviceId === deviceId) {
+    if (userId && reaction.userId.toString() === userId) {
       userReaction = reaction.type;
     }
   }
+  
   return { counts, userReaction };
 } 

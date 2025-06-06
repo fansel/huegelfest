@@ -17,6 +17,8 @@ import { deleteRideAction } from '../actions/deleteRide';
 import { useDeviceContext } from '@/shared/contexts/DeviceContext';
 import { useNetworkStatus } from '@/shared/hooks/useNetworkStatus';
 import { OfflineDisabled } from '@/shared/components/ui/OfflineDisabledButton';
+import { useAuth } from '@/features/auth/AuthContext';
+import { checkRegistrationStatusAction } from '../actions/register';
 import useSWR from 'swr';
 
 interface Ride {
@@ -49,6 +51,7 @@ const festivalLocation = 'Hügelfest';
 export default function CarpoolClient({ initialRides }: CarpoolClientProps) {
   const { deviceType } = useDeviceContext();
   const { isOnline } = useNetworkStatus();
+  const { user } = useAuth();
   const isMobile = deviceType === 'mobile';
   
   // SWR für Carpool-Daten mit verbessertem Offline-Caching
@@ -70,6 +73,7 @@ export default function CarpoolClient({ initialRides }: CarpoolClientProps) {
   const [showPassengerDialog, setShowPassengerDialog] = useState<string | null>(null);
   const [filterDate, setFilterDate] = useState('all');
   const [filterDirection, setFilterDirection] = useState('all');
+  const [registeredName, setRegisteredName] = useState<string>('');
   
   const [newRide, setNewRide] = useState<Omit<Ride, '_id' | 'passengers'>>({
     driver: '',
@@ -84,6 +88,38 @@ export default function CarpoolClient({ initialRides }: CarpoolClientProps) {
 
   const [passengerContact, setPassengerContact] = useState('');
   const [showPassengerContact, setShowPassengerContact] = useState<{ name: string, contact?: string } | null>(null);
+
+  // Lade Anmeldedaten für automatische Namens-Befüllung
+  useEffect(() => {
+    const loadRegistrationData = async () => {
+      if (user && isOnline) {
+        try {
+          const statusResult = await checkRegistrationStatusAction();
+          if (statusResult.isRegistered && statusResult.name) {
+            setRegisteredName(statusResult.name);
+          }
+        } catch (error) {
+          console.log('Registrierungsstatus konnte nicht geladen werden (vermutlich offline)');
+        }
+      }
+    };
+
+    loadRegistrationData();
+  }, [user, isOnline]);
+
+  // Automatische Befüllung des Fahrernamens beim Öffnen des Dialogs
+  useEffect(() => {
+    if (showCreateDialog && registeredName && !newRide.driver) {
+      setNewRide(prev => ({ ...prev, driver: registeredName }));
+    }
+  }, [showCreateDialog, registeredName, newRide.driver]);
+
+  // Automatische Befüllung des Mitfahrernamens beim Öffnen des Dialogs
+  useEffect(() => {
+    if (showPassengerDialog && registeredName && !passengerName) {
+      setPassengerName(registeredName);
+    }
+  }, [showPassengerDialog, registeredName, passengerName]);
 
   // Filter Logic
   const filteredRides = rides.filter(ride => {
@@ -105,7 +141,7 @@ export default function CarpoolClient({ initialRides }: CarpoolClientProps) {
       toast.success('Fahrt erfolgreich erstellt!');
       setShowCreateDialog(false);
       setNewRide({
-        driver: '',
+        driver: registeredName || '',
         direction: 'hinfahrt',
         start: '',
         destination: festivalLocation,
@@ -145,7 +181,7 @@ export default function CarpoolClient({ initialRides }: CarpoolClientProps) {
       await updateRideAction(rideId, { passengers: updatedPassengers });
       
       toast.success('Du bist jetzt als Mitfahrer angemeldet!');
-      setPassengerName('');
+      setPassengerName(registeredName || '');
       setPassengerContact('');
       setShowPassengerDialog(null);
       mutate();
@@ -205,7 +241,7 @@ export default function CarpoolClient({ initialRides }: CarpoolClientProps) {
   return (
     <div className="w-full max-w-4xl mx-auto">
       {/* Sticky Filter Header im Timeline-Stil */}
-      <div className="sticky top-0 z-10 bg-[#460b6c]/90 backdrop-blur-sm py-2 px-4">
+      <div className={`sticky ${!isMobile ? 'top-16' : 'top-0'} z-10 bg-[#460b6c]/90 backdrop-blur-sm py-2 px-4`}>
         {/* Filter-Buttons im Timeline-Stil */}
         <div className="flex justify-center">
           <div className="flex space-x-2 overflow-x-auto pb-2 px-4">

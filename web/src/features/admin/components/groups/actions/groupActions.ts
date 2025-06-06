@@ -96,11 +96,11 @@ export async function getGroupMembersAction(groupId: string) {
 /**
  * Server Action: Weist einen Benutzer einer Gruppe zu
  */
-export async function assignUserToGroupAction(deviceId: string, groupId: string) {
+export async function assignUserToGroupAction(userId: string, groupId: string) {
   try {
-    const result = await assignUserToGroup(deviceId, groupId);
+    const result = await assignUserToGroup(userId, groupId);
     if (result.success) {
-      await broadcast('user-assigned', { deviceId, groupId });
+      await broadcast('user-assigned', { userId, groupId });
     }
     return result;
   } catch (error) {
@@ -112,11 +112,11 @@ export async function assignUserToGroupAction(deviceId: string, groupId: string)
 /**
  * Server Action: Entfernt einen Benutzer aus seiner Gruppe
  */
-export async function removeUserFromGroupAction(deviceId: string) {
+export async function removeUserFromGroupAction(userId: string) {
   try {
-    const result = await removeUserFromGroup(deviceId);
+    const result = await removeUserFromGroup(userId);
     if (result.success) {
-      await broadcast('user-removed', { deviceId });
+      await broadcast('user-removed', { userId });
     }
     return result;
   } catch (error) {
@@ -128,11 +128,11 @@ export async function removeUserFromGroupAction(deviceId: string) {
 /**
  * Server Action: Weist einen Benutzer automatisch einer zufälligen Gruppe zu
  */
-export async function assignUserToRandomGroupAction(deviceId: string) {
+export async function assignUserToRandomGroupAction(userId: string) {
   try {
-    const result = await assignUserToRandomGroup(deviceId);
+    const result = await assignUserToRandomGroup(userId);
     if (result.success && result.groupName) {
-      await broadcast('user-assigned', { deviceId, groupName: result.groupName });
+      await broadcast('user-assigned', { userId, groupName: result.groupName });
     }
     return result;
   } catch (error) {

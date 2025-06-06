@@ -1,7 +1,6 @@
 'use client';
 
 import { getWebSocketUrl } from './getWebSocketUrl';
-import { getOrCreateDeviceId } from '@/shared/hooks/useDeviceId';
 
 // Event-Handler Types
 type MessageHandler = (data: any) => void;
@@ -19,12 +18,12 @@ interface WebSocketListeners {
  * Globaler WebSocket-Manager
  * - Eine einzige WebSocket-Verbindung pro App
  * - Mehrere Komponenten können sich registrieren
- * - Intelligente Reconnection mit Device-ID
+ * - Unterstützt sowohl authentifizierte als auch anonyme Verbindungen
  */
 class GlobalWebSocketManager {
   private static instance: GlobalWebSocketManager;
   private ws: WebSocket | null = null;
-  private deviceId: string | null = null;
+  private userId: string | null = null;
   private isConnecting = false;
   private reconnectAttempts = 0;
   private maxReconnectAttempts = 10;
@@ -44,15 +43,23 @@ class GlobalWebSocketManager {
   }
 
   /**
-   * Initialisiert WebSocket-Verbindung (nur einmal pro App)
+   * Initialisiert WebSocket-Verbindung
+   * @param userId - ID des authentifizierten Benutzers (null für anonyme Verbindungen)
    */
-  initialize() {
+  initialize(userId: string | null) {
     if (typeof window === 'undefined') return;
     
-    // Verwende die einheitliche Device-ID aus useDeviceId Hook
-    this.deviceId = getOrCreateDeviceId();
+    // Update userId wenn sich der authentifizierte User ändert
+    if (this.userId !== userId) {
+      this.userId = userId;
+      
+      // Schließe bestehende Verbindung wenn User sich ändert
+      if (this.ws && this.ws.readyState === WebSocket.OPEN) {
+        this.disconnect();
+      }
+    }
 
-    // Nur verbinden wenn noch keine Verbindung existiert
+    // Verbinden wenn noch keine Verbindung existiert (sowohl für authentifizierte als auch anonyme User)
     if (!this.ws || this.ws.readyState === WebSocket.CLOSED) {
       this.connect();
     }
@@ -108,21 +115,25 @@ class GlobalWebSocketManager {
 
     try {
       const wsUrl = getWebSocketUrl();
-      console.log(`[GlobalWebSocket] Verbinde mit Device-ID: ${this.deviceId}`);
+      const connectionType = this.userId ? `User: ${this.userId}` : 'Anonymous';
+      console.log(`[GlobalWebSocket] Verbinde als ${connectionType}`);
       
       this.ws = new WebSocket(wsUrl);
 
       this.ws.onopen = () => {
-        console.log(`[GlobalWebSocket] Verbunden als ${this.deviceId}`);
+        console.log(`[GlobalWebSocket] Verbunden als ${connectionType}`);
         this.isConnecting = false;
         this.reconnectAttempts = 0;
         
-        // Automatische Device-Registrierung beim Server
-        if (this.deviceId) {
+        // User-Registrierung beim Server (falls authentifiziert)
+        if (this.userId) {
           this.ws?.send(JSON.stringify({
-            type: 'DEVICE_REGISTRATION',
-            deviceId: this.deviceId
+            type: 'USER_REGISTRATION',
+            userId: this.userId
           }));
+        } else {
+          // Anonyme Verbindung - keine Registrierung nötig
+          console.log('[GlobalWebSocket] Anonyme Verbindung hergestellt');
         }
         
         // Alle onOpen-Handler aufrufen
@@ -165,7 +176,7 @@ class GlobalWebSocketManager {
           }
         });
 
-        // Intelligente Reconnection
+        // Intelligente Reconnection (sowohl für authentifizierte als auch anonyme User)
         this.scheduleReconnect();
       };
 
@@ -222,6 +233,7 @@ class GlobalWebSocketManager {
       this.ws.close();
       this.ws = null;
     }
+    // userId nicht auf null setzen - wird beim nächsten initialize() gesetzt
   }
 
   /**
@@ -229,7 +241,8 @@ class GlobalWebSocketManager {
    */
   getStatus() {
     return {
-      deviceId: this.deviceId,
+      userId: this.userId,
+      isAuthenticated: !!this.userId,
       connected: this.ws?.readyState === WebSocket.OPEN,
       connecting: this.isConnecting,
       reconnectAttempts: this.reconnectAttempts,

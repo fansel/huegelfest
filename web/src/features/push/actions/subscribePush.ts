@@ -1,7 +1,15 @@
 "use server";
 
-import { subscribePush, PushSubscriptionPayload } from '../services/pushService';
+import { subscribePush } from '../services/pushService';
 
-export async function subscribePushAction(payload: PushSubscriptionPayload) {
-  return await subscribePush(payload);
+export interface PushSubscriptionPayload {
+  endpoint: string;
+  keys: {
+    auth: string;
+    p256dh: string;
+  };
+}
+
+export async function subscribePushAction(subscription: PushSubscriptionPayload) {
+  return await subscribePush(subscription);
 } 

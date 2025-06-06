@@ -24,7 +24,23 @@ export const DeviceProvider = ({ children }: { children: ReactNode }) => {
 
   useEffect(() => {
     const updateDeviceType = () => {
-      setDeviceType(window.innerWidth < 768 ? "mobile" : "desktop");
+      // Verbesserte Mobile-Erkennung mit mehreren Faktoren
+      const hasTouch = 'ontouchstart' in window || navigator.maxTouchPoints > 0;
+      const isSmallScreen = window.innerWidth < 768;
+      const isMediumScreen = window.innerWidth < 1024;
+      const userAgent = navigator.userAgent.toLowerCase();
+      const isMobileUA = /android|webos|iphone|ipad|ipod|blackberry|iemobile|opera mini/i.test(userAgent);
+      
+      // Mobile wenn:
+      // 1. Touch-fähig UND (kleiner Bildschirm ODER mobile User Agent)
+      // 2. ODER kleiner Bildschirm (unter 768px)
+      // 3. ODER definitiv mobile User Agent (auch auf größeren Bildschirmen)
+      const isMobile = 
+        (hasTouch && (isSmallScreen || isMobileUA)) || 
+        isSmallScreen || 
+        (isMobileUA && isMediumScreen); // Tablets mit mobilen UA auch als mobile behandeln
+      
+      setDeviceType(isMobile ? "mobile" : "desktop");
     };
 
     updateDeviceType(); // initial check

@@ -1,20 +1,28 @@
-'use client';
+"use client";
 
 import React, { useMemo } from 'react';
-import { Check, Clock, Calendar, AlertCircle, Wifi, WifiOff, Crown } from 'lucide-react';
-import * as LucideIcons from 'lucide-react';
-import { useDeviceId } from '@/shared/hooks/useDeviceId';
-import { useDeviceContext } from '@/shared/contexts/DeviceContext';
-import { format, isToday, isTomorrow, isYesterday, startOfDay } from 'date-fns';
-import { de } from 'date-fns/locale';
-import type { ActivityWithCategoryAndTemplate } from '../../admin/components/activities/types';
-import { formatActivityTime, sortActivitiesByTime, getActivityTimeStatus, groupActivitiesByStatus } from '../../admin/components/activities/utils/timeUtils';
-import useSWR from 'swr';
-import { fetchUserActivitiesAction, type UserActivitiesData } from '../../admin/components/activities/actions/fetchUserActivities';
-import { useGlobalWebSocket } from '@/shared/hooks/useGlobalWebSocket';
+import { fetchUserActivitiesAction } from '@/features/admin/components/activities/actions/fetchUserActivities';
+import type { UserActivitiesData } from '@/features/admin/components/activities/actions/fetchUserActivities';
+import type { ActivityWithCategoryAndTemplate } from '@/features/admin/components/activities/types';
 import { useNetworkStatus } from '@/shared/hooks/useNetworkStatus';
+import { useDeviceContext } from '@/shared/contexts/DeviceContext';
+import { useGlobalWebSocket } from '@/shared/hooks/useGlobalWebSocket';
+import useSWR from 'swr';
+import { 
+  Check, 
+  Calendar, 
+  Clock, 
+  AlertCircle, 
+  Wifi, 
+  WifiOff 
+} from 'lucide-react';
+import * as LucideIcons from 'lucide-react';
+import { startOfDay, format, isToday, isTomorrow, isYesterday } from 'date-fns';
+import { de } from 'date-fns/locale';
+import { formatActivityTime, groupActivitiesByStatus } from '@/features/admin/components/activities/utils/timeUtils';
+import { useAuth } from '@/features/auth/AuthContext';
 
-interface ActivityDay {
+export interface ActivityDay {
   date: Date;
   dateString: string;
   label: string;
@@ -24,19 +32,19 @@ interface ActivityDay {
 }
 
 export default function ActivitiesClient() {
-  const deviceId = useDeviceId();
+  const { user } = useAuth();
   const { deviceType } = useDeviceContext();
   const isOnline = useNetworkStatus();
   const isMobile = deviceType === 'mobile';
 
-  // SWR für User Activities mit Offline-Caching
+  // SWR für User Activities mit session-basierter Authentifizierung
   const { data, mutate, isLoading } = useSWR<UserActivitiesData>(
-    deviceId ? `user-activities-${deviceId}` : null,
-    () => deviceId ? fetchUserActivitiesAction(deviceId) : Promise.resolve({ activities: [], userStatus: { isRegistered: false } }),
+    user ? `user-activities-${user.id}` : null,
+    () => fetchUserActivitiesAction(),
     {
       revalidateOnFocus: false,
       revalidateOnReconnect: true,
-      dedupingInterval: 30000, // 30 Sekunden
+      dedupingInterval: 30000,
     }
   );
 
@@ -45,7 +53,6 @@ export default function ActivitiesClient() {
   // WebSocket für Live-Updates
   useGlobalWebSocket({
     onMessage: (msg: any) => {
-      // Bei relevanten Updates: SWR Cache invalidieren
       if (msg.topic === 'ACTIVITY_CREATED' || 
           msg.topic === 'ACTIVITY_UPDATED' || 
           msg.topic === 'ACTIVITY_DELETED' ||
@@ -54,7 +61,7 @@ export default function ActivitiesClient() {
           msg.topic === 'user-removed') {
         
         console.log('[ActivitiesClient] Activities-Update erkannt, invalidiere SWR Cache');
-        mutate(); // SWR Cache invalidieren
+        mutate();
       }
     },
     topicFilter: [
@@ -69,22 +76,26 @@ export default function ActivitiesClient() {
 
   // Find current active activities and check if user is responsible
   const currentActivities = useMemo(() => {
-    if (!activities.length || !userStatus.isRegistered || !deviceId) return [];
+    if (!activities.length || !userStatus.isRegistered || !user) return [];
     
-    const todayActivities = activities.filter(activity => isToday(new Date(activity.date)));
+    const todayActivities = activities.filter((activity: ActivityWithCategoryAndTemplate) => 
+      isToday(new Date(activity.date))
+    );
     const { active } = groupActivitiesByStatus(todayActivities);
     
-    return active.map(activity => {
-      const isResponsible = activity.responsibleUsersData?.some(user => user.deviceId === deviceId) || false;
+    return active.map((activity: ActivityWithCategoryAndTemplate) => {
+      const isResponsible = activity.responsibleUsersData?.some(
+        (userData: { _id: string; name: string; email: string }) => userData._id === user.id
+      ) || false;
       return { ...activity, isResponsible };
     });
-  }, [activities, deviceId, userStatus.isRegistered]);
+  }, [activities, user, userStatus.isRegistered]);
 
   // Group activities by day
   const activityDays = useMemo((): ActivityDay[] => {
     if (!activities.length) return [];
 
-    const groupedByDate = activities.reduce((acc, activity) => {
+    const groupedByDate = activities.reduce((acc: Record<string, ActivityWithCategoryAndTemplate[]>, activity: ActivityWithCategoryAndTemplate) => {
       const date = new Date(activity.date);
       const dateString = startOfDay(date).toISOString();
       
@@ -93,7 +104,7 @@ export default function ActivitiesClient() {
       }
       acc[dateString].push(activity);
       return acc;
-    }, {} as Record<string, ActivityWithCategoryAndTemplate[]>);
+    }, {});
 
     return Object.entries(groupedByDate)
       .map(([dateString, dayActivities]) => {
@@ -109,7 +120,7 @@ export default function ActivitiesClient() {
           date,
           dateString,
           label,
-          activities: dayActivities.sort((a, b) => {
+          activities: dayActivities.sort((a: ActivityWithCategoryAndTemplate, b: ActivityWithCategoryAndTemplate) => {
             const timeA = a.startTime || '24:00';
             const timeB = b.startTime || '24:00';
             return timeA.localeCompare(timeB);
@@ -126,13 +137,10 @@ export default function ActivitiesClient() {
     return IconComponent || LucideIcons.HelpCircle;
   };
 
-  // Sort activities by time
-  const sortedActivities = sortActivitiesByTime(activities);
-
   if (isLoading) {
     return (
       <div className="w-full max-w-4xl mx-auto">
-        <div className="sticky top-0 z-10 bg-[#460b6c]/90 backdrop-blur-sm py-4 px-4">
+        <div className={`sticky ${!isMobile ? 'top-16' : 'top-0'} z-10 bg-[#460b6c]/90 backdrop-blur-sm py-4 px-4`}>
           <div className="flex items-center gap-3">
             <Check className="h-6 w-6 text-[#ff9900]" />
             <h2 className="text-xl font-bold text-[#ff9900]">Deine Aufgaben</h2>
@@ -148,7 +156,7 @@ export default function ActivitiesClient() {
   return (
     <div className="w-full max-w-4xl mx-auto">
       {/* Header */}
-      <div className="sticky top-0 z-10 bg-[#460b6c]/90 backdrop-blur-sm py-4 px-4">
+      <div className={`sticky ${!isMobile ? 'top-16' : 'top-0'} z-10 bg-[#460b6c]/90 backdrop-blur-sm py-4 px-4`}>
         <div className="flex items-center gap-3">
           <Check className="h-6 w-6 text-[#ff9900]" />
           <h2 className="text-xl font-bold text-[#ff9900]">Deine Aufgaben</h2>
@@ -172,11 +180,21 @@ export default function ActivitiesClient() {
         <div className="space-y-4">
           {/* Current Activity Status */}
           <div className="bg-white/10 backdrop-blur-sm rounded-lg border border-[#ff9900]/20 p-4 sm:p-6">
-            {!userStatus.isRegistered ? (
+            {!user ? (
+              <div className="text-center">
+                <div className="text-4xl mb-3">🔐</div>
+                <h3 className="text-lg font-semibold text-[#ff9900] mb-2">
+                  Du bist nicht angemeldet.
+                </h3>
+                <p className="text-[#ff9900]/80 text-sm">
+                  Melde dich an, um deine Aufgaben zu sehen.
+                </p>
+              </div>
+            ) : !userStatus.isRegistered ? (
               <div className="text-center">
                 <div className="text-4xl mb-3">🚫</div>
                 <h3 className="text-lg font-semibold text-[#ff9900] mb-2">
-                  Ups! Du bist noch nicht angemeldet.
+                  Ups! Du bist noch nicht registriert.
                 </h3>
                 <p className="text-[#ff9900]/80 text-sm">
                   Registriere dich, um deine Aufgaben zu sehen.
@@ -207,43 +225,38 @@ export default function ActivitiesClient() {
                   
                   {currentActivities.length > 0 ? (
                     <div className="space-y-3">
-                      {currentActivities.map((activity) => {
+                      {currentActivities.map((activity: any) => {
                         const IconComponent = activity.category ? getIconComponent(activity.category.icon) : LucideIcons.HelpCircle;
                         const activityName = activity.template?.name || activity.customName || 'Unbekannte Aufgabe';
-                        
+
                         return (
-                          <div key={activity._id} className="space-y-2">
-                            <div className="flex items-center justify-center gap-2 mb-2">
-                              <div 
-                                className="p-2 rounded-full"
-                                style={{ backgroundColor: `${activity.category?.color || '#ff9900'}20` }}
-                              >
-                                <IconComponent 
-                                  className="h-6 w-6" 
-                                  style={{ color: activity.category?.color || '#ff9900' }}
-                                />
+                          <div 
+                            key={activity._id} 
+                            className={`flex items-center gap-3 p-3 rounded-lg border ${
+                              activity.isResponsible 
+                                ? 'border-[#ff9900] bg-[#ff9900]/10' 
+                                : 'border-[#ff9900]/30 bg-white/5'
+                            }`}
+                          >
+                            <IconComponent 
+                              className="h-5 w-5" 
+                              style={{ color: activity.category?.color || '#ff9900' }}
+                            />
+                            <div className="flex-1">
+                              <div className="font-medium text-[#ff9900] text-lg">
+                                {activityName}
+                                {activity.isResponsible && (
+                                  <span className="ml-2 text-xs bg-[#ff9900] text-white px-2 py-1 rounded-full">
+                                    Hauptverantwortung
+                                  </span>
+                                )}
                               </div>
+                              {activity.startTime && (
+                                <div className="text-sm text-[#ff9900]/70">
+                                  {formatActivityTime(activity)}
+                                </div>
+                              )}
                             </div>
-                            
-                            <div className="text-2xl font-bold text-[#ff9900]">
-                              {activityName}
-                            </div>
-                            
-                            {activity.isResponsible && (
-                              <div className="flex items-center justify-center gap-2">
-                                <Crown className="h-4 w-4 text-yellow-400" />
-                                <span className="font-bold text-yellow-400 text-sm">
-                                  Du trägst die Hauptverantwortung
-                                </span>
-                              </div>
-                            )}
-                            
-                            {activity.startTime && (
-                              <div className="flex items-center justify-center gap-1 text-[#ff9900]/80 text-sm">
-                                <Clock className="h-4 w-4" />
-                                <span>{formatActivityTime(activity)}</span>
-                              </div>
-                            )}
                           </div>
                         );
                       })}
@@ -302,23 +315,23 @@ export default function ActivitiesClient() {
                   </div>
 
                   {/* Activities for this day */}
-                  <div className="space-y-3">
+                  <div className="space-y-2">
                     {day.activities.map((activity) => {
                       const IconComponent = activity.category ? getIconComponent(activity.category.icon) : LucideIcons.HelpCircle;
-                      const timeStatus = getActivityTimeStatus(activity);
-                      const isResponsible = deviceId ? activity.responsibleUsersData?.some(user => user.deviceId === deviceId) || false : false;
+                      const activityName = activity.template?.name || activity.customName || 'Unbekannte Aufgabe';
+                      
+                      // Check if current user is responsible (by userId)
+                      const isResponsible = user && activity.responsibleUsersData?.some((userData: { _id: string; name: string; email: string }) => userData._id === user.id) || false;
 
                       return (
-                        <div
+                        <div 
                           key={activity._id}
-                          className={`bg-white/10 backdrop-blur-sm rounded-lg border p-4 transition-all duration-200 ${
-                            timeStatus.isActive
-                              ? 'border-green-400/60 bg-green-400/10'
+                          className={`bg-white/10 backdrop-blur-sm rounded-lg border p-4 ${
+                            isResponsible
+                              ? 'border-[#ff9900] bg-[#ff9900]/5'
                               : day.isToday 
-                                ? 'border-[#ff9900]/40 hover:border-[#ff9900]/60' 
-                                : day.isPast
-                                  ? 'border-gray-500/20 opacity-75'
-                                  : 'border-[#ff9900]/20 hover:border-[#ff9900]/40'
+                                ? 'border-[#ff9900]/40' 
+                                : 'border-[#ff9900]/20'
                           }`}
                         >
                           <div className="flex items-start gap-3">
@@ -341,8 +354,13 @@ export default function ActivitiesClient() {
                                     <h4 className={`font-medium text-sm ${
                                       day.isToday ? 'text-[#ff9900]' : 'text-[#ff9900]/80'
                                     }`}>
-                                      {activity.template?.name || activity.customName}
+                                      {activityName}
                                     </h4>
+                                    {isResponsible && (
+                                      <span className="text-xs bg-[#ff9900] text-white px-2 py-1 rounded-full">
+                                        Hauptverantwortung
+                                      </span>
+                                    )}
                                   </div>
                                   
                                   {activity.startTime && (
@@ -355,25 +373,6 @@ export default function ActivitiesClient() {
                                   <p className="text-xs mt-2 text-[#ff9900]/60">
                                     {activity.description}
                                   </p>
-                                </div>
-
-                                {/* Status Badge */}
-                                <div className="flex-shrink-0 ml-3 flex items-center gap-2">
-                                  {isResponsible && (
-                                    <span className="inline-flex items-center justify-center w-6 h-6 rounded-full bg-yellow-400/20">
-                                      <Crown className="h-3 w-3 text-yellow-400" />
-                                    </span>
-                                  )}
-                                  
-                                  {timeStatus.isActive ? (
-                                    <span className="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium bg-green-400/20 text-green-400">
-                                      Aktiv
-                                    </span>
-                                  ) : day.isToday && (
-                                    <span className="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium bg-[#ff9900]/20 text-[#ff9900]">
-                                      Heute
-                                    </span>
-                                  )}
                                 </div>
                               </div>
                             </div>

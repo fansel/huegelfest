@@ -2,7 +2,7 @@
 
 import { useEffect, useState, useCallback } from 'react';
 import { toast } from 'react-hot-toast';
-import { useWebSocket, WebSocketMessage } from '@/shared/hooks/useWebSocket';
+import { useGlobalWebSocket, WebSocketMessage } from '@/shared/hooks/useGlobalWebSocket';
 import { getWebSocketUrl } from '@/shared/utils/getWebSocketUrl';
 import { fetchGroupsData, type GroupsData } from '../actions/fetchGroupsData';
 import { globalWebSocketManager } from '@/shared/utils/globalWebSocketManager';
@@ -100,26 +100,32 @@ export function useGroupsWebSocket(initialData?: GroupsData) {
     }
   }, [refreshData]);
 
-  // WebSocket-Verbindung mit bestehender Infrastruktur
-  useWebSocket(
-    getWebSocketUrl(),
-    {
-      onMessage: handleWebSocketMessage,
-      onOpen: () => {
-        updateConnectionStatus(); // Status sofort aktualisieren
-        console.log('[useGroupsWebSocket] WebSocket verbunden');
-      },
-      onClose: () => {
-        updateConnectionStatus(); // Status sofort aktualisieren
-        console.log('[useGroupsWebSocket] WebSocket getrennt');
-      },
-      onError: (err) => {
-        console.error('[useGroupsWebSocket] WebSocket-Fehler:', err);
-        updateConnectionStatus(); // Status sofort aktualisieren
-      },
-      reconnectIntervalMs: 5000,
-    }
-  );
+  // WebSocket-Verbindung mit globalem WebSocket System
+  useGlobalWebSocket({
+    onMessage: handleWebSocketMessage,
+    onOpen: () => {
+      setConnected(true);
+      console.log('[useGroupsWebSocket] WebSocket verbunden');
+    },
+    onClose: () => {
+      setConnected(false);
+      console.log('[useGroupsWebSocket] WebSocket getrennt');
+    },
+    onError: (err) => {
+      console.error('[useGroupsWebSocket] WebSocket-Fehler:', err);
+      setConnected(false);
+    },
+    topicFilter: [
+      'groups-updated',
+      'group-created',
+      'group-updated',
+      'group-deleted',
+      'user-assigned',
+      'user-removed',
+      'user-deleted',
+      'registration-updated'
+    ]
+  });
 
   // Initiale Daten beim Mount laden
   useEffect(() => {

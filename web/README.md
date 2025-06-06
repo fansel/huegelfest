@@ -13,23 +13,25 @@ Der Server läuft standardmäßig auf `ws://localhost:8080` (Port kann über die
 
 ## Nutzung im Client
 
-Verwende den Hook `useWebSocket` aus `src/shared/hooks/useWebSocket.ts`:
+Verwende den Hook `useGlobalWebSocket` aus `src/shared/hooks/useGlobalWebSocket.ts`:
 
 ```tsx
 'use client';
 import { useState } from 'react';
-import { useWebSocket } from '@/shared/hooks/useWebSocket';
-import type { WebSocketMessage } from '@/shared/types/websocket';
+import { useGlobalWebSocket } from '@/shared/hooks/useGlobalWebSocket';
+import type { WebSocketMessage } from '@/shared/hooks/useGlobalWebSocket';
 
 export default function AnnouncementList() {
   const [announcements, setAnnouncements] = useState<any[]>([]);
 
-  useWebSocket('ws://localhost:8080', {
+  useGlobalWebSocket({
     onMessage: (msg: WebSocketMessage) => {
       if (msg.topic === 'announcement') {
         setAnnouncements((prev) => [msg.payload, ...prev]);
       }
     },
+    // Optional: Filter für spezifische Topics
+    topicFilter: ['announcement']
   });
 
   // ... Render-Logik
@@ -38,7 +40,7 @@ export default function AnnouncementList() {
 
 ## Typen
 
-Die Typen für Nachrichten und Topics findest du in `src/shared/types/websocket.ts`.
+Die Typen für Nachrichten und Topics findest du in `src/shared/hooks/useGlobalWebSocket.ts`.
 
 ---
 

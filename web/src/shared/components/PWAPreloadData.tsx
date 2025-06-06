@@ -9,7 +9,10 @@ import { getRidesAction } from '@/features/registration/actions/getRides';
 import { fetchUserActivitiesAction } from '@/features/admin/components/activities/actions/fetchUserActivities';
 import { mutate } from 'swr';
 import { useNetworkStatus } from '../hooks/useNetworkStatus';
-import { useDeviceId } from '../hooks/useDeviceId';
+import { useAuth } from '@/features/auth/AuthContext';
+
+// Debug nur in Entwicklung aktivieren
+const DEBUG = process.env.NODE_ENV === 'development' && false;
 
 /**
  * Preload-Komponente für kritische Daten der PWA.
@@ -18,19 +21,23 @@ import { useDeviceId } from '../hooks/useDeviceId';
  */
 export function PWAPreloadData() {
   const { isOnline } = useNetworkStatus();
-  const deviceId = useDeviceId();
+  const { user, isAuthenticated } = useAuth();
   
   // Beim ersten Laden wichtige Daten sofort in den SWR-Cache laden
   useEffect(() => {
     if (isOnline && typeof window !== 'undefined') {
       const preloadCriticalData = async () => {
         try {
-          console.log('[PWA] Starte sofortigen Preload kritischer Daten...');
+          if (DEBUG) {
+            console.log('[PWA] Starte sofortigen Preload kritischer Daten...');
+          }
           
           // 1. Timeline-Daten vorladen (wichtigste Daten)
           const timelineData = await fetchTimeline();
           mutate('timeline', timelineData, false);
-          console.log('[PWA] Timeline-Daten erfolgreich vorgeladen');
+          if (DEBUG) {
+            console.log('[PWA] Timeline-Daten erfolgreich vorgeladen');
+          }
           
           // 2. Ankündigungen vorladen
           const announcements = await getAllAnnouncementsAction();
@@ -40,55 +47,69 @@ export function PWAPreloadData() {
             groupColor: a.groupColor ?? a.groupInfo?.color ?? '#cccccc',
           }));
           
-          // 3. Reactions für alle Announcements vorladen (mit und ohne Device-ID)
+          // 3. Reactions für alle Announcements vorladen - mit neuer Auth-API
           const reactionsObj: Record<string, any> = {};
-          if (deviceId) {
-            await Promise.all(mapped.map(async (a) => {
-              try {
-                reactionsObj[a.id] = await getAnnouncementReactionsAction(a.id, deviceId);
-              } catch (error) {
+          await Promise.all(mapped.map(async (a) => {
+            try {
+              reactionsObj[a.id] = await getAnnouncementReactionsAction(a.id);
+            } catch (error) {
+              if (DEBUG) {
                 console.warn(`[PWA] Fehler beim Laden von Reactions für ${a.id}:`, error);
-                reactionsObj[a.id] = { counts: {}, userReaction: undefined };
               }
-            }));
-          }
+              reactionsObj[a.id] = { counts: {}, userReaction: undefined };
+            }
+          }));
           
-          // InfoBoard-Daten mit korrektem Key cachen
+          // InfoBoard-Daten mit korrektem Key cachen - auth-basiert
           const infoboardData = { announcements: mapped, reactionsMap: reactionsObj };
-          mutate(['infoboard', deviceId], infoboardData, false);
-          // Fallback für null Device-ID
-          mutate(['infoboard', null], infoboardData, false);
-          console.log('[PWA] Ankündigungen und Reactions erfolgreich vorgeladen');
+          mutate(['infoboard', user?.id || 'anonymous'], infoboardData, false);
+          // Fallback für nicht-authentifizierte User
+          mutate(['infoboard', 'anonymous'], infoboardData, false);
+          if (DEBUG) {
+            console.log('[PWA] Ankündigungen und Reactions erfolgreich vorgeladen');
+          }
           
           // 4. Packliste vorladen
           const packlistItems = await getGlobalPacklistAction();
           mutate('packlist-data', packlistItems, false);
-          console.log('[PWA] Packliste erfolgreich vorgeladen');
+          if (DEBUG) {
+            console.log('[PWA] Packliste erfolgreich vorgeladen');
+          }
           
           // 5. Carpool-Daten vorladen
           try {
             const carpoolData = await getRidesAction();
             const validCarpoolData = Array.isArray(carpoolData) ? carpoolData : [];
             mutate('carpool-rides', validCarpoolData, false);
-            console.log('[PWA] Carpool-Daten erfolgreich vorgeladen');
+            if (DEBUG) {
+              console.log('[PWA] Carpool-Daten erfolgreich vorgeladen');
+            }
           } catch (error) {
-            console.warn('[PWA] Fehler beim Laden der Carpool-Daten:', error);
+            if (DEBUG) {
+              console.warn('[PWA] Fehler beim Laden der Carpool-Daten:', error);
+            }
             mutate('carpool-rides', [], false); // Fallback auf leeres Array
           }
           
-          // 6. User Activities (Aufgaben) vorladen
-          if (deviceId) {
+          // 6. User Activities (Aufgaben) vorladen - nur für authentifizierte User
+          if (isAuthenticated && user?.id) {
             try {
-              const userActivitiesData = await fetchUserActivitiesAction(deviceId);
-              mutate(`user-activities-${deviceId}`, userActivitiesData, false);
-              console.log('[PWA] User Activities (Aufgaben) erfolgreich vorgeladen');
+              const userActivitiesData = await fetchUserActivitiesAction();
+              mutate(`user-activities-${user.id}`, userActivitiesData, false);
+              if (DEBUG) {
+                console.log('[PWA] User Activities (Aufgaben) erfolgreich vorgeladen');
+              }
             } catch (error) {
-              console.warn('[PWA] Fehler beim Laden der User Activities:', error);
-              mutate(`user-activities-${deviceId}`, { activities: [], userStatus: { isRegistered: false } }, false);
+              if (DEBUG) {
+                console.warn('[PWA] Fehler beim Laden der User Activities:', error);
+              }
+              mutate(`user-activities-${user.id}`, { activities: [], userStatus: { isRegistered: false } }, false);
             }
           }
           
-          console.log('[PWA] Sofortiger Preload aller kritischen Daten abgeschlossen');
+          if (DEBUG) {
+            console.log('[PWA] Sofortiger Preload aller kritischen Daten abgeschlossen');
+          }
         } catch (error) {
           console.error('[PWA] Fehler beim Vorladen kritischer Daten:', error);
         }
@@ -96,10 +117,10 @@ export function PWAPreloadData() {
       
       // Sofort ausführen ohne Verzögerung für optimales Offline-Verhalten
       preloadCriticalData();
-    } else if (!isOnline) {
+    } else if (!isOnline && DEBUG) {
       console.log('[PWA] Offline-Modus: Überspringe Preload, verwende gecachte Daten');
     }
-  }, [isOnline, deviceId]);
+  }, [isOnline, user?.id, isAuthenticated]);
   
   return null;
 } 

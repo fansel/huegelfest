@@ -28,7 +28,7 @@ export interface SystemStatus {
   websocketStats?: {
     totalConnections: number;
     totalDevices: number;
-    devicesList: Array<{deviceId: string, connected: boolean, readyState: number}>;
+    devicesList: Array<{userId: string, connected: boolean, readyState: number}>;
     connectionsByDevice: Record<string, number>;
   };
   lastUpdated: string;
@@ -110,7 +110,7 @@ function addLogToCollection(level: string, source: string, message: string) {
 async function getWebSocketStatistics(): Promise<{
   totalConnections: number;
   totalDevices: number;
-  devicesList: Array<{deviceId: string, connected: boolean, readyState: number}>;
+  devicesList: Array<{userId: string, connected: boolean, readyState: number}>;
   connectionsByDevice: Record<string, number>;
 } | null> {
   try {
@@ -128,7 +128,7 @@ async function getWebSocketStatistics(): Promise<{
       const data = await response.json() as {
         totalConnections: number;
         totalDevices: number;
-        devicesList: Array<{deviceId: string, connected: boolean, readyState: number}>;
+        devicesList: Array<{userId: string, connected: boolean, readyState: number}>;
         connectionsByDevice: Record<string, number>;
       };
       return data;
@@ -308,4 +308,29 @@ export async function addLogEntry(level: string, source: string, message: string
     console.error('Failed to store log entry:', error);
     return { success: false, error: String(error) };
   }
+}
+
+// Returns all future, active scheduled push events
+export async function getScheduledPushEvents() {
+  await connectDB();
+  const now = new Date();
+  const events = await ScheduledPushEvent.find({ active: true, schedule: { $gte: now } })
+    .sort({ schedule: 1 })
+    .lean();
+
+  // Convert all fields to plain values
+  return events.map(event => ({
+    _id: event._id?.toString?.() ?? String(event._id),
+    title: event.title,
+    body: event.body,
+    repeat: event.repeat,
+    schedule: event.schedule instanceof Date ? event.schedule.toISOString() : String(event.schedule),
+    active: event.active,
+    subscribers: (event.subscribers || []).map((id: any) => id?.toString?.() ?? String(id)),
+    sendToAll: event.sendToAll,
+    groupId: event.groupId ? event.groupId.toString() : undefined,
+    createdAt: event.createdAt instanceof Date ? event.createdAt.toISOString() : String(event.createdAt),
+    updatedAt: event.updatedAt instanceof Date ? event.updatedAt.toISOString() : String(event.updatedAt),
+    agendaJobId: event.agendaJobId ? String(event.agendaJobId) : undefined,
+  }));
 } 

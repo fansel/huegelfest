@@ -4,7 +4,7 @@ export type ReactionType = 'thumbsUp' | 'clap' | 'laugh' | 'surprised' | 'heart'
 
 interface IReactionDocument extends Document {
   announcementId: mongoose.Types.ObjectId;
-  deviceId: string;
+  userId: mongoose.Types.ObjectId;
   type: ReactionType;
   createdAt: Date;
   updatedAt: Date;
@@ -17,8 +17,9 @@ const reactionSchema = new mongoose.Schema({
     required: true,
     index: true
   },
-  deviceId: {
-    type: String,
+  userId: {
+    type: mongoose.Schema.Types.ObjectId,
+    ref: 'User',
     required: true,
     index: true
   },
@@ -39,11 +40,18 @@ const reactionSchema = new mongoose.Schema({
   }
 });
 
-reactionSchema.index({ announcementId: 1, deviceId: 1, type: 1 }, { unique: true });
+reactionSchema.index({ announcementId: 1, userId: 1 }, { unique: true });
 
 reactionSchema.virtual('announcement', {
   ref: 'Announcement',
   localField: 'announcementId',
+  foreignField: '_id',
+  justOne: true
+});
+
+reactionSchema.virtual('user', {
+  ref: 'User',
+  localField: 'userId',
   foreignField: '_id',
   justOne: true
 });

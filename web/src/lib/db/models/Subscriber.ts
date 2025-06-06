@@ -6,7 +6,7 @@ interface ISubscriber extends Document {
     p256dh: string;
     auth: string;
   };
-  deviceId: string;
+  userId?: string; // Optional: Wenn gesetzt, ist es eine user-gebundene Subscription. Sonst allgemeine/"anonyme" Subscription.
   createdAt: Date;
 }
 
@@ -16,9 +16,12 @@ const subscriberSchema = new mongoose.Schema({
     p256dh: { type: String, required: true },
     auth: { type: String, required: true }
   },
-  deviceId: { type: String, required: true },
+  userId: { type: String, required: false }, // Optional für allgemeine Subscriptions
   createdAt: { type: Date, default: Date.now }
 });
+
+// Index for faster user-based queries
+subscriberSchema.index({ userId: 1 });
 
 let Subscriber: Model<ISubscriber>;
 try {

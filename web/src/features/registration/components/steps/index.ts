@@ -1,5 +1,6 @@
 export { IntroStep } from './IntroStep';
 export { NameStep } from './NameStep';
+export { EmailPasswordStep } from './EmailPasswordStep';
 export { default as TimeRangeStep } from './TimeRangeStep';
 export { FinanceStep } from './FinanceStep';
 export { TravelStep } from './TravelStep';

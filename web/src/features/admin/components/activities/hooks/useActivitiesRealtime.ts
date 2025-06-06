@@ -1,6 +1,6 @@
-import { useEffect, useState, useCallback } from 'react';
+import { useEffect, useState, useCallback, useRef } from 'react';
 import { toast } from 'react-hot-toast';
-import { useGlobalWebSocket } from '@/shared/hooks/useGlobalWebSocket';
+import { useGlobalWebSocket, WebSocketMessage } from '@/shared/hooks/useGlobalWebSocket';
 import { globalWebSocketManager } from '@/shared/utils/globalWebSocketManager';
 import { fetchActivitiesData, type ActivitiesData } from '../actions/fetchActivitiesData';
 import { useNetworkStatus } from '@/shared/hooks/useNetworkStatus';
@@ -11,122 +11,158 @@ type ActivitiesEvent = {
   timestamp: string;
 };
 
+// Am Anfang der Datei
+const DEBUG = true; // Set to true to help debug the current issue
+
+const EMPTY_DATA: ActivitiesData = {
+  activities: [],
+  categories: [],
+  templates: [],
+  groups: []
+};
+
+/**
+ * Überprüft ob die Daten gültig sind
+ */
+function isValidData(data: ActivitiesData | undefined | null): data is ActivitiesData {
+  if (!data) return false;
+  
+  const hasArrays = Array.isArray(data.activities) && 
+                   Array.isArray(data.categories) && 
+                   Array.isArray(data.templates) && 
+                   Array.isArray(data.groups);
+                   
+  if (DEBUG) {
+    console.log('[useActivitiesRealtime] Data validation:', {
+      hasArrays,
+      activitiesCount: data.activities?.length || 0,
+      categoriesCount: data.categories?.length || 0,
+      templatesCount: data.templates?.length || 0,
+      groupsCount: data.groups?.length || 0,
+      isValid: hasArrays
+    });
+  }
+  
+  return hasArrays;
+}
+
 /**
  * Hook für Echtzeit-Synchronisation der Activities-Daten über das globale WebSocket-System
  * Folgt dem exakten Pattern von useGroupsWebSocket
  */
 export function useActivitiesRealtime(initialData?: ActivitiesData) {
-  const [data, setData] = useState<ActivitiesData>(initialData || {
-    activities: [],
-    categories: [],
-    templates: [],
-    groups: []
+  const [data, setData] = useState<ActivitiesData>(() => {
+    if (DEBUG) {
+      console.log('[useActivitiesRealtime] Hook called with initial data:', {
+        hasInitialData: !!initialData,
+        activitiesCount: initialData?.activities?.length || 0,
+        categoriesCount: initialData?.categories?.length || 0,
+        templatesCount: initialData?.templates?.length || 0,
+        groupsCount: initialData?.groups?.length || 0,
+        activities: initialData?.activities,
+        categories: initialData?.categories,
+        templates: initialData?.templates,
+        groups: initialData?.groups,
+        isValid: isValidData(initialData)
+      });
+    }
+
+    // Validiere initial data
+    if (isValidData(initialData)) {
+      if (DEBUG) {
+        console.log('[useActivitiesRealtime] Using valid initial data');
+      }
+      return initialData;
+    }
+
+    if (DEBUG) {
+      console.log('[useActivitiesRealtime] No valid initial data, starting with empty arrays');
+    }
+    return EMPTY_DATA;
   });
-  const [loading, setLoading] = useState(!initialData); // No loading if initial data provided
+
+  const [loading, setLoading] = useState(true);
   const [connected, setConnected] = useState(false);
   const isOnline = useNetworkStatus();
+  
+  // Use a ref to track if we have valid data
+  const hasValidDataRef = useRef(isValidData(data));
+  const loadAttempts = useRef(0);
 
-  // WebSocket-Status vom globalen Manager abfragen
-  const updateConnectionStatus = useCallback(() => {
-    const status = globalWebSocketManager.getStatus();
-    setConnected(status.connected);
+  // Initiale Daten laden
+  useEffect(() => {
+    const loadData = async () => {
+      try {
+        setLoading(true);
+        const freshData = await fetchActivitiesData();
+        if (DEBUG) {
+          console.log('[useActivitiesRealtime] Loaded fresh data:', {
+            activitiesCount: freshData.activities?.length || 0,
+            categoriesCount: freshData.categories?.length || 0,
+            templatesCount: freshData.templates?.length || 0,
+            groupsCount: freshData.groups?.length || 0,
+            activities: freshData.activities,
+            categories: freshData.categories,
+            templates: freshData.templates,
+            groups: freshData.groups
+          });
+        }
+        setData(freshData);
+      } catch (error) {
+        console.error('[useActivitiesRealtime] Error loading data:', error);
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    loadData();
   }, []);
 
-  // Status-Updates alle 2 Sekunden prüfen
-  useEffect(() => {
-    updateConnectionStatus();
-    const interval = setInterval(updateConnectionStatus, 2000);
-    return () => clearInterval(interval);
-  }, [updateConnectionStatus]);
-
-  // Initiale Daten laden - nur wenn keine initial data bereitgestellt
-  const loadInitialData = useCallback(async () => {
-    if (initialData) return; // Skip if initial data provided
-    
-    setLoading(true);
-    try {
-      const freshData = await fetchActivitiesData();
-      setData(freshData);
-    } catch (error) {
-      console.error('[useActivitiesRealtime] Fehler beim Laden der initial Daten:', error);
-      if (isOnline) {
-        toast.error('Fehler beim Laden der Activities-Daten');
-      }
-    } finally {
-      setLoading(false);
-    }
-  }, [isOnline, initialData]);
-
-  // Daten vollständig neu laden (fallback für komplexe Updates)
-  const refreshData = useCallback(async () => {
-    try {
-      console.log('[useActivitiesRealtime] Starte Datenaktualisierung...');
-      const freshData = await fetchActivitiesData();
-      console.log('[useActivitiesRealtime] Neue Daten erhalten:', {
-        activitiesCount: freshData.activities.length,
-        categoriesCount: freshData.categories.length,
-        templatesCount: freshData.templates.length,
-        groupsCount: freshData.groups.length
-      });
-      setData(freshData);
-    } catch (error) {
-      console.error('[useActivitiesRealtime] Fehler beim Aktualisieren der Daten:', error);
-      if (isOnline) {
-        toast.error('Fehler beim Aktualisieren der Activities-Daten');
-      }
-    }
-  }, [isOnline]);
-
-  // WebSocket Message Handler - verwendet globales System
-  const handleWebSocketMessage = useCallback((msg: any) => {
-    console.log('[useActivitiesRealtime] WebSocket-Nachricht empfangen:', msg);
-
-    // Prüfe auf activities-bezogene Topics
-    if (msg.topic === 'ACTIVITY_CREATED' || 
-        msg.topic === 'ACTIVITY_UPDATED' || 
-        msg.topic === 'ACTIVITY_DELETED' ||
-        msg.topic === 'ACTIVITY_CATEGORY_CREATED' ||
-        msg.topic === 'ACTIVITY_CATEGORY_UPDATED' ||
-        msg.topic === 'ACTIVITY_CATEGORY_DELETED') {
-      
-      console.log('[useActivitiesRealtime] Activities-Update erkannt, lade Daten neu');
-      refreshData();
-
-      // Keine Toast-Messages bei WebSocket-Updates von anderen Admins
-      // Toast-Messages werden nur in den Dialog-Callbacks gezeigt
-    }
-  }, [refreshData]);
-
-  // Globales WebSocket-System verwenden
+  // WebSocket-Verbindung
   useGlobalWebSocket({
-    onMessage: handleWebSocketMessage,
+    onMessage: (msg: WebSocketMessage) => {
+      if (DEBUG) {
+        console.log('[useActivitiesRealtime] WebSocket message:', msg);
+      }
+
+      if (
+        msg.topic === 'ACTIVITY_CREATED' ||
+        msg.topic === 'ACTIVITY_UPDATED' ||
+        msg.topic === 'ACTIVITY_DELETED'
+      ) {
+        refreshData();
+      }
+    },
     onOpen: () => {
-      updateConnectionStatus();
-      console.log('[useActivitiesRealtime] Global WebSocket verbunden');
+      setConnected(true);
     },
     onClose: () => {
-      updateConnectionStatus();
-      console.log('[useActivitiesRealtime] Global WebSocket getrennt');
+      setConnected(false);
     },
-    onError: (err) => {
-      console.error('[useActivitiesRealtime] Global WebSocket-Fehler:', err);
-      updateConnectionStatus();
-    },
-    // Topic-Filter für Activities-relevante Events
-    topicFilter: [
-      'ACTIVITY_CREATED',
-      'ACTIVITY_UPDATED', 
-      'ACTIVITY_DELETED',
-      'ACTIVITY_CATEGORY_CREATED',
-      'ACTIVITY_CATEGORY_UPDATED',
-      'ACTIVITY_CATEGORY_DELETED'
-    ]
+    topicFilter: ['ACTIVITY_CREATED', 'ACTIVITY_UPDATED', 'ACTIVITY_DELETED']
   });
 
-  // Initiale Daten beim Mount laden
-  useEffect(() => {
-    loadInitialData();
-  }, [loadInitialData]);
+  // Refresh function
+  const refreshData = useCallback(async () => {
+    try {
+      const freshData = await fetchActivitiesData();
+      if (DEBUG) {
+        console.log('[useActivitiesRealtime] Refreshed data:', {
+          activitiesCount: freshData.activities?.length || 0,
+          categoriesCount: freshData.categories?.length || 0,
+          templatesCount: freshData.templates?.length || 0,
+          groupsCount: freshData.groups?.length || 0,
+          activities: freshData.activities,
+          categories: freshData.categories,
+          templates: freshData.templates,
+          groups: freshData.groups
+        });
+      }
+      setData(freshData);
+    } catch (error) {
+      console.error('[useActivitiesRealtime] Error refreshing data:', error);
+    }
+  }, []);
 
   return {
     data,

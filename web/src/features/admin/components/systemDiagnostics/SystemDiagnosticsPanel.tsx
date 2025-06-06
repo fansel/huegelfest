@@ -1,7 +1,8 @@
 'use client';
 
 import { useState, useEffect, useMemo } from 'react';
-import { getSystemStatus, getSystemLogs, type SystemStatus, type LogEntry } from '@/lib/actions/systemDiagnostics';
+import { getSystemStatus, getSystemLogs, type SystemStatus, type LogEntry, getScheduledPushEvents } from '@/lib/actions/systemDiagnostics';
+import { format } from 'date-fns';
 
 interface SystemDiagnosticsPanelProps {
   onBack?: () => void;
@@ -12,6 +13,10 @@ export default function SystemDiagnosticsPanel({ onBack }: SystemDiagnosticsPane
   const [logs, setLogs] = useState<LogEntry[]>([]);
   const [selectedLevel, setSelectedLevel] = useState<string>('');
   const [loading, setLoading] = useState(true);
+
+  // Scheduled Push Events
+  const [scheduledEvents, setScheduledEvents] = useState<any[]>([]);
+  const [loadingScheduled, setLoadingScheduled] = useState(true);
 
   // Filter logs based on selected level
   const filteredLogs = useMemo(() => {
@@ -37,6 +42,17 @@ export default function SystemDiagnosticsPanel({ onBack }: SystemDiagnosticsPane
     }
   };
 
+  const loadScheduledEvents = async () => {
+    setLoadingScheduled(true);
+    try {
+      const events = await getScheduledPushEvents();
+      setScheduledEvents(events);
+    } catch (error) {
+      setScheduledEvents([]);
+    }
+    setLoadingScheduled(false);
+  };
+
   const refreshData = async () => {
     setLoading(true);
     await Promise.all([loadStatus(), loadLogs()]);
@@ -49,9 +65,12 @@ export default function SystemDiagnosticsPanel({ onBack }: SystemDiagnosticsPane
 
   useEffect(() => {
     refreshData();
-    
+    loadScheduledEvents();
     // Auto-refresh every 30 seconds
-    const interval = setInterval(refreshData, 30000);
+    const interval = setInterval(() => {
+      refreshData();
+      loadScheduledEvents();
+    }, 30000);
     return () => clearInterval(interval);
   }, []);
 
@@ -153,18 +172,63 @@ export default function SystemDiagnosticsPanel({ onBack }: SystemDiagnosticsPane
         </div>
       </div>
 
+      {/* Scheduled Push Events Section */}
+      <div className="bg-white rounded-lg border border-gray-200 p-6">
+        <h3 className="text-lg font-medium text-gray-900 mb-4">Geplante Agenda-Nachrichten</h3>
+        {loadingScheduled ? (
+          <div className="text-gray-500 py-8 text-center">Lade geplante Nachrichten...</div>
+        ) : scheduledEvents.length === 0 ? (
+          <div className="text-gray-500 py-8 text-center">Keine geplanten Nachrichten vorhanden.</div>
+        ) : (
+          <div className="overflow-x-auto">
+            <table className="min-w-full text-xs text-left">
+              <thead>
+                <tr className="bg-gray-50">
+                  <th className="px-3 py-2 font-semibold">Zeitpunkt</th>
+                  <th className="px-3 py-2 font-semibold">Empfänger</th>
+                  <th className="px-3 py-2 font-semibold">Typ</th>
+                  <th className="px-3 py-2 font-semibold">Nachricht</th>
+                  <th className="px-3 py-2 font-semibold">Wiederholung</th>
+                </tr>
+              </thead>
+              <tbody>
+                {scheduledEvents.map((event) => (
+                  <tr key={event._id} className="border-b last:border-0">
+                    <td className="px-3 py-2 whitespace-nowrap">{format(new Date(event.schedule), 'dd.MM.yyyy HH:mm')}</td>
+                    <td className="px-3 py-2">
+                      {event.sendToAll ? (
+                        <span className="text-green-700 font-semibold">Alle</span>
+                      ) : event.groupId ? (
+                        <span className="text-blue-700 font-semibold">Gruppe<br />{event.groupId}</span>
+                      ) : event.subscribers && event.subscribers.length > 0 ? (
+                        <span className="text-gray-700">User<br />{event.subscribers.map((id: string) => id.toString()).join(', ')}</span>
+                      ) : (
+                        <span className="text-gray-400">Unbekannt</span>
+                      )}
+                    </td>
+                    <td className="px-3 py-2 font-semibold">{event.title}</td>
+                    <td className="px-3 py-2">{event.body}</td>
+                    <td className="px-3 py-2">{event.repeat === 'recurring' ? 'Wiederkehrend' : 'Einmalig'}</td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        )}
+      </div>
+
       {/* WebSocket Connections */}
       {status?.websocketStats && (
         <div className="bg-white rounded-lg border border-gray-200 p-6">
           <h3 className="text-lg font-medium text-gray-900 mb-4">
-            WebSocket-Verbindungen ({status.websocketStats.totalDevices} Geräte)
+            WebSocket-Verbindungen ({status.websocketStats.totalDevices || 0} Geräte)
           </h3>
           
-          {status.websocketStats.devicesList.length > 0 ? (
+          {(status.websocketStats.devicesList && status.websocketStats.devicesList.length > 0) ? (
             <div className="space-y-2">
               {status.websocketStats.devicesList.map((device, index) => (
                 <div 
-                  key={device.deviceId} 
+                  key={device.userId} 
                   className="flex items-center justify-between p-3 bg-gray-50 rounded-lg"
                 >
                   <div className="flex items-center space-x-3">
@@ -173,10 +237,10 @@ export default function SystemDiagnosticsPanel({ onBack }: SystemDiagnosticsPane
                     </div>
                     <div>
                       <div className="text-sm font-medium text-gray-900">
-                        {device.deviceId}
+                        {device.userId}
                       </div>
                       <div className="text-xs text-gray-500">
-                        Device ID • {device.connected ? 'Aktiv' : 'Inaktiv'}
+                        User ID • {device.connected ? 'Aktiv' : 'Inaktiv'}
                       </div>
                     </div>
                   </div>
@@ -197,24 +261,24 @@ export default function SystemDiagnosticsPanel({ onBack }: SystemDiagnosticsPane
                 <div className="grid grid-cols-2 md:grid-cols-4 gap-4 text-xs">
                   <div>
                     <div className="font-medium text-blue-900">Gesamt</div>
-                    <div className="text-blue-700">{status.websocketStats.totalConnections}</div>
+                    <div className="text-blue-700">{status.websocketStats.totalConnections || 0}</div>
                   </div>
                   <div>
                     <div className="font-medium text-blue-900">Aktive Geräte</div>
                     <div className="text-blue-700">
-                      {status.websocketStats.devicesList.filter(d => d.connected).length}
+                      {status.websocketStats.devicesList?.filter(d => d.connected).length || 0}
                     </div>
                   </div>
                   <div>
                     <div className="font-medium text-blue-900">Verbunden</div>
                     <div className="text-blue-700">
-                      {status.websocketStats.devicesList.filter(d => d.readyState === 1).length}
+                      {status.websocketStats.devicesList?.filter(d => d.readyState === 1).length || 0}
                     </div>
                   </div>
                   <div>
                     <div className="font-medium text-blue-900">Offline</div>
                     <div className="text-blue-700">
-                      {status.websocketStats.devicesList.filter(d => !d.connected).length}
+                      {status.websocketStats.devicesList?.filter(d => !d.connected).length || 0}
                     </div>
                   </div>
                 </div>

@@ -2,8 +2,7 @@
 
 import { useEffect, useState, useCallback } from 'react';
 import { toast } from 'react-hot-toast';
-import { useWebSocket, WebSocketMessage } from '@/shared/hooks/useWebSocket';
-import { getWebSocketUrl } from '@/shared/utils/getWebSocketUrl';
+import { useGlobalWebSocket, WebSocketMessage } from '@/shared/hooks/useGlobalWebSocket';
 import { getAllAnnouncementsAction } from '../actions/getAllAnnouncements';
 import { getWorkingGroupsArrayAction } from '../../workingGroups/actions/getWorkingGroupColors';
 import { globalWebSocketManager } from '@/shared/utils/globalWebSocketManager';
@@ -25,6 +24,8 @@ export interface AnnouncementsData {
   announcements: IAnnouncement[];
   workingGroups: WorkingGroup[];
 }
+
+const DEBUG = false;
 
 /**
  * Hook für Echtzeit-Synchronisation der Announcements-Daten über WebSockets
@@ -87,7 +88,9 @@ export function useAnnouncementsWebSocket() {
   // Daten vollständig neu laden
   const refreshData = useCallback(async () => {
     try {
-      console.log('[useAnnouncementsWebSocket] Starte Datenaktualisierung...');
+      if (DEBUG) {
+        console.log('[useAnnouncementsWebSocket] Starte Datenaktualisierung...');
+      }
       const [announcementsData, workingGroups] = await Promise.all([
         getAllAnnouncementsAction(),
         getWorkingGroupsArrayAction()
@@ -108,10 +111,12 @@ export function useAnnouncementsWebSocket() {
         updatedAt: item.updatedAt
       }));
 
-      console.log('[useAnnouncementsWebSocket] Neue Daten erhalten:', {
-        announcementsCount: announcements.length,
-        workingGroupsCount: workingGroups.length
-      });
+      if (DEBUG) {
+        console.log('[useAnnouncementsWebSocket] Neue Daten erhalten:', {
+          announcementsCount: announcements.length,
+          workingGroupsCount: workingGroups.length
+        });
+      }
       setData({ announcements, workingGroups });
     } catch (error) {
       console.error('[useAnnouncementsWebSocket] Fehler beim Aktualisieren der Daten:', error);
@@ -121,7 +126,9 @@ export function useAnnouncementsWebSocket() {
 
   // WebSocket Message Handler - Nur Updates, keine Toast-Messages
   const handleWebSocketMessage = useCallback((msg: WebSocketMessage) => {
-    console.log('[useAnnouncementsWebSocket] WebSocket-Nachricht empfangen:', msg);
+    if (DEBUG) {
+      console.log('[useAnnouncementsWebSocket] WebSocket-Nachricht empfangen:', msg);
+    }
 
     // Prüfe auf announcements-bezogene Topics
     if (msg.topic === 'announcement' || 
@@ -129,7 +136,9 @@ export function useAnnouncementsWebSocket() {
         msg.topic === 'announcement-reaction-updated' || 
         msg.topic === 'announcements-updated') {
       
-      console.log('[useAnnouncementsWebSocket] Announcements-Update erkannt, lade Daten neu');
+      if (DEBUG) {
+        console.log('[useAnnouncementsWebSocket] Announcements-Update erkannt, lade Daten neu');
+      }
       refreshData();
 
       // Keine Toast-Messages bei WebSocket-Updates von anderen Admins
@@ -137,26 +146,32 @@ export function useAnnouncementsWebSocket() {
     }
   }, [refreshData]);
 
-  // WebSocket-Verbindung mit bestehender Infrastruktur
-  useWebSocket(
-    getWebSocketUrl(),
-    {
-      onMessage: handleWebSocketMessage,
-      onOpen: () => {
-        updateConnectionStatus();
+  // WebSocket-Verbindung mit globalem WebSocket System
+  useGlobalWebSocket({
+    onMessage: handleWebSocketMessage,
+    onOpen: () => {
+      setConnected(true);
+      if (DEBUG) {
         console.log('[useAnnouncementsWebSocket] WebSocket verbunden');
-      },
-      onClose: () => {
-        updateConnectionStatus();
+      }
+    },
+    onClose: () => {
+      setConnected(false);
+      if (DEBUG) {
         console.log('[useAnnouncementsWebSocket] WebSocket getrennt');
-      },
-      onError: (err) => {
-        console.error('[useAnnouncementsWebSocket] WebSocket-Fehler:', err);
-        updateConnectionStatus();
-      },
-      reconnectIntervalMs: 5000,
-    }
-  );
+      }
+    },
+    onError: (err) => {
+      console.error('[useAnnouncementsWebSocket] WebSocket-Fehler:', err);
+      setConnected(false);
+    },
+    topicFilter: [
+      'announcement',
+      'announcement-reaction',
+      'announcement-reaction-updated',
+      'announcements-updated'
+    ]
+  });
 
   // Initiale Daten beim Mount laden
   useEffect(() => {

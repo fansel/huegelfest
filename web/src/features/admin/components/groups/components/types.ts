@@ -1,16 +1,18 @@
 import { getCentralFestivalDays } from '@/shared/services/festivalDaysService';
 import { convertToLegacyFormat } from '@/shared/utils/festivalDaysUtils';
 
-export type TabType = 'groups' | 'users' | 'registrations' | 'magic-codes';
+export type TabType = 'groups' | 'users' | 'registrations';
 
 export interface User {
-  deviceId: string;
+  _id: string;
   name: string;
+  email: string;
+  role: 'user' | 'admin';
   groupId?: string;
   groupName?: string;
   isRegistered: boolean;
   registrationId?: string;
-  userId?: string;
+  isShadowUser?: boolean;
   createdAt?: Date;
   lastActivity?: Date;
 }
