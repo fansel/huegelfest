@@ -2,6 +2,7 @@ import { User } from '@/lib/db/models/User';
 import { connectDB } from '@/lib/db/connector';
 import { sendEmail } from '@/lib/config/email';
 import { logger } from '@/lib/logger';
+import { getSiteConfig } from '@/lib/config/site';
 
 /**
  * Sendet einen Passwort-Reset-Link per E-Mail
@@ -32,7 +33,8 @@ export async function sendPasswordResetEmail(email: string): Promise<{ success: 
     await user.save();
     
     // E-Mail senden
-    const resetUrl = `${process.env.NEXTAUTH_URL || 'http://localhost:3000'}/auth/reset-password?token=${resetToken}`;
+    const { baseUrl } = getSiteConfig();
+    const resetUrl = `${baseUrl}/auth/reset-password?token=${resetToken}`;
     
     const emailSent = await sendEmail({
       to: user.email,
@@ -122,8 +124,7 @@ export async function validatePasswordResetToken(token: string): Promise<{ valid
  * @returns HTML-String
  */
 function generatePasswordResetEmail(userName: string, resetUrl: string): string {
-  const baseUrl = process.env.NEXTAUTH_URL || 'http://localhost:3000';
-  const logoUrl = `${baseUrl}/logo.svg`;
+  const { baseUrl } = getSiteConfig();
   
   return `
     <!DOCTYPE html>
@@ -164,15 +165,6 @@ function generatePasswordResetEmail(userName: string, resetUrl: string): string 
         
         .logo-container {
           margin-bottom: 24px;
-        }
-        
-        .logo {
-          width: 64px;
-          height: 64px;
-          background-color: rgba(255, 255, 255, 0.1);
-          border-radius: 50%;
-          padding: 12px;
-          margin: 0 auto;
         }
         
         .logo-text {
@@ -319,11 +311,6 @@ function generatePasswordResetEmail(userName: string, resetUrl: string): string 
             padding: 24px 20px;
           }
           
-          .logo {
-            width: 56px;
-            height: 56px;
-          }
-          
           .logo-text {
             font-size: 24px;
           }
@@ -339,9 +326,6 @@ function generatePasswordResetEmail(userName: string, resetUrl: string): string 
       <div class="email-container">
         <div class="header">
           <div class="logo-container">
-            <div class="logo">
-              <img src="${logoUrl}" alt="Hügelfest Logo" style="width: 100%; height: 100%; object-fit: contain;" />
-            </div>
             <h1 class="logo-text">Hügelfest</h1>
           </div>
           <p class="header-subtitle">Passwort zurücksetzen</p>
