@@ -8,11 +8,25 @@ export default function Datenschutz() {
         
         <div className="space-y-8">
           <div>
+            <h2 className="text-xl font-display mb-2">Wichtiger Hinweis</h2>
+            <p className="text-white/80 mb-4">
+              Diese Website ist eine private Plattform, die ausschließlich für die Organisation 
+              und Durchführung des Hügelfests unter Freunden konzipiert ist. Sie ist nicht 
+              öffentlich zugänglich und dient nicht kommerziellen Zwecken.
+            </p>
+            <p className="text-white/80">
+              Als private Plattform legen wir besonderen Wert auf den vertrauensvollen Umgang 
+              mit den Daten unserer Freunde und Festival-Teilnehmer.
+            </p>
+          </div>
+
+          <div>
             <h2 className="text-xl font-display mb-2">Datenschutz auf einen Blick</h2>
             <p className="text-white/80">
-              Diese Website verarbeitet personenbezogene Daten ausschließlich für die 
-              Festival-Anmeldung und technische Funktionalität. Alle Daten werden 
-              vertraulich behandelt und nicht an Dritte weitergegeben.
+              Diese private Website verarbeitet personenbezogene Daten ausschließlich für die 
+              Organisation des Hügelfests, die Authentifizierung der Teilnehmer und die 
+              gemeinsame Nutzung von Musik-Features. Die Verarbeitung erfolgt auf unseren 
+              Servern in Deutschland und unterliegt der DSGVO.
             </p>
           </div>
 
@@ -21,86 +35,144 @@ export default function Datenschutz() {
             
             <div className="space-y-4">
               <div>
+                <h3 className="text-lg font-semibold text-[#ff9900] mb-2">Authentifizierung & Benutzerkonten</h3>
+                <p className="text-white/80 mb-2">
+                  Für die Nutzung der privaten App werden folgende Daten gespeichert:
+                </p>
+                <ul className="list-disc list-inside text-white/80 space-y-1 ml-4">
+                  <li>Benutzername</li>
+                  <li>Passwort (verschlüsselt)</li>
+                  <li>E-Mail-Adresse (optional)</li>
+                  <li>Authentifizierungs-Token (temporär)</li>
+                </ul>
+                <p className="text-white/80 mt-2">
+                  <strong>Cookies:</strong> Für die Authentifizierung verwenden wir einen 
+                  sicheren, HTTP-only Cookie mit dem Namen 'authToken', der für 7 Tage gültig ist.
+                </p>
+              </div>
+
+              <div>
                 <h3 className="text-lg font-semibold text-[#ff9900] mb-2">Festival-Anmeldung</h3>
                 <p className="text-white/80 mb-2">
-                  Bei der Anmeldung für das Hügelfest speichern wir folgende Daten:
+                  Als Teilnehmer des Hügelfests speichern wir:
                 </p>
                 <ul className="list-disc list-inside text-white/80 space-y-1 ml-4">
                   <li>Name</li>
-                  <li>E-Mail-Adresse</li>
+                  <li>E-Mail-Adresse (optional)</li>
                   <li>Anmeldedatum</li>
-                  <li>Weitere freiwillige Angaben (falls gemacht)</li>
+                  <li>Anwesenheitstage</li>
+                  <li>Präferenzen (Essen, Schlafen, etc.)</li>
+                  <li>Weitere freiwillige Angaben</li>
                 </ul>
                 <p className="text-white/80 mt-2">
-                  <strong>Zweck:</strong> Organisation des Festivals, Kommunikation mit Teilnehmenden
+                  <strong>Cookies:</strong> Ein 'festival_registered' Cookie wird für 365 Tage 
+                  gesetzt, um deinen Anmeldestatus zu speichern.
                 </p>
                 <p className="text-white/80">
-                  <strong>Rechtsgrundlage:</strong> Vertragserfüllung (Art. 6 Abs. 1 lit. b DSGVO)
+                  <strong>Lokaler Speicher:</strong> Anmeldedaten werden temporär im 
+                  Browser-Speicher unter 'festival_register_form' gesichert.
+                </p>
+              </div>
+
+              <div>
+                <h3 className="text-lg font-semibold text-[#ff9900] mb-2">Musik-Features</h3>
+                <p className="text-white/80 mb-2">
+                  Für die gemeinsame Musik-Nutzung werden folgende Daten serverseitig verarbeitet:
+                </p>
+                <ul className="list-disc list-inside text-white/80 space-y-1 ml-4">
+                  <li>SoundCloud Track-Informationen</li>
+                  <li>Audio-Streaming-Daten</li>
+                  <li>Cover-Art Bilder</li>
+                  <li>Track-URLs und Metadaten</li>
+                </ul>
+                <p className="text-white/80 mt-2">
+                  <strong>Server-Verarbeitung:</strong> Die Musik-Features werden vollständig 
+                  auf unserem Server verarbeitet. Wir fungieren als Proxy für SoundCloud, 
+                  um eine bessere Performance und Verfügbarkeit zu gewährleisten.
                 </p>
               </div>
 
               <div>
                 <h3 className="text-lg font-semibold text-[#ff9900] mb-2">Technische Daten</h3>
                 <p className="text-white/80 mb-2">
-                  <strong>Device-ID:</strong> Eine zufällig generierte Kennung zur lokalen 
-                  Speicherung Ihrer Einstellungen und Präferenzen. Diese ID ist 
-                  nicht mit Ihrer Person verknüpfbar.
+                  <strong>WebSocket-Verbindungen:</strong> Für Echtzeit-Updates und 
+                  Benachrichtigungen nutzen wir WebSocket-Verbindungen. Dabei werden 
+                  temporär technische Verbindungsdaten verarbeitet.
                 </p>
                 <p className="text-white/80">
-                  <strong>Lokale Einstellungen:</strong> Ihre individuellen App-Einstellungen 
-                  (z.B. Design-Präferenzen) werden lokal in Ihrem Browser gespeichert.
+                  <strong>Server-Side Rendering:</strong> Die App nutzt Next.js für 
+                  serverseitiges Rendering, wodurch temporär technische Daten auf dem 
+                  Server verarbeitet werden.
                 </p>
               </div>
             </div>
           </div>
 
           <div>
-            <h2 className="text-xl font-display mb-2">Wie lange speichern wir Ihre Daten?</h2>
+            <h2 className="text-xl font-display mb-2">Wie lange speichern wir deine Daten?</h2>
             <p className="text-white/80">
-              Anmeldedaten werden nur so lange gespeichert, wie es für die Organisation 
-              des Festivals erforderlich ist. Nach dem Festival werden die Daten 
-              gelöscht, sofern keine gesetzlichen Aufbewahrungspflichten bestehen.
+              <strong>Anmeldedaten:</strong> Werden für die Dauer des Festivals plus eine 
+              angemessene Nachbereitungszeit gespeichert.
+            </p>
+            <p className="text-white/80">
+              <strong>Benutzerkonten:</strong> Bleiben aktiv bis zur manuellen Löschung 
+              oder bis du nicht mehr am Festival teilnimmst.
+            </p>
+            <p className="text-white/80">
+              <strong>Musik-Daten:</strong> Werden serverseitig gecacht und regelmäßig 
+              aktualisiert. Diese Daten sind nur für Festival-Teilnehmer zugänglich.
             </p>
           </div>
 
           <div>
-            <h2 className="text-xl font-display mb-2">Hosting</h2>
-            <p className="text-white/80">
-              Diese Website wird auf Servern der netcup GmbH in Nürnberg, Deutschland gehostet. 
-              netcup ist ein deutscher Anbieter von Hosting-Diensten. Die Server befinden sich 
-              in Deutschland und unterliegen damit der strengen europäischen Datenschutz-Grundverordnung (DSGVO). 
-              Weitere Informationen zum Datenschutz bei netcup finden Sie unter: 
-              <a href="https://www.netcup.de/kontakt/datenschutzerklaerung.php" 
-                 className="text-[#ff9900] hover:text-[#ffb340] underline ml-1" 
-                 target="_blank" 
-                 rel="noopener noreferrer">
-                netcup Datenschutzerklärung
-              </a>
-            </p>
+            <h2 className="text-xl font-display mb-2">Hosting & Technische Details</h2>
+            <div className="space-y-4">
+              <p className="text-white/80">
+                Diese private Website und alle ihre Komponenten (Datenbank, Musik-Features, etc.) 
+                werden ausschließlich auf meinem eigenen Server bei netcup GmbH in Nürnberg 
+                gehostet. Die Server befinden sich in Deutschland und unterliegen der DSGVO.
+              </p>
+              <p className="text-white/80">
+                <strong>Datenverarbeitung:</strong> Sämtliche Datenverarbeitung, einschließlich 
+                der Musik-Features und Datenbank-Operationen, findet ausschließlich auf unserem 
+                Server statt. Es werden keine Daten an externe Dienste weitergegeben.
+              </p>
+            </div>
           </div>
 
           <div>
-            <h2 className="text-xl font-display mb-2">Ihre Rechte</h2>
+            <h2 className="text-xl font-display mb-2">Deine Rechte als Teilnehmer</h2>
             <p className="text-white/80 mb-4">
-              Sie haben folgende Rechte bezüglich Ihrer personenbezogenen Daten:
+              Als Freund und Teilnehmer des Festivals hast du natürlich jederzeit das Recht:
             </p>
             <ul className="list-disc list-inside text-white/80 space-y-1 ml-4">
-              <li>Auskunft über gespeicherte Daten</li>
-              <li>Berichtigung unrichtiger Daten</li>
-              <li>Löschung Ihrer Daten</li>
-              <li>Einschränkung der Verarbeitung</li>
-              <li>Datenübertragbarkeit</li>
-              <li>Widerspruch gegen die Verarbeitung</li>
+              <li>Auskunft über deine gespeicherten Daten zu erhalten</li>
+              <li>Deine Daten korrigieren zu lassen</li>
+              <li>Deine Daten löschen zu lassen</li>
+              <li>Der Verarbeitung zu widersprechen</li>
+              <li>Deine Daten übertragen zu lassen</li>
             </ul>
           </div>
 
           <div>
             <h2 className="text-xl font-display mb-2">Kontakt</h2>
             <p className="text-white/80">
-              Bei Fragen zum Datenschutz oder zur Ausübung Ihrer Rechte können Sie mich 
-              unter folgender E-Mail-Adresse kontaktieren:
+              Bei Fragen zu deinen Daten oder der Nutzung der App kannst du mich 
+              jederzeit direkt oder unter folgender E-Mail-Adresse kontaktieren:
             </p>
             <p className="mt-2 text-[#ff9900]">huegelfest@hey.fansel.dev</p>
+          </div>
+
+          <div>
+            <h2 className="text-xl font-display mb-2">Änderungen dieser Datenschutzerklärung</h2>
+            <p className="text-white/80">
+              Diese Datenschutzerklärung wird bei Bedarf aktualisiert, um Änderungen 
+              an der App oder der Datenverarbeitung zu berücksichtigen. Die aktuelle 
+              Version findest du immer hier.
+            </p>
+            <p className="text-white/80 mt-2">
+              Letzte Aktualisierung: Juni 2024
+            </p>
           </div>
         </div>
 

@@ -11,6 +11,10 @@ const isEdgeRuntime = () => {
   return false;
 };
 
+const isBuildTime = () => {
+  return process.env.NEXT_PHASE === 'phase-production-build';
+};
+
 const MONGODB_OPTIONS = {
   maxPoolSize: 10,
   minPoolSize: 5,
@@ -76,6 +80,12 @@ export async function connectDB(): Promise<void> {
     // logger.warn('[Database] connectDB wurde im Edge Runtime aufgerufen. Datenbankoperationen sind in der Edge Runtime nicht möglich.');
     return Promise.resolve();
   }
+
+  if (isBuildTime()) {
+    // logger.warn('[Database] connectDB wurde während des Builds aufgerufen. Verwende Fallback-Daten.');
+    return Promise.resolve();
+  }
+
   if (state.isConnected) {
     // logger.debug('[MongoDB] Bereits verbunden');
     return;

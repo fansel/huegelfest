@@ -2,20 +2,118 @@ import { connectDB } from '@/lib/db/connector';
 import Music, { MusicDocument, TrackInfo } from '@/lib/db/models/Music';
 import { logger } from '@/lib/logger';
 import scdl from 'soundcloud-downloader';
+import fetch from 'node-fetch';
 
 export class MusicService {
   private static clientId: string;
 
-  private static getClientId(): string {
-    if (!this.clientId) {
-      this.clientId = process.env.SOUNDCLOUD_CLIENT_ID || '';
-      if (!this.clientId) {
-        logger.error('[MusicService] SOUNDCLOUD_CLIENT_ID nicht gefunden in Umgebungsvariablen');
-        throw new Error('SOUNDCLOUD_CLIENT_ID ist nicht in den Umgebungsvariablen definiert');
+  private static async extractClientId(html: string): Promise<string | null> {
+    try {
+      // Suche nach dem Script-Tag mit der Client-ID
+      const scriptUrlMatch = html.match(/https:\/\/[^"]*js\/app-[^"]*\.js/);
+      if (!scriptUrlMatch) {
+        // Alternative Methode: Suche direkt nach der Client-ID im HTML
+        const directClientIdMatch = html.match(/client_id:"([^"]+)"/);
+        if (directClientIdMatch) {
+          return directClientIdMatch[1];
+        }
+        return null;
       }
-      logger.info('[MusicService] Client-ID erfolgreich geladen');
+
+      const scriptResponse = await fetch(scriptUrlMatch[0]);
+      if (!scriptResponse.ok) {
+        throw new Error(`Failed to fetch script: ${scriptResponse.status}`);
+      }
+      const scriptContent = await scriptResponse.text();
+
+      // Versuche verschiedene Muster für die Client-ID
+      const patterns = [
+        /client_id:"([^"]+)"/,
+        /clientId:"([^"]+)"/,
+        /client_id=([^&]+)/,
+        /clientId=([^&]+)/
+      ];
+
+      for (const pattern of patterns) {
+        const match = scriptContent.match(pattern);
+        if (match) {
+          return match[1];
+        }
+      }
+
+      return null;
+    } catch (error) {
+      logger.error('[MusicService] Fehler beim Extrahieren der Client-ID:', error);
+      return null;
     }
-    return this.clientId;
+  }
+
+  private static async fetchClientId(): Promise<string> {
+    try {
+      logger.debug('[MusicService] Versuche Client-ID aus SoundCloud Assets zu holen...');
+      
+      // Hole die Hauptseite
+      const response = await fetch('https://soundcloud.com', {
+        headers: {
+          'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/91.0.4472.124 Safari/537.36'
+        }
+      });
+
+      if (!response.ok) {
+        throw new Error(`HTTP error! status: ${response.status}`);
+      }
+
+      const html = await response.text();
+      
+      // Extrahiere alle JavaScript Asset URLs
+      const jsUrls = html.match(/src="https:\/\/a-v2\.sndcdn\.com\/assets\/[^"]*\.js"/g) || [];
+      
+      // Entferne die src=" und " von den URLs
+      const cleanJsUrls = jsUrls.map(url => url.slice(5, -1));
+      
+      logger.debug(`[MusicService] Gefundene JS Assets: ${cleanJsUrls.length}`);
+
+      // Durchsuche jede JS-Datei nach der Client-ID
+      for (const jsUrl of cleanJsUrls) {
+        try {
+          logger.debug(`[MusicService] Prüfe JS Asset: ${jsUrl}`);
+          const jsResponse = await fetch(jsUrl);
+          if (!jsResponse.ok) continue;
+          
+          const jsContent = await jsResponse.text();
+          const clientIdMatch = jsContent.match(/client_id=([a-zA-Z0-9]{32})/);
+          
+          if (clientIdMatch && clientIdMatch[1]) {
+            logger.info('[MusicService] Client-ID in JS Asset gefunden');
+            return clientIdMatch[1];
+          }
+        } catch (error) {
+          logger.warn(`[MusicService] Fehler beim Laden des JS Assets: ${jsUrl}`, error);
+          continue;
+        }
+      }
+
+      throw new Error('Keine Client-ID in den JS Assets gefunden');
+    } catch (error) {
+      logger.error('[MusicService] Fehler beim Abrufen der Client-ID:', error);
+      if (error instanceof Error) {
+        logger.error(`[MusicService] Fehlerdetails: ${error.message}`);
+        logger.error(`[MusicService] Stack: ${error.stack}`);
+      }
+      throw error;
+    }
+  }
+
+  private static async getClientId(): Promise<string> {
+    try {
+      // Hole direkt eine neue Client-ID
+      const clientId = await this.fetchClientId();
+      logger.info('[MusicService] Neue Client-ID erfolgreich abgerufen');
+      return clientId;
+    } catch (error) {
+      logger.error('[MusicService] Fehler beim Laden der Client-ID:', error);
+      throw new Error('Fehler beim Laden der SoundCloud Client-ID');
+    }
   }
 
   private static isValidUrl(url: string): boolean {
@@ -69,7 +167,7 @@ export class MusicService {
   public static async getTrackInfo(url: string): Promise<TrackInfo> {
     logger.debug('[MusicService] Hole SoundCloud Track-Info...');
     try {
-      const clientId = this.getClientId();
+      const clientId = await this.getClientId();
       if (url.includes('on.soundcloud.com')) {
         url = await this.resolveShortUrl(url);
         logger.info('[MusicService] Aufgelöste URL:', url);
@@ -81,6 +179,7 @@ export class MusicService {
       }
       
       logger.debug('[MusicService] Versuche Track-Info von SoundCloud abzurufen...');
+      scdl.setClientID(clientId);
       const trackInfo = await scdl.getInfo(url);
       logger.debug('[MusicService] SoundCloud Track-Info erhalten:', trackInfo);
       
@@ -121,7 +220,14 @@ export class MusicService {
           throw new Error('Ungültige SoundCloud URL - unterstützt werden nur direkte Track-Links');
         }
         if (error.message.includes('could not find the song')) {
-          throw new Error('Track konnte nicht gefunden werden. Der Track ist möglicherweise:\n• Privat oder unlisted\n• Nur über SoundCloud Go+ verfügbar\n• Geografisch eingeschränkt\n• Von einem Label mit besonderen Rechten');
+          throw new Error(
+            'Track konnte nicht heruntergeladen werden. Mögliche Gründe:\n' +
+            '• Der Track wurde gelöscht\n' +
+            '• Der Track ist privat\n' +
+            '• Der Track ist in deiner Region nicht verfügbar\n' +
+            '• Der Track ist nur für SoundCloud Go+ verfügbar\n' +
+            '• Der Track wurde vom Künstler oder Label gesperrt'
+          );
         }
         throw new Error(`Fehler beim Abrufen der Track-Informationen: ${error.message}`);
       }
@@ -136,28 +242,24 @@ export class MusicService {
     try {
       const trackInfo = await this.getTrackInfo(url);
       
-      // Prüfe verschiedene Verfügbarkeitskriterien
-      if (!trackInfo) {
-        return { isAvailable: false, reason: 'Track-Informationen konnten nicht abgerufen werden' };
+      // Versuche den Download mit allen Methoden
+      try {
+        // Nur kurz testen ob der Download prinzipiell möglich ist
+        const downloadTest = await this.downloadAudioWithFallback(url);
+        if (downloadTest.buffer.length > 0) {
+          return { isAvailable: true, trackInfo };
+        }
+      } catch (downloadError) {
+        logger.warn('[MusicService] Download-Test fehlgeschlagen:', downloadError);
+        // Fehler hier nicht werfen - wir geben stattdessen zurück dass der Track nicht verfügbar ist
       }
       
-      // Zusätzliche Prüfungen basierend auf SoundCloud API Antwort
-      const fullTrackInfo = await scdl.getInfo(url);
-      
-      if (fullTrackInfo.policy === 'BLOCK') {
-        return { isAvailable: false, reason: 'Track ist durch Richtlinien blockiert', trackInfo };
-      }
-      
-      if (fullTrackInfo.monetization_model === 'TIER_2') {
-        return { isAvailable: false, reason: 'Track ist nur für SoundCloud Go+ verfügbar', trackInfo };
-      }
-      
-      if (!fullTrackInfo.streamable) {
-        return { isAvailable: false, reason: 'Track ist nicht streambar', trackInfo };
-      }
-      
-      return { isAvailable: true, trackInfo };
-      
+      return { 
+        isAvailable: false, 
+        reason: 'Track konnte nicht heruntergeladen werden',
+        trackInfo 
+      };
+
     } catch (error) {
       logger.error('[MusicService] Fehler bei Verfügbarkeitsprüfung:', error);
       if (error instanceof Error) {
@@ -167,46 +269,194 @@ export class MusicService {
     }
   }
 
-  private static async downloadAudio(url: string): Promise<{ buffer: Buffer; mimeType: string }> {
-    logger.debug('[MusicService] Starte Audio-Download für URL:', url);
-    try {
-      const clientId = this.getClientId();
-      logger.info('[MusicService] Verwende Client-ID:', clientId);
-      logger.debug('[MusicService] Hole SoundCloud Track-Info...');
-      const trackInfo = await scdl.getInfo(url);
-      logger.debug('[MusicService] SoundCloud Track-Info erhalten:', trackInfo);
-      logger.debug('[MusicService] Initialisiere Download...');
-      const stream = await scdl.download(url);
-      logger.info('[MusicService] Download-Stream erfolgreich erstellt');
-      logger.debug('[MusicService] Konvertiere Stream zu Buffer...');
-      const chunks: Buffer[] = [];
-      let chunkCount = 0;
-      let totalBytes = 0;
-      for await (const chunk of stream) {
-        const buffer = Buffer.from(chunk);
-        chunks.push(buffer);
-        chunkCount++;
-        totalBytes += buffer.length;
-        if (chunkCount % 10 === 0) {
-          logger.debug(`[MusicService] ${chunkCount} Chunks verarbeitet, ${totalBytes} Bytes`);
+  private static async downloadAudioWithFallback(url: string): Promise<{ buffer: Buffer; mimeType: string }> {
+    logger.debug('[MusicService] Starte Audio-Download mit Fallback für URL:', url);
+    
+    // Resolve URL if it's a short URL
+    if (url.includes('on.soundcloud.com')) {
+      url = await this.resolveShortUrl(url);
+      logger.info('[MusicService] Aufgelöste URL:', url);
+    }
+    
+    // Liste der Download-Methoden
+    const downloadMethods = [
+      this.downloadWithSCDL,
+      this.downloadWithMobileAPI,
+      this.downloadWithDirectAPI,
+      this.downloadWithMediaAPI
+    ];
+
+    let lastError: Error | null = null;
+
+    // Versuche nacheinander alle Download-Methoden
+    for (const method of downloadMethods) {
+      try {
+        const result = await method(url);
+        if (result && result.buffer && result.buffer.length > 0) {
+          logger.info(`[MusicService] Download erfolgreich mit Methode ${method.name}`);
+          return result;
         }
+      } catch (error) {
+        lastError = error as Error;
+        logger.warn(`[MusicService] Download-Methode ${method.name} fehlgeschlagen:`, error);
+        continue;
       }
-      const buffer = Buffer.concat(chunks);
-      logger.info(`[MusicService] Download abgeschlossen. ${chunkCount} Chunks, ${buffer.length} Bytes`);
-      if (buffer.length === 0) {
-        logger.error('[MusicService] Download-Stream war leer');
-        throw new Error('Download-Stream war leer');
+    }
+
+    // Wenn keine Methode erfolgreich war
+    throw lastError || new Error('Alle Download-Methoden fehlgeschlagen');
+  }
+
+  private static async downloadWithSCDL(url: string): Promise<{ buffer: Buffer; mimeType: string }> {
+    const clientId = await MusicService.getClientId();
+    scdl.setClientID(clientId);
+    const stream = await scdl.download(url);
+    
+    const chunks: Buffer[] = [];
+    for await (const chunk of stream) {
+      chunks.push(Buffer.from(chunk));
+    }
+    
+    return {
+      buffer: Buffer.concat(chunks),
+      mimeType: 'audio/mpeg'
+    };
+  }
+
+  private static async downloadWithMobileAPI(url: string): Promise<{ buffer: Buffer; mimeType: string }> {
+    const clientId = await MusicService.getClientId();
+    
+    // 1. Hole zuerst die Track-ID über die mobile API
+    const mobileHeaders = {
+      'User-Agent': 'Mozilla/5.0 (iPhone; CPU iPhone OS 14_8 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/14.1.2 Mobile/15E148 Safari/604.1',
+      'Accept': 'application/json'
+    };
+
+    // Versuche erst die Track-ID zu bekommen
+    const resolveResponse = await fetch(`https://api-v2.soundcloud.com/resolve?url=${url}&client_id=${clientId}`, {
+      headers: mobileHeaders
+    });
+    
+    if (!resolveResponse.ok) {
+      throw new Error(`Mobile API Resolve Fehler: ${resolveResponse.status}`);
+    }
+
+    const trackData = await resolveResponse.json() as { id?: number; media?: { transcodings?: Array<{ url: string, format: { protocol: string } }> } };
+    
+    if (!trackData?.id) {
+      throw new Error('Track ID nicht gefunden');
+    }
+
+    // 2. Hole die verfügbaren Transcodings
+    const trackResponse = await fetch(`https://api-v2.soundcloud.com/tracks/${trackData.id}?client_id=${clientId}`, {
+      headers: mobileHeaders
+    });
+
+    if (!trackResponse.ok) {
+      throw new Error(`Track API Fehler: ${trackResponse.status}`);
+    }
+
+    const fullTrackData = await trackResponse.json() as { media?: { transcodings?: Array<{ url: string, format: { protocol: string } }> } };
+    
+    // 3. Suche nach progressiver MP3-URL oder HLS-Stream
+    const transcodings = fullTrackData?.media?.transcodings || [];
+    let mediaUrl: string | null = null;
+
+    // Priorisiere progressive Downloads über HLS
+    const progressive = transcodings.find(t => t.format.protocol === 'progressive');
+    const hls = transcodings.find(t => t.format.protocol === 'hls');
+    
+    const transcoding = progressive || hls;
+    if (!transcoding?.url) {
+      throw new Error('Keine Download-URL gefunden');
+    }
+
+    // 4. Hole die finale Media-URL
+    const mediaResponse = await fetch(`${transcoding.url}?client_id=${clientId}`, {
+      headers: mobileHeaders
+    });
+
+    if (!mediaResponse.ok) {
+      throw new Error(`Media URL Fehler: ${mediaResponse.status}`);
+    }
+
+    const mediaData = await mediaResponse.json() as { url?: string };
+    if (!mediaData?.url) {
+      throw new Error('Keine finale Download-URL gefunden');
+    }
+
+    // 5. Lade den tatsächlichen Audio-Stream
+    const audioResponse = await fetch(mediaData.url, {
+      headers: {
+        'User-Agent': mobileHeaders['User-Agent'],
+        'Range': 'bytes=0-' // Wichtig für einige CDN-Server
       }
-      return {
-        buffer,
-        mimeType: 'audio/mpeg'
-      };
+    });
+
+    if (!audioResponse.ok) {
+      throw new Error(`Audio Download Fehler: ${audioResponse.status}`);
+    }
+
+    const arrayBuffer = await audioResponse.arrayBuffer();
+    
+    return {
+      buffer: Buffer.from(arrayBuffer),
+      mimeType: audioResponse.headers.get('content-type') || 'audio/mpeg'
+    };
+  }
+
+  private static async downloadWithDirectAPI(url: string): Promise<{ buffer: Buffer; mimeType: string }> {
+    const clientId = await MusicService.getClientId();
+    
+    // Hole Track-ID aus der URL
+    const trackResponse = await fetch(`https://api-v2.soundcloud.com/resolve?url=${url}&client_id=${clientId}`);
+    const trackData = await trackResponse.json() as { id?: number };
+    
+    if (!trackData?.id) {
+      throw new Error('Track ID nicht gefunden');
+    }
+
+    // Hole Download/Stream URL
+    const mediaResponse = await fetch(`https://api-v2.soundcloud.com/tracks/${trackData.id}/stream?client_id=${clientId}`);
+    if (!mediaResponse.ok) {
+      throw new Error(`Media API Fehler: ${mediaResponse.status}`);
+    }
+
+    const mediaUrl = await mediaResponse.text();
+    const audioResponse = await fetch(mediaUrl);
+    const arrayBuffer = await audioResponse.arrayBuffer();
+    
+    return {
+      buffer: Buffer.from(arrayBuffer),
+      mimeType: audioResponse.headers.get('content-type') || 'audio/mpeg'
+    };
+  }
+
+  private static async downloadWithMediaAPI(url: string): Promise<{ buffer: Buffer; mimeType: string }> {
+    const clientId = await MusicService.getClientId();
+    
+    // Alternative Media API Endpoint
+    const mediaResponse = await fetch(`https://api-widget.soundcloud.com/resolve?url=${url}&client_id=${clientId}&format=json`);
+    const mediaData = await mediaResponse.json() as { stream_url?: string };
+    
+    if (!mediaData?.stream_url) {
+      throw new Error('Stream URL nicht gefunden');
+    }
+
+    const streamUrl = `${mediaData.stream_url}?client_id=${clientId}`;
+    const audioResponse = await fetch(streamUrl);
+    const arrayBuffer = await audioResponse.arrayBuffer();
+    
+    return {
+      buffer: Buffer.from(arrayBuffer),
+      mimeType: audioResponse.headers.get('content-type') || 'audio/mpeg'
+    };
+  }
+  private static async downloadAudio(url: string): Promise<{ buffer: Buffer; mimeType: string }> {
+    try {
+      return await this.downloadAudioWithFallback(url);
     } catch (error) {
       logger.error('[MusicService] Fehler beim Herunterladen der Audio-Datei:', error);
-      if (error instanceof Error) {
-        logger.error('[MusicService] Fehlerdetails:', error.message);
-        logger.error('[MusicService] Stack Trace:', error.stack);
-      }
       throw error;
     }
   }

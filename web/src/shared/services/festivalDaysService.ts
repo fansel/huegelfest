@@ -4,6 +4,42 @@ import { connectDB } from '@/lib/db/connector';
 import { FestivalDay } from '@/lib/db/models/FestivalDay';
 import { broadcast } from '@/lib/websocket/broadcast';
 
+// Default Festival-Tage für Build-Zeit und Fallback
+const DEFAULT_FESTIVAL_DAYS: CentralFestivalDay[] = [
+  {
+    _id: 'build-1',
+    date: new Date('2024-07-31'),
+    label: '31.07. - Anreise',
+    description: 'Anreise und erste Aufbauarbeiten',
+    isActive: true,
+    order: 1,
+  },
+  {
+    _id: 'build-2',
+    date: new Date('2024-08-01'),
+    label: '01.08. - Festival Tag 1',
+    description: 'Erster Festivaltag',
+    isActive: true,
+    order: 2,
+  },
+  {
+    _id: 'build-3',
+    date: new Date('2024-08-02'),
+    label: '02.08. - Festival Tag 2',
+    description: 'Zweiter Festivaltag',
+    isActive: true,
+    order: 3,
+  },
+  {
+    _id: 'build-4',
+    date: new Date('2024-08-03'),
+    label: '03.08. - Abreise',
+    description: 'Abbau und Abreise',
+    isActive: true,
+    order: 4,
+  },
+];
+
 export interface CentralFestivalDay {
   _id?: string;
   date: Date;
@@ -42,6 +78,12 @@ export async function getCentralFestivalDays(): Promise<CentralFestivalDay[]> {
   try {
     await connectDB();
     
+    // Wenn wir im Build sind, geben wir die Default-Tage zurück
+    if (process.env.NEXT_PHASE === 'phase-production-build') {
+      console.log('[getCentralFestivalDays] Build-Zeit erkannt, verwende Default-Tage');
+      return DEFAULT_FESTIVAL_DAYS;
+    }
+    
     const festivalDays = await FestivalDay.find({ isActive: { $ne: false } })
       .sort({ order: 1 })
       .lean();
@@ -60,7 +102,9 @@ export async function getCentralFestivalDays(): Promise<CentralFestivalDay[]> {
     return result;
   } catch (error) {
     console.error('[getCentralFestivalDays] Fehler:', error);
-    throw error;
+    // Bei Fehlern auch die Default-Tage als Fallback zurückgeben
+    console.log('[getCentralFestivalDays] Fehler beim Laden der Tage, verwende Default-Tage');
+    return DEFAULT_FESTIVAL_DAYS;
   }
 }
 
@@ -70,6 +114,12 @@ export async function getCentralFestivalDays(): Promise<CentralFestivalDay[]> {
 export async function getCentralFestivalDayById(id: string): Promise<CentralFestivalDay | null> {
   try {
     await connectDB();
+    
+    // Wenn wir im Build sind, suchen wir in den Default-Tagen
+    if (process.env.NEXT_PHASE === 'phase-production-build') {
+      console.log('[getCentralFestivalDayById] Build-Zeit erkannt, suche in Default-Tagen');
+      return DEFAULT_FESTIVAL_DAYS.find(day => day._id === id) || null;
+    }
     
     const festivalDay = await FestivalDay.findById(id).lean();
     if (!festivalDay) {
@@ -90,7 +140,9 @@ export async function getCentralFestivalDayById(id: string): Promise<CentralFest
     return result;
   } catch (error) {
     console.error('[getCentralFestivalDayById] Fehler:', error);
-    return null;
+    // Bei Fehlern in den Default-Tagen suchen
+    console.log('[getCentralFestivalDayById] Fehler beim Laden des Tages, suche in Default-Tagen');
+    return DEFAULT_FESTIVAL_DAYS.find(day => day._id === id) || null;
   }
 }
 
@@ -100,6 +152,13 @@ export async function getCentralFestivalDayById(id: string): Promise<CentralFest
 export async function getAllCentralFestivalDays(): Promise<CentralFestivalDay[]> {
   try {
     await connectDB();
+    
+    // Wenn wir im Build sind, geben wir die Default-Tage zurück
+    if (process.env.NEXT_PHASE === 'phase-production-build') {
+      console.log('[getAllCentralFestivalDays] Build-Zeit erkannt, verwende Default-Tage');
+      return DEFAULT_FESTIVAL_DAYS;
+    }
+    
     await initDefaultFestivalDaysIfEmpty();
     
     const days = await FestivalDay.find()
@@ -118,7 +177,9 @@ export async function getAllCentralFestivalDays(): Promise<CentralFestivalDay[]>
     }));
   } catch (error) {
     console.error('[getAllCentralFestivalDays] Fehler:', error);
-    return [];
+    // Bei Fehlern die Default-Tage zurückgeben
+    console.log('[getAllCentralFestivalDays] Fehler beim Laden der Tage, verwende Default-Tage');
+    return DEFAULT_FESTIVAL_DAYS;
   }
 }
 

@@ -12,9 +12,10 @@ interface UserSettingsCardProps {
   info?: React.ReactNode;
   variant?: 'row' | 'tile';
   children?: React.ReactNode;
+  onClick?: () => void;
 }
 
-const UserSettingsCard: React.FC<UserSettingsCardProps> = ({ icon, title, switchElement, info, variant = 'row', children }) => {
+const UserSettingsCard: React.FC<UserSettingsCardProps> = ({ icon, title, switchElement, info, variant = 'row', children, onClick }) => {
   const { deviceType } = useDeviceContext();
   const isMobile = deviceType === 'mobile';
   const [open, setOpen] = useState(false);
@@ -44,7 +45,10 @@ const UserSettingsCard: React.FC<UserSettingsCardProps> = ({ icon, title, switch
 
   if (variant === 'tile') {
     return (
-      <div className="flex flex-col items-center justify-center border border-[#ff9900]/40 rounded-2xl aspect-square min-h-[180px] bg-transparent p-4">
+      <div 
+        className="flex flex-col items-center justify-center border border-[#ff9900]/40 rounded-2xl aspect-square min-h-[180px] bg-transparent p-4 cursor-pointer hover:bg-[#ff9900]/5 transition-colors"
+        onClick={onClick}
+      >
         <div className="mb-2">{React.cloneElement(icon as React.ReactElement, { className: 'w-10 h-10 text-[#ff9900]' })}</div>
         <div className="text-[#ff9900] text-lg font-semibold text-center mb-2">{title}</div>
         <div className="flex items-center gap-2 mt-2">
@@ -67,7 +71,10 @@ const UserSettingsCard: React.FC<UserSettingsCardProps> = ({ icon, title, switch
   }
   // row-Layout wie bisher
   return (
-    <div className="flex items-center justify-between border border-[#ff9900]/40 rounded-2xl px-4 py-3 mb-1 min-h-[56px] bg-transparent">
+    <div 
+      className="flex items-center justify-between border border-[#ff9900]/40 rounded-2xl px-4 py-3 mb-1 min-h-[56px] bg-transparent cursor-pointer hover:bg-[#ff9900]/5 transition-colors"
+      onClick={onClick}
+    >
       <div className="flex items-center gap-3">
         <div className="bg-[#460b6c]/60 rounded-full p-2 flex items-center justify-center">
           {icon}

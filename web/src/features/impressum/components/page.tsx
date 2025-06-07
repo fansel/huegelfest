@@ -1,11 +1,11 @@
 import Link from 'next/link';
-import { Github, Mail, MapPin, Heart, Code, Coffee } from 'lucide-react';
+import { Github, Mail, MapPin, Code } from 'lucide-react';
 
 export default function Impressum() {
   return (
     <div className="min-h-screen bg-gradient-to-br from-[#460b6c] via-[#5a1a7a] to-[#6d2888] p-8">
       <div className="max-w-4xl mx-auto">
-        {/* Hero Section */}
+        {/* Dev Info */}
         <div className="text-center mb-12">
           <div className="relative mb-8">
             <div className="w-32 h-32 mx-auto rounded-full bg-gradient-to-r from-[#ff9900] to-[#ffb340] flex items-center justify-center text-6xl font-bold text-white shadow-2xl">
@@ -16,18 +16,15 @@ export default function Impressum() {
             </div>
           </div>
           <h1 className="text-4xl md:text-6xl font-bold text-white mb-4">
-            Hey, ich bin <span className="text-[#ff9900]">fansel</span>
+            <span className="text-[#ff9900]">fansel</span>
           </h1>
-          <p className="text-xl text-white/80 mb-6">
-            Developer, Festival-Organisator & Musik-Liebhaber
-          </p>
           <div className="flex flex-wrap justify-center gap-4">
             <a 
               href="mailto:huegelfest@hey.fansel.dev"
-              className="inline-flex items-center gap-2 px-6 py-3 bg-[#ff9900] text-white rounded-full hover:bg-[#e88800] transition-all transform hover:scale-105"
+              className="inline-flex items-center gap-2 px-6 py-3 bg-[#ff9900] text-white rounded-full hover:bg-[#ff9900]/90 transition-all transform hover:scale-105"
             >
               <Mail className="w-5 h-5" />
-              Schreib mir
+              Kontakt
             </a>
             <a 
               href="https://github.com/fansel"
@@ -41,72 +38,27 @@ export default function Impressum() {
           </div>
         </div>
 
-        {/* About Section */}
-        <div className="grid md:grid-cols-2 gap-8 mb-12">
-          <div className="bg-white/10 backdrop-blur-sm rounded-xl p-8 border border-white/20">
-            <h2 className="text-2xl font-bold text-white mb-4 flex items-center gap-2">
-              <Heart className="w-6 h-6 text-[#ff9900]" />
-              Über diese Seite
-            </h2>
-            <p className="text-white/80 leading-relaxed">
-              Diese Website ist für das <strong className="text-[#ff9900]">Hügelfest</strong> entstanden - 
-              ein kleines, feines Festival bei Leipzig. Mit viel Liebe zum Detail und 
-              modernen Web-Technologien entwickelt, um die beste User Experience zu bieten.
-            </p>
-          </div>
-
-          <div className="bg-white/10 backdrop-blur-sm rounded-xl p-8 border border-white/20">
-            <h2 className="text-2xl font-bold text-white mb-4 flex items-center gap-2">
-              <Code className="w-6 h-6 text-[#ff9900]" />
-              Tech Stack
-            </h2>
-            <div className="flex flex-wrap gap-2">
-              {['Next.js', 'React', 'TypeScript', 'Tailwind CSS', 'Supabase'].map((tech) => (
-                <span 
-                  key={tech}
-                  className="px-3 py-1 bg-[#ff9900]/20 text-[#ff9900] rounded-full text-sm border border-[#ff9900]/30"
-                >
-                  {tech}
-                </span>
-              ))}
-            </div>
-          </div>
-        </div>
-
-        {/* Features */}
+        {/* Tech Stack */}
         <div className="bg-white/10 backdrop-blur-sm rounded-xl p-8 mb-12 border border-white/20">
-          <h2 className="text-2xl font-bold text-white mb-6 flex items-center gap-2">
-            <Coffee className="w-6 h-6 text-[#ff9900]" />
-            Was macht diese Seite besonders?
+          <h2 className="text-2xl font-bold text-white mb-4 flex items-center gap-2">
+            <Code className="w-6 h-6 text-[#ff9900]" />
+            Tech Stack
           </h2>
-          <div className="grid md:grid-cols-3 gap-6">
-            <div className="text-center">
-              <div className="w-16 h-16 mx-auto mb-4 bg-[#ff9900]/20 rounded-full flex items-center justify-center">
-                <span className="text-2xl">🎵</span>
-              </div>
-              <h3 className="text-lg font-semibold text-white mb-2">Festival-Integration</h3>
-              <p className="text-white/70 text-sm">Lineup, Zeitplan und alle Infos übersichtlich dargestellt</p>
-            </div>
-            <div className="text-center">
-              <div className="w-16 h-16 mx-auto mb-4 bg-[#ff9900]/20 rounded-full flex items-center justify-center">
-                <span className="text-2xl">📱</span>
-              </div>
-              <h3 className="text-lg font-semibold text-white mb-2">Mobile First</h3>
-              <p className="text-white/70 text-sm">Perfekt optimiert für alle Geräte</p>
-            </div>
-            <div className="text-center">
-              <div className="w-16 h-16 mx-auto mb-4 bg-[#ff9900]/20 rounded-full flex items-center justify-center">
-                <span className="text-2xl">⚡</span>
-              </div>
-              <h3 className="text-lg font-semibold text-white mb-2">Performance</h3>
-              <p className="text-white/70 text-sm">Schnell, modern und benutzerfreundlich</p>
-            </div>
+          <div className="flex flex-wrap gap-2">
+            {['Next.js', 'React', 'TypeScript', 'Tailwind CSS', 'MongoDB'].map((tech) => (
+              <span 
+                key={tech}
+                className="px-3 py-1 bg-[#ff9900]/20 text-[#ff9900] rounded-full text-sm border border-[#ff9900]/30"
+              >
+                {tech}
+              </span>
+            ))}
           </div>
         </div>
 
         {/* Legal Section */}
         <div className="bg-white/5 backdrop-blur-sm rounded-xl p-8 border border-white/10">
-          <h2 className="text-2xl font-bold text-white mb-6">Rechtliches</h2>
+          <h2 className="text-2xl font-bold text-white mb-6">Impressum</h2>
           
           <div className="grid md:grid-cols-2 gap-8">
             <div>

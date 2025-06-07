@@ -7,8 +7,7 @@ import { ArrowLeft, Settings as SettingsIcon } from 'lucide-react';
 import PushNotificationSettings from './PushNotificationSettings';
 import StarfieldSettings from './StarfieldSettings';
 import UserLogin from './UserLogin';
-import ImpressumSettings from './ImpressumSettings';
-import DatenschutzSettings from './DatenschutzSettings';
+import LegalNotice from './LegalNotice';
 import ResetAppDataSettings from './ResetAppDataSettings';
 import MusicNoteSettings from './MusicNoteSettings';
 import { useDeviceContext } from '@/shared/contexts/DeviceContext';
@@ -39,8 +38,7 @@ export default function Settings({
         <MusicNoteSettings showMusicNote={showMusicNote} onToggle={onToggleMusicNote} variant="row" />
         <UpdateSettings variant="row" />
         <UserLogin variant="row" />
-        <DatenschutzSettings variant="row" />
-        <ImpressumSettings variant="row" />
+        <LegalNotice variant="row" />
         <ResetAppDataSettings variant="row" />
       </div>
     );
@@ -56,8 +54,7 @@ export default function Settings({
         <MusicNoteSettings showMusicNote={showMusicNote} onToggle={onToggleMusicNote} variant="tile" />
         <UpdateSettings variant="tile" />
         <UserLogin variant="tile" />
-        <DatenschutzSettings variant="tile" />
-        <ImpressumSettings variant="tile" />
+        <LegalNotice variant="tile" />
         <ResetAppDataSettings variant="tile" />
       </div>
     </div>
