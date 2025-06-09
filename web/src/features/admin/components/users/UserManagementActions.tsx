@@ -207,53 +207,46 @@ export function UserManagementActions({ users, onRefreshUsers }: UserManagementA
 
   return (
     <div className="space-y-6">
-      <Card>
+      <Card className="overflow-hidden">
         <CardHeader>
-          <div className="flex items-center justify-between">
-            <div>
-              <CardTitle className="flex items-center gap-2">
-                <Shield className="h-5 w-5 text-[#ff9900]" />
-                User Management
-              </CardTitle>
-              <CardDescription>
-                Benutzerverwaltung mit Passwort-Reset und Rollenverwaltung
-              </CardDescription>
-            </div>
-            <Button
-              variant="outline"
-              size="sm"
-              className="flex items-center gap-2"
-              onClick={() => setShowArchive(!showArchive)}
-            >
-              {showArchive ? (
-                <>
+          <div className="space-y-1.5">
+            <div className="flex items-center gap-2">
+              <Shield className="h-5 w-5 text-[#ff9900]" />
+              <CardTitle className="flex-1">Benutzerverwaltung</CardTitle>
+              <Button
+                variant="ghost"
+                size="sm"
+                className="h-8 w-8 p-0 -mr-2"
+                onClick={() => setShowArchive(!showArchive)}
+                title={showArchive ? "Aktive User anzeigen" : `Archiv (${shadowUsers.length})`}
+              >
+                {showArchive ? (
                   <Eye className="h-4 w-4" />
-                  Aktive User anzeigen
-                </>
-              ) : (
-                <>
+                ) : (
                   <Archive className="h-4 w-4" />
-                  Archiv anzeigen ({shadowUsers.length})
-                </>
-              )}
-            </Button>
+                )}
+              </Button>
+            </div>
+            <CardDescription>
+              Benutzerverwaltung mit Passwort-Reset und Rollenverwaltung
+            </CardDescription>
           </div>
         </CardHeader>
         
         {showArchive ? (
-          <CardContent>
+          <CardContent className="p-0">
             <ShadowUserArchive 
               shadowUsers={shadowUsers}
               onRefreshUsers={onRefreshUsers}
             />
           </CardContent>
         ) : (
-          <CardContent className="space-y-6">
+          <CardContent className="p-4 sm:p-6">
             {/* Search */}
-            <div className="relative">
+            <div className="relative mb-4">
               <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 w-4 h-4" />
               <Input
-                placeholder="User suchen (Name, E-Mail, Username)..."
+                placeholder="User suchen..."
                 value={searchTerm}
                 onChange={(e) => setSearchTerm(e.target.value)}
                 className="pl-10"
@@ -261,27 +254,27 @@ export function UserManagementActions({ users, onRefreshUsers }: UserManagementA
             </div>
 
             {/* Statistics */}
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-              <div className="bg-blue-50 p-4 rounded-lg">
-                <div className="text-2xl font-bold text-blue-700">{filteredUsers.length}</div>
-                <div className="text-sm text-blue-600">User gefunden</div>
+            <div className="grid grid-cols-3 gap-2 mb-4">
+              <div className="bg-blue-50 p-3 rounded-lg text-center">
+                <div className="text-xl font-bold text-blue-700">{filteredUsers.length}</div>
+                <div className="text-xs text-blue-600">User</div>
               </div>
-              <div className="bg-green-50 p-4 rounded-lg">
-                <div className="text-2xl font-bold text-green-700">
+              <div className="bg-green-50 p-3 rounded-lg text-center">
+                <div className="text-xl font-bold text-green-700">
                   {filteredUsers.filter(u => u.email).length}
                 </div>
-                <div className="text-sm text-green-600">Mit E-Mail</div>
+                <div className="text-xs text-green-600">Mit E-Mail</div>
               </div>
-              <div className="bg-orange-50 p-4 rounded-lg">
-                <div className="text-2xl font-bold text-orange-700">
+              <div className="bg-orange-50 p-3 rounded-lg text-center">
+                <div className="text-xl font-bold text-orange-700">
                   {sentResets.size}
                 </div>
-                <div className="text-sm text-orange-600">Reset-Links gesendet</div>
+                <div className="text-xs text-orange-600">Resets</div>
               </div>
             </div>
 
             {/* User List */}
-            <div className="space-y-3 max-h-96 overflow-y-auto">
+            <div className="space-y-2">
               {filteredUsers.length === 0 ? (
                 <div className="text-center py-8 text-gray-500">
                   <UserIcon className="mx-auto h-12 w-12 text-gray-300 mb-4" />
@@ -291,8 +284,8 @@ export function UserManagementActions({ users, onRefreshUsers }: UserManagementA
                 filteredUsers.map(user => (
                   <div 
                     key={user._id}
-                    className={`border border-gray-200 rounded-lg p-4 hover:bg-gray-50 transition-colors ${
-                      sentResets.has(user._id) ? 'bg-green-50 border-green-200' : ''
+                    className={`bg-white border rounded-lg p-3 ${
+                      sentResets.has(user._id) ? 'border-green-200 bg-green-50' : 'border-gray-200'
                     }`}
                   >
                     <div className="flex items-center justify-between">

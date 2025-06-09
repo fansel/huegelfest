@@ -4,10 +4,11 @@ import { useState, useEffect } from 'react';
 import { useAuth } from '@/features/auth/AuthContext';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/shared/components/ui/dialog';
 import { Button } from '@/shared/components/ui/button';
-import { Bell, X } from 'lucide-react';
+import { Bell } from 'lucide-react';
 import { subscribePushAction } from '../actions/subscribePush';
 import { env } from 'next-runtime-env';
 import { toast } from 'react-hot-toast';
+import { PushStateManager } from '../utils/pushStateManager';
 
 const VAPID_PUBLIC_KEY = env('NEXT_PUBLIC_VAPID_PUBLIC_KEY');
 
@@ -24,10 +25,16 @@ export default function AutoPushPrompt({ forceShow = false, onClose, onSubscript
   const [triggerReason, setTriggerReason] = useState<string>('manual');
   const [customMessage, setCustomMessage] = useState<string | null>(null);
 
-  // Nur bei forceShow oder manuellen Triggers anzeigen
+  // Prüfe beim ersten App-Start ob Berechtigung angefragt werden soll
   useEffect(() => {
-    setShowPrompt(forceShow);
-  }, [forceShow]);
+    const hasAskedForPermission = localStorage.getItem('push-permission-asked') === 'true';
+    const { supported, api } = PushStateManager.getNotificationAPI();
+    
+    if (!hasAskedForPermission && supported && api && api.permission === 'default') {
+      console.log('[AutoPushPrompt] Zeige initiale Push-Abfrage');
+      setShowPrompt(true);
+    }
+  }, []);
 
   // Event-Listener für manuelle Triggers
   useEffect(() => {
@@ -46,19 +53,16 @@ export default function AutoPushPrompt({ forceShow = false, onClose, onSubscript
   }, []);
 
   const handleAllow = async () => {
-    if (!user) {
-      toast.error('Benutzer nicht angemeldet');
-      return;
-    }
-
     setIsLoading(true);
 
     try {
-      if (!('Notification' in window) || !('serviceWorker' in navigator) || !('PushManager' in window)) {
+      const { supported, api } = PushStateManager.getNotificationAPI();
+      
+      if (!supported || !api) {
         throw new Error('Push-Benachrichtigungen werden von diesem Browser nicht unterstützt');
       }
 
-      const permission = await Notification.requestPermission();
+      const permission = await api.requestPermission();
       
       if (permission === 'granted') {
         const registration = await navigator.serviceWorker.ready;
@@ -81,12 +85,14 @@ export default function AutoPushPrompt({ forceShow = false, onClose, onSubscript
           ? btoa(String.fromCharCode.apply(null, Array.from(new Uint8Array(authKey))))
           : '';
 
+        // Speichere die Subscription - mit oder ohne User
         const result = await subscribePushAction({
           endpoint: pushSubscription.endpoint,
           keys: { p256dh, auth }
         });
 
         if (result.status === 'success') {
+          localStorage.setItem('push-permission-asked', 'true');
           toast.success('Push-Benachrichtigungen aktiviert! 🔔');
           onSubscriptionChange?.(true);
           setShowPrompt(false);
@@ -94,19 +100,18 @@ export default function AutoPushPrompt({ forceShow = false, onClose, onSubscript
         } else {
           throw new Error(result.message || 'Fehler beim Speichern der Subscription');
         }
-      } else if (permission === 'denied') {
+      } else {
+        localStorage.setItem('push-permission-asked', 'true');
         onSubscriptionChange?.(false);
         setShowPrompt(false);
         onClose?.();
-        toast.error('Push-Benachrichtigungen wurden abgelehnt');
-      } else {
-        // Permission ist 'default' - User hat abgebrochen
-        setShowPrompt(false);
-        onClose?.();
+        if (permission === 'denied') {
+          toast.error('Push-Benachrichtigungen wurden abgelehnt');
+        }
       }
     } catch (error) {
       console.error('[AutoPushPrompt] Fehler beim Aktivieren:', error);
-      toast.error('Fehler beim Aktivieren der Push-Benachrichtigungen');
+      toast.error(error instanceof Error ? error.message : 'Fehler beim Aktivieren der Push-Benachrichtigungen');
       onSubscriptionChange?.(false);
     } finally {
       setIsLoading(false);
@@ -114,12 +119,14 @@ export default function AutoPushPrompt({ forceShow = false, onClose, onSubscript
   };
 
   const handleDeny = () => {
+    localStorage.setItem('push-permission-asked', 'true');
     onSubscriptionChange?.(false);
     setShowPrompt(false);
     onClose?.();
   };
 
-  if (!showPrompt || !user) return null;
+  // Zeige Dialog nur wenn showPrompt true ist
+  if (!showPrompt) return null;
 
   return (
     <Dialog open={showPrompt} onOpenChange={(open) => {
@@ -127,16 +134,16 @@ export default function AutoPushPrompt({ forceShow = false, onClose, onSubscript
         handleDeny();
       }
     }}>
-      <DialogContent className="max-w-md">
+      <DialogContent className="bg-[#460b6c] border-[#ff9900]/20">
         <DialogHeader>
-          <DialogTitle className="flex items-center gap-2">
+          <DialogTitle className="flex items-center gap-2 text-[#ff9900]">
             <Bell className="h-5 w-5" />
             Push-Benachrichtigungen
           </DialogTitle>
         </DialogHeader>
         
         <div className="space-y-4">
-          <p className="text-sm text-gray-600">
+          <p className="text-sm text-[#ff9900]/80">
             {customMessage || 'Möchtest du Benachrichtigungen über wichtige Ereignisse erhalten?'}
           </p>
           
@@ -144,7 +151,7 @@ export default function AutoPushPrompt({ forceShow = false, onClose, onSubscript
             <Button
               onClick={handleAllow}
               disabled={isLoading}
-              className="flex-1"
+              className="flex-1 bg-[#ff9900] text-[#460b6c] hover:bg-[#ff9900]/90 disabled:bg-[#ff9900]/50"
             >
               {isLoading ? 'Aktiviere...' : 'Aktivieren'}
             </Button>
@@ -152,7 +159,7 @@ export default function AutoPushPrompt({ forceShow = false, onClose, onSubscript
               variant="outline"
               onClick={handleDeny}
               disabled={isLoading}
-              className="flex-1"
+              className="flex-1 border-[#ff9900]/20 text-[#ff9900] hover:bg-[#ff9900]/10"
             >
               Nicht jetzt
             </Button>

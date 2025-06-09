@@ -80,7 +80,7 @@ export async function registerWithAccount(
       if (error instanceof Error && error.message.includes('bereits vergeben')) {
         return {
           success: false,
-          error: 'Dieser Username ist bereits vergeben. Bitte wählen Sie einen anderen.'
+          error: 'Dieser Username ist bereits vergeben. Bitte wähle einen anderen.'
         };
       }
       if (error instanceof Error && error.message.includes('E-Mail-Adresse existiert bereits')) {
@@ -98,7 +98,7 @@ export async function registerWithAccount(
       logger.error(`[RegisterWithAccount] Auto-Login fehlgeschlagen für @${registrationData.username}`);
       return {
         success: false,
-        error: 'Account erstellt, aber Login fehlgeschlagen. Bitte versuchen Sie sich anzumelden.'
+        error: 'Account erstellt, aber Login fehlgeschlagen. Bitte versuche dich anzumelden.'
       };
     }
 

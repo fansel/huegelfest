@@ -29,12 +29,23 @@ interface UserManagementTabProps {
   users: UserManagementUser[];
   groups: GroupData[];
   onRefreshUsers: () => void;
+  onShowUserRegistration?: (userId: string, userName: string) => void;
+  shadowUsers: UserManagementUser[];
+  showArchive: boolean;
+  setShowArchive: (show: boolean) => void;
 }
 
-export const UserManagementTab: React.FC<UserManagementTabProps> = ({ users, groups, onRefreshUsers }) => {
+export const UserManagementTab: React.FC<UserManagementTabProps> = ({
+  users,
+  groups,
+  onRefreshUsers,
+  onShowUserRegistration,
+  shadowUsers,
+  showArchive,
+  setShowArchive
+}) => {
   const { user: currentUser, isAdmin } = useAuth();
   const [searchTerm, setSearchTerm] = useState('');
-  const [showArchive, setShowArchive] = useState(false);
   const [openDropdown, setOpenDropdown] = useState<string | null>(null);
   const [selectedUser, setSelectedUser] = useState<UserManagementUser | null>(null);
   const [isSendingReset, setIsSendingReset] = useState(false);
@@ -53,11 +64,10 @@ export const UserManagementTab: React.FC<UserManagementTabProps> = ({ users, gro
   ));
 
   // Filter für Shadow-Archiv
-  const shadowUsers = users.filter(u => u.isShadowUser === true && (
-    u.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
+  const shadowUsersFiltered = shadowUsers.filter(u => u.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
     (u.email && u.email.toLowerCase().includes(searchTerm.toLowerCase())) ||
     (u.username && u.username.toLowerCase().includes(searchTerm.toLowerCase()))
-  ));
+  );
 
   // Statistiken
   const stats = {
@@ -163,47 +173,33 @@ export const UserManagementTab: React.FC<UserManagementTabProps> = ({ users, gro
   }
 
   return (
-    <div className="space-y-6">
-      <div className="flex items-center justify-between">
-        <div className="text-2xl font-bold">Benutzerverwaltung</div>
-        <Button
-          variant="outline"
-          size="sm"
-          className="flex items-center gap-2"
-          onClick={() => setShowArchive(!showArchive)}
-        >
-          {showArchive ? (
-            <>
-              <Eye className="h-4 w-4" /> Aktive User anzeigen
-            </>
-          ) : (
-            <>
-              <Archive className="h-4 w-4" /> Archiv anzeigen ({shadowUsers.length})
-            </>
+    <div className="space-y-6 overflow-hidden">
+      <div className="flex items-center gap-2">
+        <h2 className="text-lg font-semibold flex items-center gap-2">
+          <Shield className="h-5 w-5 text-[#ff9900]" />
+          Benutzerverwaltung
+          {showArchive && (
+            <span className="text-sm font-normal text-purple-600 bg-purple-100 px-2 py-0.5 rounded-full">
+              Archiv
+            </span>
           )}
-        </Button>
+          <Button
+            variant="ghost"
+            size="sm"
+            className="h-8 w-8 p-0"
+            onClick={() => setShowArchive(!showArchive)}
+            title={showArchive ? "Aktive User anzeigen" : `Archiv (${shadowUsers.length})`}
+          >
+            {showArchive ? (
+              <Eye className="h-4 w-4" />
+            ) : (
+              <Archive className="h-4 w-4" />
+            )}
+          </Button>
+        </h2>
       </div>
 
-      {/* Statistiken */}
-      <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
-        <div className="bg-gray-50 p-4 rounded-lg text-center">
-          <div className="text-2xl font-bold text-[#ff9900]">{stats.total}</div>
-          <div className="text-sm text-gray-600">Gesamt Benutzer</div>
-        </div>
-        <div className="bg-green-50 p-4 rounded-lg text-center">
-          <div className="text-2xl font-bold text-green-700">{stats.withGroups}</div>
-          <div className="text-sm text-green-600">Mit Gruppe</div>
-        </div>
-        <div className="bg-orange-50 p-4 rounded-lg text-center">
-          <div className="text-2xl font-bold text-orange-700">{stats.withoutGroups}</div>
-          <div className="text-sm text-orange-600">Ohne Gruppe</div>
-        </div>
-        <div className="bg-red-50 p-4 rounded-lg text-center">
-          <div className="text-2xl font-bold text-red-700">{stats.admins}</div>
-          <div className="text-sm text-red-600">Admins</div>
-        </div>
-      </div>
-
+     
       {/* Suche */}
       <div className="relative">
         <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 w-4 h-4" />
@@ -363,10 +359,10 @@ export const UserManagementTab: React.FC<UserManagementTabProps> = ({ users, gro
       ) : (
         // Shadow-Archiv
         <div className="space-y-3">
-          {shadowUsers.length === 0 ? (
+          {shadowUsersFiltered.length === 0 ? (
             <div className="text-center py-8 text-gray-500">Keine Shadow User im Archiv</div>
           ) : (
-            shadowUsers.map(user => (
+            shadowUsersFiltered.map(user => (
               <div key={user._id} className="border border-purple-200 rounded-lg p-4 bg-purple-50">
                 <div className="flex items-center justify-between">
                   <div className="flex-1 min-w-0">

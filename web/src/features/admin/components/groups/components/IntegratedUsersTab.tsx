@@ -23,7 +23,8 @@ import {
   Eye,
   EyeOff,
   UserCheck,
-  UserX
+  UserX,
+  Archive
 } from 'lucide-react';
 import { assignUserToGroupAction, removeUserFromGroupAction } from '../actions/groupActions';
 import { sendPasswordResetAction } from '@/features/auth/actions/passwordReset';
@@ -40,6 +41,9 @@ interface IntegratedUsersTabProps {
   onDeleteUser: (userId: string) => void;
   onRefreshData: () => void;
   onShowUserRegistration?: (userId: string, userName: string) => void;
+  shadowUsers: User[];
+  showArchive: boolean;
+  setShowArchive: (show: boolean) => void;
 }
 
 type GroupFilter = 'all' | 'with-group' | 'without-group' | string;
@@ -52,7 +56,10 @@ export function IntegratedUsersTab({
   setSearchTerm,
   onDeleteUser,
   onRefreshData,
-  onShowUserRegistration
+  onShowUserRegistration,
+  shadowUsers,
+  showArchive,
+  setShowArchive
 }: IntegratedUsersTabProps) {
   const { deviceType } = useDeviceContext();
   const { user: currentUser } = useAuth();
@@ -265,96 +272,99 @@ export function IntegratedUsersTab({
     return (
       <div className="space-y-4">
         {/* Mobile Header */}
-        <div className="space-y-3">
-          {/* Search Bar */}
-          <div className="relative">
-            <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 w-4 h-4" />
-            <Input
-              placeholder="Benutzer suchen..."
-              value={searchTerm}
-              onChange={(e) => setSearchTerm(e.target.value)}
-              className="pl-10"
-            />
-          </div>
-
-          {/* Filters Toggle */}
-          <div className="flex items-center justify-between">
-            <button
-              onClick={() => setShowFilters(!showFilters)}
-              className="flex items-center gap-2 px-3 py-2 text-sm bg-gray-100 rounded-lg hover:bg-gray-200"
+        <div className="flex items-center justify-between mb-4">
+          <h2 className="text-lg font-semibold flex items-center gap-2">
+            <Shield className="h-5 w-5 text-[#ff9900]" />
+            Benutzerverwaltung
+            <Button
+              variant="ghost"
+              size="sm"
+              className="h-8 w-8 p-0"
+              onClick={() => setShowArchive(!showArchive)}
+              title={showArchive ? "Aktive User anzeigen" : `Archiv (${shadowUsers.length})`}
             >
-              <Filter className="w-4 h-4" />
-              Filter
-              <ChevronDown className={`w-4 h-4 transition-transform ${showFilters ? 'rotate-180' : ''}`} />
-            </button>
-            
-            <div className="text-sm text-gray-600">
-              {sortedUsers.length} von {users.length} Benutzer
-            </div>
-          </div>
-
-          {/* Filters */}
-          {showFilters && (
-            <div className="grid grid-cols-2 gap-3 p-3 bg-gray-50 rounded-lg">
-              <div>
-                <label className="text-xs font-medium text-gray-600 block mb-1">Gruppe</label>
-                <Select value={groupFilter} onValueChange={(value) => setGroupFilter(value as GroupFilter)}>
-                  <SelectTrigger className="h-8 text-xs">
-                    <SelectValue />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="all">Alle Gruppen</SelectItem>
-                    <SelectItem value="with-group">Mit Gruppe</SelectItem>
-                    <SelectItem value="without-group">Ohne Gruppe</SelectItem>
-                    {groups.map(group => (
-                      <SelectItem key={group.id} value={group.id}>
-                        <div className="flex items-center gap-2">
-                          <div 
-                            className="w-2 h-2 rounded-full"
-                            style={{ backgroundColor: group.color }}
-                          />
-                          {group.name}
-                        </div>
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-              </div>
-
-              <div>
-                <label className="text-xs font-medium text-gray-600 block mb-1">Sortierung</label>
-                <Select value={sortBy} onValueChange={(value) => setSortBy(value as SortOption)}>
-                  <SelectTrigger className="h-8 text-xs">
-                    <SelectValue />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="name">Name</SelectItem>
-                    <SelectItem value="email">E-Mail</SelectItem>
-                    <SelectItem value="group">Gruppe</SelectItem>
-                    <SelectItem value="role">Rolle</SelectItem>
-                    <SelectItem value="created">Erstellt</SelectItem>
-                  </SelectContent>
-                </Select>
-              </div>
-            </div>
-          )}
+              {showArchive ? (
+                <Eye className="h-4 w-4" />
+              ) : (
+                <Archive className="h-4 w-4" />
+              )}
+            </Button>
+          </h2>
         </div>
 
-        {/* Statistics Cards */}
-        <div className="grid grid-cols-3 gap-2">
-          <div className="text-center p-3 bg-blue-50 rounded-lg border border-blue-200">
-            <div className="text-lg font-bold text-blue-600">{groupStats.withGroups}</div>
-            <div className="text-xs text-blue-600">Mit Gruppe</div>
-          </div>
-          <div className="text-center p-3 bg-orange-50 rounded-lg border border-orange-200">
-            <div className="text-lg font-bold text-orange-600">{groupStats.withoutGroups}</div>
-            <div className="text-xs text-orange-600">Ohne Gruppe</div>
-          </div>
-          <div className="text-center p-3 bg-red-50 rounded-lg border border-red-200">
-            <div className="text-lg font-bold text-red-600">{groupStats.admins}</div>
-            <div className="text-xs text-red-600">Admins</div>
+        {/* Search Bar */}
+        <div className="relative">
+          <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 w-4 h-4" />
+          <Input
+            placeholder="Benutzer suchen..."
+            value={searchTerm}
+            onChange={(e) => setSearchTerm(e.target.value)}
+            className="pl-10"
+          />
+        </div>
+
+        {/* Filters Toggle */}
+        <div className="flex items-center justify-between">
+          <button
+            onClick={() => setShowFilters(!showFilters)}
+            className="flex items-center gap-2 px-3 py-2 text-sm bg-gray-100 rounded-lg hover:bg-gray-200"
+          >
+            <Filter className="w-4 h-4" />
+            Filter
+            <ChevronDown className={`w-4 h-4 transition-transform ${showFilters ? 'rotate-180' : ''}`} />
+          </button>
+          
+          <div className="text-sm text-gray-600">
+            {sortedUsers.length} von {users.length} Benutzer
           </div>
         </div>
+
+        {/* Filters */}
+        {showFilters && (
+          <div className="grid grid-cols-2 gap-3 p-3 bg-gray-50 rounded-lg">
+            <div>
+              <label className="text-xs font-medium text-gray-600 block mb-1">Gruppe</label>
+              <Select value={groupFilter} onValueChange={(value) => setGroupFilter(value as GroupFilter)}>
+                <SelectTrigger className="h-8 text-xs">
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="all">Alle Gruppen</SelectItem>
+                  <SelectItem value="with-group">Mit Gruppe</SelectItem>
+                  <SelectItem value="without-group">Ohne Gruppe</SelectItem>
+                  {groups.map(group => (
+                    <SelectItem key={group.id} value={group.id}>
+                      <div className="flex items-center gap-2">
+                        <div 
+                          className="w-2 h-2 rounded-full"
+                          style={{ backgroundColor: group.color }}
+                        />
+                        {group.name}
+                      </div>
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+
+            <div>
+              <label className="text-xs font-medium text-gray-600 block mb-1">Sortierung</label>
+              <Select value={sortBy} onValueChange={(value) => setSortBy(value as SortOption)}>
+                <SelectTrigger className="h-8 text-xs">
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="name">Name</SelectItem>
+                  <SelectItem value="email">E-Mail</SelectItem>
+                  <SelectItem value="group">Gruppe</SelectItem>
+                  <SelectItem value="role">Rolle</SelectItem>
+                  <SelectItem value="created">Erstellt</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+          </div>
+        )}
+
 
         {/* Users List */}
         <div className="space-y-3">
@@ -592,7 +602,7 @@ export function IntegratedUsersTab({
             <Users className="mx-auto h-12 w-12 text-gray-400" />
             <h3 className="mt-2 text-sm font-medium text-gray-900">Keine Benutzer gefunden</h3>
             <p className="mt-1 text-sm text-gray-500">
-              Passen Sie Ihre Suchkriterien oder Filter an.
+              Passe deine Suchkriterien oder Filter an.
             </p>
           </div>
         )}
@@ -940,7 +950,7 @@ export function IntegratedUsersTab({
           <Users className="mx-auto h-12 w-12 text-gray-400" />
           <h3 className="mt-2 text-sm font-medium text-gray-900">Keine Benutzer gefunden</h3>
           <p className="mt-1 text-sm text-gray-500">
-            Passen Sie Ihre Suchkriterien oder Filter an.
+            Passe deine Suchkriterien oder Filter an.
           </p>
         </div>
       )}

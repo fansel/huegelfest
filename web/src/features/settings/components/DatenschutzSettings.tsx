@@ -27,17 +27,17 @@ const DatenschutzContent = () => (
         <h3 className="text-lg font-semibold mb-2">Technische Daten</h3>
         <p className="mb-2">
           <strong>Device-ID:</strong> Zufällige Kennung zur lokalen Speicherung 
-          Ihrer Einstellungen. Diese ID ist nicht mit Ihrer Person verknüpfbar.
+          deiner Einstellungen. Diese ID ist nicht mit deiner Person verknüpfbar.
         </p>
         <p>
-          <strong>Lokale Einstellungen:</strong> App-Einstellungen werden lokal in Ihrem Browser gespeichert.
+          <strong>Lokale Einstellungen:</strong> App-Einstellungen werden lokal in deinem Browser gespeichert.
         </p>
       </div>
       <div>
-        <h3 className="text-lg font-semibold mb-2">Ihre Rechte</h3>
+        <h3 className="text-lg font-semibold mb-2">Deine Rechte</h3>
         <p>
-          Sie haben Recht auf Auskunft, Berichtigung, Löschung und weitere 
-          DSGVO-Rechte bezüglich Ihrer gespeicherten Daten.
+          Du hast Recht auf Auskunft, Berichtigung, Löschung und weitere 
+          DSGVO-Rechte bezüglich deiner gespeicherten Daten.
         </p>
       </div>
       <div>

@@ -83,87 +83,30 @@ export function RegistrationsTab({
         ),
         cell: info => {
           const name = info.getValue() as string;
-          const [vorname, ...rest] = name.trim().split(' ');
-          const nachname = rest.length > 0 ? rest[0] : '';
-          const display = nachname ? `${vorname} ${nachname.charAt(0).toUpperCase()}.` : vorname;
           return (
-            <span className="max-w-[80px] whitespace-nowrap overflow-hidden text-ellipsis inline-block align-bottom">{display}</span>
+            <div className="flex items-center gap-2 min-w-[200px]">
+              <span className="whitespace-nowrap overflow-hidden text-ellipsis">{name}</span>
+              {info.row.original.isMedic && (
+                <Tooltip content="Sanitäter">
+                  <Stethoscope className="w-3 h-3 text-blue-500 flex-shrink-0" />
+                </Tooltip>
+              )}
+              {info.row.original.canStaySober && (
+                <Tooltip content="Kann nüchtern fahren">
+                  <AlertTriangle className="w-3 h-3 text-orange-500 flex-shrink-0" />
+                </Tooltip>
+              )}
+              {info.row.original.wantsAwareness && (
+                <Tooltip content="Awareness-Team">
+                  <Shield className="w-3 h-3 text-purple-500 flex-shrink-0" />
+                </Tooltip>
+              )}
+            </div>
           );
         },
+        meta: { className: 'w-[250px] min-w-[250px]' },
         filterFn: (row, columnId, filterValue) =>
           row.getValue<string>(columnId).toLowerCase().includes(filterValue.toLowerCase()),
-      }),
-      columnHelper.accessor(row => {
-        if (row.contactType === 'none' || !row.contactInfo?.trim()) return '';
-        return `${row.contactType === 'phone' ? 'Tel' : 'TG'}: ${row.contactInfo}`;
-      }, {
-        id: 'contact',
-        header: () => (
-          <Tooltip content="Kontakt">
-            <Phone className="w-3 h-3" />
-          </Tooltip>
-        ),
-        cell: info => {
-          const contactValue = info.getValue() as string;
-          if (!contactValue) return null;
-          
-          const isPhone = contactValue.startsWith('Tel:');
-          const contactInfo = contactValue.substring(4); // Remove "Tel:" or "TG:"
-          
-          return (
-            <Tooltip content={contactValue}>
-              <div className="flex items-center gap-1">
-                {isPhone ? <Phone className="w-3 h-3 text-[#ff9900]" /> : <MessageCircle className="w-3 h-3 text-[#ff9900]" />}
-                <span className="max-w-[60px] whitespace-nowrap overflow-hidden text-ellipsis text-xs">
-                  {contactInfo}
-                </span>
-              </div>
-            </Tooltip>
-          );
-        },
-        filterFn: (row, columnId, filterValue) => {
-          const value = row.getValue(columnId) as string;
-          return value.toLowerCase().includes(filterValue.toLowerCase());
-        },
-      }),
-      columnHelper.accessor('isMedic', {
-        header: () => (
-          <Tooltip content="Sanitäter">
-            <Stethoscope className="w-3 h-3" />
-          </Tooltip>
-        ),
-        cell: info => info.getValue() ? (
-          <Tooltip content="Sanitäter">
-            <Stethoscope className="w-3 h-3 text-blue-500" />
-          </Tooltip>
-        ) : null,
-        filterFn: (row, columnId, filterValue) => !filterValue || row.getValue(columnId) === true,
-      }),
-      columnHelper.accessor('canStaySober', {
-        header: () => (
-          <Tooltip content="Nüchtern fahren">
-            <AlertTriangle className="w-3 h-3" />
-          </Tooltip>
-        ),
-        cell: info => info.getValue() ? (
-          <Tooltip content="Kann nüchtern fahren">
-            <AlertTriangle className="w-3 h-3 text-orange-500" />
-          </Tooltip>
-        ) : null,
-        filterFn: (row, columnId, filterValue) => !filterValue || row.getValue(columnId) === true,
-      }),
-      columnHelper.accessor('wantsAwareness', {
-        header: () => (
-          <Tooltip content="Awareness">
-            <Shield className="w-3 h-3" />
-          </Tooltip>
-        ),
-        cell: info => info.getValue() ? (
-          <Tooltip content="Awareness-Team">
-            <Shield className="w-3 h-3 text-purple-500" />
-          </Tooltip>
-        ) : null,
-        filterFn: (row, columnId, filterValue) => !filterValue || row.getValue(columnId) === true,
       }),
       columnHelper.accessor('wantsKitchenHelp', {
         header: () => (
@@ -320,18 +263,43 @@ export function RegistrationsTab({
   }, [showSani, columnHelper, onEditRegistration]);
 
   const registrationTable = useReactTable({
-    data: registrations,
+    data: useMemo(() => {
+      return registrations.filter(registration => {
+        // Name search
+        if (globalFilter && !registration.name.toLowerCase().includes(globalFilter.toLowerCase())) {
+          return false;
+        }
+        
+        // Apply all other filters
+        if (sleepFilter && registration.sleepingPreference !== sleepFilter) return false;
+        if (travelFilter && registration.travelType !== travelFilter) return false;
+        if (medicFilter && !registration.isMedic) return false;
+        if (soberFilter && !registration.canStaySober) return false;
+        if (awarenessFilter && !registration.wantsAwareness) return false;
+        if (kitchenFilter && !registration.wantsKitchenHelp) return false;
+        
+        if (photosFilter) {
+          if (photosFilter === 'allowed' && !registration.allowsPhotos) return false;
+          if (photosFilter === 'notAllowed' && registration.allowsPhotos) return false;
+        }
+        
+        if (paidFilter) {
+          if (paidFilter === 'paid' && !registration.paid) return false;
+          if (paidFilter === 'unpaid' && registration.paid) return false;
+        }
+        
+        if (checkedInFilter) {
+          if (checkedInFilter === 'checkedIn' && !registration.checkedIn) return false;
+          if (checkedInFilter === 'notCheckedIn' && registration.checkedIn) return false;
+        }
+        
+        return true;
+      });
+    }, [registrations, globalFilter, sleepFilter, travelFilter, medicFilter, soberFilter, 
+        awarenessFilter, kitchenFilter, photosFilter, paidFilter, checkedInFilter]),
     columns: registrationColumns,
-    state: {
-      globalFilter,
-    },
     getCoreRowModel: getCoreRowModel(),
-    getFilteredRowModel: getFilteredRowModel(),
     getPaginationRowModel: getPaginationRowModel(),
-    onGlobalFilterChange: setGlobalFilter,
-    globalFilterFn: (row, columnId, filterValue) => {
-      return String(row.getValue('name')).toLowerCase().includes(String(filterValue).toLowerCase());
-    },
     debugTable: false,
     initialState: {
       pagination: {
@@ -425,42 +393,6 @@ export function RegistrationsTab({
 
   // Effects for registration filters
   useEffect(() => {
-    registrationTable.getColumn('sleepingPreference')?.setFilterValue(sleepFilter);
-  }, [sleepFilter, registrationTable]);
-  
-  useEffect(() => {
-    registrationTable.getColumn('travelType')?.setFilterValue(travelFilter);
-  }, [travelFilter, registrationTable]);
-  
-  useEffect(() => {
-    registrationTable.getColumn('isMedic')?.setFilterValue(medicFilter);
-  }, [medicFilter, registrationTable]);
-  
-  useEffect(() => {
-    registrationTable.getColumn('canStaySober')?.setFilterValue(soberFilter);
-  }, [soberFilter, registrationTable]);
-  
-  useEffect(() => {
-    registrationTable.getColumn('wantsAwareness')?.setFilterValue(awarenessFilter);
-  }, [awarenessFilter, registrationTable]);
-  
-  useEffect(() => {
-    registrationTable.getColumn('wantsKitchenHelp')?.setFilterValue(kitchenFilter);
-  }, [kitchenFilter, registrationTable]);
-  
-  useEffect(() => {
-    registrationTable.getColumn('allowsPhotos')?.setFilterValue(photosFilter);
-  }, [photosFilter, registrationTable]);
-  
-  useEffect(() => {
-    registrationTable.getColumn('paid')?.setFilterValue(paidFilter);
-  }, [paidFilter, registrationTable]);
-  
-  useEffect(() => {
-    registrationTable.getColumn('checkedIn')?.setFilterValue(checkedInFilter);
-  }, [checkedInFilter, registrationTable]);
-
-  useEffect(() => {
     calculateRowsPerPage();
     window.addEventListener('resize', calculateRowsPerPage);
     return () => {
@@ -474,61 +406,145 @@ export function RegistrationsTab({
   }, [rowsPerPage, registrationTable]);
 
   return (
-    <div className="h-[calc(100vh-300px)] max-h-[800px] flex flex-col overflow-hidden">
+    <div className="h-[calc(100vh-300px)] flex flex-col">
       {/* Filter Toolbar */}
-      <div className="flex flex-wrap gap-3 mb-4 items-end">
+      <div className="flex flex-wrap gap-3 mb-4 items-end sticky top-0 bg-white z-10 p-2">
         <Input
           placeholder="Name suchen..."
           value={globalFilter}
-          onChange={e => registrationTable.setGlobalFilter(e.target.value)}
+          onChange={e => setGlobalFilter(e.target.value)}
           className="w-40"
         />
         <Popover>
           <PopoverTrigger asChild>
-            <Button variant="outline">Filter</Button>
+            <Button variant="outline" className="flex items-center gap-2">
+              <span>Filter</span>
+              {(sleepFilter || travelFilter || medicFilter || soberFilter || awarenessFilter || kitchenFilter || photosFilter || paidFilter || checkedInFilter) && (
+                <div className="w-2 h-2 rounded-full bg-[#ff9900]" />
+              )}
+            </Button>
           </PopoverTrigger>
-          <PopoverContent className="bg-white p-4 rounded shadow min-w-[220px]">
-            <div className="flex flex-col gap-2">
-              <label className="text-xs font-semibold text-[#460b6c]">Schlaf</label>
-              <select value={sleepFilter} onChange={e => setSleepFilter(e.target.value)} className="border rounded px-2 py-1">
-                <option value="">Alle</option>
-                {sleepOptions.map(opt => (
-                  <option key={opt} value={opt}>{opt === 'bed' ? 'Bett' : opt === 'tent' ? 'Zelt' : 'Auto'}</option>
-                ))}
-              </select>
-              <label className="text-xs font-semibold text-[#460b6c]">Anreise</label>
-              <select value={travelFilter} onChange={e => setTravelFilter(e.target.value)} className="border rounded px-2 py-1">
-                <option value="">Alle</option>
-                {travelOptions.map(opt => (
-                  <option key={opt} value={opt}>{opt === 'auto' ? 'Auto' : opt === 'zug' ? 'Zug' : opt === 'fahrrad' ? 'Fahrrad' : 'Andere'}</option>
-                ))}
-              </select>
-              <label className="text-xs font-semibold text-[#460b6c]">Sanitäter</label>
-              <input type="checkbox" checked={medicFilter} onChange={e => setMedicFilter(e.target.checked)} />
-              <label className="text-xs font-semibold text-[#460b6c]">Nüchtern fahren</label>
-              <input type="checkbox" checked={soberFilter} onChange={e => setSoberFilter(e.target.checked)} />
-              <label className="text-xs font-semibold text-[#460b6c]">Awareness</label>
-              <input type="checkbox" checked={awarenessFilter} onChange={e => setAwarenessFilter(e.target.checked)} />
-              <label className="text-xs font-semibold text-[#460b6c]">Küche</label>
-              <input type="checkbox" checked={kitchenFilter} onChange={e => setKitchenFilter(e.target.checked)} />
-              <label className="text-xs font-semibold text-[#460b6c]">Fotos</label>
-              <select value={photosFilter} onChange={e => setPhotosFilter(e.target.value)} className="border rounded px-2 py-1">
-                <option value="">Alle</option>
-                <option value="allowed">Erlaubt</option>
-                <option value="notAllowed">Nicht erlaubt</option>
-              </select>
-              <label className="text-xs font-semibold text-[#460b6c]">Bezahlstatus</label>
-              <select value={paidFilter} onChange={e => setPaidFilter(e.target.value)} className="border rounded px-2 py-1">
-                <option value="">Alle</option>
-                <option value="paid">Bezahlt</option>
-                <option value="unpaid">Unbezahlt</option>
-              </select>
-              <label className="text-xs font-semibold text-[#460b6c]">Anmeldestatus</label>
-              <select value={checkedInFilter} onChange={e => setCheckedInFilter(e.target.value)} className="border rounded px-2 py-1">
-                <option value="">Alle</option>
-                <option value="checkedIn">Angemeldet</option>
-                <option value="notCheckedIn">Nicht angemeldet</option>
-              </select>
+          <PopoverContent className="bg-white p-4 rounded shadow min-w-[280px]">
+            <div className="flex flex-col gap-4">
+              {/* Status Filters */}
+              <div>
+                <h3 className="font-medium text-[#460b6c] mb-2">Status</h3>
+                <div className="grid grid-cols-2 gap-3">
+                  <div>
+                    <label className="text-xs font-medium text-gray-600">Bezahlung</label>
+                    <select value={paidFilter} onChange={e => setPaidFilter(e.target.value)} className="w-full mt-1 border rounded px-2 py-1 text-sm">
+                      <option value="">Alle</option>
+                      <option value="paid">Bezahlt</option>
+                      <option value="unpaid">Unbezahlt</option>
+                    </select>
+                  </div>
+                  <div>
+                    <label className="text-xs font-medium text-gray-600">Check-In</label>
+                    <select value={checkedInFilter} onChange={e => setCheckedInFilter(e.target.value)} className="w-full mt-1 border rounded px-2 py-1 text-sm">
+                      <option value="">Alle</option>
+                      <option value="checkedIn">Angemeldet</option>
+                      <option value="notCheckedIn">Nicht angemeldet</option>
+                    </select>
+                  </div>
+                </div>
+              </div>
+
+              {/* Travel & Sleep */}
+              <div>
+                <h3 className="font-medium text-[#460b6c] mb-2">Anreise & Übernachtung</h3>
+                <div className="grid grid-cols-2 gap-3">
+                  <div>
+                    <label className="text-xs font-medium text-gray-600">Schlafplatz</label>
+                    <select value={sleepFilter} onChange={e => setSleepFilter(e.target.value)} className="w-full mt-1 border rounded px-2 py-1 text-sm">
+                      <option value="">Alle</option>
+                      {sleepOptions.map(opt => (
+                        <option key={opt} value={opt}>{opt === 'bed' ? 'Bett' : opt === 'tent' ? 'Zelt' : 'Auto'}</option>
+                      ))}
+                    </select>
+                  </div>
+                  <div>
+                    <label className="text-xs font-medium text-gray-600">Anreise</label>
+                    <select value={travelFilter} onChange={e => setTravelFilter(e.target.value)} className="w-full mt-1 border rounded px-2 py-1 text-sm">
+                      <option value="">Alle</option>
+                      {travelOptions.map(opt => (
+                        <option key={opt} value={opt}>{opt === 'auto' ? 'Auto' : opt === 'zug' ? 'Zug' : opt === 'fahrrad' ? 'Fahrrad' : 'Andere'}</option>
+                      ))}
+                    </select>
+                  </div>
+                </div>
+              </div>
+
+              {/* Roles & Preferences */}
+              <div>
+                <h3 className="font-medium text-[#460b6c] mb-2">Rollen & Präferenzen</h3>
+                <div className="grid grid-cols-2 gap-2">
+                  <label className="flex items-center gap-2 text-sm">
+                    <input 
+                      type="checkbox" 
+                      checked={medicFilter} 
+                      onChange={e => setMedicFilter(e.target.checked)}
+                      className="rounded border-gray-300 text-[#ff9900] focus:ring-[#ff9900]"
+                    />
+                    <span>Sanitäter</span>
+                  </label>
+                  <label className="flex items-center gap-2 text-sm">
+                    <input 
+                      type="checkbox" 
+                      checked={soberFilter} 
+                      onChange={e => setSoberFilter(e.target.checked)}
+                      className="rounded border-gray-300 text-[#ff9900] focus:ring-[#ff9900]"
+                    />
+                    <span>Nüchtern fahren</span>
+                  </label>
+                  <label className="flex items-center gap-2 text-sm">
+                    <input 
+                      type="checkbox" 
+                      checked={awarenessFilter} 
+                      onChange={e => setAwarenessFilter(e.target.checked)}
+                      className="rounded border-gray-300 text-[#ff9900] focus:ring-[#ff9900]"
+                    />
+                    <span>Awareness</span>
+                  </label>
+                  <label className="flex items-center gap-2 text-sm">
+                    <input 
+                      type="checkbox" 
+                      checked={kitchenFilter} 
+                      onChange={e => setKitchenFilter(e.target.checked)}
+                      className="rounded border-gray-300 text-[#ff9900] focus:ring-[#ff9900]"
+                    />
+                    <span>Küche</span>
+                  </label>
+                </div>
+              </div>
+
+              {/* Photos */}
+              <div>
+                <h3 className="font-medium text-[#460b6c] mb-2">Fotos</h3>
+                <select value={photosFilter} onChange={e => setPhotosFilter(e.target.value)} className="w-full border rounded px-2 py-1 text-sm">
+                  <option value="">Alle</option>
+                  <option value="allowed">Erlaubt</option>
+                  <option value="notAllowed">Nicht erlaubt</option>
+                </select>
+              </div>
+
+              {/* Reset Button */}
+              <Button
+                variant="outline"
+                className="w-full mt-2"
+                onClick={() => {
+                  setSleepFilter('');
+                  setTravelFilter('');
+                  setMedicFilter(false);
+                  setSoberFilter(false);
+                  setAwarenessFilter(false);
+                  setKitchenFilter(false);
+                  setPhotosFilter('');
+                  setPaidFilter('');
+                  setCheckedInFilter('');
+                }}
+              >
+                Filter zurücksetzen
+              </Button>
             </div>
           </PopoverContent>
         </Popover>
@@ -547,81 +563,138 @@ export function RegistrationsTab({
         </div>
       </div>
 
-      {/* DataTable */}
-      <div className="flex-1 overflow-hidden rounded-xl shadow border border-[#ff9900]/20 bg-white/90">
-        <table className="w-full text-sm text-[#460b6c] table-fixed">
-          <thead>
-            {registrationTable.getHeaderGroups().map(headerGroup => (
-              <tr key={headerGroup.id}>
-                {headerGroup.headers.map(header => (
-                  <th
-                    key={header.id}
-                    className={
-                      header.column.id === 'actions'
-                        ? 'w-[48px] min-w-[48px] max-w-[48px] p-0 text-center bg-[#ff9900]/10'
-                        : 'p-2 text-left font-semibold bg-[#ff9900]/10'
-                    }
-                  >
-                    {flexRender(header.column.columnDef.header, header.getContext())}
-                  </th>
-                ))}
-              </tr>
-            ))}
-          </thead>
-          <tbody>
+      {/* Card Grid */}
+      <div className="flex-1 overflow-y-auto">
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4 p-2">
             {registrationTable.getRowModel().rows.map(row => (
-              <tr
+            <div
                 key={row.id}
-                className="border-b border-gray-200 last:border-b-0 hover:bg-[#ff9900]/10 cursor-pointer"
                 onClick={() => onSelectRegistration(row.original)}
+              className="bg-white rounded-xl shadow-sm border border-[#ff9900]/20 p-4 hover:shadow-md transition-shadow cursor-pointer hover:border-[#ff9900]/40"
                 tabIndex={0}
                 onKeyDown={e => { if (e.key === 'Enter' || e.key === ' ') onSelectRegistration(row.original); }}
                 aria-label={`Details zu ${row.original.name} anzeigen`}
               >
-                {row.getVisibleCells().map(cell => {
-                  return (
-                    <td
-                      key={cell.id}
-                      className={
-                        cell.column.id === 'actions'
-                          ? 'w-[48px] min-w-[48px] max-w-[48px] p-0 text-center'
-                          : (cell.column.id === 'tage'
-                              ? 'p-1.5 text-center'
-                              : (cell.column.id === 'name'
-                                  ? 'p-1.5 max-w-[80px] whitespace-nowrap overflow-hidden text-ellipsis'
-                                  : 'p-1.5'))
-                      }
-                    >
-                      {flexRender(cell.column.columnDef.cell, cell.getContext())}
-                    </td>
-                  );
-                })}
-              </tr>
-            ))}
-            {/* Placeholder rows */}
-            {Array.from({ length: Math.max(0, rowsPerPage - registrationTable.getRowModel().rows.length) }).map((_, idx) => (
-              <tr key={`placeholder-${idx}`} className="border-b border-gray-200 last:border-b-0">
-                {registrationTable.getAllLeafColumns().map(col => (
-                  <td key={col.id} className={
-                    col.id === 'actions'
-                      ? 'w-[48px] min-w-[48px] max-w-[48px] p-0 text-center'
-                      : (col.id === 'tage'
-                          ? 'p-1.5 text-center'
-                          : (col.id === 'name'
-                              ? 'p-1.5 max-w-[80px] whitespace-nowrap overflow-hidden text-ellipsis'
-                              : 'p-1.5'))
-                  }>
-                    {/* empty */}
-                  </td>
-                ))}
-              </tr>
-            ))}
-          </tbody>
-        </table>
+              <div className="flex items-start justify-between">
+                <h3 className="font-medium text-[#460b6c] truncate flex-1">{row.original.name}</h3>
+                <Button
+                  variant="ghost"
+                  size="icon"
+                  className="ml-2 -mt-1 -mr-2"
+                  onClick={e => {
+                    e.stopPropagation();
+                    onEditRegistration(row.original);
+                  }}
+                >
+                  <Edit className="w-4 h-4 text-blue-500" />
+                </Button>
+              </div>
+
+              {/* Status Icons */}
+              <div className="flex flex-wrap items-center gap-2 mt-2 mb-3">
+                {row.original.isMedic && (
+                  <div className="flex items-center gap-1 bg-blue-50 text-blue-500 px-2 py-0.5 rounded-full text-xs">
+                    <Stethoscope className="w-3 h-3" />
+                    <span>Sani</span>
+                  </div>
+                )}
+                {row.original.canStaySober && (
+                  <div className="flex items-center gap-1 bg-orange-50 text-orange-500 px-2 py-0.5 rounded-full text-xs">
+                    <AlertTriangle className="w-3 h-3" />
+                    <span>Fahrer</span>
+                  </div>
+                )}
+                {row.original.wantsAwareness && (
+                  <div className="flex items-center gap-1 bg-purple-50 text-purple-500 px-2 py-0.5 rounded-full text-xs">
+                    <Shield className="w-3 h-3" />
+                    <span>Awareness-Team</span>
+                  </div>
+                )}
+                {row.original.wantsKitchenHelp && (
+                  <div className="flex items-center gap-1 bg-green-50 text-green-600 px-2 py-0.5 rounded-full text-xs">
+                    <ChefHat className="w-3 h-3" />
+                    <span>Küche</span>
+                  </div>
+                )}
+              </div>
+
+              {/* Travel & Sleep */}
+              <div className="flex items-center justify-between text-sm text-[#460b6c] mb-3">
+                <div className="flex items-center gap-2">
+                  <div className="flex items-center gap-1">
+                    <Calendar className="w-4 h-4" />
+                    <span>{row.original.days.length} Tage</span>
+                  </div>
+                </div>
+                <div className="flex items-center gap-2">
+                  {/* Sleep Icon */}
+                  {row.original.sleepingPreference === 'bed' ? (
+                    <Tooltip content="Bett">
+                      <div className="flex items-center gap-1">
+                        <Bed className="w-4 h-4" />
+                      </div>
+                    </Tooltip>
+                  ) : row.original.sleepingPreference === 'tent' ? (
+                    <Tooltip content="Zelt">
+                      <div className="flex items-center gap-1">
+                        <Tent className="w-4 h-4" />
+                      </div>
+                    </Tooltip>
+                  ) : (
+                    <Tooltip content="Auto">
+                      <div className="flex items-center gap-1">
+                        <CarIcon className="w-4 h-4" />
+                      </div>
+                    </Tooltip>
+                  )}
+                  {/* Travel Icon */}
+                  {row.original.travelType === 'auto' ? (
+                    <Tooltip content="Anreise: Auto">
+                      <CarIcon className="w-4 h-4" />
+                    </Tooltip>
+                  ) : row.original.travelType === 'zug' ? (
+                    <Tooltip content="Anreise: Zug">
+                      <TrainIcon className="w-4 h-4" />
+                    </Tooltip>
+                  ) : row.original.travelType === 'fahrrad' ? (
+                    <Tooltip content="Anreise: Fahrrad">
+                      <BikeIcon className="w-4 h-4" />
+                    </Tooltip>
+                  ) : (
+                    <Tooltip content="Anreise: Andere">
+                      <HelpCircle className="w-4 h-4" />
+                    </Tooltip>
+                  )}
+                </div>
+              </div>
+
+              {/* Status Bar */}
+              <div className="flex items-center justify-between pt-3 border-t border-gray-100">
+                <div className="flex items-center gap-3">
+                  <Tooltip content={row.original.paid ? "Bezahlt" : "Unbezahlt"}>
+                    <div className={`flex items-center gap-1 ${row.original.paid ? 'text-green-500' : 'text-red-500'}`}>
+                      <Euro className="w-4 h-4" />
+                    </div>
+                  </Tooltip>
+                  <Tooltip content={row.original.checkedIn ? "Angemeldet" : "Nicht angemeldet"}>
+                    <div className={`flex items-center gap-1 ${row.original.checkedIn ? 'text-green-500' : 'text-red-500'}`}>
+                      <Info className="w-4 h-4" />
+                    </div>
+                  </Tooltip>
+                  <Tooltip content={row.original.allowsPhotos ? "Fotos erlaubt" : "Keine Fotos"}>
+                    <div className={`flex items-center gap-1 ${row.original.allowsPhotos ? 'text-green-500' : 'text-red-500'}`}>
+                      <Camera className="w-4 h-4" />
+                    </div>
+                  </Tooltip>
+                </div>
+              </div>
+            </div>
+          ))}
+        </div>
       </div>
 
       {/* Pagination */}
-      <div className="flex justify-between items-center p-2 bg-[#ff9900]/5">
+      <div className="flex justify-between items-center p-2 bg-[#ff9900]/5 sticky bottom-0">
         <Button size="icon" variant="ghost" disabled={!registrationTable.getCanPreviousPage()} onClick={() => registrationTable.previousPage()}>
           <ChevronLeft className="w-4 h-4" />
         </Button>

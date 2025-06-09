@@ -8,10 +8,11 @@ import { Button } from "@/shared/components/ui/button";
 import { useAuth } from '@/features/auth/AuthContext';
 import { unsubscribePushAction } from '@/features/push/actions/unsubscribePush';
 import UserSettingsCard from './UserSettingsCard';
-import { Shield, User, Mail, Lock, Eye, EyeOff, LogIn } from 'lucide-react';
+import { Shield, User, Mail, Lock, Eye, EyeOff, LogIn, Loader2 } from 'lucide-react';
 import { useNetworkStatus } from '@/shared/hooks/useNetworkStatus';
 import { ForgotPasswordModal } from '@/features/auth/components/ForgotPasswordModal';
 import { subscribePushAction } from '@/features/push/actions/subscribePush';
+import toast from 'react-hot-toast';
 
 interface UserLoginProps {
   variant?: 'row' | 'tile';
@@ -27,7 +28,8 @@ export default function UserLogin({ variant = 'row' }: UserLoginProps) {
   const [showLoginForm, setShowLoginForm] = useState(false);
   const [showForgotPassword, setShowForgotPassword] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const { user, isAuthenticated, isAdmin, login, logout, isLoading } = useAuth();
+  const [isLoading, setIsLoading] = useState(false);
+  const { user, isAuthenticated, isAdmin, login, logout, isLoading: authLoading } = useAuth();
   const isOnline = useNetworkStatus();
   const formRef = useRef<HTMLFormElement>(null);
 
@@ -35,24 +37,23 @@ export default function UserLogin({ variant = 'row' }: UserLoginProps) {
     if (!isOnline) return;
     
     if (value && !isAuthenticated) {
-      setShowLoginForm(true);
-      setError(null);
+      if (!isLoading) {
+        setShowLoginForm(true);
+        setError(null);
+      }
     } else if (!value && isAuthenticated && user?.id) {
       try {
-        const userId = user.id; // User-ID sichern bevor wir ausloggen
+        const userId = user.id;
         
-        // Erst die Push-Subscription aktualisieren
         if (typeof window !== 'undefined' && 'serviceWorker' in navigator) {
           const registration = await navigator.serviceWorker.ready;
           const subscription = await registration.pushManager.getSubscription();
           
           if (subscription) {
-            // Nur die User-ID aus der Subscription entfernen
             await unsubscribePushAction(subscription.endpoint, userId);
           }
         }
         
-        // Erst nachdem die Push-Subscription aktualisiert wurde ausloggen
         await logout();
       } catch (error) {
         console.error('Fehler beim Logout/Push-Cleanup:', error);
@@ -69,45 +70,56 @@ export default function UserLogin({ variant = 'row' }: UserLoginProps) {
     const password = formData.get('password') as string;
     
     if (!identifier || !password) {
-      setError('Bitte füllen Sie alle Felder aus');
+      setError('Bitte fülle alle Felder aus');
       return;
     }
 
-    const result = await login(identifier, password);
-    
-    if (result.success) {
-      // Nach erfolgreichem Login: Aktuelle Push-Subscription mit User verknüpfen
-      if (typeof window !== 'undefined' && 'serviceWorker' in navigator) {
-        try {
-          const registration = await navigator.serviceWorker.ready;
-          const subscription = await registration.pushManager.getSubscription();
-          
-          if (subscription) {
-            // Keys aus der Subscription extrahieren
-            const authKey = subscription.getKey('auth');
-            const p256dhKey = subscription.getKey('p256dh');
-            
-            if (authKey && p256dhKey) {
-              // Bestehende Subscription mit User verknüpfen
-              await subscribePushAction({
-                endpoint: subscription.endpoint,
-                keys: {
-                  auth: Buffer.from(authKey).toString('base64'),
-                  p256dh: Buffer.from(p256dhKey).toString('base64')
-                }
-              });
-            }
-          }
-        } catch (error) {
-          console.warn('Fehler beim Verknüpfen der Push-Subscription:', error);
-        }
-      }
+    setIsLoading(true);
+    setError(null);
 
-      form.reset();
-      setError(null);
-      setShowLoginForm(false);
-    } else {
-      setError(result.error || 'Login fehlgeschlagen');
+    try {
+      const result = await login(identifier, password);
+    
+      if (result.success) {
+        if (typeof window !== 'undefined' && 'serviceWorker' in navigator) {
+          try {
+            const registration = await navigator.serviceWorker.ready;
+            const subscription = await registration.pushManager.getSubscription();
+            
+            if (subscription) {
+              const authKey = subscription.getKey('auth');
+              const p256dhKey = subscription.getKey('p256dh');
+              
+              if (authKey && p256dhKey) {
+                await subscribePushAction({
+                  endpoint: subscription.endpoint,
+                  keys: {
+                    auth: Buffer.from(authKey).toString('base64'),
+                    p256dh: Buffer.from(p256dhKey).toString('base64')
+                  }
+                });
+              }
+            }
+          } catch (error) {
+            console.warn('Fehler beim Verknüpfen der Push-Subscription:', error);
+          }
+        }
+
+        setShowLoginForm(false);
+        form.reset();
+        setError(null);
+        setTimeout(() => {
+          toast.success('Erfolgreich angemeldet!');
+        }, 100);
+      } else {
+        setError(result.error || 'Login fehlgeschlagen');
+        toast.error(result.error || 'Login fehlgeschlagen');
+      }
+    } catch (error) {
+      setError('Ein unerwarteter Fehler ist aufgetreten');
+      toast.error('Ein unerwarteter Fehler ist aufgetreten');
+    } finally {
+      setIsLoading(false);
     }
   };
 
@@ -154,19 +166,19 @@ export default function UserLogin({ variant = 'row' }: UserLoginProps) {
         return "Session aktiv. Andere Komponenten können Account-Daten abrufen.";
       }
     }
-    return "Melden Sie sich mit Ihrer E-Mail oder Ihrem Username an.";
+    return "Melde dich mit deiner E-Mail oder deinem Username an.";
   };
 
   // Login-Dialog
   const LoginDialog = () => (
     <Dialog open={showLoginForm} onOpenChange={setShowLoginForm}>
-      <DialogContent className="sm:max-w-md">
+      <DialogContent className="sm:max-w-md !top-24 !translate-y-0 !h-auto transition-all duration-200">
         <DialogTitle className="flex items-center gap-2">
           <LogIn className="h-5 w-5 text-[#ff9900]" />
           Login
         </DialogTitle>
         <DialogDescription>
-          Melden Sie sich mit Ihrem Account an
+          Melde dich mit deinem Account an
         </DialogDescription>
 
         <form ref={formRef} onSubmit={handleLogin} className="space-y-4 mt-4">
@@ -179,6 +191,10 @@ export default function UserLogin({ variant = 'row' }: UserLoginProps) {
                 placeholder="E-Mail oder Username"
                 className="pl-10"
                 autoComplete="username"
+                inputMode="email"
+                enterKeyHint="next"
+                autoFocus
+                disabled={isLoading}
               />
             </div>
             
@@ -190,11 +206,14 @@ export default function UserLogin({ variant = 'row' }: UserLoginProps) {
                 placeholder="Passwort"
                 className="pl-10 pr-10"
                 autoComplete="current-password"
+                enterKeyHint="done"
+                disabled={isLoading}
               />
               <button
                 type="button"
                 onClick={() => setShowPassword(!showPassword)}
                 className="absolute right-3 top-2.5"
+                disabled={isLoading}
               >
                 {showPassword ? (
                   <EyeOff className="h-5 w-5 text-gray-400" />
@@ -214,8 +233,12 @@ export default function UserLogin({ variant = 'row' }: UserLoginProps) {
           <div className="flex justify-between items-center">
             <button
               type="button"
-              onClick={() => setShowForgotPassword(true)}
+              onClick={() => {
+                setShowLoginForm(false);
+                setShowForgotPassword(true);
+              }}
               className="text-sm text-[#ff9900] hover:text-[#ff9900]/80"
+              disabled={isLoading}
             >
               Passwort vergessen?
             </button>
@@ -233,8 +256,16 @@ export default function UserLogin({ variant = 'row' }: UserLoginProps) {
             <Button
               type="submit"
               disabled={isLoading}
+              className="min-w-[100px] relative"
             >
-              {isLoading ? "Lädt..." : "Anmelden"}
+              {isLoading ? (
+                <>
+                  <Loader2 className="h-4 w-4 animate-spin mr-2" />
+                  Lädt...
+                </>
+              ) : (
+                "Anmelden"
+              )}
             </Button>
           </div>
         </form>
@@ -258,8 +289,8 @@ export default function UserLogin({ variant = 'row' }: UserLoginProps) {
           <div className="space-y-2">
             <p>
               {isAuthenticated
-                ? "Sie sind angemeldet und können alle Funktionen nutzen."
-                : "Melden Sie sich an, um alle Funktionen nutzen zu können."}
+                ? "Du bist angemeldet und kannst alle Funktionen nutzen."
+                : "Melde dich an, um alle Funktionen nutzen zu können."}
             </p>
             {!isOnline && (
               <p className="text-yellow-600">

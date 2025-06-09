@@ -11,7 +11,7 @@ interface LegalNoticeProps {
 }
 
 const ImpressumContent = () => (
-  <div className="text-[#460b6c]">
+  <div className="text-[#ff9900]/80">
     <div className="space-y-6">
       <div>
         <p className="mb-6 text-sm italic">
@@ -20,8 +20,8 @@ const ImpressumContent = () => (
           melde dich gerne direkt bei mir! 🎉
         </p>
 
-        <h3 className="text-lg font-semibold mb-3 flex items-center gap-2">
-          <MapPin className="w-5 h-5 text-[#ff9900]" />
+        <h3 className="text-lg font-semibold mb-3 flex items-center gap-2 text-[#ff9900]">
+          <MapPin className="w-5 h-5" />
           Angaben gemäß § 5 TMG
         </h3>
         <div className="space-y-1">
@@ -33,11 +33,11 @@ const ImpressumContent = () => (
         
         <div className="mt-6 space-y-4">
           <div>
-            <h4 className="font-semibold mb-2">Kontakt</h4>
+            <h4 className="font-semibold mb-2 text-[#ff9900]">Kontakt</h4>
             <div className="space-y-2">
               <a 
                 href="mailto:huegelfest@hey.fansel.dev"
-                className="text-[#ff9900] hover:text-[#ffb340] transition-colors inline-flex items-center gap-2"
+                className="text-[#ff9900] hover:text-[#ff9900]/60 transition-colors inline-flex items-center gap-2"
               >
                 <Mail className="w-4 h-4" />
                 huegelfest@hey.fansel.dev
@@ -47,7 +47,7 @@ const ImpressumContent = () => (
                   href="https://github.com/fansel"
                   target="_blank"
                   rel="noopener noreferrer"
-                  className="text-[#ff9900] hover:text-[#ffb340] transition-colors inline-flex items-center gap-2"
+                  className="text-[#ff9900] hover:text-[#ff9900]/60 transition-colors inline-flex items-center gap-2"
                 >
                   <Github className="w-4 h-4" />
                   github.com/fansel
@@ -59,15 +59,15 @@ const ImpressumContent = () => (
       </div>
 
       <div>
-        <h4 className="font-semibold mb-2">Haftung für Inhalte</h4>
+        <h4 className="font-semibold mb-2 text-[#ff9900]">Haftung für Inhalte</h4>
         <p className="text-sm">
-          Als Diensteanbieter bin ich gemäß § 7 Abs.1 TMG für eigene Inhalte 
+          Als Diensteanbieter:in bin ich gemäß § 7 Abs.1 TMG für eigene Inhalte 
           auf diesen Seiten nach den allgemeinen Gesetzen verantwortlich.
         </p>
       </div>
       
       <div>
-        <h4 className="font-semibold mb-2">Urheberrecht</h4>
+        <h4 className="font-semibold mb-2 text-[#ff9900]">Urheberrecht</h4>
         <p className="text-sm">
           Die durch mich erstellten Inhalte und Werke auf diesen Seiten unterliegen 
           dem deutschen Urheberrecht. Downloads und Kopien dieser Seite sind nur für 
@@ -76,15 +76,15 @@ const ImpressumContent = () => (
       </div>
 
       <div>
-        <h3 className="text-lg font-semibold mb-2 flex items-center gap-2">
-          <Code className="w-5 h-5 text-[#ff9900]" />
+        <h3 className="text-lg font-semibold mb-2 flex items-center gap-2 text-[#ff9900]">
+          <Code className="w-5 h-5" />
           Tech Stack
         </h3>
         <div className="flex flex-wrap gap-2">
           {['Next.js', 'React', 'TypeScript', 'Tailwind CSS', 'MongoDB'].map((tech) => (
             <span 
               key={tech}
-              className="px-3 py-1 bg-[#ff9900]/20 text-[#ff9900] rounded-full text-sm border border-[#ff9900]/30"
+              className="px-3 py-1 bg-[#ff9900]/10 text-[#ff9900] rounded-full text-sm border border-[#ff9900]/30"
             >
               {tech}
             </span>
@@ -96,32 +96,32 @@ const ImpressumContent = () => (
 );
 
 const DatenschutzContent = () => (
-  <div className="text-[#460b6c]">
+  <div className="text-[#ff9900]/80">
     <div className="space-y-8">
       <div>
-        <h2 className="text-xl font-semibold mb-2">Wichtiger Hinweis</h2>
+        <h2 className="text-xl font-semibold mb-2 text-[#ff9900]">Wichtiger Hinweis</h2>
         <p className="mb-4">
           Diese Website ist eine private Plattform, die ausschließlich für die Organisation 
-          und Durchführung des Hügelfests unter Freunden konzipiert ist. Sie ist nicht 
+          und Durchführung des Hügelfests unter Freund:innen konzipiert ist. Sie ist nicht 
           öffentlich zugänglich und dient nicht kommerziellen Zwecken.
         </p>
         <p>
           Als private Plattform legen wir besonderen Wert auf den vertrauensvollen Umgang 
-          mit den Daten unserer Freunde und Festival-Teilnehmer.
+          mit den Daten unserer Freund:innen und Festival-Teilnehmer:innen.
         </p>
       </div>
 
       <div>
-        <h2 className="text-xl font-semibold mb-2">Welche Daten werden gespeichert?</h2>
+        <h2 className="text-xl font-semibold mb-2 text-[#ff9900]">Welche Daten werden gespeichert?</h2>
         
         <div className="space-y-4">
           <div>
-            <h3 className="text-lg font-semibold text-[#ff9900] mb-2">Authentifizierung & Benutzerkonten</h3>
+            <h3 className="text-lg font-semibold text-[#ff9900] mb-2">Authentifizierung & Benutzer:innen-Konten</h3>
             <p className="mb-2">
               Für die Nutzung der privaten App werden folgende Daten gespeichert:
             </p>
-            <ul className="list-disc list-inside space-y-1 ml-4">
-              <li>Benutzername</li>
+            <ul className="list-disc list-inside space-y-1 ml-4 text-[#ff9900]/80">
+              <li>Benutzer:innen-Name</li>
               <li>Passwort (verschlüsselt)</li>
               <li>E-Mail-Adresse (optional)</li>
               <li>Authentifizierungs-Token (temporär)</li>
@@ -135,9 +135,9 @@ const DatenschutzContent = () => (
           <div>
             <h3 className="text-lg font-semibold text-[#ff9900] mb-2">Festival-Anmeldung</h3>
             <p className="mb-2">
-              Als Teilnehmer des Hügelfests speichern wir:
+              Als Teilnehmer:in des Hügelfests speichern wir:
             </p>
-            <ul className="list-disc list-inside space-y-1 ml-4">
+            <ul className="list-disc list-inside space-y-1 ml-4 text-[#ff9900]/80">
               <li>Name</li>
               <li>E-Mail-Adresse (optional)</li>
               <li>Anmeldedatum</li>
@@ -152,7 +152,7 @@ const DatenschutzContent = () => (
             <p className="mb-2">
               Für die gemeinsame Musik-Nutzung werden folgende Daten serverseitig verarbeitet:
             </p>
-            <ul className="list-disc list-inside space-y-1 ml-4">
+            <ul className="list-disc list-inside space-y-1 ml-4 text-[#ff9900]/80">
               <li>SoundCloud Track-Informationen</li>
               <li>Audio-Streaming-Daten</li>
               <li>Cover-Art Bilder</li>
@@ -182,7 +182,7 @@ const DatenschutzContent = () => (
       </div>
 
       <div>
-        <h2 className="text-xl font-semibold mb-2">Hosting & Technische Details</h2>
+        <h2 className="text-xl font-semibold mb-2 text-[#ff9900]">Hosting & Technische Details</h2>
         <div className="space-y-4">
           <p>
             Diese private Website und alle ihre Komponenten (Datenbank, Musik-Features, etc.) 
@@ -198,7 +198,7 @@ const DatenschutzContent = () => (
       </div>
 
       <div>
-        <h2 className="text-xl font-semibold mb-2">Kontakt</h2>
+        <h2 className="text-xl font-semibold mb-2 text-[#ff9900]">Kontakt</h2>
         <p>
           Bei Fragen zu deinen Daten oder der Nutzung der App kannst du mich 
           jederzeit direkt oder unter folgender E-Mail-Adresse kontaktieren:
@@ -231,15 +231,25 @@ export default function LegalNotice({ variant = 'row' }: LegalNoticeProps) {
       />
       
       <Dialog open={open} onOpenChange={setOpen}>
-        <DialogContent className="max-w-4xl max-h-[80vh] overflow-y-auto">
+        <DialogContent className="bg-[#460b6c] border-[#ff9900]/20 max-w-4xl h-screen sm:h-auto sm:max-h-[80vh] overflow-y-auto data-[state=open]:bg-[#460b6c] before:bg-transparent after:bg-transparent [&>button]:border [&>button]:border-[#ff9900]/20 [&>button]:rounded-full [&>button]:p-1.5 [&>button]:text-[#ff9900] [&>button]:hover:bg-[#ff9900]/10 [&>button]:transition-colors fixed top-0 left-0 right-0 bottom-0 m-0 w-full max-w-full rounded-none sm:rounded-lg sm:relative sm:m-auto sm:w-auto">
           <DialogHeader>
-            <DialogTitle className="text-[#460b6c]">Rechtliche Informationen</DialogTitle>
+            <DialogTitle className="text-[#ff9900]">Rechtliche Informationen</DialogTitle>
           </DialogHeader>
           
           <Tabs defaultValue="impressum" className="mt-4">
-            <TabsList className="grid w-full grid-cols-2">
-              <TabsTrigger value="impressum">Impressum</TabsTrigger>
-              <TabsTrigger value="datenschutz">Datenschutz</TabsTrigger>
+            <TabsList className="grid w-full grid-cols-2 bg-[#ff9900]/10">
+              <TabsTrigger 
+                value="impressum" 
+                className="data-[state=active]:bg-[#ff9900] data-[state=active]:text-[#460b6c] text-[#ff9900]"
+              >
+                Impressum
+              </TabsTrigger>
+              <TabsTrigger 
+                value="datenschutz"
+                className="data-[state=active]:bg-[#ff9900] data-[state=active]:text-[#460b6c] text-[#ff9900]"
+              >
+                Datenschutz
+              </TabsTrigger>
             </TabsList>
             <TabsContent value="impressum" className="mt-6">
               <ImpressumContent />

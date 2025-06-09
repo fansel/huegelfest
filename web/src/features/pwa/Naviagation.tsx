@@ -130,7 +130,7 @@ const BottomBar: React.FC<BottomBarProps> = ({ mode, activeTab, onTabChange, isA
     const barPositionClasses = 'bottom-0 h-16 bg-[#460b6c] border-t-2 border-[#ff9900]';
 
     return (
-      <nav className={`main-bar fixed left-0 right-0 z-50 flex items-center ${barPositionClasses} shadow-t`}>
+      <nav className={`main-bar fixed left-0 right-0 z-40 flex items-center ${barPositionClasses} shadow-t`}>
         <div
           className="flex w-full justify-between"
         >

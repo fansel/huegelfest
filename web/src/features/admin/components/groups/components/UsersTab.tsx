@@ -124,7 +124,7 @@ export function UsersTab({
             _id: user._id,
             name: user.name,
             email: user.email,
-            username: `@${user.name.toLowerCase().replace(/\s+/g, '')}`, // Fallback username
+            username: user.name.toLowerCase().replace(/\s+/g, ''), // Fallback username without @
             role: user.role,
             emailVerified: true, // E-Mail-Verifizierung nicht mehr erforderlich
             isShadowUser: user.isShadowUser || false, // Shadow User Status
@@ -132,7 +132,6 @@ export function UsersTab({
             createdAt: user.createdAt
           }))}
           onRefreshUsers={handleRefreshData}
-          onShowUserRegistration={onShowUserRegistration}
         />
 
         {/* Mobile Users Cards */}
@@ -290,7 +289,7 @@ export function UsersTab({
           _id: user._id,
           name: user.name,
           email: user.email,
-          username: `@${user.name.toLowerCase().replace(/\s+/g, '')}`, // Fallback username
+          username: user.name.toLowerCase().replace(/\s+/g, ''), // Fallback username without @
           role: user.role,
           emailVerified: true, // E-Mail-Verifizierung nicht mehr erforderlich
           isShadowUser: user.isShadowUser || false, // Shadow User Status
@@ -298,7 +297,6 @@ export function UsersTab({
           createdAt: user.createdAt
         }))}
         onRefreshUsers={handleRefreshData}
-        onShowUserRegistration={onShowUserRegistration}
       />
 
       {/* Regular Users List */}

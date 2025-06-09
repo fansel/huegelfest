@@ -38,6 +38,7 @@ export function GroupsOverviewWebSocketClient({ initialData }: GroupsOverviewWeb
   const isMobile = deviceType === 'mobile';
   const [activeTab, setActiveTab] = useState<TabType>('users'); // Start with users tab as default
   const [searchTerm, setSearchTerm] = useState('');
+  const [showArchive, setShowArchive] = useState(false);
   
   // Dialog states
   const [showCreateGroup, setShowCreateGroup] = useState(false);
@@ -169,7 +170,7 @@ export function GroupsOverviewWebSocketClient({ initialData }: GroupsOverviewWeb
                 _id: u._id,
                 name: u.name,
                 email: u.email,
-                username: u.name ? `@${u.name.toLowerCase().replace(/\s+/g, '')}` : undefined,
+                username: u.name ? u.name.toLowerCase().replace(/\s+/g, '') : undefined,
                 role: u.role,
                 emailVerified: true, // Default, da nicht im Typ vorhanden
                 isShadowUser: u.isShadowUser === true,
@@ -179,6 +180,9 @@ export function GroupsOverviewWebSocketClient({ initialData }: GroupsOverviewWeb
               }))}
               groups={data.groups}
               onRefreshUsers={refreshData}
+              showArchive={showArchive}
+              setShowArchive={setShowArchive}
+              shadowUsers={data.users.filter(u => u.isShadowUser === true)}
             />
           )}
 
@@ -360,7 +364,7 @@ export function GroupsOverviewWebSocketClient({ initialData }: GroupsOverviewWeb
               _id: u._id,
               name: u.name,
               email: u.email,
-              username: u.name ? `@${u.name.toLowerCase().replace(/\s+/g, '')}` : undefined,
+              username: u.name ? u.name.toLowerCase().replace(/\s+/g, '') : undefined,
               role: u.role,
               emailVerified: true, // Default, da nicht im Typ vorhanden
               isShadowUser: u.isShadowUser === true,
@@ -370,6 +374,9 @@ export function GroupsOverviewWebSocketClient({ initialData }: GroupsOverviewWeb
             }))}
             groups={data.groups}
             onRefreshUsers={refreshData}
+            showArchive={showArchive}
+            setShowArchive={setShowArchive}
+            shadowUsers={data.users.filter(u => u.isShadowUser === true)}
           />
         )}
 

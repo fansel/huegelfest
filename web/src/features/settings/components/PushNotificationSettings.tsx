@@ -25,9 +25,16 @@ export default function PushNotificationSettings({ variant = 'row' }: PushNotifi
   } = usePushSubscription();
 
   // Browser-Permission Status
-  const browserPermission = typeof window !== 'undefined' && 'Notification' in window 
-    ? Notification.permission 
-    : 'default';
+  const browserPermission = (() => {
+    try {
+      return typeof window !== 'undefined' && 'Notification' in window && Notification
+        ? Notification.permission 
+        : 'default';
+    } catch (error) {
+      console.error('[PushNotificationSettings] Error checking notification permission:', error);
+      return 'default';
+    }
+  })();
 
   // Status-Dialog
   const [showStatusDetails, setShowStatusDetails] = useState(false);
@@ -51,16 +58,28 @@ export default function PushNotificationSettings({ variant = 'row' }: PushNotifi
       if (isLoading || !isSupported) return;
 
       if (checked) {
-        // Nur aktivieren wenn Berechtigung bereits erteilt wurde oder neu angefragt wird
-        if (browserPermission === 'granted') {
-          await subscribe();
-        } else {
-          const permission = await Notification.requestPermission();
-          if (permission === 'granted') {
+        // Check if Notification API is available
+        if (typeof window === 'undefined' || !('Notification' in window) || !Notification) {
+          toast.error('Push-Benachrichtigungen werden von diesem Browser nicht unterstützt');
+          return;
+        }
+
+        try {
+          // Nur aktivieren wenn Berechtigung bereits erteilt wurde oder neu angefragt wird
+          if (browserPermission === 'granted') {
             await subscribe();
           } else {
-            toast.error('Bitte erlaube Push-Benachrichtigungen in den Browser-Einstellungen');
+            const permission = await Notification.requestPermission();
+            if (permission === 'granted') {
+              await subscribe();
+            } else {
+              toast.error('Bitte erlaube Push-Benachrichtigungen in den Browser-Einstellungen');
+            }
           }
+        } catch (error) {
+          console.error('[PushNotificationSettings] Error requesting notification permission:', error);
+          toast.error('Fehler beim Anfordern der Push-Berechtigung');
+          return;
         }
       } else {
         await unsubscribe();

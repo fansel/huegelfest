@@ -40,7 +40,7 @@ export function LoginForm() {
 
     // Validation
     if (!formData.identifier || !formData.password) {
-      setError('Bitte füllen Sie alle Felder aus');
+      setError('Bitte fülle alle Felder aus');
       return;
     }
 
@@ -158,7 +158,7 @@ export function LoginForm() {
                   console.log('Navigation zur Registrierung');
                 }}
               >
-                Registrieren Sie sich hier
+                Registriere dich hier
               </button>
             </p>
           </div>
