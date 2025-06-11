@@ -7,7 +7,7 @@ import { Subscriber } from '@/lib/db/models/Subscriber';
 import { Event } from '@/lib/db/models/Event';
 import { Activity } from '@/lib/db/models/Activity';
 import ScheduledPushEvent from '@/lib/db/models/ScheduledPushEvent';
-import agenda from '@/lib/pushScheduler/agenda';
+import getAgenda from '@/lib/pushScheduler/agenda';
 import mongoose from 'mongoose';
 
 export interface SystemStatus {
@@ -182,7 +182,7 @@ export async function getSystemStatus(): Promise<SystemStatus> {
     // Get Agenda job count
     let agendaJobs = 0;
     try {
-      const jobs = await agenda.jobs({});
+      const jobs = await getAgenda().jobs({});
       agendaJobs = jobs.length;
     } catch (error) {
       console.error('Failed to get agenda jobs:', error);
