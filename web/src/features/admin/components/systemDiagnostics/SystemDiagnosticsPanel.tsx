@@ -3,6 +3,7 @@
 import { useState, useEffect, useMemo } from 'react';
 import { getSystemStatus, getSystemLogs, type SystemStatus, type LogEntry, getScheduledPushEvents } from '@/lib/actions/systemDiagnostics';
 import { format } from 'date-fns';
+import { useGlobalWebSocket } from '@/shared/hooks/useGlobalWebSocket';
 
 interface SystemDiagnosticsPanelProps {
   onBack?: () => void;
@@ -17,6 +18,18 @@ export default function SystemDiagnosticsPanel({ onBack }: SystemDiagnosticsPane
   // Scheduled Push Events
   const [scheduledEvents, setScheduledEvents] = useState<any[]>([]);
   const [loadingScheduled, setLoadingScheduled] = useState(true);
+
+  // WebSocket listener for real-time status updates
+  useGlobalWebSocket({
+    topicFilter: ['system-status-updated'],
+    onMessage: (message) => {
+      if (message.topic === 'system-status-updated') {
+        // Safely cast the payload to the expected type
+        const newStatus = message.payload as SystemStatus;
+        setStatus(newStatus);
+      }
+    },
+  });
 
   // Filter logs based on selected level
   const filteredLogs = useMemo(() => {

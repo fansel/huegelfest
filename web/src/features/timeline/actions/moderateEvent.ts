@@ -1,7 +1,6 @@
 "use server";
 
 import { updateEvent } from '@/features/timeline/services/eventService';
-import { sendPushNotificationAction } from '@/features/push/actions/sendPushNotification';
 import { createScheduledPushEvent } from '@/features/pushScheduler/scheduledPushEventService';
 import { getCentralFestivalDayById } from '@/shared/services/festivalDaysService';
 import { Event } from '@/lib/db/models/Event';
@@ -27,18 +26,21 @@ export async function moderateEvent(eventId: string, status: 'approved' | 'rejec
     if (status === 'approved' && updatedEvent?.title) {
       console.log('[moderateEvent] Event approved, sending notifications');
       
-      // Sofortige Benachrichtigung über neues Event
+      // Schedule immediate notification for the new event
       try {
-        await sendPushNotificationAction({
+        await createScheduledPushEvent({
           title: 'Neues Event veröffentlicht',
           body: updatedEvent.title,
-          icon: '/icon-192x192.png',
-          badge: '/badge-96x96.png',
-          data: { type: 'timeline-event', eventId: updatedEvent._id }
+          repeat: 'once',
+          schedule: new Date(),
+          active: true,
+          sendToAll: true,
+          type: 'general',
+          data: { type: 'timeline-event', eventId: updatedEvent._id.toString() }
         });
-        console.log('[moderateEvent] Immediate push notification sent');
+        console.log('[moderateEvent] Immediate push notification scheduled');
       } catch (error) {
-        console.error('[moderateEvent] Failed to send immediate push notification:', error);
+        console.error('[moderateEvent] Failed to schedule immediate push notification:', error);
       }
 
       // Scheduled Push für Event-Startzeit erstellen
@@ -131,9 +133,12 @@ async function createScheduledPushForApprovedEvent(event: any) {
  * Löscht einen scheduled Push Job
  */
 async function cancelScheduledPushForEvent(agendaJobId: string) {
+  if (!agendaJobId) return;
   try {
-    const agenda = (await import('@/lib/pushScheduler/agenda')).default;
+    const { getAgendaClient } = await import('@/lib/pushScheduler/agenda');
+    const agenda = await getAgendaClient();
     await agenda.cancel({ _id: agendaJobId });
+    console.log('[cancelScheduledPushForEvent] Successfully cancelled agenda job:', agendaJobId);
   } catch (error) {
     console.error('Fehler beim Löschen des scheduled Push:', error);
   }

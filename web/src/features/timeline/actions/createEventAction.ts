@@ -2,10 +2,9 @@
 
 import { Types } from 'mongoose';
 import { createEvent } from '../services/eventService';
-import { sendPushNotificationAction } from '@/features/push/actions/sendPushNotification';
+import { createScheduledPushEvent } from '@/features/pushScheduler/scheduledPushEventService';
 import { logger } from '@/lib/logger';
 import { initServices } from '@/lib/initServices';
-import { webPushService } from '@/lib/webpush/webPushService';
 
 // Utility: Rekursive Serialisierung aller ObjectIds zu Strings
 function deepObjectIdToString(obj: any): any {
@@ -52,32 +51,27 @@ export async function createEventAction(data: Record<string, any>) {
     // Push-Benachrichtigung für direkt von Admins erstellte Events
     if (isAdminEvent && event.title) {
       try {
-        // Stelle sicher, dass Services initialisiert sind
-        await initServices();
-        
-        // Prüfe ob WebPush-Service verfügbar ist
-        if (!webPushService.isInitialized()) {
-          logger.warn('[createEventAction] WebPush-Service ist nicht initialisiert, keine Push-Benachrichtigung gesendet', {
-            eventId: event._id.toString(),
-            title: event.title
-          });
-        } else {
-          await sendPushNotificationAction({
-            title: 'Neues Event veröffentlicht',
-            body: event.title,
-            icon: '/icon-192x192.png',
-            badge: '/badge-96x96.png',
-            data: { type: 'timeline-event', eventId: event._id.toString() }
-          });
-          logger.info('[createEventAction] Push notification sent for admin-created event', { 
-            eventId: event._id.toString(),
-            title: event.title
-          });
-        }
-      } catch (error) {
-        logger.error('[createEventAction] Push notification failed for admin-created event', { 
+        await initServices(); // Stellt sicher, dass DB-Verbindung etc. da ist
+
+        await createScheduledPushEvent({
+          title: 'Neues Event veröffentlicht',
+          body: event.title,
+          repeat: 'once',
+          schedule: new Date(), // Sofort ausführen
+          active: true,
+          sendToAll: true,
+          type: 'general',
+          data: { type: 'timeline-event', eventId: event._id.toString() }
+        });
+
+        logger.info('[createEventAction] Push notification scheduled for admin-created event', {
           eventId: event._id.toString(),
-          error 
+          title: event.title
+        });
+      } catch (error) {
+        logger.error('[createEventAction] Push notification scheduling failed for admin-created event', {
+          eventId: event._id.toString(),
+          error
         });
         // Fehler nicht weiterwerfen - Event wurde trotzdem erstellt
       }

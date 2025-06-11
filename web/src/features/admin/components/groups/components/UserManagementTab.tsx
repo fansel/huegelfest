@@ -11,6 +11,7 @@ import { toast } from 'react-hot-toast';
 import type { GroupData } from '../types';
 import { assignUserToGroupAction } from '../actions/groupActions';
 import { authEvents, AUTH_EVENTS } from '@/features/auth/authEvents';
+import { useGlobalWebSocket } from '@/shared/hooks/useGlobalWebSocket';
 
 // Vereinheitlichter User-Typ
 export interface UserManagementUser {
@@ -58,6 +59,15 @@ export const UserManagementTab: React.FC<UserManagementTabProps> = ({
   const [isBecomingUser, setIsBecomingUser] = useState(false);
   const [isDeletingUser, setIsDeletingUser] = useState(false);
   const [showDeleteConfirmation, setShowDeleteConfirmation] = useState<string | null>(null);
+
+  // WebSocket listener for real-time updates
+  useGlobalWebSocket({
+    topicFilter: ['registration-created', 'user-deleted', 'user-updated'],
+    onMessage: (message) => {
+      console.log('[UserManagementTab] WebSocket message received, refreshing users:', message);
+      onRefreshUsers();
+    }
+  });
 
   // Debug: Logge alle User und deren Shadow-Status
   console.log('Alle User:', users.map(u => ({ name: u.name, isShadowUser: u.isShadowUser })));

@@ -61,15 +61,17 @@ export async function registerWithAccount(
 
   await connectDB();
 
+  const lowerCaseUsername = registrationData.username.toLowerCase();
+
   try {
-    logger.info(`[RegisterWithAccount] Starte kombinierte Registrierung für: ${registrationData.name} (@${registrationData.username})`);
+    logger.info(`[RegisterWithAccount] Starte kombinierte Registrierung für: ${registrationData.name} (@${lowerCaseUsername})`);
 
     // 1. User-Account erstellen
     let user;
     try {
       user = await registerUser(
         registrationData.name,
-        registrationData.username,
+        lowerCaseUsername,
         password,
         'user',
         registrationData.email || undefined
@@ -93,9 +95,9 @@ export async function registerWithAccount(
     }
 
     // 2. User automatisch einloggen
-    const loginResult = await loginUser(registrationData.username, password);
+    const loginResult = await loginUser(lowerCaseUsername, password);
     if (!loginResult.success) {
-      logger.error(`[RegisterWithAccount] Auto-Login fehlgeschlagen für @${registrationData.username}`);
+      logger.error(`[RegisterWithAccount] Auto-Login fehlgeschlagen für @${lowerCaseUsername}`);
       return {
         success: false,
         error: 'Account erstellt, aber Login fehlgeschlagen. Bitte versuche dich anzumelden.'
@@ -141,7 +143,7 @@ export async function registerWithAccount(
       userId: (user._id as mongoose.Types.ObjectId).toString()
     });
 
-    logger.info(`[RegisterWithAccount] Kombinierte Registrierung erfolgreich abgeschlossen für ${registrationData.name} (@${registrationData.username})`);
+    logger.info(`[RegisterWithAccount] Kombinierte Registrierung erfolgreich abgeschlossen für ${registrationData.name} (@${lowerCaseUsername})`);
 
     return {
       success: true,

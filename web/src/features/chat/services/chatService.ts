@@ -222,7 +222,7 @@ async function sendActivityChatPushNotification({
   excludeUserId: string;
 }) {
   try {
-    const { sendPushNotificationToUser } = await import('@/features/push/services/pushService');
+    const { createScheduledPushEvent } = await import('@/features/pushScheduler/scheduledPushEventService');
     
     if (!Types.ObjectId.isValid(groupId) || !Types.ObjectId.isValid(activityId)) {
       console.error('Invalid groupId or activityId for push notification:', { groupId, activityId });
@@ -275,11 +275,14 @@ async function sendActivityChatPushNotification({
 
     for (const userId of allRecipients) {
       try {
-        await sendPushNotificationToUser(userId, {
+        await createScheduledPushEvent({
           title,
           body,
-          icon: '/icon-192x192.png',
-          badge: '/badge-96x96.png',
+          repeat: 'once',
+          schedule: new Date(),
+          active: true,
+          type: 'user',
+          targetUserId: userId,
           data: {
             type: 'activity-chat',
             groupId,
@@ -289,11 +292,11 @@ async function sendActivityChatPushNotification({
           }
         });
       } catch (error) {
-        console.error('Failed to send activity chat push notification to user:', userId, error);
+        console.error('Failed to schedule activity chat push notification for user:', userId, error);
       }
     }
   } catch (error) {
-    console.error('Failed to send activity chat push notifications:', error);
+    console.error('Failed to schedule activity chat push notifications:', error);
   }
 }
 
@@ -313,7 +316,7 @@ async function sendGroupChatPushNotification({
   excludeUserId: string;
 }) {
   try {
-    const { sendPushNotificationToUser } = await import('@/features/push/services/pushService');
+    const { createScheduledPushEvent } = await import('@/features/pushScheduler/scheduledPushEventService');
     
     if (!Types.ObjectId.isValid(groupId)) {
       console.error('Invalid groupId for push notification:', groupId);
@@ -331,11 +334,14 @@ async function sendGroupChatPushNotification({
 
     for (const user of groupUsers) {
       try {
-        await sendPushNotificationToUser(user._id.toString(), {
+        await createScheduledPushEvent({
           title,
           body,
-          icon: '/icon-192x192.png',
-          badge: '/badge-96x96.png',
+          repeat: 'once',
+          schedule: new Date(),
+          active: true,
+          type: 'user',
+          targetUserId: user._id.toString(),
           data: {
             type: 'group-chat',
             groupId,
@@ -344,11 +350,11 @@ async function sendGroupChatPushNotification({
           }
         });
       } catch (error) {
-        console.error('Failed to send group chat push notification to user:', user._id, error);
+        console.error('Failed to schedule group chat push notification for user:', user._id, error);
       }
     }
   } catch (error) {
-    console.error('Failed to send group chat push notifications:', error);
+    console.error('Failed to schedule group chat push notifications:', error);
   }
 }
 

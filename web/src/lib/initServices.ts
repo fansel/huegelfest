@@ -4,19 +4,16 @@ import { ensureDefaultCategories, ensureDefaultWorkingGroup, ensureDefaultGroups
 import { initWebpush } from './initWebpush';
 import { webPushService } from './webpush/webPushService';
 import { initDefaultFestivalDaysIfEmpty } from '@/shared/services/festivalDaysService';
-import { initializeAgenda, cleanupStaleJobs } from './pushScheduler/agenda';
 
 export interface InitStatus {
   db: boolean;
   webPush: boolean;
-  scheduler: boolean;
   errors: string[];
 }
 
 let status: InitStatus = {
   db: false,
   webPush: false,
-  scheduler: false,
   errors: [],
 };
 
@@ -36,17 +33,6 @@ export async function initServices(): Promise<InitStatus> {
     await connectDB();
     status.db = true;
     logger.info('[Init] Datenbank erfolgreich initialisiert.');
-    
-    // Agenda-Scheduler initialisieren (benötigt DB-Verbindung)
-    try {
-      await initializeAgenda();
-      await cleanupStaleJobs();
-      status.scheduler = true;
-      logger.info('[Init] Agenda-Scheduler erfolgreich initialisiert.');
-    } catch (err) {
-      status.errors.push('Scheduler: ' + (err instanceof Error ? err.message : String(err)));
-      logger.warn('[Init] Agenda-Scheduler konnte nicht initialisiert werden:', err);
-    }
     
     // Nur wenn DB-Verbindung erfolgreich ist, Default-Daten sicherstellen
     try {

@@ -31,7 +31,7 @@ const getMongoConfig = () => ({
   database: process.env.MONGO_DATABASE || 'huegelfest'
 });
 
-const getMongoUri = () => {
+export const getMongoUri = () => {
   const config = getMongoConfig();
   return `mongodb://${config.host}:${config.port}/${config.database}`;
 };

@@ -1,42 +1,42 @@
 'use client';
 
 import { useState, useEffect } from 'react';
-import { useAuth } from '@/features/auth/AuthContext';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/shared/components/ui/dialog';
 import { Button } from '@/shared/components/ui/button';
 import { Bell } from 'lucide-react';
-import { subscribePushAction } from '../actions/subscribePush';
-import { env } from 'next-runtime-env';
+import { usePushSubscription } from '../hooks/usePushSubscription';
 import { toast } from 'react-hot-toast';
-import { PushStateManager } from '../utils/pushStateManager';
-
-const VAPID_PUBLIC_KEY = env('NEXT_PUBLIC_VAPID_PUBLIC_KEY');
 
 interface AutoPushPromptProps {
   forceShow?: boolean;
   onClose?: () => void;
   onSubscriptionChange?: (subscribed: boolean) => void;
+  isTemporarySession?: boolean;
 }
 
-export default function AutoPushPrompt({ forceShow = false, onClose, onSubscriptionChange }: AutoPushPromptProps) {
-  const { user } = useAuth(); 
+export default function AutoPushPrompt({ forceShow = false, onClose, onSubscriptionChange, isTemporarySession = false }: AutoPushPromptProps) {
+  const { isSubscribed, isLoading, isSupported, subscribe } = usePushSubscription();
   const [showPrompt, setShowPrompt] = useState(forceShow);
-  const [isLoading, setIsLoading] = useState(false);
   const [triggerReason, setTriggerReason] = useState<string>('manual');
   const [customMessage, setCustomMessage] = useState<string | null>(null);
 
-  // Prüfe beim ersten App-Start ob Berechtigung angefragt werden soll
+  // Check on mount if we should prompt the user
   useEffect(() => {
-    const hasAskedForPermission = localStorage.getItem('push-permission-asked') === 'true';
-    const { supported, api } = PushStateManager.getNotificationAPI();
+    if (forceShow || isTemporarySession) return;
+
+    // Don't show if already subscribed, not supported, or permission isn't 'default'
+    if (isSubscribed || !isSupported || Notification.permission !== 'default') {
+      return;
+    }
     
-    if (!hasAskedForPermission && supported && api && api.permission === 'default') {
-      console.log('[AutoPushPrompt] Zeige initiale Push-Abfrage');
+    // Check if we've already asked
+    const hasAskedForPermission = localStorage.getItem('push-permission-asked') === 'true';
+    if (!hasAskedForPermission) {
       setShowPrompt(true);
     }
-  }, []);
-
-  // Event-Listener für manuelle Triggers
+  }, [isSubscribed, isSupported, forceShow, isTemporarySession]);
+  
+  // Event-Listener for manual triggers
   useEffect(() => {
     const handleTriggerPushPrompt = (event: CustomEvent) => {
       console.log('[AutoPushPrompt] Manueller Trigger erhalten:', event.detail);
@@ -53,79 +53,26 @@ export default function AutoPushPrompt({ forceShow = false, onClose, onSubscript
   }, []);
 
   const handleAllow = async () => {
-    setIsLoading(true);
-
-    try {
-      const { supported, api } = PushStateManager.getNotificationAPI();
-      
-      if (!supported || !api) {
-        throw new Error('Push-Benachrichtigungen werden von diesem Browser nicht unterstützt');
-      }
-
-      const permission = await api.requestPermission();
-      
-      if (permission === 'granted') {
-        const registration = await navigator.serviceWorker.ready;
-        
-        let pushSubscription = await registration.pushManager.getSubscription();
-        
-        if (!pushSubscription) {
-          pushSubscription = await registration.pushManager.subscribe({
-            userVisibleOnly: true,
-            applicationServerKey: VAPID_PUBLIC_KEY
-          });
-        }
-
-        const p256dhKey = pushSubscription.getKey('p256dh');
-        const authKey = pushSubscription.getKey('auth');
-        const p256dh = p256dhKey
-          ? btoa(String.fromCharCode.apply(null, Array.from(new Uint8Array(p256dhKey))))
-          : '';
-        const auth = authKey
-          ? btoa(String.fromCharCode.apply(null, Array.from(new Uint8Array(authKey))))
-          : '';
-
-        // Speichere die Subscription - mit oder ohne User
-        const result = await subscribePushAction({
-          endpoint: pushSubscription.endpoint,
-          keys: { p256dh, auth }
-        });
-
-        if (result.status === 'success') {
-          localStorage.setItem('push-permission-asked', 'true');
-          toast.success('Push-Benachrichtigungen aktiviert! 🔔');
-          onSubscriptionChange?.(true);
-          setShowPrompt(false);
-          onClose?.();
-        } else {
-          throw new Error(result.message || 'Fehler beim Speichern der Subscription');
-        }
-      } else {
-        localStorage.setItem('push-permission-asked', 'true');
-        onSubscriptionChange?.(false);
-        setShowPrompt(false);
-        onClose?.();
-        if (permission === 'denied') {
-          toast.error('Push-Benachrichtigungen wurden abgelehnt');
-        }
-      }
-    } catch (error) {
-      console.error('[AutoPushPrompt] Fehler beim Aktivieren:', error);
-      toast.error(error instanceof Error ? error.message : 'Fehler beim Aktivieren der Push-Benachrichtigungen');
-      onSubscriptionChange?.(false);
-    } finally {
-      setIsLoading(false);
+    // Mark that we've asked for permission
+    localStorage.setItem('push-permission-asked', 'true');
+    
+    const success = await subscribe();
+    if (success) {
+      toast.success('Push-Benachrichtigungen aktiviert! 🔔');
     }
+    onSubscriptionChange?.(success);
+    setShowPrompt(false);
+    onClose?.();
   };
 
   const handleDeny = () => {
+    // Mark that we've asked for permission so we don't bother the user again
     localStorage.setItem('push-permission-asked', 'true');
     onSubscriptionChange?.(false);
     setShowPrompt(false);
     onClose?.();
   };
 
-  // Zeige Dialog nur wenn showPrompt true ist
   if (!showPrompt) return null;
 
   return (

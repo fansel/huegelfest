@@ -7,6 +7,9 @@ import { fromZonedTime, format } from 'date-fns-tz';
 import { Types } from 'mongoose';
 import type { CreateActivityData, UpdateActivityData } from '../types';
 import mongoose from 'mongoose';
+import {
+  getAgendaClient
+} from '@/lib/pushScheduler/agenda';
 
 // Helper function to safely serialize populated documents
 function serializeActivity(activity: any) {
@@ -146,144 +149,93 @@ export async function createActivity(data: CreateActivityData, createdBy: string
   return broadcastData;
 }
 
-export async function updateActivity(id: string, data: UpdateActivityData) {
-  const activity = await Activity.findById(id);
-  if (!activity) {
-    throw new Error('Aktivität nicht gefunden');
+async function cancelActivityJobs(activityId: string) {
+  const activity = await Activity.findById(activityId);
+  if (!activity) return;
+
+  const agenda = await getAgendaClient();
+  const jobIdsToCancel: string[] = [];
+
+  if (activity.agendaJobId) {
+    jobIdsToCancel.push(activity.agendaJobId);
+  }
+  if (activity.responsiblePushJobId) {
+    jobIdsToCancel.push(activity.responsiblePushJobId);
   }
 
-  // Store old values for comparison
-  const oldGroupId = activity.groupId?.toString();
-  const oldResponsibleUsers = activity.responsibleUsers?.map((userId: any) => userId.toString()) || [];
-
-  // Update fields
-  if (data.date !== undefined) {
-    activity.date = typeof data.date === 'string' ? new Date(data.date) : data.date;
-  }
-  if (data.startTime !== undefined) activity.startTime = data.startTime;
-  if (data.endTime !== undefined) activity.endTime = data.endTime;
-  if (data.categoryId !== undefined) activity.categoryId = new Types.ObjectId(data.categoryId);
-  if (data.templateId !== undefined) {
-    activity.templateId = data.templateId ? new Types.ObjectId(data.templateId) : undefined;
-  }
-  if (data.customName !== undefined) activity.customName = data.customName;
-  if (data.description !== undefined) activity.description = data.description;
-  if (data.groupId !== undefined) {
-    activity.groupId = data.groupId ? new Types.ObjectId(data.groupId) : undefined;
-  }
-  if (data.responsibleUsers !== undefined) {
-    activity.responsibleUsers = data.responsibleUsers.map(userId => new Types.ObjectId(userId));
-  }
-
-  await activity.save();
-
-  // Handle group change - cancel old push events and create new ones
-  const newGroupId = activity.groupId?.toString();
-  const newResponsibleUsers = activity.responsibleUsers?.map((userId: any) => userId.toString()) || [];
-
-  if (oldGroupId !== newGroupId || JSON.stringify(oldResponsibleUsers) !== JSON.stringify(newResponsibleUsers)) {
-    // Cancel old push events
-    if (activity.agendaJobId) {
-      try {
-        const agenda = (await import('@/lib/pushScheduler/agenda')).default;
-        await agenda.cancel({ _id: activity.agendaJobId });
-        activity.agendaJobId = undefined;
-      } catch (error) {
-        console.error('Failed to cancel old push event:', error);
+  if (jobIdsToCancel.length > 0) {
+    await agenda.cancel({
+      _id: {
+        $in: jobIdsToCancel
       }
-    }
-
-    if (activity.responsiblePushJobId) {
-      try {
-        const agenda = (await import('@/lib/pushScheduler/agenda')).default;
-        await agenda.cancel({ _id: activity.responsiblePushJobId });
-        activity.responsiblePushJobId = undefined;
-      } catch (error) {
-        console.error('Failed to cancel old responsible push event:', error);
-      }
-    }
-
-    // Create new push events if group and time are set
-    if (activity.groupId && activity.startTime) {
-      try {
-        await createActivityPushEvents(activity);
-      } catch (error) {
-        console.error('Failed to create new push events:', error);
-      }
-    }
-
-    // Send immediate notification to new responsible users
-    if (activity.responsibleUsers && activity.responsibleUsers.length > 0) {
-      try {
-        await sendResponsibleUserNotification(activity);
-      } catch (error) {
-        console.error('Failed to send responsible user notification:', error);
-      }
-    }
-
-    await activity.save();
+    });
   }
-
-  // Load populated data for broadcast
-  const populatedActivity = await Activity.findById(activity._id)
-    .populate('categoryId', 'name icon color')
-    .populate('templateId', 'name defaultDescription')
-    .populate('groupId', 'name color')
-    .populate('responsibleUsers', 'name email')
-    .lean();
-
-  if (!populatedActivity) {
-    throw new Error('Aktivität konnte nicht geladen werden');
-  }
-
-  const broadcastData = serializeActivity(populatedActivity);
-
-  await broadcast('ACTIVITY_UPDATED', { 
-    type: 'ACTIVITY_UPDATED',
-    data: broadcastData,
-    timestamp: new Date().toISOString()
-  });
-
-  return broadcastData;
 }
 
-export async function deleteActivity(id: string) {
-  const activity = await Activity.findById(id);
-  if (!activity) {
-    throw new Error('Aktivität nicht gefunden');
+async function updateActivityJobs(activityId: string) {
+  await cancelActivityJobs(activityId);
+  const activity = await Activity.findById(activityId);
+  if (activity) {
+    await createActivityPushEvents(activity);
   }
-
-  // Remove push events if they exist
-  if (activity.agendaJobId) {
-    try {
-      const agenda = (await import('@/lib/pushScheduler/agenda')).default;
-      await agenda.cancel({ _id: activity.agendaJobId });
-    } catch (error) {
-      console.error('Failed to cancel push event for activity:', error);
-    }
-  }
-
-  if (activity.responsiblePushJobId) {
-    try {
-      const agenda = (await import('@/lib/pushScheduler/agenda')).default;
-      await agenda.cancel({ _id: activity.responsiblePushJobId });
-    } catch (error) {
-      console.error('Failed to cancel responsible push event for activity:', error);
-    }
-  }
-
-  await activity.deleteOne();
-  await broadcast('ACTIVITY_DELETED', { 
-    type: 'ACTIVITY_DELETED',
-    data: { activityId: id },
-    timestamp: new Date().toISOString()
-  });
-
-  return { success: true };
 }
 
 /**
- * Send immediate reminder for an activity to assigned group
+ * Erstellt eine neue Aktivität basierend auf einem Template
+ * @param templateId - ID des Activity-Templates
+ * @param data - Daten für das Update
+ * @returns Die aktualisierte Aktivität
+ */
+export async function updateActivity(id: string, data: UpdateActivityData) {
+  try {
+    const activity = await Activity.findById(id);
+    if (!activity) {
+      throw new Error('Aktivität nicht gefunden');
+    }
+
+    Object.assign(activity, data);
+
+    // Wenn sich die Zeit ändert, müssen die Jobs aktualisiert werden
+    if (data.date || data.startTime) {
+      await updateActivityJobs(id);
+    }
+    
+    await activity.save();
+
+    // Broadcast, dass sich eine Aktivität geändert hat
+    await broadcast('activity-updated', { activityId: id });
+
+    return serializeActivity(activity.toObject());
+  } catch (error) {
+    console.error('Fehler beim Aktualisieren der Aktivität:', error);
+    throw error;
+  }
+}
+
+/**
+ * Löscht eine Aktivität und zugehörige Jobs
+ */
+export async function deleteActivity(id: string) {
+  try {
+    await cancelActivityJobs(id);
+    const deletedActivity = await Activity.findByIdAndDelete(id);
+
+    if (!deletedActivity) {
+      throw new Error('Aktivität nicht gefunden');
+    }
+
+    // Broadcast, dass eine Aktivität gelöscht wurde
+    await broadcast('activity-deleted', { activityId: id });
+
+    return { success: true };
+  } catch (error) {
+    console.error('Fehler beim Löschen der Aktivität:', error);
+    throw error;
+  }
+}
+
+/**
+ * Sendet eine manuelle Erinnerung für eine Aktivität
  */
 export async function sendActivityReminder(activityId: string) {
   const activity = await Activity.findById(activityId)
@@ -322,7 +274,6 @@ export async function sendActivityReminder(activityId: string) {
   const groupName = populatedGroup?.name || 'Unbekannte Gruppe';
 
   // Send push notification using new user-based system
-  const { sendPushNotificationToUser } = await import('@/features/push/services/pushService');
   const { User } = await import('@/lib/db/models/User');
   
   // Get all users in this group with proper typing
@@ -338,23 +289,23 @@ export async function sendActivityReminder(activityId: string) {
 
   for (const user of groupUsers) {
     try {
-      const result = await sendPushNotificationToUser((user._id as any).toString(), {
+      await createScheduledPushEvent({
         title,
         body,
-        icon: '/icon-192x192.png',
-        badge: '/badge-96x96.png',
+        repeat: 'once',
+        schedule: new Date(),
+        active: true,
+        type: 'user',
+        targetUserId: (user._id as any).toString(),
         data: { 
           type: 'activity-reminder', 
           activityId: activity._id.toString(),
           groupId: populatedGroup._id.toString()
         }
       });
-      
-      if (result.success) {
-        successCount++;
-      }
+      successCount++;
     } catch (error) {
-      console.error('Failed to send push notification to user:', user._id, error);
+      console.error('Failed to schedule push notification for user:', user._id, error);
       errors.push(error);
     }
   }
@@ -368,7 +319,6 @@ export async function sendActivityReminder(activityId: string) {
 async function sendResponsibleUserNotification(activity: any) {
   if (!activity.responsibleUsers || activity.responsibleUsers.length === 0) return;
 
-  const { sendPushNotificationToUser } = await import('@/features/push/services/pushService');
   const { User } = await import('@/lib/db/models/User');
   const { Group } = await import('@/lib/db/models/Group');
 
@@ -394,18 +344,21 @@ async function sendResponsibleUserNotification(activity: any) {
 
   for (const user of responsibleUsers) {
     try {
-      await sendPushNotificationToUser((user._id as any).toString(), {
+      await createScheduledPushEvent({
         title,
         body,
-        icon: '/icon-192x192.png',
-        badge: '/badge-96x96.png',
+        repeat: 'once',
+        schedule: new Date(),
+        active: true,
+        type: 'user',
+        targetUserId: (user._id as any).toString(),
         data: { 
           type: 'responsible-assignment', 
           activityId: activity._id.toString()
         }
       });
     } catch (error) {
-      console.error('Failed to send responsible user notification:', error);
+      console.error('Failed to schedule responsible user notification:', error);
     }
   }
 }

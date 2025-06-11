@@ -1,7 +1,7 @@
 'use server';
 import { removeGlobalPacklistItem } from '../services/PacklistService';
 import { broadcast } from '@/lib/websocket/broadcast';
-import { webPushService } from '@/lib/webpush/webPushService';
+import { createScheduledPushEvent } from '@/features/pushScheduler/scheduledPushEventService';
 import { initServices } from '@/lib/initServices';
 
 export async function removePacklistItemAction(index: number) {
@@ -11,13 +11,16 @@ export async function removePacklistItemAction(index: number) {
   // WebSocket-Broadcast für Live-Updates
   await broadcast('packlist-updated', { action: 'remove', index });
   
-  // Push-Notification an alle User senden (falls Item-Text verfügbar)
-  if (webPushService.isInitialized() && removedItem) {
-    await webPushService.sendNotificationToAll({
+  // Schedule a push notification if an item was actually removed
+  if (removedItem) {
+    await createScheduledPushEvent({
       title: 'Packliste aktualisiert 📦',
       body: `"${removedItem}" wurde von der Packliste entfernt`,
-      icon: '/icon-192x192.png',
-      badge: '/badge-96x96.png',
+      repeat: 'once',
+      schedule: new Date(),
+      active: true,
+      sendToAll: true,
+      type: 'general',
       data: {
         type: 'packlist',
         action: 'item-removed',

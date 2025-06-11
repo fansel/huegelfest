@@ -1,90 +1,26 @@
 fansel@fansel.dev:/opt/huegelfest/staging$ cat log.txt 
-mongodb-staging-1  | {"t":{"$date":"2025-06-11T09:45:22.327+00:00"},"s":"I",  "c":"STORAGE",  "id":22315,   "ctx":"initandlisten","msg":"Opening WiredTiger","attr":{"config":"create,cache_size=3456M,session_max=33000,eviction=(threads_min=4,threads_max=4),config_base=false,statistics=(fast),log=(enabled=true,remove=true,path=journal,compressor=snappy),builtin_extension_config=(zstd=(compression_level=6)),file_manager=(close_idle_time=600,close_scan_interval=10,close_handle_minimum=2000),statistics_log=(wait=0),json_output=(error,message),verbose=[recovery_progress:1,checkpoint_progress:1,compact_progress:1,backup:0,checkpoint:0,compact:0,evict:0,history_store:0,recovery:0,rts:0,salvage:0,tiered:0,timestamp:0,transaction:0,verify:0,log:0],prefetch=(available=true,default=false),"}}
-huegelfest-app-staging-1  | 2025-06-11T09:45:23.465Z agenda:define job [send-announcement-notification] defined with following options: 
-huegelfest-app-staging-1  | {
-huegelfest-app-staging-1  |   fn: [AsyncFunction (anonymous)],
-huegelfest-app-staging-1  |   concurrency: 5,
-huegelfest-app-staging-1  |   lockLimit: 0,
-huegelfest-app-staging-1  |   priority: 0,
-huegelfest-app-staging-1  |   lockLifetime: 600000,
-huegelfest-app-staging-1  |   running: 0,
-huegelfest-app-staging-1  |   locked: 0,
-huegelfest-app-staging-1  |   shouldSaveResult: false
-huegelfest-app-staging-1  | }
-huegelfest-app-staging-1  | 2025-06-11T09:45:23.466Z agenda:define job [sendPushEvent] defined with following options: 
-huegelfest-app-staging-1  | {
-huegelfest-app-staging-1  |   fn: [AsyncFunction (anonymous)],
-huegelfest-app-staging-1  |   concurrency: 5,
-huegelfest-app-staging-1  |   lockLimit: 0,
-huegelfest-app-staging-1  |   priority: 0,
-huegelfest-app-staging-1  |   lockLifetime: 600000,
-huegelfest-app-staging-1  |   running: 0,
-huegelfest-app-staging-1  |   locked: 0,
-huegelfest-app-staging-1  |   shouldSaveResult: false
-huegelfest-app-staging-1  | }
-huegelfest-app-staging-1  | 2025-06-11T09:45:24.230Z agenda:database successful connection to MongoDB using collection: [agendaJobs]
-huegelfest-app-staging-1  | 2025-06-11T09:45:24.231Z agenda:db_init init database collection using name [agendaJobs]
-huegelfest-app-staging-1  | 2025-06-11T09:45:24.232Z agenda:db_init attempting index creation
-huegelfest-app-staging-1  | [2025-06-11T09:45:24.273Z] [INFO] [fallbackLog@logger.js] [Agenda] Mongoose verbunden
-huegelfest-app-staging-1  | 2025-06-11T09:45:24.288Z agenda:db_init index creation success
-huegelfest-app-staging-1  | [2025-06-11T09:45:24.289Z] [INFO] [fallbackLog@logger.js] [Agenda] Connected & ready
-huegelfest-app-staging-1  | 2025-06-11T09:45:24.289Z agenda:start Agenda.start called, creating interval to call processJobs every [30000ms]
-huegelfest-app-staging-1  | [2025-06-11T09:45:24.290Z] [INFO] [fallbackLog@logger.js] [Agenda] Scheduler is running
-huegelfest-app-staging-1  | 2025-06-11T09:45:24.291Z agenda:internal:processJobs starting to process jobs: [unknownName:unknownId]
-huegelfest-app-staging-1  | 2025-06-11T09:45:24.291Z agenda:internal:processJobs queuing up job to process: [send-announcement-notification]
-huegelfest-app-staging-1  | 2025-06-11T09:45:24.292Z agenda:internal:processJobs jobQueueFilling: send-announcement-notification isJobQueueFilling: false
-huegelfest-app-staging-1  | 2025-06-11T09:45:24.292Z agenda:internal:processJobs job [send-announcement-notification] lock status: shouldLock = true
-huegelfest-app-staging-1  | 2025-06-11T09:45:24.292Z agenda:internal:_findAndLockNextJob _findAndLockNextJob(send-announcement-notification, [Function])
-huegelfest-app-staging-1  | 2025-06-11T09:45:24.294Z agenda:internal:processJobs queuing up job to process: [sendPushEvent]
-huegelfest-app-staging-1  | 2025-06-11T09:45:24.294Z agenda:internal:processJobs jobQueueFilling: sendPushEvent isJobQueueFilling: false
-huegelfest-app-staging-1  | 2025-06-11T09:45:24.295Z agenda:internal:processJobs job [sendPushEvent] lock status: shouldLock = true
-huegelfest-app-staging-1  | 2025-06-11T09:45:24.295Z agenda:internal:_findAndLockNextJob _findAndLockNextJob(sendPushEvent, [Function])
+mongodb-staging-1  | {"t":{"$date":"2025-06-11T10:36:35.063+00:00"},"s":"I",  "c":"STORAGE",  "id":22315,   "ctx":"initandlisten","msg":"Opening WiredTiger","attr":{"config":"create,cache_size=3456M,session_max=33000,eviction=(threads_min=4,threads_max=4),config_base=false,statistics=(fast),log=(enabled=true,remove=true,path=journal,compressor=snappy),builtin_extension_config=(zstd=(compression_level=6)),file_manager=(close_idle_time=600,close_scan_interval=10,close_handle_minimum=2000),statistics_log=(wait=0),json_output=(error,message),verbose=[recovery_progress:1,checkpoint_progress:1,compact_progress:1,backup:0,checkpoint:0,compact:0,evict:0,history_store:0,recovery:0,rts:0,salvage:0,tiered:0,timestamp:0,transaction:0,verify:0,log:0],prefetch=(available=true,default=false),"}}
+mongodb-staging-1  | {"t":{"$date":"2025-06-11T10:36:35.847+00:00"},"s":"I",  "c":"STORAGE",  "id":20320,   "ctx":"initandlisten","msg":"createCollection","attr":{"namespace":"local.startup_log","uuidDisposition":"generated","uuid":{"uuid":{"$uuid":"b5c98a1d-e746-4b19-af72-cfab3ed1885b"}},"options":{"capped":true,"size":10485760}}}
 huegelfest-app-staging-1  | [WebSocket] Server gesetzt
 huegelfest-app-staging-1  | [WebSocket] Initialisiere WebSocket-Server auf /ws …
-huegelfest-app-staging-1  | 2025-06-11T09:45:25.152Z agenda:define job [send-announcement-notification] defined with following options: 
-huegelfest-app-staging-1  | {
-huegelfest-app-staging-1  |   fn: [AsyncFunction (anonymous)],
-huegelfest-app-staging-1  |   concurrency: 5,
-huegelfest-app-staging-1  |   lockLimit: 0,
-huegelfest-app-staging-1  |   priority: 0,
-huegelfest-app-staging-1  |   lockLifetime: 600000,
-huegelfest-app-staging-1  |   running: 0,
-huegelfest-app-staging-1  |   locked: 0,
-huegelfest-app-staging-1  |   shouldSaveResult: false
-huegelfest-app-staging-1  | }
-huegelfest-app-staging-1  | 2025-06-11T09:45:25.153Z agenda:define job [sendPushEvent] defined with following options: 
-huegelfest-app-staging-1  | {
-huegelfest-app-staging-1  |   fn: [AsyncFunction (anonymous)],
-huegelfest-app-staging-1  |   concurrency: 5,
-huegelfest-app-staging-1  |   lockLimit: 0,
-huegelfest-app-staging-1  |   priority: 0,
-huegelfest-app-staging-1  |   lockLifetime: 600000,
-huegelfest-app-staging-1  |   running: 0,
-huegelfest-app-staging-1  |   locked: 0,
-huegelfest-app-staging-1  |   shouldSaveResult: false
-huegelfest-app-staging-1  | }
 huegelfest-app-staging-1  | > [Server] Ready on http://localhost:3000
 huegelfest-app-staging-1  | > [WebSocket] Verfügbar auf ws://localhost:3000/ws
-huegelfest-app-staging-1  | [2025-06-11T09:45:25.511Z] [INFO] [n@39.js] [Agenda] Mongoose verbunden
-huegelfest-app-staging-1  | 2025-06-11T09:45:25.528Z agenda:database successful connection to MongoDB using collection: [agendaJobs]
-huegelfest-app-staging-1  | 2025-06-11T09:45:25.529Z agenda:db_init init database collection using name [agendaJobs]
-huegelfest-app-staging-1  | 2025-06-11T09:45:25.529Z agenda:db_init attempting index creation
-huegelfest-app-staging-1  | 2025-06-11T09:45:25.559Z agenda:db_init index creation success
-huegelfest-app-staging-1  | [2025-06-11T09:45:25.564Z] [INFO] [n@39.js] [Agenda] Connected & ready
-huegelfest-app-staging-1  | 2025-06-11T09:45:25.564Z agenda:start Agenda.start called, creating interval to call processJobs every [30000ms]
-huegelfest-app-staging-1  | [2025-06-11T09:45:25.565Z] [INFO] [n@39.js] [Agenda] Scheduler is running
-huegelfest-app-staging-1  | 2025-06-11T09:45:25.565Z agenda:internal:processJobs starting to process jobs: [unknownName:unknownId]
-huegelfest-app-staging-1  | 2025-06-11T09:45:25.565Z agenda:internal:processJobs queuing up job to process: [send-announcement-notification]
-huegelfest-app-staging-1  | 2025-06-11T09:45:25.566Z agenda:internal:processJobs jobQueueFilling: send-announcement-notification isJobQueueFilling: false
-huegelfest-app-staging-1  | 2025-06-11T09:45:25.566Z agenda:internal:processJobs job [send-announcement-notification] lock status: shouldLock = true
-huegelfest-app-staging-1  | 2025-06-11T09:45:25.567Z agenda:internal:_findAndLockNextJob _findAndLockNextJob(send-announcement-notification, [Function])
-huegelfest-app-staging-1  | 2025-06-11T09:45:25.568Z agenda:internal:processJobs queuing up job to process: [sendPushEvent]
-huegelfest-app-staging-1  | 2025-06-11T09:45:25.568Z agenda:internal:processJobs jobQueueFilling: sendPushEvent isJobQueueFilling: false
-huegelfest-app-staging-1  | 2025-06-11T09:45:25.568Z agenda:internal:processJobs job [sendPushEvent] lock status: shouldLock = true
-huegelfest-app-staging-1  | 2025-06-11T09:45:25.568Z agenda:internal:_findAndLockNextJob _findAndLockNextJob(sendPushEvent, [Function])
-huegelfest-app-staging-1  | [Error: Failed to find Server Action "00dd62f1dad2c37245921fcb7ab4907d37072c9336". This request might be from an older or newer deployment.
+huegelfest-app-staging-1  | [Error: Failed to find Server Action "009e75d128e64ffa55cf81c256403e121364ad3c89". This request might be from an older or newer deployment.
 huegelfest-app-staging-1  | Read more: https://nextjs.org/docs/messages/failed-to-find-server-action]
-huegelfest-app-staging-1  | 2025-06-11T09:45:26.162Z agenda:define job [send-announcement-notification] defined with following options: 
+huegelfest-app-staging-1  |  ⨯ [MongoServerError: E11000 duplicate key error collection: huegelfest.categories index: name_1 dup key: { name: "Musik" }] {
+huegelfest-app-staging-1  |   errorLabelSet: Set(0) {},
+huegelfest-app-staging-1  |   errorResponse: [Object],
+huegelfest-app-staging-1  |   index: 0,
+huegelfest-app-staging-1  |   code: 11000,
+huegelfest-app-staging-1  |   keyPattern: [Object],
+huegelfest-app-staging-1  |   keyValue: [Object],
+huegelfest-app-staging-1  |   digest: '1300270344'
+huegelfest-app-staging-1  | }
+huegelfest-app-staging-1  | [2025-06-11T10:36:39.380Z] [INFO] [i@758.js] [Init] Initialisiere Services...
+huegelfest-app-staging-1  | [2025-06-11T10:36:39.381Z] [INFO] [i@758.js] [Init] Datenbank erfolgreich initialisiert.
+huegelfest-app-staging-1  | [2025-06-11T10:36:39.382Z] [INFO] [i@758.js] [Agenda] Initializing scheduler...
+huegelfest-app-staging-1  | [2025-06-11T10:36:39.382Z] [INFO] [i@758.js] [Agenda] Database connection established.
+huegelfest-app-staging-1  | 2025-06-11T10:36:39.406Z agenda:define job [send-announcement-notification] defined with following options: 
 huegelfest-app-staging-1  | {
 huegelfest-app-staging-1  |   fn: [AsyncFunction (anonymous)],
 huegelfest-app-staging-1  |   concurrency: 5,
@@ -95,7 +31,7 @@ huegelfest-app-staging-1  |   running: 0,
 huegelfest-app-staging-1  |   locked: 0,
 huegelfest-app-staging-1  |   shouldSaveResult: false
 huegelfest-app-staging-1  | }
-huegelfest-app-staging-1  | 2025-06-11T09:45:26.163Z agenda:define job [sendPushEvent] defined with following options: 
+huegelfest-app-staging-1  | 2025-06-11T10:36:39.407Z agenda:define job [sendPushEvent] defined with following options: 
 huegelfest-app-staging-1  | {
 huegelfest-app-staging-1  |   fn: [AsyncFunction (anonymous)],
 huegelfest-app-staging-1  |   concurrency: 5,
@@ -106,195 +42,227 @@ huegelfest-app-staging-1  |   running: 0,
 huegelfest-app-staging-1  |   locked: 0,
 huegelfest-app-staging-1  |   shouldSaveResult: false
 huegelfest-app-staging-1  | }
-huegelfest-app-staging-1  | 2025-06-11T09:45:26.384Z agenda:database successful connection to MongoDB using collection: [agendaJobs]
-huegelfest-app-staging-1  | 2025-06-11T09:45:26.385Z agenda:db_init init database collection using name [agendaJobs]
-huegelfest-app-staging-1  | 2025-06-11T09:45:26.387Z agenda:db_init attempting index creation
-huegelfest-app-staging-1  | [2025-06-11T09:45:26.408Z] [INFO] [i@758.js] [Agenda] Mongoose verbunden
-huegelfest-app-staging-1  | 2025-06-11T09:45:26.414Z agenda:db_init index creation success
-huegelfest-app-staging-1  | [2025-06-11T09:45:26.418Z] [INFO] [i@758.js] [Agenda] Connected & ready
-huegelfest-app-staging-1  | 2025-06-11T09:45:26.418Z agenda:start Agenda.start called, creating interval to call processJobs every [30000ms]
-huegelfest-app-staging-1  | [2025-06-11T09:45:26.419Z] [INFO] [i@758.js] [Agenda] Scheduler is running
-huegelfest-app-staging-1  | 2025-06-11T09:45:26.419Z agenda:internal:processJobs starting to process jobs: [unknownName:unknownId]
-huegelfest-app-staging-1  | 2025-06-11T09:45:26.420Z agenda:internal:processJobs queuing up job to process: [send-announcement-notification]
-huegelfest-app-staging-1  | 2025-06-11T09:45:26.420Z agenda:internal:processJobs jobQueueFilling: send-announcement-notification isJobQueueFilling: false
-huegelfest-app-staging-1  | 2025-06-11T09:45:26.420Z agenda:internal:processJobs job [send-announcement-notification] lock status: shouldLock = true
-huegelfest-app-staging-1  | 2025-06-11T09:45:26.421Z agenda:internal:_findAndLockNextJob _findAndLockNextJob(send-announcement-notification, [Function])
-huegelfest-app-staging-1  | 2025-06-11T09:45:26.423Z agenda:internal:processJobs queuing up job to process: [sendPushEvent]
-huegelfest-app-staging-1  | 2025-06-11T09:45:26.423Z agenda:internal:processJobs jobQueueFilling: sendPushEvent isJobQueueFilling: false
-huegelfest-app-staging-1  | 2025-06-11T09:45:26.423Z agenda:internal:processJobs job [sendPushEvent] lock status: shouldLock = true
-huegelfest-app-staging-1  | 2025-06-11T09:45:26.423Z agenda:internal:_findAndLockNextJob _findAndLockNextJob(sendPushEvent, [Function])
-huegelfest-app-staging-1  | [2025-06-11T09:45:26.493Z] [INFO] [i@758.js] [Init] Initialisiere Services...
-huegelfest-app-staging-1  | [2025-06-11T09:45:26.494Z] [INFO] [i@758.js] [Init] Datenbank erfolgreich initialisiert.
-huegelfest-app-staging-1  | [2025-06-11T09:45:26.501Z] [INFO] [i@758.js] [Init] Default-Gruppe sichergestellt.
-huegelfest-app-staging-1  | [2025-06-11T09:45:26.558Z] [INFO] [i@758.js] [Init] Default-Benutzergruppen sichergestellt.
-huegelfest-app-staging-1  | [2025-06-11T09:45:26.571Z] [INFO] [i@758.js] [Init] Default-Kategorien sichergestellt.
-huegelfest-app-staging-1  | [2025-06-11T09:45:26.573Z] [INFO] [i@758.js] [WebPush] Service erfolgreich initialisiert
-huegelfest-app-staging-1  | [2025-06-11T09:45:26.573Z] [INFO] [i@758.js] [Init] WebPush erfolgreich initialisiert.
-huegelfest-app-staging-1  | [2025-06-11T09:45:26.583Z] [INFO] [i@758.js] [Init] Service-Initialisierung abgeschlossen.
-huegelfest-app-staging-1  | [2025-06-11T09:45:26.681Z] [INFO] [i@758.js] [MusicService] Hole alle Musik-Einträge
-huegelfest-app-staging-1  | [fetchGroupsData] Fehler beim Laden der Gruppen-Daten: Error: Route / used "cookies" inside a function cached with "unstable_cache(...)". Accessing Dynamic data sources inside a cache scope is not supported. If you need this data inside a cached function use "cookies" outside of the cached function and pass the required dynamic data in as an argument. See more info here: https://nextjs.org/docs/app/api-reference/functions/unstable_cache
-huegelfest-app-staging-1  |     at p (.next/server/app/page.js:293:229197)
-huegelfest-app-staging-1  |     at eg (.next/server/app/page.js:270:68088)
-huegelfest-app-staging-1  |     at o (.next/server/app/page.js:293:226883)
-huegelfest-app-staging-1  |     at s (.next/server/app/page.js:293:227157)
-huegelfest-app-staging-1  |     at c.revalidate (.next/server/app/page.js:1:58467)
-huegelfest-app-staging-1  |     at <unknown> (.next/server/chunks/821.js:68:71106)
-huegelfest-app-staging-1  |     at async b (.next/server/app/page.js:5:2790)
-huegelfest-app-staging-1  | [UserActions] Fehler bei getAllUsers: Error: Route / used "cookies" inside a function cached with "unstable_cache(...)". Accessing Dynamic data sources inside a cache scope is not supported. If you need this data inside a cached function use "cookies" outside of the cached function and pass the required dynamic data in as an argument. See more info here: https://nextjs.org/docs/app/api-reference/functions/unstable_cache
-huegelfest-app-staging-1  |     at p (.next/server/app/page.js:293:229197)
-huegelfest-app-staging-1  |     at eg (.next/server/app/page.js:270:68088)
-huegelfest-app-staging-1  |     at h (.next/server/app/page.js:277:22347)
-huegelfest-app-staging-1  |     at e.revalidate (.next/server/app/page.js:1:50891)
-huegelfest-app-staging-1  |     at <unknown> (.next/server/chunks/821.js:68:71106)
-huegelfest-app-staging-1  |     at async f (.next/server/app/page.js:1:50955)
-huegelfest-app-staging-1  |     at async c.revalidate (.next/server/app/page.js:1:58398)
-huegelfest-app-staging-1  |     at async (.next/server/chunks/821.js:68:71077)
-huegelfest-app-staging-1  | [2025-06-11T09:45:26.728Z] [INFO] [i@758.js] [MusicService] Gefundene Einträge: 1
-huegelfest-app-staging-1  | [Error: Failed to find Server Action "407192f4c42e41e9abf90391982e37d178ad7a8b4a". This request might be from an older or newer deployment.
-huegelfest-app-staging-1  | Read more: https://nextjs.org/docs/messages/failed-to-find-server-action]
-huegelfest-app-staging-1  | [2025-06-11T09:45:27.249Z] [INFO] [i@758.js] [MusicService] Hole alle Musik-Einträge
-huegelfest-app-staging-1  | [2025-06-11T09:45:27.282Z] [INFO] [i@758.js] [MusicService] Gefundene Einträge: 1
-huegelfest-app-staging-1  | [2025-06-11T09:45:27.380Z] [INFO] [i@758.js] [MusicService] Hole alle Musik-Einträge
-huegelfest-app-staging-1  | [2025-06-11T09:45:27.402Z] [INFO] [i@758.js] [MusicService] Gefundene Einträge: 1
+huegelfest-app-staging-1  | [2025-06-11T10:36:39.407Z] [INFO] [i@758.js] [Agenda] Jobs defined
+huegelfest-app-staging-1  | 2025-06-11T10:36:39.421Z agenda:database successful connection to MongoDB using collection: [agendaJobs]
+huegelfest-app-staging-1  | 2025-06-11T10:36:39.422Z agenda:db_init init database collection using name [agendaJobs]
+huegelfest-app-staging-1  | 2025-06-11T10:36:39.423Z agenda:db_init attempting index creation
+huegelfest-app-staging-1  | 2025-06-11T10:36:39.465Z agenda:db_init index creation success
+huegelfest-app-staging-1  | [2025-06-11T10:36:39.469Z] [INFO] [i@758.js] [Agenda] Connected & ready
+huegelfest-app-staging-1  | 2025-06-11T10:36:39.469Z agenda:start Agenda.start called, creating interval to call processJobs every [30000ms]
+huegelfest-app-staging-1  | [2025-06-11T10:36:39.470Z] [INFO] [i@758.js] [Agenda] Scheduler started successfully.
+huegelfest-app-staging-1  | [2025-06-11T10:36:39.471Z] [INFO] [i@758.js] [Agenda] Cleaning up stale or stuck jobs...
+huegelfest-app-staging-1  | 2025-06-11T10:36:39.474Z agenda:internal:processJobs starting to process jobs: [unknownName:unknownId]
+huegelfest-app-staging-1  | 2025-06-11T10:36:39.474Z agenda:internal:processJobs queuing up job to process: [send-announcement-notification]
+huegelfest-app-staging-1  | 2025-06-11T10:36:39.475Z agenda:internal:processJobs jobQueueFilling: send-announcement-notification isJobQueueFilling: false
+huegelfest-app-staging-1  | 2025-06-11T10:36:39.475Z agenda:internal:processJobs job [send-announcement-notification] lock status: shouldLock = true
+huegelfest-app-staging-1  | 2025-06-11T10:36:39.476Z agenda:internal:_findAndLockNextJob _findAndLockNextJob(send-announcement-notification, [Function])
+huegelfest-app-staging-1  | 2025-06-11T10:36:39.477Z agenda:internal:processJobs queuing up job to process: [sendPushEvent]
+huegelfest-app-staging-1  | 2025-06-11T10:36:39.477Z agenda:internal:processJobs jobQueueFilling: sendPushEvent isJobQueueFilling: false
+huegelfest-app-staging-1  | 2025-06-11T10:36:39.477Z agenda:internal:processJobs job [sendPushEvent] lock status: shouldLock = true
+huegelfest-app-staging-1  | 2025-06-11T10:36:39.477Z agenda:internal:_findAndLockNextJob _findAndLockNextJob(sendPushEvent, [Function])
+huegelfest-app-staging-1  | [2025-06-11T10:36:39.483Z] [INFO] [i@758.js] [Init] Agenda-Scheduler erfolgreich initialisiert.
+huegelfest-app-staging-1  | [2025-06-11T10:36:39.537Z] [INFO] [i@758.js] [Init] Default-Gruppe erfolgreich erstellt.
+huegelfest-app-staging-1  | [2025-06-11T10:36:39.537Z] [INFO] [i@758.js] [Init] Default-Gruppe sichergestellt.
+huegelfest-app-staging-1  | [2025-06-11T10:36:39.647Z] [INFO] [i@758.js] [Init] Default-Benutzergruppen sichergestellt.
+huegelfest-app-staging-1  | [2025-06-11T10:36:39.660Z] [INFO] [i@758.js] [Init] Default-Kategorien sichergestellt.
+huegelfest-app-staging-1  | [2025-06-11T10:36:39.662Z] [INFO] [i@758.js] [WebPush] Service erfolgreich initialisiert
+huegelfest-app-staging-1  | [2025-06-11T10:36:39.662Z] [INFO] [i@758.js] [Init] WebPush erfolgreich initialisiert.
+huegelfest-app-staging-1  | [WebSocket] Broadcast "festival-day" an 0 Clients: {"topic":"festival-day","payload":{"type":"FESTIVAL_DAY_CREATED","data":{"_id":"68495c375af1e903390722f2","date":"2025-08-01T00:00:00.000Z","label":"01.08. - Festival Tag 1","description":"Erster Festivaltag","isActive":true,"order":2,"createdAt":"2025-06-11T10:36:39.681Z","updatedAt":"2025-06-11T10:36:39.681Z"}}}
+huegelfest-app-staging-1  | [WebSocket] Broadcast "festival-day" an 0 Clients: {"topic":"festival-day","payload":{"type":"FESTIVAL_DAY_CREATED","data":{"_id":"68495c375af1e903390722f6","date":"2025-07-31T00:00:00.000Z","label":"31.07. - Anreise","description":"Anreise und erste Aufbauarbeiten","isActive":true,"order":1,"createdAt":"2025-06-11T10:36:39.715Z","updatedAt":"2025-06-11T10:36:39.715Z"}}}
+huegelfest-app-staging-1  | [WebSocket] Broadcast via HTTP erfolgreich ausgelöst
+huegelfest-app-staging-1  | [WebSocket] Broadcast via HTTP erfolgreich ausgelöst
+huegelfest-app-staging-1  | [WebSocket] Broadcast "festival-day" an 0 Clients: {"topic":"festival-day","payload":{"type":"FESTIVAL_DAY_CREATED","data":{"_id":"68495c375af1e903390722f8","date":"2025-08-02T00:00:00.000Z","label":"02.08. - Festival Tag 2","description":"Zweiter Festivaltag","isActive":true,"order":3,"createdAt":"2025-06-11T10:36:39.718Z","updatedAt":"2025-06-11T10:36:39.718Z"}}}
+huegelfest-app-staging-1  | [WebSocket] Broadcast "festival-day" an 0 Clients: {"topic":"festival-day","payload":{"type":"FESTIVAL_DAY_CREATED","data":{"_id":"68495c375af1e903390722fa","date":"2025-08-03T00:00:00.000Z","label":"03.08. - Abreise","description":"Abbau und Abreise","isActive":true,"order":4,"createdAt":"2025-06-11T10:36:39.724Z","updatedAt":"2025-06-11T10:36:39.724Z"}}}
+huegelfest-app-staging-1  | [WebSocket] Broadcast via HTTP erfolgreich ausgelöst
+huegelfest-app-staging-1  | [WebSocket] Broadcast via HTTP erfolgreich ausgelöst
+huegelfest-app-staging-1  | [2025-06-11T10:36:39.759Z] [INFO] [i@758.js] [Init] Service-Initialisierung abgeschlossen.
 huegelfest-app-staging-1  | [WebSocket] Neue Verbindung eingegangen
 huegelfest-app-staging-1  | [isTemporaryUserSession] Starting check...
-huegelfest-app-staging-1  | [isTemporaryUserSession] Token found, verifying...
-huegelfest-app-staging-1  | [isTemporaryUserSession] Payload: {
-huegelfest-app-staging-1  |   userId: '6842fb794263e5d613714373',
-huegelfest-app-staging-1  |   email: 'admin@huegelfest.de',
-huegelfest-app-staging-1  |   name: 'Administrator',
-huegelfest-app-staging-1  |   username: 'felix',
-huegelfest-app-staging-1  |   role: 'admin',
-huegelfest-app-staging-1  |   emailVerified: true,
-huegelfest-app-staging-1  |   isShadowUser: true,
-huegelfest-app-staging-1  |   type: 'user',
-huegelfest-app-staging-1  |   iat: 1749635128,
-huegelfest-app-staging-1  |   exp: 1750239928
-huegelfest-app-staging-1  | }
-huegelfest-app-staging-1  | [isTemporaryUserSession] originalAdmin: undefined
-huegelfest-app-staging-1  | [isTemporaryUserSession] Result: false
-huegelfest-app-staging-1  | [2025-06-11T09:45:28.630Z] [INFO] [i@758.js] [MusicService] Hole alle Musik-Einträge
-huegelfest-app-staging-1  | [2025-06-11T09:45:28.650Z] [INFO] [i@758.js] [MusicService] Gefundene Einträge: 1
+huegelfest-app-staging-1  | [isTemporaryUserSession] No token found
+huegelfest-app-staging-1  | [2025-06-11T10:36:44.321Z] [INFO] [i@758.js] [MusicService] Hole alle Musik-Einträge
+huegelfest-app-staging-1  | [2025-06-11T10:36:44.326Z] [INFO] [i@758.js] [MusicService] Gefundene Einträge: 0
 huegelfest-app-staging-1  | [WebSocket] Anonyme Verbindung getrennt
 huegelfest-app-staging-1  | [WebSocket] Neue Verbindung eingegangen
-huegelfest-app-staging-1  | [WebSocket] User 6842fb794263e5d613714373 registriert
-huegelfest-app-staging-1  | [2025-06-11T09:45:32.111Z] [INFO] [i@758.js] [MusicService] Hole alle Musik-Einträge
-huegelfest-app-staging-1  | [2025-06-11T09:45:32.116Z] [INFO] [i@758.js] [MusicService] Gefundene Einträge: 1
-huegelfest-app-staging-1  | [2025-06-11T09:45:34.717Z] [INFO] [i@758.js] [MusicService] Hole alle Musik-Einträge
-huegelfest-app-staging-1  | [2025-06-11T09:45:34.722Z] [INFO] [i@758.js] [MusicService] Gefundene Einträge: 1
-huegelfest-app-staging-1  | [2025-06-11T09:45:39.104Z] [INFO] [n@39.js] [Init] Initialisiere Services...
-huegelfest-app-staging-1  | [2025-06-11T09:45:39.104Z] [INFO] [n@39.js] [Init] Datenbank erfolgreich initialisiert.
-huegelfest-app-staging-1  | [2025-06-11T09:45:39.113Z] [INFO] [n@39.js] [Init] Default-Gruppe sichergestellt.
-huegelfest-app-staging-1  | [2025-06-11T09:45:39.162Z] [INFO] [n@39.js] [Init] Default-Benutzergruppen sichergestellt.
-huegelfest-app-staging-1  | [2025-06-11T09:45:39.174Z] [INFO] [n@39.js] [Init] Default-Kategorien sichergestellt.
-huegelfest-app-staging-1  | [2025-06-11T09:45:39.175Z] [INFO] [n@39.js] [WebPush] Service erfolgreich initialisiert
-huegelfest-app-staging-1  | [2025-06-11T09:45:39.175Z] [INFO] [n@39.js] [Init] WebPush erfolgreich initialisiert.
-huegelfest-app-staging-1  | [2025-06-11T09:45:39.179Z] [INFO] [n@39.js] [Init] Service-Initialisierung abgeschlossen.
-huegelfest-app-staging-1  | 2025-06-11T09:45:39.209Z agenda:now Agenda.now(send-announcement-notification, [Object])
-huegelfest-app-staging-1  | 2025-06-11T09:45:39.210Z agenda:create Agenda.create(send-announcement-notification, [Object])
-huegelfest-app-staging-1  | 2025-06-11T09:45:39.212Z agenda:saveJob attempting to save a job into Agenda instance
-huegelfest-app-staging-1  | 2025-06-11T09:45:39.213Z agenda:saveJob [job undefined] set job props: 
+huegelfest-app-staging-1  | [isTemporaryUserSession] Starting check...
+huegelfest-app-staging-1  | [isTemporaryUserSession] No token found
+huegelfest-app-staging-1  | [2025-06-11T10:36:54.965Z] [INFO] [i@758.js] [MusicService] Hole alle Musik-Einträge
+huegelfest-app-staging-1  | [2025-06-11T10:36:54.971Z] [INFO] [i@758.js] [MusicService] Gefundene Einträge: 0
+huegelfest-app-staging-1  | 2025-06-11T10:37:09.471Z agenda:internal:processJobs starting to process jobs: [unknownName:unknownId]
+huegelfest-app-staging-1  | 2025-06-11T10:37:09.471Z agenda:internal:processJobs queuing up job to process: [send-announcement-notification]
+huegelfest-app-staging-1  | 2025-06-11T10:37:09.472Z agenda:internal:processJobs jobQueueFilling: send-announcement-notification isJobQueueFilling: false
+huegelfest-app-staging-1  | 2025-06-11T10:37:09.472Z agenda:internal:processJobs job [send-announcement-notification] lock status: shouldLock = true
+huegelfest-app-staging-1  | 2025-06-11T10:37:09.473Z agenda:internal:_findAndLockNextJob _findAndLockNextJob(send-announcement-notification, [Function])
+huegelfest-app-staging-1  | 2025-06-11T10:37:09.478Z agenda:internal:processJobs queuing up job to process: [sendPushEvent]
+huegelfest-app-staging-1  | 2025-06-11T10:37:09.478Z agenda:internal:processJobs jobQueueFilling: sendPushEvent isJobQueueFilling: false
+huegelfest-app-staging-1  | 2025-06-11T10:37:09.478Z agenda:internal:processJobs job [sendPushEvent] lock status: shouldLock = true
+huegelfest-app-staging-1  | 2025-06-11T10:37:09.478Z agenda:internal:_findAndLockNextJob _findAndLockNextJob(sendPushEvent, [Function])
+huegelfest-app-staging-1  | [2025-06-11T10:37:11.380Z] [INFO] [i@758.js] [Auth] User erfolgreich angemeldet: Administrator (felix)
+huegelfest-app-staging-1  | [2025-06-11T10:37:11.437Z] [INFO] [i@758.js] [MusicService] Hole alle Musik-Einträge
+huegelfest-app-staging-1  | [2025-06-11T10:37:11.486Z] [INFO] [i@758.js] [MusicService] Gefundene Einträge: 0
+huegelfest-app-staging-1  | [2025-06-11T10:37:11.503Z] [INFO] [i@758.js] [UserService] getAllUsers - Gefundene User: 1
+huegelfest-app-staging-1  | [WebSocket] Anonyme Verbindung getrennt
+huegelfest-app-staging-1  | [WebSocket] Neue Verbindung eingegangen
+huegelfest-app-staging-1  | [WebSocket] User 68495c365af1e90339072272 registriert
+huegelfest-app-staging-1  | [2025-06-11T10:37:17.127Z] [INFO] [i@758.js] [MusicService] Hole alle Musik-Einträge
+huegelfest-app-staging-1  | [2025-06-11T10:37:17.130Z] [INFO] [i@758.js] [MusicService] Gefundene Einträge: 0
+huegelfest-app-staging-1  | [2025-06-11T10:37:17.230Z] [INFO] [i@758.js] [UserService] getAllUsers - Gefundene User: 1
+huegelfest-app-staging-1  | [2025-06-11T10:37:17.824Z] [INFO] [i@758.js] [MusicService] Hole alle Musik-Einträge
+huegelfest-app-staging-1  | [2025-06-11T10:37:17.830Z] [INFO] [i@758.js] [MusicService] Gefundene Einträge: 0
+huegelfest-app-staging-1  | [2025-06-11T10:37:17.931Z] [INFO] [i@758.js] [UserService] getAllUsers - Gefundene User: 1
+huegelfest-app-staging-1  | [2025-06-11T10:37:22.015Z] [INFO] [n@39.js] [Init] Initialisiere Services...
+huegelfest-app-staging-1  | [2025-06-11T10:37:22.015Z] [INFO] [n@39.js] [Init] Datenbank erfolgreich initialisiert.
+huegelfest-app-staging-1  | [2025-06-11T10:37:22.016Z] [INFO] [n@39.js] [Agenda] Initializing scheduler...
+huegelfest-app-staging-1  | [2025-06-11T10:37:22.016Z] [INFO] [n@39.js] [Agenda] Database connection established.
+huegelfest-app-staging-1  | 2025-06-11T10:37:22.041Z agenda:define job [send-announcement-notification] defined with following options: 
+huegelfest-app-staging-1  | {
+huegelfest-app-staging-1  |   fn: [AsyncFunction (anonymous)],
+huegelfest-app-staging-1  |   concurrency: 5,
+huegelfest-app-staging-1  |   lockLimit: 0,
+huegelfest-app-staging-1  |   priority: 0,
+huegelfest-app-staging-1  |   lockLifetime: 600000,
+huegelfest-app-staging-1  |   running: 0,
+huegelfest-app-staging-1  |   locked: 0,
+huegelfest-app-staging-1  |   shouldSaveResult: false
+huegelfest-app-staging-1  | }
+huegelfest-app-staging-1  | 2025-06-11T10:37:22.042Z agenda:define job [sendPushEvent] defined with following options: 
+huegelfest-app-staging-1  | {
+huegelfest-app-staging-1  | [2025-06-11T10:37:22.042Z] [INFO] [n@39.js] [Agenda] Jobs defined
+huegelfest-app-staging-1  |   fn: [AsyncFunction (anonymous)],
+huegelfest-app-staging-1  |   concurrency: 5,
+huegelfest-app-staging-1  |   lockLimit: 0,
+huegelfest-app-staging-1  |   priority: 0,
+huegelfest-app-staging-1  |   lockLifetime: 600000,
+huegelfest-app-staging-1  |   running: 0,
+huegelfest-app-staging-1  |   locked: 0,
+huegelfest-app-staging-1  |   shouldSaveResult: false
+huegelfest-app-staging-1  | }
+huegelfest-app-staging-1  | 2025-06-11T10:37:22.053Z agenda:database successful connection to MongoDB using collection: [agendaJobs]
+huegelfest-app-staging-1  | 2025-06-11T10:37:22.054Z agenda:db_init init database collection using name [agendaJobs]
+huegelfest-app-staging-1  | 2025-06-11T10:37:22.055Z agenda:db_init attempting index creation
+huegelfest-app-staging-1  | 2025-06-11T10:37:22.072Z agenda:db_init index creation success
+huegelfest-app-staging-1  | [2025-06-11T10:37:22.078Z] [INFO] [n@39.js] [Agenda] Connected & ready
+huegelfest-app-staging-1  | 2025-06-11T10:37:22.078Z agenda:start Agenda.start called, creating interval to call processJobs every [30000ms]
+huegelfest-app-staging-1  | [2025-06-11T10:37:22.079Z] [INFO] [n@39.js] [Agenda] Scheduler started successfully.
+huegelfest-app-staging-1  | [2025-06-11T10:37:22.080Z] [INFO] [n@39.js] [Agenda] Cleaning up stale or stuck jobs...
+huegelfest-app-staging-1  | 2025-06-11T10:37:22.083Z agenda:internal:processJobs starting to process jobs: [unknownName:unknownId]
+huegelfest-app-staging-1  | 2025-06-11T10:37:22.084Z agenda:internal:processJobs queuing up job to process: [send-announcement-notification]
+huegelfest-app-staging-1  | 2025-06-11T10:37:22.084Z agenda:internal:processJobs jobQueueFilling: send-announcement-notification isJobQueueFilling: false
+huegelfest-app-staging-1  | 2025-06-11T10:37:22.085Z agenda:internal:processJobs job [send-announcement-notification] lock status: shouldLock = true
+huegelfest-app-staging-1  | 2025-06-11T10:37:22.085Z agenda:internal:_findAndLockNextJob _findAndLockNextJob(send-announcement-notification, [Function])
+huegelfest-app-staging-1  | 2025-06-11T10:37:22.087Z agenda:internal:processJobs queuing up job to process: [sendPushEvent]
+huegelfest-app-staging-1  | 2025-06-11T10:37:22.087Z agenda:internal:processJobs jobQueueFilling: sendPushEvent isJobQueueFilling: false
+huegelfest-app-staging-1  | 2025-06-11T10:37:22.087Z agenda:internal:processJobs job [sendPushEvent] lock status: shouldLock = true
+huegelfest-app-staging-1  | 2025-06-11T10:37:22.087Z agenda:internal:_findAndLockNextJob _findAndLockNextJob(sendPushEvent, [Function])
+huegelfest-app-staging-1  | [2025-06-11T10:37:22.096Z] [INFO] [n@39.js] [Init] Agenda-Scheduler erfolgreich initialisiert.
+huegelfest-app-staging-1  | [2025-06-11T10:37:22.101Z] [INFO] [n@39.js] [Init] Default-Gruppe sichergestellt.
+huegelfest-app-staging-1  | [2025-06-11T10:37:22.166Z] [INFO] [n@39.js] [Init] Default-Benutzergruppen sichergestellt.
+huegelfest-app-staging-1  | [2025-06-11T10:37:22.185Z] [INFO] [n@39.js] [Init] Default-Kategorien sichergestellt.
+huegelfest-app-staging-1  | [2025-06-11T10:37:22.187Z] [INFO] [n@39.js] [WebPush] Service erfolgreich initialisiert
+huegelfest-app-staging-1  | [2025-06-11T10:37:22.188Z] [INFO] [n@39.js] [Init] WebPush erfolgreich initialisiert.
+huegelfest-app-staging-1  | [2025-06-11T10:37:22.193Z] [INFO] [n@39.js] [Init] Service-Initialisierung abgeschlossen.
+huegelfest-app-staging-1  | 2025-06-11T10:37:22.207Z agenda:now Agenda.now(send-announcement-notification, [Object])
+huegelfest-app-staging-1  | 2025-06-11T10:37:22.207Z agenda:create Agenda.create(send-announcement-notification, [Object])
+huegelfest-app-staging-1  | 2025-06-11T10:37:22.209Z agenda:saveJob attempting to save a job into Agenda instance
+huegelfest-app-staging-1  | 2025-06-11T10:37:22.211Z agenda:saveJob [job undefined] set job props: 
 huegelfest-app-staging-1  | {
 huegelfest-app-staging-1  |   name: 'send-announcement-notification',
 huegelfest-app-staging-1  |   data: {
-huegelfest-app-staging-1  |     title: 'Gruppe Technik',
-huegelfest-app-staging-1  |     body: 'mkmkk',
+huegelfest-app-staging-1  |     title: 'Gruppe Awareness',
+huegelfest-app-staging-1  |     body: 'sdsd',
 huegelfest-app-staging-1  |     icon: '/icon-192x192.png',
 huegelfest-app-staging-1  |     badge: '/badge-96x96.png',
 huegelfest-app-staging-1  |     data: {
 huegelfest-app-staging-1  |       type: 'announcement',
-huegelfest-app-staging-1  |       groupId: new ObjectId('6842fb7e4263e5d6137143a8'),
-huegelfest-app-staging-1  |       announcementId: new ObjectId('6849504304a75b3c703bd33c')
+huegelfest-app-staging-1  |       groupId: new ObjectId('68495c375af1e903390722a0'),
+huegelfest-app-staging-1  |       announcementId: new ObjectId('68495c625af1e903390724c1')
 huegelfest-app-staging-1  |     }
 huegelfest-app-staging-1  |   },
 huegelfest-app-staging-1  |   priority: 0,
 huegelfest-app-staging-1  |   shouldSaveResult: false,
 huegelfest-app-staging-1  |   type: 'normal',
-huegelfest-app-staging-1  |   nextRunAt: 2025-06-11T09:45:39.211Z,
+huegelfest-app-staging-1  |   nextRunAt: 2025-06-11T10:37:22.208Z,
 huegelfest-app-staging-1  |   lastModifiedBy: undefined
 huegelfest-app-staging-1  | }
-huegelfest-app-staging-1  | 2025-06-11T09:45:39.213Z agenda:saveJob current time stored as 2025-06-11T09:45:39.213Z
-huegelfest-app-staging-1  | 2025-06-11T09:45:39.213Z agenda:saveJob using default behavior, inserting new job via insertOne() with props that were set: 
+huegelfest-app-staging-1  | 2025-06-11T10:37:22.211Z agenda:saveJob current time stored as 2025-06-11T10:37:22.211Z
+huegelfest-app-staging-1  | 2025-06-11T10:37:22.212Z agenda:saveJob using default behavior, inserting new job via insertOne() with props that were set: 
 huegelfest-app-staging-1  | {
 huegelfest-app-staging-1  |   name: 'send-announcement-notification',
 huegelfest-app-staging-1  |   data: {
-huegelfest-app-staging-1  |     title: 'Gruppe Technik',
-huegelfest-app-staging-1  |     body: 'mkmkk',
+huegelfest-app-staging-1  |     title: 'Gruppe Awareness',
+huegelfest-app-staging-1  |     body: 'sdsd',
 huegelfest-app-staging-1  |     icon: '/icon-192x192.png',
 huegelfest-app-staging-1  |     badge: '/badge-96x96.png',
 huegelfest-app-staging-1  |     data: {
 huegelfest-app-staging-1  |       type: 'announcement',
-huegelfest-app-staging-1  |       groupId: new ObjectId('6842fb7e4263e5d6137143a8'),
-huegelfest-app-staging-1  |       announcementId: new ObjectId('6849504304a75b3c703bd33c')
+huegelfest-app-staging-1  |       groupId: new ObjectId('68495c375af1e903390722a0'),
+huegelfest-app-staging-1  |       announcementId: new ObjectId('68495c625af1e903390724c1')
 huegelfest-app-staging-1  |     }
 huegelfest-app-staging-1  |   },
 huegelfest-app-staging-1  |   priority: 0,
 huegelfest-app-staging-1  |   shouldSaveResult: false,
 huegelfest-app-staging-1  |   type: 'normal',
-huegelfest-app-staging-1  |   nextRunAt: 2025-06-11T09:45:39.211Z,
+huegelfest-app-staging-1  |   nextRunAt: 2025-06-11T10:37:22.208Z,
 huegelfest-app-staging-1  |   lastModifiedBy: undefined
 huegelfest-app-staging-1  | }
-huegelfest-app-staging-1  | 2025-06-11T09:45:39.221Z agenda:saveJob processDbResult() called with success, checking whether to process job immediately or not
-huegelfest-app-staging-1  | 2025-06-11T09:45:39.227Z agenda:saveJob [send-announcement-notification:undefined] job would have ran by nextScanAt, processing the job immediately
-huegelfest-app-staging-1  | 2025-06-11T09:45:39.228Z agenda:internal:processJobs starting to process jobs: [send-announcement-notification:684950432756ec7d0d133304]
-huegelfest-app-staging-1  | 2025-06-11T09:45:39.228Z agenda:internal:processJobs job [send-announcement-notification:684950432756ec7d0d133304] was passed directly to processJobs(), locking and running immediately
-huegelfest-app-staging-1  | 2025-06-11T09:45:39.228Z agenda:internal:processJobs lockOnTheFly: isLockingOnTheFly: false
-huegelfest-app-staging-1  | 2025-06-11T09:45:39.228Z agenda:internal:processJobs job [send-announcement-notification] lock status: shouldLock = true
-huegelfest-app-staging-1  | 2025-06-11T09:45:39.232Z agenda:internal:processJobs found job [send-announcement-notification:684950432756ec7d0d133304] that can be locked on the fly
-huegelfest-app-staging-1  | 2025-06-11T09:45:39.233Z agenda:internal:processJobs [send-announcement-notification:684950432756ec7d0d133304] about to process job
-huegelfest-app-staging-1  | 2025-06-11T09:45:39.233Z agenda:internal:processJobs [send-announcement-notification:684950432756ec7d0d133304] nextRunAt is in the past, run the job immediately
-huegelfest-app-staging-1  | 2025-06-11T09:45:39.233Z agenda:internal:processJobs [send-announcement-notification:684950432756ec7d0d133304] processing job
-huegelfest-app-staging-1  | 2025-06-11T09:45:39.234Z agenda:job [send-announcement-notification:684950432756ec7d0d133304] setting lastRunAt to: 2025-06-11T09:45:39.234Z
-huegelfest-app-staging-1  | 2025-06-11T09:45:39.235Z agenda:saveJob attempting to save a job into Agenda instance
-huegelfest-app-staging-1  | 2025-06-11T09:45:39.236Z agenda:saveJob [job 684950432756ec7d0d133304] set job props: 
+huegelfest-app-staging-1  | 2025-06-11T10:37:22.218Z agenda:saveJob processDbResult() called with success, checking whether to process job immediately or not
+huegelfest-app-staging-1  | 2025-06-11T10:37:22.221Z agenda:saveJob [send-announcement-notification:undefined] job would have ran by nextScanAt, processing the job immediately
+huegelfest-app-staging-1  | 2025-06-11T10:37:22.221Z agenda:internal:processJobs starting to process jobs: [send-announcement-notification:68495c62d489c703463efd71]
+huegelfest-app-staging-1  | 2025-06-11T10:37:22.222Z agenda:internal:processJobs job [send-announcement-notification:68495c62d489c703463efd71] was passed directly to processJobs(), locking and running immediately
+huegelfest-app-staging-1  | 2025-06-11T10:37:22.222Z agenda:internal:processJobs lockOnTheFly: isLockingOnTheFly: false
+huegelfest-app-staging-1  | 2025-06-11T10:37:22.222Z agenda:internal:processJobs job [send-announcement-notification] lock status: shouldLock = true
+huegelfest-app-staging-1  | 2025-06-11T10:37:22.226Z agenda:internal:processJobs found job [send-announcement-notification:68495c62d489c703463efd71] that can be locked on the fly
+huegelfest-app-staging-1  | 2025-06-11T10:37:22.226Z agenda:internal:processJobs [send-announcement-notification:68495c62d489c703463efd71] about to process job
+huegelfest-app-staging-1  | 2025-06-11T10:37:22.226Z agenda:internal:processJobs [send-announcement-notification:68495c62d489c703463efd71] nextRunAt is in the past, run the job immediately
+huegelfest-app-staging-1  | 2025-06-11T10:37:22.226Z agenda:internal:processJobs [send-announcement-notification:68495c62d489c703463efd71] processing job
+huegelfest-app-staging-1  | 2025-06-11T10:37:22.227Z agenda:job [send-announcement-notification:68495c62d489c703463efd71] setting lastRunAt to: 2025-06-11T10:37:22.227Z
+huegelfest-app-staging-1  | 2025-06-11T10:37:22.227Z agenda:saveJob attempting to save a job into Agenda instance
+huegelfest-app-staging-1  | 2025-06-11T10:37:22.228Z agenda:saveJob [job 68495c62d489c703463efd71] set job props: 
 huegelfest-app-staging-1  | {
 huegelfest-app-staging-1  |   name: 'send-announcement-notification',
 huegelfest-app-staging-1  |   data: {
-huegelfest-app-staging-1  |     title: 'Gruppe Technik',
-huegelfest-app-staging-1  |     body: 'mkmkk',
+huegelfest-app-staging-1  |     title: 'Gruppe Awareness',
+huegelfest-app-staging-1  |     body: 'sdsd',
 huegelfest-app-staging-1  |     icon: '/icon-192x192.png',
 huegelfest-app-staging-1  |     badge: '/badge-96x96.png',
 huegelfest-app-staging-1  |     data: {
 huegelfest-app-staging-1  |       type: 'announcement',
-huegelfest-app-staging-1  |       groupId: new ObjectId("6842fb7e4263e5d6137143a8"),
-huegelfest-app-staging-1  |       announcementId: new ObjectId("6849504304a75b3c703bd33c")
+huegelfest-app-staging-1  |       groupId: new ObjectId("68495c375af1e903390722a0"),
+huegelfest-app-staging-1  |       announcementId: new ObjectId("68495c625af1e903390724c1")
 huegelfest-app-staging-1  |     }
 huegelfest-app-staging-1  |   },
 huegelfest-app-staging-1  |   priority: 0,
 huegelfest-app-staging-1  |   shouldSaveResult: false,
 huegelfest-app-staging-1  |   lastModifiedBy: undefined,
-huegelfest-app-staging-1  |   lockedAt: 2025-06-11T09:45:39.228Z,
+huegelfest-app-staging-1  |   lockedAt: 2025-06-11T10:37:22.222Z,
 huegelfest-app-staging-1  |   type: 'normal',
 huegelfest-app-staging-1  |   nextRunAt: undefined,
-huegelfest-app-staging-1  |   lastRunAt: 2025-06-11T09:45:39.234Z
+huegelfest-app-staging-1  |   lastRunAt: 2025-06-11T10:37:22.227Z
 huegelfest-app-staging-1  | }
-huegelfest-app-staging-1  | 2025-06-11T09:45:39.236Z agenda:saveJob current time stored as 2025-06-11T09:45:39.236Z
-huegelfest-app-staging-1  | 2025-06-11T09:45:39.236Z agenda:saveJob job already has _id, calling findOneAndUpdate() using _id as query
-huegelfest-app-staging-1  | 2025-06-11T09:45:39.237Z agenda:internal:processJobs lockOnTheFly: isLockingOnTheFly: false
-huegelfest-app-staging-1  | 2025-06-11T09:45:39.237Z agenda:internal:processJobs no jobs to current lock on the fly, returning
-huegelfest-app-staging-1  | [2025-06-11T09:45:39.237Z] [INFO] [n@39.js] [saveAnnouncements] Ankündigungen erfolgreich gespeichert
-huegelfest-app-staging-1  | 2025-06-11T09:45:39.257Z agenda:saveJob processDbResult() called with success, checking whether to process job immediately or not
-huegelfest-app-staging-1  | 2025-06-11T09:45:39.258Z agenda:job [send-announcement-notification:684950432756ec7d0d133304] starting job
-huegelfest-app-staging-1  | 2025-06-11T09:45:39.258Z agenda:job [send-announcement-notification:684950432756ec7d0d133304] process function being called
-huegelfest-app-staging-1  | [2025-06-11T09:45:39.258Z] [INFO] [n@39.js] [Agenda] Job started: send-announcement-notification
-huegelfest-app-staging-1  | [2025-06-11T09:45:39.258Z] [INFO] [n@39.js] [WebPush] Service erfolgreich initialisiert
-huegelfest-app-staging-1  | [2025-06-11T09:45:39.259Z] [INFO] [n@39.js] [WebPush] Starte Senden der Benachrichtigungen {"title":"Gruppe Technik","body":"mkmkk","payloadSize":207}
-huegelfest-app-staging-1  | [WebSocket] Broadcast "announcement" an 1 Clients: {"topic":"announcement","payload":{"updated":true}}
-huegelfest-app-staging-1  | [WebSocket] Broadcast via HTTP erfolgreich ausgelöst
-huegelfest-app-staging-1  | [2025-06-11T09:45:42.252Z] [INFO] [n@39.js] [WebPush] Alle Benachrichtigungen abgeschlossen {"total":7,"success":7,"failed":0,"timestamp":"2025-06-11T09:45:42.252Z"}
-huegelfest-app-staging-1  | 2025-06-11T09:45:42.253Z agenda:saveJob attempting to save a job into Agenda instance
-huegelfest-app-staging-1  | 2025-06-11T09:45:42.254Z agenda:saveJob [job 684950432756ec7d0d133304] set job props: 
+huegelfest-app-staging-1  | 2025-06-11T10:37:22.228Z agenda:saveJob current time stored as 2025-06-11T10:37:22.228Z
+huegelfest-app-staging-1  | 2025-06-11T10:37:22.228Z agenda:saveJob job already has _id, calling findOneAndUpdate() using _id as query
+huegelfest-app-staging-1  | 2025-06-11T10:37:22.229Z agenda:internal:processJobs lockOnTheFly: isLockingOnTheFly: false
+huegelfest-app-staging-1  | 2025-06-11T10:37:22.229Z agenda:internal:processJobs no jobs to current lock on the fly, returning
+huegelfest-app-staging-1  | [2025-06-11T10:37:22.230Z] [INFO] [n@39.js] [saveAnnouncements] Ankündigungen erfolgreich gespeichert
+huegelfest-app-staging-1  | 2025-06-11T10:37:22.242Z agenda:saveJob processDbResult() called with success, checking whether to process job immediately or not
+huegelfest-app-staging-1  | [2025-06-11T10:37:22.243Z] [INFO] [n@39.js] [Agenda] Job started: send-announcement-notification (68495c62d489c703463efd71)
+huegelfest-app-staging-1  | 2025-06-11T10:37:22.243Z agenda:job [send-announcement-notification:68495c62d489c703463efd71] starting job
+huegelfest-app-staging-1  | 2025-06-11T10:37:22.243Z agenda:job [send-announcement-notification:68495c62d489c703463efd71] process function being called
+huegelfest-app-staging-1  | [2025-06-11T10:37:22.243Z] [INFO] [n@39.js] [WebPush] Service erfolgreich initialisiert
+huegelfest-app-staging-1  | [2025-06-11T10:37:22.244Z] [INFO] [n@39.js] [WebPush] Starte Senden der Benachrichtigungen {"title":"Gruppe Awareness","body":"sdsd","payloadSize":208}
+huegelfest-app-staging-1  | [2025-06-11T10:37:22.250Z] [INFO] [n@39.js] [WebPush] Alle Benachrichtigungen abgeschlossen {"total":0,"success":0,"failed":0,"timestamp":"2025-06-11T10:37:22.250Z"}
+huegelfest-app-staging-1  | 2025-06-11T10:37:22.251Z agenda:saveJob attempting to save a job into Agenda instance
+huegelfest-app-staging-1  | 2025-06-11T10:37:22.251Z agenda:saveJob [job 68495c62d489c703463efd71] set job props: 
 huegelfest-app-staging-1  | {
 huegelfest-app-staging-1  |   name: 'send-announcement-notification',
 huegelfest-app-staging-1  |   data: {
-huegelfest-app-staging-1  |     title: 'Gruppe Technik',
-huegelfest-app-staging-1  |     body: 'mkmkk',
+huegelfest-app-staging-1  |     title: 'Gruppe Awareness',
+huegelfest-app-staging-1  |     body: 'sdsd',
 huegelfest-app-staging-1  |     icon: '/icon-192x192.png',
 huegelfest-app-staging-1  |     badge: '/badge-96x96.png',
 huegelfest-app-staging-1  |     data: {
 huegelfest-app-staging-1  |       type: 'announcement',
-huegelfest-app-staging-1  |       groupId: new ObjectId("6842fb7e4263e5d6137143a8"),
-huegelfest-app-staging-1  |       announcementId: new ObjectId("6849504304a75b3c703bd33c")
+huegelfest-app-staging-1  |       groupId: new ObjectId("68495c375af1e903390722a0"),
+huegelfest-app-staging-1  |       announcementId: new ObjectId("68495c625af1e903390724c1")
 huegelfest-app-staging-1  |     }
 huegelfest-app-staging-1  |   },
 huegelfest-app-staging-1  |   priority: 0,
@@ -303,287 +271,299 @@ huegelfest-app-staging-1  |   lastModifiedBy: undefined,
 huegelfest-app-staging-1  |   lockedAt: null,
 huegelfest-app-staging-1  |   type: 'normal',
 huegelfest-app-staging-1  |   nextRunAt: null,
-huegelfest-app-staging-1  |   lastRunAt: 2025-06-11T09:45:39.234Z,
-huegelfest-app-staging-1  |   lastFinishedAt: 2025-06-11T09:45:42.253Z
+huegelfest-app-staging-1  |   lastRunAt: 2025-06-11T10:37:22.227Z,
+huegelfest-app-staging-1  |   lastFinishedAt: 2025-06-11T10:37:22.250Z
 huegelfest-app-staging-1  | }
-huegelfest-app-staging-1  | 2025-06-11T09:45:42.254Z agenda:saveJob current time stored as 2025-06-11T09:45:42.254Z
-huegelfest-app-staging-1  | 2025-06-11T09:45:42.254Z agenda:saveJob job already has _id, calling findOneAndUpdate() using _id as query
-huegelfest-app-staging-1  | 2025-06-11T09:45:42.258Z agenda:saveJob processDbResult() called with success, checking whether to process job immediately or not
-huegelfest-app-staging-1  | 2025-06-11T09:45:42.258Z agenda:job [send-announcement-notification:684950432756ec7d0d133304] was saved successfully to MongoDB
-huegelfest-app-staging-1  | [2025-06-11T09:45:42.258Z] [INFO] [n@39.js] [Agenda] Job succeeded: send-announcement-notification
-huegelfest-app-staging-1  | 2025-06-11T09:45:42.259Z agenda:job [send-announcement-notification:684950432756ec7d0d133304] has succeeded
-huegelfest-app-staging-1  | [2025-06-11T09:45:42.259Z] [INFO] [n@39.js] [Agenda] Job completed: send-announcement-notification
-huegelfest-app-staging-1  | 2025-06-11T09:45:42.259Z agenda:job [send-announcement-notification:684950432756ec7d0d133304] job finished at [2025-06-11T09:45:42.253Z] and was unlocked
-huegelfest-app-staging-1  | [WebSocket] Neue Verbindung eingegangen
-huegelfest-app-staging-1  | [WebSocket] User 68433c3006746615220405c0 registriert
-huegelfest-app-staging-1  | [WebSocket] Neue Verbindung eingegangen
-huegelfest-app-staging-1  | [WebSocket] User 68433c3006746615220405c0 bereits verbunden - schließe alte Verbindung
-huegelfest-app-staging-1  | [WebSocket] User 68433c3006746615220405c0 registriert
-huegelfest-app-staging-1  | [WebSocket] User 68433c3006746615220405c0 getrennt
-huegelfest-app-staging-1  | [WebSocket] Neue Verbindung eingegangen
-huegelfest-app-staging-1  | [WebSocket] User 68433c3006746615220405c0 registriert
-huegelfest-app-staging-1  | [WebSocket] User 68433c3006746615220405c0 getrennt
-huegelfest-app-staging-1  | [WebSocket] User 68433c3006746615220405c0 getrennt
-huegelfest-app-staging-1  | 2025-06-11T09:45:54.290Z agenda:internal:processJobs starting to process jobs: [unknownName:unknownId]
-huegelfest-app-staging-1  | 2025-06-11T09:45:54.290Z agenda:internal:processJobs queuing up job to process: [send-announcement-notification]
-huegelfest-app-staging-1  | 2025-06-11T09:45:54.291Z agenda:internal:processJobs jobQueueFilling: send-announcement-notification isJobQueueFilling: false
-huegelfest-app-staging-1  | 2025-06-11T09:45:54.291Z agenda:internal:processJobs job [send-announcement-notification] lock status: shouldLock = true
-huegelfest-app-staging-1  | 2025-06-11T09:45:54.291Z agenda:internal:_findAndLockNextJob _findAndLockNextJob(send-announcement-notification, [Function])
-huegelfest-app-staging-1  | 2025-06-11T09:45:54.292Z agenda:internal:processJobs queuing up job to process: [sendPushEvent]
-huegelfest-app-staging-1  | 2025-06-11T09:45:54.292Z agenda:internal:processJobs jobQueueFilling: sendPushEvent isJobQueueFilling: false
-huegelfest-app-staging-1  | 2025-06-11T09:45:54.292Z agenda:internal:processJobs job [sendPushEvent] lock status: shouldLock = true
-huegelfest-app-staging-1  | 2025-06-11T09:45:54.292Z agenda:internal:_findAndLockNextJob _findAndLockNextJob(sendPushEvent, [Function])
-huegelfest-app-staging-1  | [WebSocket] Neue Verbindung eingegangen
-huegelfest-app-staging-1  | [WebSocket] User 6842fb794263e5d613714373 bereits verbunden - schließe alte Verbindung
-huegelfest-app-staging-1  | [WebSocket] User 6842fb794263e5d613714373 registriert
-huegelfest-app-staging-1  | [WebSocket] User 6842fb794263e5d613714373 getrennt
-huegelfest-app-staging-1  | 2025-06-11T09:45:55.565Z agenda:internal:processJobs starting to process jobs: [unknownName:unknownId]
-huegelfest-app-staging-1  | 2025-06-11T09:45:55.565Z agenda:internal:processJobs queuing up job to process: [send-announcement-notification]
-huegelfest-app-staging-1  | 2025-06-11T09:45:55.565Z agenda:internal:processJobs jobQueueFilling: send-announcement-notification isJobQueueFilling: false
-huegelfest-app-staging-1  | 2025-06-11T09:45:55.565Z agenda:internal:processJobs job [send-announcement-notification] lock status: shouldLock = true
-huegelfest-app-staging-1  | 2025-06-11T09:45:55.565Z agenda:internal:_findAndLockNextJob _findAndLockNextJob(send-announcement-notification, [Function])
-huegelfest-app-staging-1  | 2025-06-11T09:45:55.567Z agenda:internal:processJobs queuing up job to process: [sendPushEvent]
-huegelfest-app-staging-1  | 2025-06-11T09:45:55.567Z agenda:internal:processJobs jobQueueFilling: sendPushEvent isJobQueueFilling: false
-huegelfest-app-staging-1  | 2025-06-11T09:45:55.567Z agenda:internal:processJobs job [sendPushEvent] lock status: shouldLock = true
-huegelfest-app-staging-1  | 2025-06-11T09:45:55.567Z agenda:internal:_findAndLockNextJob _findAndLockNextJob(sendPushEvent, [Function])
-huegelfest-app-staging-1  | [WebSocket] User 6842fb794263e5d613714373 getrennt
-huegelfest-app-staging-1  | [WebSocket] Neue Verbindung eingegangen
-huegelfest-app-staging-1  | 2025-06-11T09:45:56.420Z agenda:internal:processJobs starting to process jobs: [unknownName:unknownId]
-huegelfest-app-staging-1  | 2025-06-11T09:45:56.420Z agenda:internal:processJobs queuing up job to process: [send-announcement-notification]
-huegelfest-app-staging-1  | 2025-06-11T09:45:56.420Z agenda:internal:processJobs jobQueueFilling: send-announcement-notification isJobQueueFilling: false
-huegelfest-app-staging-1  | 2025-06-11T09:45:56.420Z agenda:internal:processJobs job [send-announcement-notification] lock status: shouldLock = true
-huegelfest-app-staging-1  | 2025-06-11T09:45:56.420Z agenda:internal:_findAndLockNextJob _findAndLockNextJob(send-announcement-notification, [Function])
-huegelfest-app-staging-1  | 2025-06-11T09:45:56.421Z agenda:internal:processJobs queuing up job to process: [sendPushEvent]
-huegelfest-app-staging-1  | 2025-06-11T09:45:56.421Z agenda:internal:processJobs jobQueueFilling: sendPushEvent isJobQueueFilling: false
-huegelfest-app-staging-1  | 2025-06-11T09:45:56.421Z agenda:internal:processJobs job [sendPushEvent] lock status: shouldLock = true
-huegelfest-app-staging-1  | 2025-06-11T09:45:56.421Z agenda:internal:_findAndLockNextJob _findAndLockNextJob(sendPushEvent, [Function])
-huegelfest-app-staging-1  | [WebSocket] Anonyme Verbindung getrennt
-huegelfest-app-staging-1  | [WebSocket] Neue Verbindung eingegangen
-huegelfest-app-staging-1  | [WebSocket] User 6842fb794263e5d613714373 registriert
-huegelfest-app-staging-1  | [2025-06-11T09:45:57.082Z] [INFO] [i@758.js] [MusicService] Hole alle Musik-Einträge
-huegelfest-app-staging-1  | [2025-06-11T09:45:57.100Z] [INFO] [i@758.js] [MusicService] Gefundene Einträge: 1
-huegelfest-app-staging-1  | [WebSocket] Neue Verbindung eingegangen
-huegelfest-app-staging-1  | [2025-06-11T09:45:58.235Z] [INFO] [i@758.js] [MusicService] Hole alle Musik-Einträge
-huegelfest-app-staging-1  | [2025-06-11T09:45:58.255Z] [INFO] [i@758.js] [MusicService] Gefundene Einträge: 1
-huegelfest-app-staging-1  | [isTemporaryUserSession] Starting check...
-huegelfest-app-staging-1  | [isTemporaryUserSession] Token found, verifying...
-huegelfest-app-staging-1  | [isTemporaryUserSession] Payload: {
-huegelfest-app-staging-1  |   userId: '6842fb794263e5d613714373',
-huegelfest-app-staging-1  |   email: 'admin@huegelfest.de',
-huegelfest-app-staging-1  |   name: 'Administrator',
-huegelfest-app-staging-1  |   username: 'felix',
-huegelfest-app-staging-1  |   role: 'admin',
-huegelfest-app-staging-1  |   emailVerified: true,
-huegelfest-app-staging-1  |   isShadowUser: true,
-huegelfest-app-staging-1  |   type: 'user',
-huegelfest-app-staging-1  |   iat: 1749635158,
-huegelfest-app-staging-1  |   exp: 1750239958
-huegelfest-app-staging-1  | }
-huegelfest-app-staging-1  | [isTemporaryUserSession] originalAdmin: undefined
-huegelfest-app-staging-1  | [isTemporaryUserSession] Result: false
-huegelfest-app-staging-1  | [WebSocket] Anonyme Verbindung getrennt
-huegelfest-app-staging-1  | [WebSocket] Neue Verbindung eingegangen
-huegelfest-app-staging-1  | [WebSocket] User 6842fb794263e5d613714373 bereits verbunden - schließe alte Verbindung
-huegelfest-app-staging-1  | [WebSocket] User 6842fb794263e5d613714373 registriert
-huegelfest-app-staging-1  | [WebSocket] User 6842fb794263e5d613714373 getrennt
-huegelfest-app-staging-1  | [WebSocket] Neue Verbindung eingegangen
-huegelfest-app-staging-1  | [WebSocket] User 6842fb794263e5d613714373 registriert
-huegelfest-app-staging-1  | [2025-06-11T09:46:01.888Z] [INFO] [i@758.js] [MusicService] Hole alle Musik-Einträge
-huegelfest-app-staging-1  | [2025-06-11T09:46:01.894Z] [INFO] [i@758.js] [MusicService] Gefundene Einträge: 1
-huegelfest-app-staging-1  | [2025-06-11T09:46:03.088Z] [INFO] [i@758.js] [MusicService] Hole alle Musik-Einträge
-huegelfest-app-staging-1  | [2025-06-11T09:46:03.093Z] [INFO] [i@758.js] [MusicService] Gefundene Einträge: 1
-huegelfest-app-staging-1  | [moderateEvent] Starting moderation for event: 68494a0e7ccf5dff47236127 Status: approved
-huegelfest-app-staging-1  | [moderateEvent] Current event found: true Current status: pending
-huegelfest-app-staging-1  | [WebSocket] Broadcast "event-updated" an 2 Clients: {"topic":"event-updated","payload":{"eventId":"68494a0e7ccf5dff47236127","dayId":"6842fb7e4263e5d6137143ff"}}
+huegelfest-app-staging-1  | 2025-06-11T10:37:22.251Z agenda:saveJob current time stored as 2025-06-11T10:37:22.251Z
+huegelfest-app-staging-1  | 2025-06-11T10:37:22.251Z agenda:saveJob job already has _id, calling findOneAndUpdate() using _id as query
+huegelfest-app-staging-1  | [WebSocket] Broadcast "announcement" an 1 Clients: {"topic":"announcement","payload":{"updated":true}}
+huegelfest-app-staging-1  | 2025-06-11T10:37:22.256Z agenda:saveJob processDbResult() called with success, checking whether to process job immediately or not
+huegelfest-app-staging-1  | 2025-06-11T10:37:22.256Z agenda:job [send-announcement-notification:68495c62d489c703463efd71] was saved successfully to MongoDB
+huegelfest-app-staging-1  | [2025-06-11T10:37:22.256Z] [INFO] [n@39.js] [Agenda] Job succeeded: send-announcement-notification (68495c62d489c703463efd71)
+huegelfest-app-staging-1  | 2025-06-11T10:37:22.256Z agenda:job [send-announcement-notification:68495c62d489c703463efd71] has succeeded
+huegelfest-app-staging-1  | [2025-06-11T10:37:22.257Z] [INFO] [n@39.js] [Agenda] Job completed: send-announcement-notification (68495c62d489c703463efd71)
+huegelfest-app-staging-1  | 2025-06-11T10:37:22.257Z agenda:job [send-announcement-notification:68495c62d489c703463efd71] job finished at [2025-06-11T10:37:22.250Z] and was unlocked
 huegelfest-app-staging-1  | [WebSocket] Broadcast via HTTP erfolgreich ausgelöst
-huegelfest-app-staging-1  | [moderateEvent] Event updated: true
-huegelfest-app-staging-1  | [moderateEvent] Event approved, sending notifications
-huegelfest-app-staging-1  | [2025-06-11T09:46:12.242Z] [INFO] [n@39.js] [WebPush] Starte Senden der Benachrichtigungen {"title":"Neues Event veröffentlicht","body":"Bier trinken und dabei gut aussehen - Workshop","payloadSize":218}
-huegelfest-app-staging-1  | [2025-06-11T09:46:17.395Z] [INFO] [n@39.js] [WebPush] Alle Benachrichtigungen abgeschlossen {"total":7,"success":7,"failed":0,"timestamp":"2025-06-11T09:46:17.395Z"}
-huegelfest-app-staging-1  | [moderateEvent] Immediate push notification sent
-huegelfest-app-staging-1  | [moderateEvent] Creating scheduled push for approved event
-huegelfest-app-staging-1  | [createScheduledPushForApprovedEvent] Starting for event: 68494a0e7ccf5dff47236127 Title: Bier trinken und dabei gut aussehen - Workshop
-huegelfest-app-staging-1  | [createScheduledPushForApprovedEvent] Day found: 31.07. - Anreise Date: 2025-07-31T00:00:00.000Z
-huegelfest-app-staging-1  | [createScheduledPushForApprovedEvent] Calculated event date: 2025-07-31T14:01:00.000Z
-huegelfest-app-staging-1  | [createScheduledPushForApprovedEvent] Current date: 2025-06-11T09:46:17.409Z
-huegelfest-app-staging-1  | [createScheduledPushForApprovedEvent] Event is in future: true
-huegelfest-app-staging-1  | [createScheduledPushForApprovedEvent] Creating scheduled push event
-huegelfest-app-staging-1  | 2025-06-11T09:46:17.427Z agenda:schedule Agenda.schedule(2025-07-31T14:01:00.000Z, 'sendPushEvent', [undefined], cb)
-huegelfest-app-staging-1  | 2025-06-11T09:46:17.427Z agenda:create Agenda.create(sendPushEvent, [Object])
-huegelfest-app-staging-1  | 2025-06-11T09:46:17.427Z agenda:saveJob attempting to save a job into Agenda instance
-huegelfest-app-staging-1  | 2025-06-11T09:46:17.429Z agenda:saveJob [job undefined] set job props: 
-huegelfest-app-staging-1  | {
-huegelfest-app-staging-1  |   name: 'sendPushEvent',
-huegelfest-app-staging-1  |   data: { eventId: new ObjectId('6849506904a75b3c703bd4bd') },
-huegelfest-app-staging-1  |   priority: 0,
-huegelfest-app-staging-1  |   shouldSaveResult: false,
-huegelfest-app-staging-1  |   type: 'normal',
-huegelfest-app-staging-1  |   nextRunAt: 2025-07-31T14:01:00.000Z,
-huegelfest-app-staging-1  |   lastModifiedBy: undefined
-huegelfest-app-staging-1  | }
-huegelfest-app-staging-1  | 2025-06-11T09:46:17.429Z agenda:saveJob current time stored as 2025-06-11T09:46:17.429Z
-huegelfest-app-staging-1  | 2025-06-11T09:46:17.430Z agenda:saveJob using default behavior, inserting new job via insertOne() with props that were set: 
-huegelfest-app-staging-1  | {
-huegelfest-app-staging-1  |   name: 'sendPushEvent',
-huegelfest-app-staging-1  |   data: { eventId: new ObjectId('6849506904a75b3c703bd4bd') },
-huegelfest-app-staging-1  |   priority: 0,
-huegelfest-app-staging-1  |   shouldSaveResult: false,
-huegelfest-app-staging-1  |   type: 'normal',
-huegelfest-app-staging-1  |   nextRunAt: 2025-07-31T14:01:00.000Z,
-huegelfest-app-staging-1  |   lastModifiedBy: undefined
-huegelfest-app-staging-1  | }
-huegelfest-app-staging-1  | 2025-06-11T09:46:17.435Z agenda:saveJob processDbResult() called with success, checking whether to process job immediately or not
-huegelfest-app-staging-1  | [createScheduledPushForApprovedEvent] Push event created with agendaJobId: 684950692756ec7d0d133305
-huegelfest-app-staging-1  | [createScheduledPushForApprovedEvent] Event updated with agendaJobId
-huegelfest-app-staging-1  | [moderateEvent] Scheduled push creation completed
+huegelfest-app-staging-1  | [isTemporaryUserSession] Starting check...
+huegelfest-app-staging-1  | [isTemporaryUserSession] No token found
 huegelfest-app-staging-1  | [WebSocket] Neue Verbindung eingegangen
-huegelfest-app-staging-1  | [WebSocket] User 68433c3006746615220405c0 registriert
+huegelfest-app-staging-1  | [2025-06-11T10:37:31.936Z] [INFO] [i@758.js] [MusicService] Hole alle Musik-Einträge
+huegelfest-app-staging-1  | [2025-06-11T10:37:31.940Z] [INFO] [i@758.js] [MusicService] Gefundene Einträge: 0
+huegelfest-app-staging-1  | 2025-06-11T10:37:39.470Z agenda:internal:processJobs starting to process jobs: [unknownName:unknownId]
+huegelfest-app-staging-1  | 2025-06-11T10:37:39.470Z agenda:internal:processJobs queuing up job to process: [send-announcement-notification]
+huegelfest-app-staging-1  | 2025-06-11T10:37:39.470Z agenda:internal:processJobs jobQueueFilling: send-announcement-notification isJobQueueFilling: false
+huegelfest-app-staging-1  | 2025-06-11T10:37:39.470Z agenda:internal:processJobs job [send-announcement-notification] lock status: shouldLock = true
+huegelfest-app-staging-1  | 2025-06-11T10:37:39.470Z agenda:internal:_findAndLockNextJob _findAndLockNextJob(send-announcement-notification, [Function])
+huegelfest-app-staging-1  | 2025-06-11T10:37:39.471Z agenda:internal:processJobs queuing up job to process: [sendPushEvent]
+huegelfest-app-staging-1  | 2025-06-11T10:37:39.471Z agenda:internal:processJobs jobQueueFilling: sendPushEvent isJobQueueFilling: false
+huegelfest-app-staging-1  | 2025-06-11T10:37:39.471Z agenda:internal:processJobs job [sendPushEvent] lock status: shouldLock = true
+huegelfest-app-staging-1  | 2025-06-11T10:37:39.471Z agenda:internal:_findAndLockNextJob _findAndLockNextJob(sendPushEvent, [Function])
+huegelfest-app-staging-1  | [WebSocket] Anonyme Verbindung getrennt
 huegelfest-app-staging-1  | [WebSocket] Neue Verbindung eingegangen
-huegelfest-app-staging-1  | [WebSocket] User 68433c3006746615220405c0 bereits verbunden - schließe alte Verbindung
-huegelfest-app-staging-1  | [WebSocket] User 68433c3006746615220405c0 registriert
-huegelfest-app-staging-1  | [WebSocket] User 68433c3006746615220405c0 getrennt
-huegelfest-app-staging-1  | [WebSocket] Neue Verbindung eingegangen
-huegelfest-app-staging-1  | [WebSocket] User 68433c3006746615220405c0 registriert
-huegelfest-app-staging-1  | [WebSocket] User 68433c3006746615220405c0 getrennt
-huegelfest-app-staging-1  | [WebSocket] User 68433c3006746615220405c0 getrennt
-huegelfest-app-staging-1  | 2025-06-11T09:46:24.290Z agenda:internal:processJobs starting to process jobs: [unknownName:unknownId]
-huegelfest-app-staging-1  | 2025-06-11T09:46:24.291Z agenda:internal:processJobs queuing up job to process: [send-announcement-notification]
-huegelfest-app-staging-1  | 2025-06-11T09:46:24.291Z agenda:internal:processJobs jobQueueFilling: send-announcement-notification isJobQueueFilling: false
-huegelfest-app-staging-1  | 2025-06-11T09:46:24.291Z agenda:internal:processJobs job [send-announcement-notification] lock status: shouldLock = true
-huegelfest-app-staging-1  | 2025-06-11T09:46:24.291Z agenda:internal:_findAndLockNextJob _findAndLockNextJob(send-announcement-notification, [Function])
-huegelfest-app-staging-1  | 2025-06-11T09:46:24.291Z agenda:internal:processJobs queuing up job to process: [sendPushEvent]
-huegelfest-app-staging-1  | 2025-06-11T09:46:24.292Z agenda:internal:processJobs jobQueueFilling: sendPushEvent isJobQueueFilling: false
-huegelfest-app-staging-1  | 2025-06-11T09:46:24.292Z agenda:internal:processJobs job [sendPushEvent] lock status: shouldLock = true
-huegelfest-app-staging-1  | 2025-06-11T09:46:24.292Z agenda:internal:_findAndLockNextJob _findAndLockNextJob(sendPushEvent, [Function])
-huegelfest-app-staging-1  | 2025-06-11T09:46:25.566Z agenda:internal:processJobs starting to process jobs: [unknownName:unknownId]
-huegelfest-app-staging-1  | 2025-06-11T09:46:25.566Z agenda:internal:processJobs queuing up job to process: [send-announcement-notification]
-huegelfest-app-staging-1  | 2025-06-11T09:46:25.566Z agenda:internal:processJobs jobQueueFilling: send-announcement-notification isJobQueueFilling: false
-huegelfest-app-staging-1  | 2025-06-11T09:46:25.567Z agenda:internal:processJobs job [send-announcement-notification] lock status: shouldLock = true
-huegelfest-app-staging-1  | 2025-06-11T09:46:25.567Z agenda:internal:_findAndLockNextJob _findAndLockNextJob(send-announcement-notification, [Function])
-huegelfest-app-staging-1  | 2025-06-11T09:46:25.567Z agenda:internal:processJobs queuing up job to process: [sendPushEvent]
-huegelfest-app-staging-1  | 2025-06-11T09:46:25.567Z agenda:internal:processJobs jobQueueFilling: sendPushEvent isJobQueueFilling: false
-huegelfest-app-staging-1  | 2025-06-11T09:46:25.567Z agenda:internal:processJobs job [sendPushEvent] lock status: shouldLock = true
-huegelfest-app-staging-1  | 2025-06-11T09:46:25.567Z agenda:internal:_findAndLockNextJob _findAndLockNextJob(sendPushEvent, [Function])
-huegelfest-app-staging-1  | 2025-06-11T09:46:26.421Z agenda:internal:processJobs starting to process jobs: [unknownName:unknownId]
-huegelfest-app-staging-1  | 2025-06-11T09:46:26.421Z agenda:internal:processJobs queuing up job to process: [send-announcement-notification]
-huegelfest-app-staging-1  | 2025-06-11T09:46:26.421Z agenda:internal:processJobs jobQueueFilling: send-announcement-notification isJobQueueFilling: false
-huegelfest-app-staging-1  | 2025-06-11T09:46:26.421Z agenda:internal:processJobs job [send-announcement-notification] lock status: shouldLock = true
-huegelfest-app-staging-1  | 2025-06-11T09:46:26.421Z agenda:internal:_findAndLockNextJob _findAndLockNextJob(send-announcement-notification, [Function])
-huegelfest-app-staging-1  | 2025-06-11T09:46:26.422Z agenda:internal:processJobs queuing up job to process: [sendPushEvent]
-huegelfest-app-staging-1  | 2025-06-11T09:46:26.422Z agenda:internal:processJobs jobQueueFilling: sendPushEvent isJobQueueFilling: false
-huegelfest-app-staging-1  | 2025-06-11T09:46:26.422Z agenda:internal:processJobs job [sendPushEvent] lock status: shouldLock = true
-huegelfest-app-staging-1  | 2025-06-11T09:46:26.422Z agenda:internal:_findAndLockNextJob _findAndLockNextJob(sendPushEvent, [Function])
-huegelfest-app-staging-1  | 2025-06-11T09:46:32.782Z agenda:now Agenda.now(send-announcement-notification, [Object])
-huegelfest-app-staging-1  | 2025-06-11T09:46:32.782Z agenda:create Agenda.create(send-announcement-notification, [Object])
-huegelfest-app-staging-1  | 2025-06-11T09:46:32.783Z agenda:saveJob attempting to save a job into Agenda instance
-huegelfest-app-staging-1  | 2025-06-11T09:46:32.783Z agenda:saveJob [job undefined] set job props: 
+huegelfest-app-staging-1  | [isTemporaryUserSession] Starting check...
+huegelfest-app-staging-1  | [isTemporaryUserSession] No token found
+huegelfest-app-staging-1  | [2025-06-11T10:37:45.249Z] [INFO] [i@758.js] [MusicService] Hole alle Musik-Einträge
+huegelfest-app-staging-1  | [2025-06-11T10:37:45.255Z] [INFO] [i@758.js] [MusicService] Gefundene Einträge: 0
+huegelfest-app-staging-1  | 2025-06-11T10:37:52.079Z agenda:internal:processJobs starting to process jobs: [unknownName:unknownId]
+huegelfest-app-staging-1  | 2025-06-11T10:37:52.080Z agenda:internal:processJobs queuing up job to process: [send-announcement-notification]
+huegelfest-app-staging-1  | 2025-06-11T10:37:52.080Z agenda:internal:processJobs jobQueueFilling: send-announcement-notification isJobQueueFilling: false
+huegelfest-app-staging-1  | 2025-06-11T10:37:52.080Z agenda:internal:processJobs job [send-announcement-notification] lock status: shouldLock = true
+huegelfest-app-staging-1  | 2025-06-11T10:37:52.080Z agenda:internal:_findAndLockNextJob _findAndLockNextJob(send-announcement-notification, [Function])
+huegelfest-app-staging-1  | 2025-06-11T10:37:52.080Z agenda:internal:processJobs queuing up job to process: [sendPushEvent]
+huegelfest-app-staging-1  | 2025-06-11T10:37:52.080Z agenda:internal:processJobs jobQueueFilling: sendPushEvent isJobQueueFilling: false
+huegelfest-app-staging-1  | 2025-06-11T10:37:52.080Z agenda:internal:processJobs job [sendPushEvent] lock status: shouldLock = true
+huegelfest-app-staging-1  | 2025-06-11T10:37:52.081Z agenda:internal:_findAndLockNextJob _findAndLockNextJob(sendPushEvent, [Function])
+huegelfest-app-staging-1  | 2025-06-11T10:37:52.275Z agenda:now Agenda.now(send-announcement-notification, [Object])
+huegelfest-app-staging-1  | 2025-06-11T10:37:52.275Z agenda:create Agenda.create(send-announcement-notification, [Object])
+huegelfest-app-staging-1  | 2025-06-11T10:37:52.276Z agenda:saveJob attempting to save a job into Agenda instance
+huegelfest-app-staging-1  | 2025-06-11T10:37:52.277Z agenda:saveJob [job undefined] set job props: 
 huegelfest-app-staging-1  | {
 huegelfest-app-staging-1  |   name: 'send-announcement-notification',
 huegelfest-app-staging-1  |   data: {
-huegelfest-app-staging-1  |     title: 'Gruppe Programm',
-huegelfest-app-staging-1  |     body: 'Juhu',
+huegelfest-app-staging-1  |     title: 'Gruppe Awareness',
+huegelfest-app-staging-1  |     body: 'asddas',
 huegelfest-app-staging-1  |     icon: '/icon-192x192.png',
 huegelfest-app-staging-1  |     badge: '/badge-96x96.png',
 huegelfest-app-staging-1  |     data: {
 huegelfest-app-staging-1  |       type: 'announcement',
-huegelfest-app-staging-1  |       groupId: new ObjectId('6842fb7e4263e5d6137143aa'),
-huegelfest-app-staging-1  |       announcementId: new ObjectId('6849507804a75b3c703bd4cd')
+huegelfest-app-staging-1  |       groupId: new ObjectId('68495c375af1e903390722a0'),
+huegelfest-app-staging-1  |       announcementId: new ObjectId('68495c805af1e90339072535')
 huegelfest-app-staging-1  |     }
 huegelfest-app-staging-1  |   },
 huegelfest-app-staging-1  |   priority: 0,
 huegelfest-app-staging-1  |   shouldSaveResult: false,
 huegelfest-app-staging-1  |   type: 'normal',
-huegelfest-app-staging-1  |   nextRunAt: 2025-06-11T09:46:32.783Z,
+huegelfest-app-staging-1  |   nextRunAt: 2025-06-11T10:37:52.276Z,
 huegelfest-app-staging-1  |   lastModifiedBy: undefined
 huegelfest-app-staging-1  | }
-huegelfest-app-staging-1  | 2025-06-11T09:46:32.784Z agenda:saveJob current time stored as 2025-06-11T09:46:32.783Z
-huegelfest-app-staging-1  | 2025-06-11T09:46:32.785Z agenda:saveJob using default behavior, inserting new job via insertOne() with props that were set: 
+huegelfest-app-staging-1  | 2025-06-11T10:37:52.278Z agenda:saveJob current time stored as 2025-06-11T10:37:52.278Z
+huegelfest-app-staging-1  | 2025-06-11T10:37:52.279Z agenda:saveJob using default behavior, inserting new job via insertOne() with props that were set: 
 huegelfest-app-staging-1  | {
 huegelfest-app-staging-1  |   name: 'send-announcement-notification',
 huegelfest-app-staging-1  |   data: {
-huegelfest-app-staging-1  |     title: 'Gruppe Programm',
-huegelfest-app-staging-1  |     body: 'Juhu',
+huegelfest-app-staging-1  |     title: 'Gruppe Awareness',
+huegelfest-app-staging-1  |     body: 'asddas',
 huegelfest-app-staging-1  |     icon: '/icon-192x192.png',
 huegelfest-app-staging-1  |     badge: '/badge-96x96.png',
 huegelfest-app-staging-1  |     data: {
 huegelfest-app-staging-1  |       type: 'announcement',
-huegelfest-app-staging-1  |       groupId: new ObjectId('6842fb7e4263e5d6137143aa'),
-huegelfest-app-staging-1  |       announcementId: new ObjectId('6849507804a75b3c703bd4cd')
+huegelfest-app-staging-1  |       groupId: new ObjectId('68495c375af1e903390722a0'),
+huegelfest-app-staging-1  |       announcementId: new ObjectId('68495c805af1e90339072535')
 huegelfest-app-staging-1  |     }
 huegelfest-app-staging-1  |   },
 huegelfest-app-staging-1  |   priority: 0,
 huegelfest-app-staging-1  |   shouldSaveResult: false,
 huegelfest-app-staging-1  |   type: 'normal',
-huegelfest-app-staging-1  |   nextRunAt: 2025-06-11T09:46:32.783Z,
+huegelfest-app-staging-1  |   nextRunAt: 2025-06-11T10:37:52.276Z,
 huegelfest-app-staging-1  |   lastModifiedBy: undefined
 huegelfest-app-staging-1  | }
-huegelfest-app-staging-1  | 2025-06-11T09:46:32.788Z agenda:saveJob processDbResult() called with success, checking whether to process job immediately or not
-huegelfest-app-staging-1  | 2025-06-11T09:46:32.792Z agenda:saveJob [send-announcement-notification:undefined] job would have ran by nextScanAt, processing the job immediately
-huegelfest-app-staging-1  | 2025-06-11T09:46:32.793Z agenda:internal:processJobs starting to process jobs: [send-announcement-notification:684950782756ec7d0d133306]
-huegelfest-app-staging-1  | 2025-06-11T09:46:32.793Z agenda:internal:processJobs job [send-announcement-notification:684950782756ec7d0d133306] was passed directly to processJobs(), locking and running immediately
-huegelfest-app-staging-1  | 2025-06-11T09:46:32.793Z agenda:internal:processJobs lockOnTheFly: isLockingOnTheFly: false
-huegelfest-app-staging-1  | 2025-06-11T09:46:32.793Z agenda:internal:processJobs job [send-announcement-notification] lock status: shouldLock = true
-huegelfest-app-staging-1  | 2025-06-11T09:46:32.797Z agenda:internal:processJobs found job [send-announcement-notification:684950782756ec7d0d133306] that can be locked on the fly
-huegelfest-app-staging-1  | 2025-06-11T09:46:32.797Z agenda:internal:processJobs [send-announcement-notification:684950782756ec7d0d133306] about to process job
-huegelfest-app-staging-1  | 2025-06-11T09:46:32.797Z agenda:internal:processJobs [send-announcement-notification:684950782756ec7d0d133306] nextRunAt is in the past, run the job immediately
-huegelfest-app-staging-1  | 2025-06-11T09:46:32.797Z agenda:internal:processJobs [send-announcement-notification:684950782756ec7d0d133306] processing job
-huegelfest-app-staging-1  | 2025-06-11T09:46:32.797Z agenda:job [send-announcement-notification:684950782756ec7d0d133306] setting lastRunAt to: 2025-06-11T09:46:32.797Z
-huegelfest-app-staging-1  | 2025-06-11T09:46:32.798Z agenda:saveJob attempting to save a job into Agenda instance
-huegelfest-app-staging-1  | 2025-06-11T09:46:32.798Z agenda:saveJob [job 684950782756ec7d0d133306] set job props: 
+huegelfest-app-staging-1  | 2025-06-11T10:37:52.283Z agenda:saveJob processDbResult() called with success, checking whether to process job immediately or not
+huegelfest-app-staging-1  | 2025-06-11T10:37:52.286Z agenda:saveJob [send-announcement-notification:undefined] job would have ran by nextScanAt, processing the job immediately
+huegelfest-app-staging-1  | 2025-06-11T10:37:52.286Z agenda:internal:processJobs starting to process jobs: [send-announcement-notification:68495c80d489c703463efd72]
+huegelfest-app-staging-1  | 2025-06-11T10:37:52.286Z agenda:internal:processJobs job [send-announcement-notification:68495c80d489c703463efd72] was passed directly to processJobs(), locking and running immediately
+huegelfest-app-staging-1  | 2025-06-11T10:37:52.287Z agenda:internal:processJobs lockOnTheFly: isLockingOnTheFly: false
+huegelfest-app-staging-1  | 2025-06-11T10:37:52.288Z agenda:internal:processJobs job [send-announcement-notification] lock status: shouldLock = true
+huegelfest-app-staging-1  | 2025-06-11T10:37:52.291Z agenda:internal:processJobs found job [send-announcement-notification:68495c80d489c703463efd72] that can be locked on the fly
+huegelfest-app-staging-1  | 2025-06-11T10:37:52.291Z agenda:internal:processJobs [send-announcement-notification:68495c80d489c703463efd72] about to process job
+huegelfest-app-staging-1  | 2025-06-11T10:37:52.292Z agenda:internal:processJobs [send-announcement-notification:68495c80d489c703463efd72] nextRunAt is in the past, run the job immediately
+huegelfest-app-staging-1  | [2025-06-11T10:37:52.308Z] [INFO] [n@39.js] [saveAnnouncements] Ankündigungen erfolgreich gespeichert
+huegelfest-app-staging-1  | 2025-06-11T10:37:52.292Z agenda:internal:processJobs [send-announcement-notification:68495c80d489c703463efd72] processing job
+huegelfest-app-staging-1  | 2025-06-11T10:37:52.304Z agenda:job [send-announcement-notification:68495c80d489c703463efd72] setting lastRunAt to: 2025-06-11T10:37:52.304Z
+huegelfest-app-staging-1  | 2025-06-11T10:37:52.305Z agenda:saveJob attempting to save a job into Agenda instance
+huegelfest-app-staging-1  | 2025-06-11T10:37:52.306Z agenda:saveJob [job 68495c80d489c703463efd72] set job props: 
 huegelfest-app-staging-1  | {
 huegelfest-app-staging-1  |   name: 'send-announcement-notification',
 huegelfest-app-staging-1  |   data: {
-huegelfest-app-staging-1  |     title: 'Gruppe Programm',
-huegelfest-app-staging-1  |     body: 'Juhu',
+huegelfest-app-staging-1  |     title: 'Gruppe Awareness',
+huegelfest-app-staging-1  |     body: 'asddas',
 huegelfest-app-staging-1  |     icon: '/icon-192x192.png',
 huegelfest-app-staging-1  |     badge: '/badge-96x96.png',
 huegelfest-app-staging-1  |     data: {
 huegelfest-app-staging-1  |       type: 'announcement',
-huegelfest-app-staging-1  |       groupId: new ObjectId("6842fb7e4263e5d6137143aa"),
-huegelfest-app-staging-1  |       announcementId: new ObjectId("6849507804a75b3c703bd4cd")
+huegelfest-app-staging-1  |       groupId: new ObjectId("68495c375af1e903390722a0"),
+huegelfest-app-staging-1  |       announcementId: new ObjectId("68495c805af1e90339072535")
 huegelfest-app-staging-1  |     }
 huegelfest-app-staging-1  |   },
 huegelfest-app-staging-1  |   priority: 0,
 huegelfest-app-staging-1  |   shouldSaveResult: false,
 huegelfest-app-staging-1  |   lastModifiedBy: undefined,
-huegelfest-app-staging-1  |   lockedAt: 2025-06-11T09:46:32.793Z,
+huegelfest-app-staging-1  |   lockedAt: 2025-06-11T10:37:52.287Z,
 huegelfest-app-staging-1  |   type: 'normal',
 huegelfest-app-staging-1  |   nextRunAt: undefined,
-huegelfest-app-staging-1  |   lastRunAt: 2025-06-11T09:46:32.797Z
+huegelfest-app-staging-1  |   lastRunAt: 2025-06-11T10:37:52.304Z
 huegelfest-app-staging-1  | }
-huegelfest-app-staging-1  | 2025-06-11T09:46:32.798Z agenda:saveJob current time stored as 2025-06-11T09:46:32.798Z
-huegelfest-app-staging-1  | 2025-06-11T09:46:32.798Z agenda:saveJob job already has _id, calling findOneAndUpdate() using _id as query
-huegelfest-app-staging-1  | 2025-06-11T09:46:32.799Z agenda:internal:processJobs lockOnTheFly: isLockingOnTheFly: false
-huegelfest-app-staging-1  | 2025-06-11T09:46:32.799Z agenda:internal:processJobs no jobs to current lock on the fly, returning
-huegelfest-app-staging-1  | [2025-06-11T09:46:32.800Z] [INFO] [n@39.js] [saveAnnouncements] Ankündigungen erfolgreich gespeichert
-huegelfest-app-staging-1  | 2025-06-11T09:46:32.808Z agenda:saveJob processDbResult() called with success, checking whether to process job immediately or not
-huegelfest-app-staging-1  | [2025-06-11T09:46:32.808Z] [INFO] [n@39.js] [Agenda] Job started: send-announcement-notification
-huegelfest-app-staging-1  | 2025-06-11T09:46:32.809Z agenda:job [send-announcement-notification:684950782756ec7d0d133306] starting job
-huegelfest-app-staging-1  | 2025-06-11T09:46:32.809Z agenda:job [send-announcement-notification:684950782756ec7d0d133306] process function being called
-huegelfest-app-staging-1  | [2025-06-11T09:46:32.809Z] [INFO] [n@39.js] [WebPush] Service erfolgreich initialisiert
-huegelfest-app-staging-1  | [2025-06-11T09:46:32.810Z] [INFO] [n@39.js] [WebPush] Starte Senden der Benachrichtigungen {"title":"Gruppe Programm","body":"Juhu","payloadSize":207}
+huegelfest-app-staging-1  | 2025-06-11T10:37:52.306Z agenda:saveJob current time stored as 2025-06-11T10:37:52.306Z
+huegelfest-app-staging-1  | 2025-06-11T10:37:52.306Z agenda:saveJob job already has _id, calling findOneAndUpdate() using _id as query
+huegelfest-app-staging-1  | 2025-06-11T10:37:52.307Z agenda:internal:processJobs lockOnTheFly: isLockingOnTheFly: false
+huegelfest-app-staging-1  | 2025-06-11T10:37:52.307Z agenda:internal:processJobs no jobs to current lock on the fly, returning
+huegelfest-app-staging-1  | 2025-06-11T10:37:52.313Z agenda:saveJob processDbResult() called with success, checking whether to process job immediately or not
+huegelfest-app-staging-1  | [2025-06-11T10:37:52.313Z] [INFO] [n@39.js] [Agenda] Job started: send-announcement-notification (68495c80d489c703463efd72)
+huegelfest-app-staging-1  | 2025-06-11T10:37:52.314Z agenda:job [send-announcement-notification:68495c80d489c703463efd72] starting job
+huegelfest-app-staging-1  | 2025-06-11T10:37:52.314Z agenda:job [send-announcement-notification:68495c80d489c703463efd72] process function being called
+huegelfest-app-staging-1  | [2025-06-11T10:37:52.314Z] [INFO] [n@39.js] [WebPush] Service erfolgreich initialisiert
+huegelfest-app-staging-1  | [2025-06-11T10:37:52.315Z] [INFO] [n@39.js] [WebPush] Starte Senden der Benachrichtigungen {"title":"Gruppe Awareness","body":"asddas","payloadSize":210}
+huegelfest-app-staging-1  | [2025-06-11T10:37:52.319Z] [INFO] [n@39.js] [WebPush] Alle Benachrichtigungen abgeschlossen {"total":0,"success":0,"failed":0,"timestamp":"2025-06-11T10:37:52.319Z"}
+huegelfest-app-staging-1  | 2025-06-11T10:37:52.319Z agenda:saveJob attempting to save a job into Agenda instance
+huegelfest-app-staging-1  | 2025-06-11T10:37:52.321Z agenda:saveJob [job 68495c80d489c703463efd72] set job props: 
+huegelfest-app-staging-1  | {
+huegelfest-app-staging-1  |   name: 'send-announcement-notification',
+huegelfest-app-staging-1  |   data: {
+huegelfest-app-staging-1  |     title: 'Gruppe Awareness',
+huegelfest-app-staging-1  |     body: 'asddas',
+huegelfest-app-staging-1  |     icon: '/icon-192x192.png',
+huegelfest-app-staging-1  |     badge: '/badge-96x96.png',
+huegelfest-app-staging-1  |     data: {
+huegelfest-app-staging-1  |       type: 'announcement',
+huegelfest-app-staging-1  |       groupId: new ObjectId("68495c375af1e903390722a0"),
+huegelfest-app-staging-1  |       announcementId: new ObjectId("68495c805af1e90339072535")
+huegelfest-app-staging-1  |     }
+huegelfest-app-staging-1  |   },
+huegelfest-app-staging-1  |   priority: 0,
+huegelfest-app-staging-1  |   shouldSaveResult: false,
+huegelfest-app-staging-1  |   lastModifiedBy: undefined,
+huegelfest-app-staging-1  |   lockedAt: null,
+huegelfest-app-staging-1  |   type: 'normal',
+huegelfest-app-staging-1  |   nextRunAt: null,
+huegelfest-app-staging-1  |   lastRunAt: 2025-06-11T10:37:52.304Z,
+huegelfest-app-staging-1  |   lastFinishedAt: 2025-06-11T10:37:52.319Z
+huegelfest-app-staging-1  | }
+huegelfest-app-staging-1  | 2025-06-11T10:37:52.321Z agenda:saveJob current time stored as 2025-06-11T10:37:52.321Z
+huegelfest-app-staging-1  | 2025-06-11T10:37:52.321Z agenda:saveJob job already has _id, calling findOneAndUpdate() using _id as query
 huegelfest-app-staging-1  | [WebSocket] Broadcast "announcement" an 2 Clients: {"topic":"announcement","payload":{"updated":true}}
 huegelfest-app-staging-1  | [WebSocket] Broadcast via HTTP erfolgreich ausgelöst
+huegelfest-app-staging-1  | 2025-06-11T10:37:52.338Z agenda:saveJob processDbResult() called with success, checking whether to process job immediately or not
+huegelfest-app-staging-1  | 2025-06-11T10:37:52.338Z agenda:job [send-announcement-notification:68495c80d489c703463efd72] was saved successfully to MongoDB
+huegelfest-app-staging-1  | [2025-06-11T10:37:52.338Z] [INFO] [n@39.js] [Agenda] Job succeeded: send-announcement-notification (68495c80d489c703463efd72)
+huegelfest-app-staging-1  | 2025-06-11T10:37:52.339Z agenda:job [send-announcement-notification:68495c80d489c703463efd72] has succeeded
+huegelfest-app-staging-1  | [2025-06-11T10:37:52.342Z] [INFO] [n@39.js] [Agenda] Job completed: send-announcement-notification (68495c80d489c703463efd72)
+huegelfest-app-staging-1  | 2025-06-11T10:37:52.342Z agenda:job [send-announcement-notification:68495c80d489c703463efd72] job finished at [2025-06-11T10:37:52.319Z] and was unlocked
+huegelfest-app-staging-1  | 2025-06-11T10:38:09.471Z agenda:internal:processJobs starting to process jobs: [unknownName:unknownId]
+huegelfest-app-staging-1  | 2025-06-11T10:38:09.471Z agenda:internal:processJobs queuing up job to process: [send-announcement-notification]
+huegelfest-app-staging-1  | 2025-06-11T10:38:09.471Z agenda:internal:processJobs jobQueueFilling: send-announcement-notification isJobQueueFilling: false
+huegelfest-app-staging-1  | 2025-06-11T10:38:09.471Z agenda:internal:processJobs job [send-announcement-notification] lock status: shouldLock = true
+huegelfest-app-staging-1  | 2025-06-11T10:38:09.471Z agenda:internal:_findAndLockNextJob _findAndLockNextJob(send-announcement-notification, [Function])
+huegelfest-app-staging-1  | 2025-06-11T10:38:09.472Z agenda:internal:processJobs queuing up job to process: [sendPushEvent]
+huegelfest-app-staging-1  | 2025-06-11T10:38:09.472Z agenda:internal:processJobs jobQueueFilling: sendPushEvent isJobQueueFilling: false
+huegelfest-app-staging-1  | 2025-06-11T10:38:09.472Z agenda:internal:processJobs job [sendPushEvent] lock status: shouldLock = true
+huegelfest-app-staging-1  | 2025-06-11T10:38:09.472Z agenda:internal:_findAndLockNextJob _findAndLockNextJob(sendPushEvent, [Function])
+huegelfest-app-staging-1  | [WebSocket] Anonyme Verbindung getrennt
 huegelfest-app-staging-1  | [WebSocket] Neue Verbindung eingegangen
-huegelfest-app-staging-1  | [WebSocket] User 68433c3006746615220405c0 registriert
-huegelfest-app-staging-1  | [WebSocket] Neue Verbindung eingegangen
-huegelfest-app-staging-1  | [WebSocket] User 68433c3006746615220405c0 bereits verbunden - schließe alte Verbindung
-huegelfest-app-staging-1  | [WebSocket] User 68433c3006746615220405c0 registriert
-huegelfest-app-staging-1  | [WebSocket] User 68433c3006746615220405c0 getrennt
-huegelfest-app-staging-1  | [2025-06-11T09:46:46.100Z] [INFO] [n@39.js] [WebPush] Alle Benachrichtigungen abgeschlossen {"total":7,"success":7,"failed":0,"timestamp":"2025-06-11T09:46:46.100Z"}
-huegelfest-app-staging-1  | 2025-06-11T09:46:46.101Z agenda:saveJob attempting to save a job into Agenda instance
-huegelfest-app-staging-1  | 2025-06-11T09:46:46.102Z agenda:saveJob [job 684950782756ec7d0d133306] set job props: 
+huegelfest-app-staging-1  | [isTemporaryUserSession] Starting check...
+huegelfest-app-staging-1  | [isTemporaryUserSession] No token found
+huegelfest-app-staging-1  | [2025-06-11T10:38:18.897Z] [INFO] [i@758.js] [MusicService] Hole alle Musik-Einträge
+huegelfest-app-staging-1  | [2025-06-11T10:38:18.901Z] [INFO] [i@758.js] [MusicService] Gefundene Einträge: 0
+huegelfest-app-staging-1  | 2025-06-11T10:38:22.080Z agenda:internal:processJobs starting to process jobs: [unknownName:unknownId]
+huegelfest-app-staging-1  | 2025-06-11T10:38:22.080Z agenda:internal:processJobs queuing up job to process: [send-announcement-notification]
+huegelfest-app-staging-1  | 2025-06-11T10:38:22.080Z agenda:internal:processJobs jobQueueFilling: send-announcement-notification isJobQueueFilling: false
+huegelfest-app-staging-1  | 2025-06-11T10:38:22.080Z agenda:internal:processJobs job [send-announcement-notification] lock status: shouldLock = true
+huegelfest-app-staging-1  | 2025-06-11T10:38:22.080Z agenda:internal:_findAndLockNextJob _findAndLockNextJob(send-announcement-notification, [Function])
+huegelfest-app-staging-1  | 2025-06-11T10:38:22.081Z agenda:internal:processJobs queuing up job to process: [sendPushEvent]
+huegelfest-app-staging-1  | 2025-06-11T10:38:22.081Z agenda:internal:processJobs jobQueueFilling: sendPushEvent isJobQueueFilling: false
+huegelfest-app-staging-1  | 2025-06-11T10:38:22.081Z agenda:internal:processJobs job [sendPushEvent] lock status: shouldLock = true
+huegelfest-app-staging-1  | 2025-06-11T10:38:22.081Z agenda:internal:_findAndLockNextJob _findAndLockNextJob(sendPushEvent, [Function])
+huegelfest-app-staging-1  | 2025-06-11T10:38:25.610Z agenda:now Agenda.now(send-announcement-notification, [Object])
+huegelfest-app-staging-1  | 2025-06-11T10:38:25.610Z agenda:create Agenda.create(send-announcement-notification, [Object])
+huegelfest-app-staging-1  | 2025-06-11T10:38:25.611Z agenda:saveJob attempting to save a job into Agenda instance
+huegelfest-app-staging-1  | 2025-06-11T10:38:25.612Z agenda:saveJob [job undefined] set job props: 
 huegelfest-app-staging-1  | {
 huegelfest-app-staging-1  |   name: 'send-announcement-notification',
 huegelfest-app-staging-1  |   data: {
-huegelfest-app-staging-1  |     title: 'Gruppe Programm',
-huegelfest-app-staging-1  |     body: 'Juhu',
+huegelfest-app-staging-1  |     title: 'Gruppe Technik',
+huegelfest-app-staging-1  |     body: 'sad',
 huegelfest-app-staging-1  |     icon: '/icon-192x192.png',
 huegelfest-app-staging-1  |     badge: '/badge-96x96.png',
 huegelfest-app-staging-1  |     data: {
 huegelfest-app-staging-1  |       type: 'announcement',
-huegelfest-app-staging-1  |       groupId: new ObjectId("6842fb7e4263e5d6137143aa"),
-huegelfest-app-staging-1  |       announcementId: new ObjectId("6849507804a75b3c703bd4cd")
+huegelfest-app-staging-1  |       groupId: new ObjectId('68495c375af1e903390722a3'),
+huegelfest-app-staging-1  |       announcementId: new ObjectId('68495ca15af1e90339072591')
+huegelfest-app-staging-1  |     }
+huegelfest-app-staging-1  |   },
+huegelfest-app-staging-1  |   priority: 0,
+huegelfest-app-staging-1  |   shouldSaveResult: false,
+huegelfest-app-staging-1  |   type: 'normal',
+huegelfest-app-staging-1  |   nextRunAt: 2025-06-11T10:38:25.611Z,
+huegelfest-app-staging-1  |   lastModifiedBy: undefined
+huegelfest-app-staging-1  | }
+huegelfest-app-staging-1  | 2025-06-11T10:38:25.612Z agenda:saveJob current time stored as 2025-06-11T10:38:25.612Z
+huegelfest-app-staging-1  | 2025-06-11T10:38:25.612Z agenda:saveJob using default behavior, inserting new job via insertOne() with props that were set: 
+huegelfest-app-staging-1  | {
+huegelfest-app-staging-1  |   name: 'send-announcement-notification',
+huegelfest-app-staging-1  |   data: {
+huegelfest-app-staging-1  |     title: 'Gruppe Technik',
+huegelfest-app-staging-1  |     body: 'sad',
+huegelfest-app-staging-1  |     icon: '/icon-192x192.png',
+huegelfest-app-staging-1  |     badge: '/badge-96x96.png',
+huegelfest-app-staging-1  |     data: {
+huegelfest-app-staging-1  |       type: 'announcement',
+huegelfest-app-staging-1  |       groupId: new ObjectId('68495c375af1e903390722a3'),
+huegelfest-app-staging-1  |       announcementId: new ObjectId('68495ca15af1e90339072591')
+huegelfest-app-staging-1  |     }
+huegelfest-app-staging-1  |   },
+huegelfest-app-staging-1  |   priority: 0,
+huegelfest-app-staging-1  |   shouldSaveResult: false,
+huegelfest-app-staging-1  |   type: 'normal',
+huegelfest-app-staging-1  |   nextRunAt: 2025-06-11T10:38:25.611Z,
+huegelfest-app-staging-1  |   lastModifiedBy: undefined
+huegelfest-app-staging-1  | }
+huegelfest-app-staging-1  | 2025-06-11T10:38:25.615Z agenda:saveJob processDbResult() called with success, checking whether to process job immediately or not
+huegelfest-app-staging-1  | 2025-06-11T10:38:25.619Z agenda:saveJob [send-announcement-notification:undefined] job would have ran by nextScanAt, processing the job immediately
+huegelfest-app-staging-1  | 2025-06-11T10:38:25.620Z agenda:internal:processJobs starting to process jobs: [send-announcement-notification:68495ca1d489c703463efd73]
+huegelfest-app-staging-1  | 2025-06-11T10:38:25.620Z agenda:internal:processJobs job [send-announcement-notification:68495ca1d489c703463efd73] was passed directly to processJobs(), locking and running immediately
+huegelfest-app-staging-1  | 2025-06-11T10:38:25.620Z agenda:internal:processJobs lockOnTheFly: isLockingOnTheFly: false
+huegelfest-app-staging-1  | 2025-06-11T10:38:25.620Z agenda:internal:processJobs job [send-announcement-notification] lock status: shouldLock = true
+huegelfest-app-staging-1  | 2025-06-11T10:38:25.624Z agenda:internal:processJobs found job [send-announcement-notification:68495ca1d489c703463efd73] that can be locked on the fly
+huegelfest-app-staging-1  | 2025-06-11T10:38:25.624Z agenda:internal:processJobs [send-announcement-notification:68495ca1d489c703463efd73] about to process job
+huegelfest-app-staging-1  | 2025-06-11T10:38:25.624Z agenda:internal:processJobs [send-announcement-notification:68495ca1d489c703463efd73] nextRunAt is in the past, run the job immediately
+huegelfest-app-staging-1  | 2025-06-11T10:38:25.624Z agenda:internal:processJobs [send-announcement-notification:68495ca1d489c703463efd73] processing job
+huegelfest-app-staging-1  | 2025-06-11T10:38:25.624Z agenda:job [send-announcement-notification:68495ca1d489c703463efd73] setting lastRunAt to: 2025-06-11T10:38:25.624Z
+huegelfest-app-staging-1  | 2025-06-11T10:38:25.625Z agenda:saveJob attempting to save a job into Agenda instance
+huegelfest-app-staging-1  | 2025-06-11T10:38:25.625Z agenda:saveJob [job 68495ca1d489c703463efd73] set job props: 
+huegelfest-app-staging-1  | {
+huegelfest-app-staging-1  |   name: 'send-announcement-notification',
+huegelfest-app-staging-1  |   data: {
+huegelfest-app-staging-1  |     title: 'Gruppe Technik',
+huegelfest-app-staging-1  |     body: 'sad',
+huegelfest-app-staging-1  |     icon: '/icon-192x192.png',
+huegelfest-app-staging-1  |     badge: '/badge-96x96.png',
+huegelfest-app-staging-1  |     data: {
+huegelfest-app-staging-1  |       type: 'announcement',
+huegelfest-app-staging-1  |       groupId: new ObjectId("68495c375af1e903390722a3"),
+huegelfest-app-staging-1  |       announcementId: new ObjectId("68495ca15af1e90339072591")
+huegelfest-app-staging-1  |     }
+huegelfest-app-staging-1  |   },
+huegelfest-app-staging-1  |   priority: 0,
+huegelfest-app-staging-1  |   shouldSaveResult: false,
+huegelfest-app-staging-1  |   lastModifiedBy: undefined,
+huegelfest-app-staging-1  |   lockedAt: 2025-06-11T10:38:25.620Z,
+huegelfest-app-staging-1  |   type: 'normal',
+huegelfest-app-staging-1  |   nextRunAt: undefined,
+huegelfest-app-staging-1  |   lastRunAt: 2025-06-11T10:38:25.624Z
+huegelfest-app-staging-1  | }
+huegelfest-app-staging-1  | 2025-06-11T10:38:25.625Z agenda:saveJob current time stored as 2025-06-11T10:38:25.625Z
+huegelfest-app-staging-1  | 2025-06-11T10:38:25.625Z agenda:saveJob job already has _id, calling findOneAndUpdate() using _id as query
+huegelfest-app-staging-1  | 2025-06-11T10:38:25.628Z agenda:internal:processJobs lockOnTheFly: isLockingOnTheFly: false
+huegelfest-app-staging-1  | 2025-06-11T10:38:25.628Z agenda:internal:processJobs no jobs to current lock on the fly, returning
+huegelfest-app-staging-1  | [2025-06-11T10:38:25.629Z] [INFO] [n@39.js] [saveAnnouncements] Ankündigungen erfolgreich gespeichert
+huegelfest-app-staging-1  | 2025-06-11T10:38:25.637Z agenda:saveJob processDbResult() called with success, checking whether to process job immediately or not
+huegelfest-app-staging-1  | 2025-06-11T10:38:25.637Z agenda:job [send-announcement-notification:68495ca1d489c703463efd73] starting job
+huegelfest-app-staging-1  | 2025-06-11T10:38:25.637Z agenda:job [send-announcement-notification:68495ca1d489c703463efd73] process function being called
+huegelfest-app-staging-1  | [2025-06-11T10:38:25.637Z] [INFO] [n@39.js] [Agenda] Job started: send-announcement-notification (68495ca1d489c703463efd73)
+huegelfest-app-staging-1  | [2025-06-11T10:38:25.639Z] [INFO] [n@39.js] [WebPush] Service erfolgreich initialisiert
+huegelfest-app-staging-1  | [2025-06-11T10:38:25.640Z] [INFO] [n@39.js] [WebPush] Starte Senden der Benachrichtigungen {"title":"Gruppe Technik","body":"sad","payloadSize":205}
+huegelfest-app-staging-1  | [2025-06-11T10:38:25.645Z] [INFO] [n@39.js] [WebPush] Alle Benachrichtigungen abgeschlossen {"total":0,"success":0,"failed":0,"timestamp":"2025-06-11T10:38:25.645Z"}
+huegelfest-app-staging-1  | 2025-06-11T10:38:25.645Z agenda:saveJob attempting to save a job into Agenda instance
+huegelfest-app-staging-1  | 2025-06-11T10:38:25.646Z agenda:saveJob [job 68495ca1d489c703463efd73] set job props: 
+huegelfest-app-staging-1  | {
+huegelfest-app-staging-1  |   name: 'send-announcement-notification',
+huegelfest-app-staging-1  |   data: {
+huegelfest-app-staging-1  |     title: 'Gruppe Technik',
+huegelfest-app-staging-1  |     body: 'sad',
+huegelfest-app-staging-1  |     icon: '/icon-192x192.png',
+huegelfest-app-staging-1  |     badge: '/badge-96x96.png',
+huegelfest-app-staging-1  |     data: {
+huegelfest-app-staging-1  |       type: 'announcement',
+huegelfest-app-staging-1  |       groupId: new ObjectId("68495c375af1e903390722a3"),
+huegelfest-app-staging-1  |       announcementId: new ObjectId("68495ca15af1e90339072591")
 huegelfest-app-staging-1  |     }
 huegelfest-app-staging-1  |   },
 huegelfest-app-staging-1  |   priority: 0,
@@ -592,259 +572,571 @@ huegelfest-app-staging-1  |   lastModifiedBy: undefined,
 huegelfest-app-staging-1  |   lockedAt: null,
 huegelfest-app-staging-1  |   type: 'normal',
 huegelfest-app-staging-1  |   nextRunAt: null,
-huegelfest-app-staging-1  |   lastRunAt: 2025-06-11T09:46:32.797Z,
-huegelfest-app-staging-1  |   lastFinishedAt: 2025-06-11T09:46:46.101Z
+huegelfest-app-staging-1  |   lastRunAt: 2025-06-11T10:38:25.624Z,
+huegelfest-app-staging-1  |   lastFinishedAt: 2025-06-11T10:38:25.645Z
 huegelfest-app-staging-1  | }
-huegelfest-app-staging-1  | 2025-06-11T09:46:46.102Z agenda:saveJob current time stored as 2025-06-11T09:46:46.102Z
-huegelfest-app-staging-1  | 2025-06-11T09:46:46.103Z agenda:saveJob job already has _id, calling findOneAndUpdate() using _id as query
-huegelfest-app-staging-1  | 2025-06-11T09:46:46.106Z agenda:saveJob processDbResult() called with success, checking whether to process job immediately or not
-huegelfest-app-staging-1  | 2025-06-11T09:46:46.107Z agenda:job [send-announcement-notification:684950782756ec7d0d133306] was saved successfully to MongoDB
-huegelfest-app-staging-1  | [2025-06-11T09:46:46.107Z] [INFO] [n@39.js] [Agenda] Job succeeded: send-announcement-notification
-huegelfest-app-staging-1  | 2025-06-11T09:46:46.108Z agenda:job [send-announcement-notification:684950782756ec7d0d133306] has succeeded
-huegelfest-app-staging-1  | [2025-06-11T09:46:46.108Z] [INFO] [n@39.js] [Agenda] Job completed: send-announcement-notification
-huegelfest-app-staging-1  | 2025-06-11T09:46:46.109Z agenda:job [send-announcement-notification:684950782756ec7d0d133306] job finished at [2025-06-11T09:46:46.101Z] and was unlocked
-huegelfest-app-staging-1  | [WebSocket] Neue Verbindung eingegangen
-huegelfest-app-staging-1  | [WebSocket] User 68433c3006746615220405c0 registriert
-huegelfest-app-staging-1  | [WebSocket] User 68433c3006746615220405c0 getrennt
-huegelfest-app-staging-1  | [WebSocket] User 68433c3006746615220405c0 getrennt
-huegelfest-app-staging-1  | 2025-06-11T09:46:54.291Z agenda:internal:processJobs starting to process jobs: [unknownName:unknownId]
-huegelfest-app-staging-1  | 2025-06-11T09:46:54.291Z agenda:internal:processJobs queuing up job to process: [send-announcement-notification]
-huegelfest-app-staging-1  | 2025-06-11T09:46:54.291Z agenda:internal:processJobs jobQueueFilling: send-announcement-notification isJobQueueFilling: false
-huegelfest-app-staging-1  | 2025-06-11T09:46:54.291Z agenda:internal:processJobs job [send-announcement-notification] lock status: shouldLock = true
-huegelfest-app-staging-1  | 2025-06-11T09:46:54.291Z agenda:internal:_findAndLockNextJob _findAndLockNextJob(send-announcement-notification, [Function])
-huegelfest-app-staging-1  | 2025-06-11T09:46:54.292Z agenda:internal:processJobs queuing up job to process: [sendPushEvent]
-huegelfest-app-staging-1  | 2025-06-11T09:46:54.292Z agenda:internal:processJobs jobQueueFilling: sendPushEvent isJobQueueFilling: false
-huegelfest-app-staging-1  | 2025-06-11T09:46:54.292Z agenda:internal:processJobs job [sendPushEvent] lock status: shouldLock = true
-huegelfest-app-staging-1  | 2025-06-11T09:46:54.292Z agenda:internal:_findAndLockNextJob _findAndLockNextJob(sendPushEvent, [Function])
-huegelfest-app-staging-1  | 2025-06-11T09:46:55.567Z agenda:internal:processJobs starting to process jobs: [unknownName:unknownId]
-huegelfest-app-staging-1  | 2025-06-11T09:46:55.567Z agenda:internal:processJobs queuing up job to process: [send-announcement-notification]
-huegelfest-app-staging-1  | 2025-06-11T09:46:55.567Z agenda:internal:processJobs jobQueueFilling: send-announcement-notification isJobQueueFilling: false
-huegelfest-app-staging-1  | 2025-06-11T09:46:55.567Z agenda:internal:processJobs job [send-announcement-notification] lock status: shouldLock = true
-huegelfest-app-staging-1  | 2025-06-11T09:46:55.567Z agenda:internal:_findAndLockNextJob _findAndLockNextJob(send-announcement-notification, [Function])
-huegelfest-app-staging-1  | 2025-06-11T09:46:55.568Z agenda:internal:processJobs queuing up job to process: [sendPushEvent]
-huegelfest-app-staging-1  | 2025-06-11T09:46:55.568Z agenda:internal:processJobs jobQueueFilling: sendPushEvent isJobQueueFilling: false
-huegelfest-app-staging-1  | 2025-06-11T09:46:55.568Z agenda:internal:processJobs job [sendPushEvent] lock status: shouldLock = true
-huegelfest-app-staging-1  | 2025-06-11T09:46:55.569Z agenda:internal:_findAndLockNextJob _findAndLockNextJob(sendPushEvent, [Function])
-huegelfest-app-staging-1  | 2025-06-11T09:46:56.420Z agenda:internal:processJobs starting to process jobs: [unknownName:unknownId]
-huegelfest-app-staging-1  | 2025-06-11T09:46:56.420Z agenda:internal:processJobs queuing up job to process: [send-announcement-notification]
-huegelfest-app-staging-1  | 2025-06-11T09:46:56.421Z agenda:internal:processJobs jobQueueFilling: send-announcement-notification isJobQueueFilling: false
-huegelfest-app-staging-1  | 2025-06-11T09:46:56.421Z agenda:internal:processJobs job [send-announcement-notification] lock status: shouldLock = true
-huegelfest-app-staging-1  | 2025-06-11T09:46:56.421Z agenda:internal:_findAndLockNextJob _findAndLockNextJob(send-announcement-notification, [Function])
-huegelfest-app-staging-1  | 2025-06-11T09:46:56.422Z agenda:internal:processJobs queuing up job to process: [sendPushEvent]
-huegelfest-app-staging-1  | 2025-06-11T09:46:56.423Z agenda:internal:processJobs jobQueueFilling: sendPushEvent isJobQueueFilling: false
-huegelfest-app-staging-1  | 2025-06-11T09:46:56.423Z agenda:internal:processJobs job [sendPushEvent] lock status: shouldLock = true
-huegelfest-app-staging-1  | 2025-06-11T09:46:56.423Z agenda:internal:_findAndLockNextJob _findAndLockNextJob(sendPushEvent, [Function])
-huegelfest-app-staging-1  | [WebSocket] Broadcast "event-created" an 2 Clients: {"topic":"event-created","payload":{"eventId":"6849509404a75b3c703bd4dc","dayId":"6843016c8d2a2deade496277"}}
+huegelfest-app-staging-1  | 2025-06-11T10:38:25.646Z agenda:saveJob current time stored as 2025-06-11T10:38:25.646Z
+huegelfest-app-staging-1  | 2025-06-11T10:38:25.646Z agenda:saveJob job already has _id, calling findOneAndUpdate() using _id as query
+huegelfest-app-staging-1  | [WebSocket] Broadcast "announcement" an 2 Clients: {"topic":"announcement","payload":{"updated":true}}
+huegelfest-app-staging-1  | 2025-06-11T10:38:25.652Z agenda:saveJob processDbResult() called with success, checking whether to process job immediately or not
+huegelfest-app-staging-1  | 2025-06-11T10:38:25.652Z agenda:job [send-announcement-notification:68495ca1d489c703463efd73] was saved successfully to MongoDB
+huegelfest-app-staging-1  | [2025-06-11T10:38:25.652Z] [INFO] [n@39.js] [Agenda] Job succeeded: send-announcement-notification (68495ca1d489c703463efd73)
+huegelfest-app-staging-1  | 2025-06-11T10:38:25.652Z agenda:job [send-announcement-notification:68495ca1d489c703463efd73] has succeeded
+huegelfest-app-staging-1  | [2025-06-11T10:38:25.653Z] [INFO] [n@39.js] [Agenda] Job completed: send-announcement-notification (68495ca1d489c703463efd73)
+huegelfest-app-staging-1  | 2025-06-11T10:38:25.653Z agenda:job [send-announcement-notification:68495ca1d489c703463efd73] job finished at [2025-06-11T10:38:25.645Z] and was unlocked
 huegelfest-app-staging-1  | [WebSocket] Broadcast via HTTP erfolgreich ausgelöst
-huegelfest-app-staging-1  | 2025-06-11T09:47:00.924Z agenda:schedule Agenda.schedule(2025-06-06T09:47:00.000Z, 'sendPushEvent', [undefined], cb)
-huegelfest-app-staging-1  | 2025-06-11T09:47:00.924Z agenda:create Agenda.create(sendPushEvent, [Object])
-huegelfest-app-staging-1  | 2025-06-11T09:47:00.925Z agenda:saveJob attempting to save a job into Agenda instance
-huegelfest-app-staging-1  | 2025-06-11T09:47:00.925Z agenda:saveJob [job undefined] set job props: 
+huegelfest-app-staging-1  | 2025-06-11T10:38:39.470Z agenda:internal:processJobs starting to process jobs: [unknownName:unknownId]
+huegelfest-app-staging-1  | 2025-06-11T10:38:39.470Z agenda:internal:processJobs queuing up job to process: [send-announcement-notification]
+huegelfest-app-staging-1  | 2025-06-11T10:38:39.470Z agenda:internal:processJobs jobQueueFilling: send-announcement-notification isJobQueueFilling: false
+huegelfest-app-staging-1  | 2025-06-11T10:38:39.471Z agenda:internal:processJobs job [send-announcement-notification] lock status: shouldLock = true
+huegelfest-app-staging-1  | 2025-06-11T10:38:39.471Z agenda:internal:_findAndLockNextJob _findAndLockNextJob(send-announcement-notification, [Function])
+huegelfest-app-staging-1  | 2025-06-11T10:38:39.471Z agenda:internal:processJobs queuing up job to process: [sendPushEvent]
+huegelfest-app-staging-1  | 2025-06-11T10:38:39.471Z agenda:internal:processJobs jobQueueFilling: sendPushEvent isJobQueueFilling: false
+huegelfest-app-staging-1  | 2025-06-11T10:38:39.472Z agenda:internal:processJobs job [sendPushEvent] lock status: shouldLock = true
+huegelfest-app-staging-1  | 2025-06-11T10:38:39.472Z agenda:internal:_findAndLockNextJob _findAndLockNextJob(sendPushEvent, [Function])
+huegelfest-app-staging-1  | 2025-06-11T10:38:40.447Z agenda:now Agenda.now(send-announcement-notification, [Object])
+huegelfest-app-staging-1  | 2025-06-11T10:38:40.447Z agenda:create Agenda.create(send-announcement-notification, [Object])
+huegelfest-app-staging-1  | 2025-06-11T10:38:40.448Z agenda:saveJob attempting to save a job into Agenda instance
+huegelfest-app-staging-1  | 2025-06-11T10:38:40.448Z agenda:saveJob [job undefined] set job props: 
 huegelfest-app-staging-1  | {
-huegelfest-app-staging-1  |   name: 'sendPushEvent',
-huegelfest-app-staging-1  |   data: { eventId: new ObjectId('6849509404a75b3c703bd4e0') },
+huegelfest-app-staging-1  |   name: 'send-announcement-notification',
+huegelfest-app-staging-1  |   data: {
+huegelfest-app-staging-1  |     title: 'Gruppe Infrastruktur',
+huegelfest-app-staging-1  |     body: 'dsa',
+huegelfest-app-staging-1  |     icon: '/icon-192x192.png',
+huegelfest-app-staging-1  |     badge: '/badge-96x96.png',
+huegelfest-app-staging-1  |     data: {
+huegelfest-app-staging-1  |       type: 'announcement',
+huegelfest-app-staging-1  |       groupId: new ObjectId('68495c375af1e903390722a1'),
+huegelfest-app-staging-1  |       announcementId: new ObjectId('68495cb05af1e9033907259d')
+huegelfest-app-staging-1  |     }
+huegelfest-app-staging-1  |   },
 huegelfest-app-staging-1  |   priority: 0,
 huegelfest-app-staging-1  |   shouldSaveResult: false,
 huegelfest-app-staging-1  |   type: 'normal',
-huegelfest-app-staging-1  |   nextRunAt: 2025-06-06T09:47:00.000Z,
+huegelfest-app-staging-1  |   nextRunAt: 2025-06-11T10:38:40.447Z,
 huegelfest-app-staging-1  |   lastModifiedBy: undefined
 huegelfest-app-staging-1  | }
-huegelfest-app-staging-1  | 2025-06-11T09:47:00.925Z agenda:saveJob current time stored as 2025-06-11T09:47:00.925Z
-huegelfest-app-staging-1  | 2025-06-11T09:47:00.925Z agenda:saveJob using default behavior, inserting new job via insertOne() with props that were set: 
+huegelfest-app-staging-1  | 2025-06-11T10:38:40.448Z agenda:saveJob current time stored as 2025-06-11T10:38:40.448Z
+huegelfest-app-staging-1  | 2025-06-11T10:38:40.448Z agenda:saveJob using default behavior, inserting new job via insertOne() with props that were set: 
 huegelfest-app-staging-1  | {
-huegelfest-app-staging-1  |   name: 'sendPushEvent',
-huegelfest-app-staging-1  |   data: { eventId: new ObjectId('6849509404a75b3c703bd4e0') },
+huegelfest-app-staging-1  |   name: 'send-announcement-notification',
+huegelfest-app-staging-1  |   data: {
+huegelfest-app-staging-1  |     title: 'Gruppe Infrastruktur',
+huegelfest-app-staging-1  |     body: 'dsa',
+huegelfest-app-staging-1  |     icon: '/icon-192x192.png',
+huegelfest-app-staging-1  |     badge: '/badge-96x96.png',
+huegelfest-app-staging-1  |     data: {
+huegelfest-app-staging-1  |       type: 'announcement',
+huegelfest-app-staging-1  |       groupId: new ObjectId('68495c375af1e903390722a1'),
+huegelfest-app-staging-1  |       announcementId: new ObjectId('68495cb05af1e9033907259d')
+huegelfest-app-staging-1  |     }
+huegelfest-app-staging-1  |   },
 huegelfest-app-staging-1  |   priority: 0,
 huegelfest-app-staging-1  |   shouldSaveResult: false,
 huegelfest-app-staging-1  |   type: 'normal',
-huegelfest-app-staging-1  |   nextRunAt: 2025-06-06T09:47:00.000Z,
+huegelfest-app-staging-1  |   nextRunAt: 2025-06-11T10:38:40.447Z,
 huegelfest-app-staging-1  |   lastModifiedBy: undefined
 huegelfest-app-staging-1  | }
-huegelfest-app-staging-1  | 2025-06-11T09:47:00.928Z agenda:saveJob processDbResult() called with success, checking whether to process job immediately or not
-huegelfest-app-staging-1  | 2025-06-11T09:47:00.930Z agenda:saveJob [sendPushEvent:undefined] job would have ran by nextScanAt, processing the job immediately
-huegelfest-app-staging-1  | 2025-06-11T09:47:00.930Z agenda:internal:processJobs starting to process jobs: [sendPushEvent:684950942756ec7d0d133307]
-huegelfest-app-staging-1  | 2025-06-11T09:47:00.931Z agenda:internal:processJobs job [sendPushEvent:684950942756ec7d0d133307] was passed directly to processJobs(), locking and running immediately
-huegelfest-app-staging-1  | 2025-06-11T09:47:00.931Z agenda:internal:processJobs lockOnTheFly: isLockingOnTheFly: false
-huegelfest-app-staging-1  | 2025-06-11T09:47:00.931Z agenda:internal:processJobs job [sendPushEvent] lock status: shouldLock = true
-huegelfest-app-staging-1  | 2025-06-11T09:47:00.933Z agenda:internal:processJobs found job [sendPushEvent:684950942756ec7d0d133307] that can be locked on the fly
-huegelfest-app-staging-1  | 2025-06-11T09:47:00.933Z agenda:internal:processJobs [sendPushEvent:684950942756ec7d0d133307] about to process job
-huegelfest-app-staging-1  | 2025-06-11T09:47:00.933Z agenda:internal:processJobs [sendPushEvent:684950942756ec7d0d133307] nextRunAt is in the past, run the job immediately
-huegelfest-app-staging-1  | 2025-06-11T09:47:00.933Z agenda:internal:processJobs [sendPushEvent:684950942756ec7d0d133307] processing job
-huegelfest-app-staging-1  | 2025-06-11T09:47:00.934Z agenda:job [sendPushEvent:684950942756ec7d0d133307] setting lastRunAt to: 2025-06-11T09:47:00.933Z
-huegelfest-app-staging-1  | 2025-06-11T09:47:00.934Z agenda:saveJob attempting to save a job into Agenda instance
-huegelfest-app-staging-1  | 2025-06-11T09:47:00.934Z agenda:saveJob [job 684950942756ec7d0d133307] set job props: 
+huegelfest-app-staging-1  | 2025-06-11T10:38:40.451Z agenda:saveJob processDbResult() called with success, checking whether to process job immediately or not
+huegelfest-app-staging-1  | 2025-06-11T10:38:40.454Z agenda:saveJob [send-announcement-notification:undefined] job would have ran by nextScanAt, processing the job immediately
+huegelfest-app-staging-1  | 2025-06-11T10:38:40.454Z agenda:internal:processJobs starting to process jobs: [send-announcement-notification:68495cb0d489c703463efd74]
+huegelfest-app-staging-1  | 2025-06-11T10:38:40.454Z agenda:internal:processJobs job [send-announcement-notification:68495cb0d489c703463efd74] was passed directly to processJobs(), locking and running immediately
+huegelfest-app-staging-1  | 2025-06-11T10:38:40.454Z agenda:internal:processJobs lockOnTheFly: isLockingOnTheFly: false
+huegelfest-app-staging-1  | 2025-06-11T10:38:40.455Z agenda:internal:processJobs job [send-announcement-notification] lock status: shouldLock = true
+huegelfest-app-staging-1  | 2025-06-11T10:38:40.458Z agenda:internal:processJobs found job [send-announcement-notification:68495cb0d489c703463efd74] that can be locked on the fly
+huegelfest-app-staging-1  | 2025-06-11T10:38:40.458Z agenda:internal:processJobs [send-announcement-notification:68495cb0d489c703463efd74] about to process job
+huegelfest-app-staging-1  | 2025-06-11T10:38:40.458Z agenda:internal:processJobs [send-announcement-notification:68495cb0d489c703463efd74] nextRunAt is in the past, run the job immediately
+huegelfest-app-staging-1  | 2025-06-11T10:38:40.458Z agenda:internal:processJobs [send-announcement-notification:68495cb0d489c703463efd74] processing job
+huegelfest-app-staging-1  | 2025-06-11T10:38:40.458Z agenda:job [send-announcement-notification:68495cb0d489c703463efd74] setting lastRunAt to: 2025-06-11T10:38:40.458Z
+huegelfest-app-staging-1  | 2025-06-11T10:38:40.458Z agenda:saveJob attempting to save a job into Agenda instance
+huegelfest-app-staging-1  | 2025-06-11T10:38:40.459Z agenda:saveJob [job 68495cb0d489c703463efd74] set job props: 
 huegelfest-app-staging-1  | {
-huegelfest-app-staging-1  |   name: 'sendPushEvent',
-huegelfest-app-staging-1  |   data: { eventId: new ObjectId("6849509404a75b3c703bd4e0") },
+huegelfest-app-staging-1  |   name: 'send-announcement-notification',
+huegelfest-app-staging-1  |   data: {
+huegelfest-app-staging-1  |     title: 'Gruppe Infrastruktur',
+huegelfest-app-staging-1  |     body: 'dsa',
+huegelfest-app-staging-1  |     icon: '/icon-192x192.png',
+huegelfest-app-staging-1  |     badge: '/badge-96x96.png',
+huegelfest-app-staging-1  |     data: {
+huegelfest-app-staging-1  |       type: 'announcement',
+huegelfest-app-staging-1  |       groupId: new ObjectId("68495c375af1e903390722a1"),
+huegelfest-app-staging-1  |       announcementId: new ObjectId("68495cb05af1e9033907259d")
+huegelfest-app-staging-1  |     }
+huegelfest-app-staging-1  |   },
 huegelfest-app-staging-1  |   priority: 0,
 huegelfest-app-staging-1  |   shouldSaveResult: false,
 huegelfest-app-staging-1  |   lastModifiedBy: undefined,
-huegelfest-app-staging-1  |   lockedAt: 2025-06-11T09:47:00.931Z,
+huegelfest-app-staging-1  |   lockedAt: 2025-06-11T10:38:40.455Z,
 huegelfest-app-staging-1  |   type: 'normal',
 huegelfest-app-staging-1  |   nextRunAt: undefined,
-huegelfest-app-staging-1  |   lastRunAt: 2025-06-11T09:47:00.933Z
+huegelfest-app-staging-1  |   lastRunAt: 2025-06-11T10:38:40.458Z
 huegelfest-app-staging-1  | }
-huegelfest-app-staging-1  | 2025-06-11T09:47:00.934Z agenda:saveJob current time stored as 2025-06-11T09:47:00.934Z
-huegelfest-app-staging-1  | 2025-06-11T09:47:00.934Z agenda:saveJob job already has _id, calling findOneAndUpdate() using _id as query
-huegelfest-app-staging-1  | 2025-06-11T09:47:00.935Z agenda:internal:processJobs lockOnTheFly: isLockingOnTheFly: false
-huegelfest-app-staging-1  | 2025-06-11T09:47:00.935Z agenda:internal:processJobs no jobs to current lock on the fly, returning
-huegelfest-app-staging-1  | 2025-06-11T09:47:00.941Z agenda:saveJob processDbResult() called with success, checking whether to process job immediately or not
-huegelfest-app-staging-1  | [2025-06-11T09:47:00.941Z] [INFO] [n@39.js] [Agenda] Job started: sendPushEvent
-huegelfest-app-staging-1  | 2025-06-11T09:47:00.941Z agenda:job [sendPushEvent:684950942756ec7d0d133307] starting job
-huegelfest-app-staging-1  | 2025-06-11T09:47:00.941Z agenda:job [sendPushEvent:684950942756ec7d0d133307] process function being called
-huegelfest-app-staging-1  | [2025-06-11T09:47:00.952Z] [INFO] [n@39.js] [WebPush] Service erfolgreich initialisiert
-huegelfest-app-staging-1  | [2025-06-11T09:47:00.959Z] [INFO] [n@39.js] [WebPush] Starte Senden der Benachrichtigungen {"title":"Neues Event veröffentlicht","body":"Jdjdj","payloadSize":177}
-huegelfest-app-staging-1  | [2025-06-11T09:47:00.964Z] [INFO] [n@39.js] [WebPush] Starte Senden der Benachrichtigungen {"title":"Jdjdj","body":"Programmpunkt \"Jdjdj\" startet jetzt!","payloadSize":65}
-huegelfest-app-staging-1  | [2025-06-11T09:47:08.092Z] [INFO] [n@39.js] [WebPush] Alle Benachrichtigungen abgeschlossen {"total":7,"success":7,"failed":0,"timestamp":"2025-06-11T09:47:08.092Z"}
-huegelfest-app-staging-1  | [2025-06-11T09:47:08.093Z] [INFO] [n@39.js] [createEventAction] Push notification sent for admin-created event {"eventId":"6849509404a75b3c703bd4dc","title":"Jdjdj"}
-huegelfest-app-staging-1  | [WebSocket] Broadcast "event-created" an 2 Clients: {"topic":"event-created","payload":{"eventId":"6849509c04a75b3c703bd4ea","dayId":"6843016c8d2a2deade496277"}}
-huegelfest-app-staging-1  | [WebSocket] Broadcast via HTTP erfolgreich ausgelöst
-huegelfest-app-staging-1  | [2025-06-11T09:47:08.355Z] [INFO] [n@39.js] [WebPush] Alle Benachrichtigungen abgeschlossen {"total":7,"success":7,"failed":0,"timestamp":"2025-06-11T09:47:08.354Z"}
-huegelfest-app-staging-1  | [agenda] Allgemeine Push-Nachricht („Jdjdj") an alle (7 unique Subscriber) gesendet.
-huegelfest-app-staging-1  | [agenda] Einmaliges PushEvent („Jdjdj") (6849509404a75b3c703bd4e0) deaktiviert.
-huegelfest-app-staging-1  | 2025-06-11T09:47:08.364Z agenda:saveJob attempting to save a job into Agenda instance
-huegelfest-app-staging-1  | 2025-06-11T09:47:08.364Z agenda:saveJob [job 684950942756ec7d0d133307] set job props: 
+huegelfest-app-staging-1  | 2025-06-11T10:38:40.459Z agenda:saveJob current time stored as 2025-06-11T10:38:40.459Z
+huegelfest-app-staging-1  | 2025-06-11T10:38:40.459Z agenda:saveJob job already has _id, calling findOneAndUpdate() using _id as query
+huegelfest-app-staging-1  | 2025-06-11T10:38:40.461Z agenda:internal:processJobs lockOnTheFly: isLockingOnTheFly: false
+huegelfest-app-staging-1  | 2025-06-11T10:38:40.461Z agenda:internal:processJobs no jobs to current lock on the fly, returning
+huegelfest-app-staging-1  | [2025-06-11T10:38:40.461Z] [INFO] [n@39.js] [saveAnnouncements] Ankündigungen erfolgreich gespeichert
+huegelfest-app-staging-1  | 2025-06-11T10:38:40.468Z agenda:saveJob processDbResult() called with success, checking whether to process job immediately or not
+huegelfest-app-staging-1  | 2025-06-11T10:38:40.468Z agenda:job [send-announcement-notification:68495cb0d489c703463efd74] starting job
+huegelfest-app-staging-1  | 2025-06-11T10:38:40.468Z agenda:job [send-announcement-notification:68495cb0d489c703463efd74] process function being called
+huegelfest-app-staging-1  | [2025-06-11T10:38:40.468Z] [INFO] [n@39.js] [Agenda] Job started: send-announcement-notification (68495cb0d489c703463efd74)
+huegelfest-app-staging-1  | [2025-06-11T10:38:40.469Z] [INFO] [n@39.js] [WebPush] Service erfolgreich initialisiert
+huegelfest-app-staging-1  | [2025-06-11T10:38:40.470Z] [INFO] [n@39.js] [WebPush] Starte Senden der Benachrichtigungen {"title":"Gruppe Infrastruktur","body":"dsa","payloadSize":211}
+huegelfest-app-staging-1  | [2025-06-11T10:38:40.476Z] [INFO] [n@39.js] [WebPush] Alle Benachrichtigungen abgeschlossen {"total":0,"success":0,"failed":0,"timestamp":"2025-06-11T10:38:40.476Z"}
+huegelfest-app-staging-1  | 2025-06-11T10:38:40.477Z agenda:saveJob attempting to save a job into Agenda instance
+huegelfest-app-staging-1  | 2025-06-11T10:38:40.477Z agenda:saveJob [job 68495cb0d489c703463efd74] set job props: 
 huegelfest-app-staging-1  | {
-huegelfest-app-staging-1  |   name: 'sendPushEvent',
-huegelfest-app-staging-1  |   data: { eventId: new ObjectId("6849509404a75b3c703bd4e0") },
+huegelfest-app-staging-1  |   name: 'send-announcement-notification',
+huegelfest-app-staging-1  |   data: {
+huegelfest-app-staging-1  |     title: 'Gruppe Infrastruktur',
+huegelfest-app-staging-1  |     body: 'dsa',
+huegelfest-app-staging-1  |     icon: '/icon-192x192.png',
+huegelfest-app-staging-1  |     badge: '/badge-96x96.png',
+huegelfest-app-staging-1  |     data: {
+huegelfest-app-staging-1  |       type: 'announcement',
+huegelfest-app-staging-1  |       groupId: new ObjectId("68495c375af1e903390722a1"),
+huegelfest-app-staging-1  |       announcementId: new ObjectId("68495cb05af1e9033907259d")
+huegelfest-app-staging-1  |     }
+huegelfest-app-staging-1  |   },
 huegelfest-app-staging-1  |   priority: 0,
 huegelfest-app-staging-1  |   shouldSaveResult: false,
 huegelfest-app-staging-1  |   lastModifiedBy: undefined,
 huegelfest-app-staging-1  |   lockedAt: null,
 huegelfest-app-staging-1  |   type: 'normal',
 huegelfest-app-staging-1  |   nextRunAt: null,
-huegelfest-app-staging-1  |   lastRunAt: 2025-06-11T09:47:00.933Z,
-huegelfest-app-staging-1  |   lastFinishedAt: 2025-06-11T09:47:08.364Z
+huegelfest-app-staging-1  |   lastRunAt: 2025-06-11T10:38:40.458Z,
+huegelfest-app-staging-1  |   lastFinishedAt: 2025-06-11T10:38:40.477Z
 huegelfest-app-staging-1  | }
-huegelfest-app-staging-1  | 2025-06-11T09:47:08.364Z agenda:saveJob current time stored as 2025-06-11T09:47:08.364Z
-huegelfest-app-staging-1  | 2025-06-11T09:47:08.364Z agenda:saveJob job already has _id, calling findOneAndUpdate() using _id as query
-huegelfest-app-staging-1  | 2025-06-11T09:47:08.367Z agenda:schedule Agenda.schedule(2025-06-06T09:47:00.000Z, 'sendPushEvent', [undefined], cb)
-huegelfest-app-staging-1  | 2025-06-11T09:47:08.368Z agenda:create Agenda.create(sendPushEvent, [Object])
-huegelfest-app-staging-1  | 2025-06-11T09:47:08.368Z agenda:saveJob attempting to save a job into Agenda instance
-huegelfest-app-staging-1  | 2025-06-11T09:47:08.368Z agenda:saveJob [job undefined] set job props: 
+huegelfest-app-staging-1  | 2025-06-11T10:38:40.477Z agenda:saveJob current time stored as 2025-06-11T10:38:40.477Z
+huegelfest-app-staging-1  | 2025-06-11T10:38:40.477Z agenda:saveJob job already has _id, calling findOneAndUpdate() using _id as query
+huegelfest-app-staging-1  | [WebSocket] Broadcast "announcement" an 2 Clients: {"topic":"announcement","payload":{"updated":true}}
+huegelfest-app-staging-1  | [WebSocket] Broadcast via HTTP erfolgreich ausgelöst
+huegelfest-app-staging-1  | 2025-06-11T10:38:40.490Z agenda:saveJob processDbResult() called with success, checking whether to process job immediately or not
+huegelfest-app-staging-1  | 2025-06-11T10:38:40.490Z agenda:job [send-announcement-notification:68495cb0d489c703463efd74] was saved successfully to MongoDB
+huegelfest-app-staging-1  | [2025-06-11T10:38:40.491Z] [INFO] [n@39.js] [Agenda] Job succeeded: send-announcement-notification (68495cb0d489c703463efd74)
+huegelfest-app-staging-1  | 2025-06-11T10:38:40.491Z agenda:job [send-announcement-notification:68495cb0d489c703463efd74] has succeeded
+huegelfest-app-staging-1  | [2025-06-11T10:38:40.491Z] [INFO] [n@39.js] [Agenda] Job completed: send-announcement-notification (68495cb0d489c703463efd74)
+huegelfest-app-staging-1  | 2025-06-11T10:38:40.491Z agenda:job [send-announcement-notification:68495cb0d489c703463efd74] job finished at [2025-06-11T10:38:40.477Z] and was unlocked
+huegelfest-app-staging-1  | 2025-06-11T10:38:52.079Z agenda:internal:processJobs starting to process jobs: [unknownName:unknownId]
+huegelfest-app-staging-1  | 2025-06-11T10:38:52.079Z agenda:internal:processJobs queuing up job to process: [send-announcement-notification]
+huegelfest-app-staging-1  | 2025-06-11T10:38:52.079Z agenda:internal:processJobs jobQueueFilling: send-announcement-notification isJobQueueFilling: false
+huegelfest-app-staging-1  | 2025-06-11T10:38:52.079Z agenda:internal:processJobs job [send-announcement-notification] lock status: shouldLock = true
+huegelfest-app-staging-1  | 2025-06-11T10:38:52.079Z agenda:internal:_findAndLockNextJob _findAndLockNextJob(send-announcement-notification, [Function])
+huegelfest-app-staging-1  | 2025-06-11T10:38:52.081Z agenda:internal:processJobs queuing up job to process: [sendPushEvent]
+huegelfest-app-staging-1  | 2025-06-11T10:38:52.081Z agenda:internal:processJobs jobQueueFilling: sendPushEvent isJobQueueFilling: false
+huegelfest-app-staging-1  | 2025-06-11T10:38:52.081Z agenda:internal:processJobs job [sendPushEvent] lock status: shouldLock = true
+huegelfest-app-staging-1  | 2025-06-11T10:38:52.081Z agenda:internal:_findAndLockNextJob _findAndLockNextJob(sendPushEvent, [Function])
+huegelfest-app-staging-1  | [WebSocket] Anonyme Verbindung getrennt
+huegelfest-app-staging-1  | [WebSocket] Neue Verbindung eingegangen
+huegelfest-app-staging-1  | [isTemporaryUserSession] Starting check...
+huegelfest-app-staging-1  | [isTemporaryUserSession] No token found
+huegelfest-app-staging-1  | 2025-06-11T10:39:09.472Z agenda:internal:processJobs starting to process jobs: [unknownName:unknownId]
+huegelfest-app-staging-1  | 2025-06-11T10:39:09.472Z agenda:internal:processJobs queuing up job to process: [send-announcement-notification]
+huegelfest-app-staging-1  | 2025-06-11T10:39:09.472Z agenda:internal:processJobs jobQueueFilling: send-announcement-notification isJobQueueFilling: false
+huegelfest-app-staging-1  | 2025-06-11T10:39:09.472Z agenda:internal:processJobs job [send-announcement-notification] lock status: shouldLock = true
+huegelfest-app-staging-1  | 2025-06-11T10:39:09.473Z agenda:internal:_findAndLockNextJob _findAndLockNextJob(send-announcement-notification, [Function])
+huegelfest-app-staging-1  | 2025-06-11T10:39:09.474Z agenda:internal:processJobs queuing up job to process: [sendPushEvent]
+huegelfest-app-staging-1  | 2025-06-11T10:39:09.474Z agenda:internal:processJobs jobQueueFilling: sendPushEvent isJobQueueFilling: false
+huegelfest-app-staging-1  | 2025-06-11T10:39:09.474Z agenda:internal:processJobs job [sendPushEvent] lock status: shouldLock = true
+huegelfest-app-staging-1  | 2025-06-11T10:39:09.474Z agenda:internal:_findAndLockNextJob _findAndLockNextJob(sendPushEvent, [Function])
+huegelfest-app-staging-1  | [2025-06-11T10:39:13.944Z] [INFO] [i@758.js] [MusicService] Hole alle Musik-Einträge
+huegelfest-app-staging-1  | [2025-06-11T10:39:13.949Z] [INFO] [i@758.js] [MusicService] Gefundene Einträge: 0
+huegelfest-app-staging-1  | [WebSocket] Anonyme Verbindung getrennt
+huegelfest-app-staging-1  | 2025-06-11T10:39:22.080Z agenda:internal:processJobs starting to process jobs: [unknownName:unknownId]
+huegelfest-app-staging-1  | 2025-06-11T10:39:22.080Z agenda:internal:processJobs queuing up job to process: [send-announcement-notification]
+huegelfest-app-staging-1  | 2025-06-11T10:39:22.080Z agenda:internal:processJobs jobQueueFilling: send-announcement-notification isJobQueueFilling: false
+huegelfest-app-staging-1  | 2025-06-11T10:39:22.080Z agenda:internal:processJobs job [send-announcement-notification] lock status: shouldLock = true
+huegelfest-app-staging-1  | 2025-06-11T10:39:22.080Z agenda:internal:_findAndLockNextJob _findAndLockNextJob(send-announcement-notification, [Function])
+huegelfest-app-staging-1  | 2025-06-11T10:39:22.080Z agenda:internal:processJobs queuing up job to process: [sendPushEvent]
+huegelfest-app-staging-1  | 2025-06-11T10:39:22.081Z agenda:internal:processJobs jobQueueFilling: sendPushEvent isJobQueueFilling: false
+huegelfest-app-staging-1  | 2025-06-11T10:39:22.081Z agenda:internal:processJobs job [sendPushEvent] lock status: shouldLock = true
+huegelfest-app-staging-1  | 2025-06-11T10:39:22.081Z agenda:internal:_findAndLockNextJob _findAndLockNextJob(sendPushEvent, [Function])
+huegelfest-app-staging-1  | [WebSocket] Neue Verbindung eingegangen
+huegelfest-app-staging-1  | [isTemporaryUserSession] Starting check...
+huegelfest-app-staging-1  | [isTemporaryUserSession] No token found
+huegelfest-app-staging-1  | [2025-06-11T10:39:37.242Z] [INFO] [i@758.js] [MusicService] Hole alle Musik-Einträge
+huegelfest-app-staging-1  | [2025-06-11T10:39:37.246Z] [INFO] [i@758.js] [MusicService] Gefundene Einträge: 0
+huegelfest-app-staging-1  | 2025-06-11T10:39:39.472Z agenda:internal:processJobs starting to process jobs: [unknownName:unknownId]
+huegelfest-app-staging-1  | 2025-06-11T10:39:39.472Z agenda:internal:processJobs queuing up job to process: [send-announcement-notification]
+huegelfest-app-staging-1  | 2025-06-11T10:39:39.472Z agenda:internal:processJobs jobQueueFilling: send-announcement-notification isJobQueueFilling: false
+huegelfest-app-staging-1  | 2025-06-11T10:39:39.472Z agenda:internal:processJobs job [send-announcement-notification] lock status: shouldLock = true
+huegelfest-app-staging-1  | 2025-06-11T10:39:39.472Z agenda:internal:_findAndLockNextJob _findAndLockNextJob(send-announcement-notification, [Function])
+huegelfest-app-staging-1  | 2025-06-11T10:39:39.474Z agenda:internal:processJobs queuing up job to process: [sendPushEvent]
+huegelfest-app-staging-1  | 2025-06-11T10:39:39.474Z agenda:internal:processJobs jobQueueFilling: sendPushEvent isJobQueueFilling: false
+huegelfest-app-staging-1  | 2025-06-11T10:39:39.475Z agenda:internal:processJobs job [sendPushEvent] lock status: shouldLock = true
+huegelfest-app-staging-1  | 2025-06-11T10:39:39.475Z agenda:internal:_findAndLockNextJob _findAndLockNextJob(sendPushEvent, [Function])
+huegelfest-app-staging-1  | [isTemporaryUserSession] Starting check...
+huegelfest-app-staging-1  | [isTemporaryUserSession] No token found
+huegelfest-app-staging-1  | [WebSocket] Neue Verbindung eingegangen
+huegelfest-app-staging-1  | [WebSocket] Anonyme Verbindung getrennt
+huegelfest-app-staging-1  | [2025-06-11T10:39:45.527Z] [INFO] [i@758.js] [MusicService] Hole alle Musik-Einträge
+huegelfest-app-staging-1  | [2025-06-11T10:39:45.531Z] [INFO] [i@758.js] [MusicService] Gefundene Einträge: 0
+huegelfest-app-staging-1  | [2025-06-11T10:39:47.732Z] [INFO] [n@39.js] [Push/Subscribe] Neue anonyme Subscription erstellt {"endpoint":"https://web.push.apple.com/QF9Q5niSmBaLToVo058blDh95HJ8HEEfVe5HoWJ3hIA81ytRQdFTt25tAkMRyjgdGQXNU2xo58-_gcK8betre7Ad3QhievnULuZ9n2o4VBGutSMe-mQXfMBSVTJqI9lrmsLUFv_0-KoO8cGOicUc3zv3aKq3pWbwyk2xkb-blSg"}
+huegelfest-app-staging-1  | 2025-06-11T10:39:52.079Z agenda:internal:processJobs starting to process jobs: [unknownName:unknownId]
+huegelfest-app-staging-1  | 2025-06-11T10:39:52.080Z agenda:internal:processJobs queuing up job to process: [send-announcement-notification]
+huegelfest-app-staging-1  | 2025-06-11T10:39:52.080Z agenda:internal:processJobs jobQueueFilling: send-announcement-notification isJobQueueFilling: false
+huegelfest-app-staging-1  | 2025-06-11T10:39:52.080Z agenda:internal:processJobs job [send-announcement-notification] lock status: shouldLock = true
+huegelfest-app-staging-1  | 2025-06-11T10:39:52.080Z agenda:internal:_findAndLockNextJob _findAndLockNextJob(send-announcement-notification, [Function])
+huegelfest-app-staging-1  | 2025-06-11T10:39:52.081Z agenda:internal:processJobs queuing up job to process: [sendPushEvent]
+huegelfest-app-staging-1  | 2025-06-11T10:39:52.081Z agenda:internal:processJobs jobQueueFilling: sendPushEvent isJobQueueFilling: false
+huegelfest-app-staging-1  | 2025-06-11T10:39:52.081Z agenda:internal:processJobs job [sendPushEvent] lock status: shouldLock = true
+huegelfest-app-staging-1  | 2025-06-11T10:39:52.081Z agenda:internal:_findAndLockNextJob _findAndLockNextJob(sendPushEvent, [Function])
+huegelfest-app-staging-1  | 2025-06-11T10:39:55.168Z agenda:now Agenda.now(send-announcement-notification, [Object])
+huegelfest-app-staging-1  | 2025-06-11T10:39:55.168Z agenda:create Agenda.create(send-announcement-notification, [Object])
+huegelfest-app-staging-1  | 2025-06-11T10:39:55.169Z agenda:saveJob attempting to save a job into Agenda instance
+huegelfest-app-staging-1  | 2025-06-11T10:39:55.169Z agenda:saveJob [job undefined] set job props: 
 huegelfest-app-staging-1  | {
-huegelfest-app-staging-1  |   name: 'sendPushEvent',
-huegelfest-app-staging-1  |   data: { eventId: new ObjectId('6849509c04a75b3c703bd4f0') },
+huegelfest-app-staging-1  |   name: 'send-announcement-notification',
+huegelfest-app-staging-1  |   data: {
+huegelfest-app-staging-1  |     title: 'Gruppe Technik',
+huegelfest-app-staging-1  |     body: 'sdsa',
+huegelfest-app-staging-1  |     icon: '/icon-192x192.png',
+huegelfest-app-staging-1  |     badge: '/badge-96x96.png',
+huegelfest-app-staging-1  |     data: {
+huegelfest-app-staging-1  |       type: 'announcement',
+huegelfest-app-staging-1  |       groupId: new ObjectId('68495c375af1e903390722a3'),
+huegelfest-app-staging-1  |       announcementId: new ObjectId('68495cfb5af1e90339072665')
+huegelfest-app-staging-1  |     }
+huegelfest-app-staging-1  |   },
 huegelfest-app-staging-1  |   priority: 0,
 huegelfest-app-staging-1  |   shouldSaveResult: false,
 huegelfest-app-staging-1  |   type: 'normal',
-huegelfest-app-staging-1  |   nextRunAt: 2025-06-06T09:47:00.000Z,
+huegelfest-app-staging-1  |   nextRunAt: 2025-06-11T10:39:55.169Z,
 huegelfest-app-staging-1  |   lastModifiedBy: undefined
 huegelfest-app-staging-1  | }
-huegelfest-app-staging-1  | 2025-06-11T09:47:08.368Z agenda:saveJob current time stored as 2025-06-11T09:47:08.368Z
-huegelfest-app-staging-1  | 2025-06-11T09:47:08.369Z agenda:saveJob using default behavior, inserting new job via insertOne() with props that were set: 
+huegelfest-app-staging-1  | 2025-06-11T10:39:55.169Z agenda:saveJob current time stored as 2025-06-11T10:39:55.169Z
+huegelfest-app-staging-1  | 2025-06-11T10:39:55.170Z agenda:saveJob using default behavior, inserting new job via insertOne() with props that were set: 
 huegelfest-app-staging-1  | {
-huegelfest-app-staging-1  |   name: 'sendPushEvent',
-huegelfest-app-staging-1  |   data: { eventId: new ObjectId('6849509c04a75b3c703bd4f0') },
+huegelfest-app-staging-1  |   name: 'send-announcement-notification',
+huegelfest-app-staging-1  |   data: {
+huegelfest-app-staging-1  |     title: 'Gruppe Technik',
+huegelfest-app-staging-1  |     body: 'sdsa',
+huegelfest-app-staging-1  |     icon: '/icon-192x192.png',
+huegelfest-app-staging-1  |     badge: '/badge-96x96.png',
+huegelfest-app-staging-1  |     data: {
+huegelfest-app-staging-1  |       type: 'announcement',
+huegelfest-app-staging-1  |       groupId: new ObjectId('68495c375af1e903390722a3'),
+huegelfest-app-staging-1  |       announcementId: new ObjectId('68495cfb5af1e90339072665')
+huegelfest-app-staging-1  |     }
+huegelfest-app-staging-1  |   },
 huegelfest-app-staging-1  |   priority: 0,
 huegelfest-app-staging-1  |   shouldSaveResult: false,
 huegelfest-app-staging-1  |   type: 'normal',
-huegelfest-app-staging-1  |   nextRunAt: 2025-06-06T09:47:00.000Z,
+huegelfest-app-staging-1  |   nextRunAt: 2025-06-11T10:39:55.169Z,
 huegelfest-app-staging-1  |   lastModifiedBy: undefined
 huegelfest-app-staging-1  | }
-huegelfest-app-staging-1  | 2025-06-11T09:47:08.370Z agenda:saveJob processDbResult() called with success, checking whether to process job immediately or not
-huegelfest-app-staging-1  | 2025-06-11T09:47:08.371Z agenda:job [sendPushEvent:684950942756ec7d0d133307] was saved successfully to MongoDB
-huegelfest-app-staging-1  | [2025-06-11T09:47:08.371Z] [INFO] [n@39.js] [Agenda] Job succeeded: sendPushEvent
-huegelfest-app-staging-1  | 2025-06-11T09:47:08.371Z agenda:job [sendPushEvent:684950942756ec7d0d133307] has succeeded
-huegelfest-app-staging-1  | [2025-06-11T09:47:08.372Z] [INFO] [n@39.js] [Agenda] Job completed: sendPushEvent
-huegelfest-app-staging-1  | 2025-06-11T09:47:08.372Z agenda:job [sendPushEvent:684950942756ec7d0d133307] job finished at [2025-06-11T09:47:08.364Z] and was unlocked
-huegelfest-app-staging-1  | 2025-06-11T09:47:08.373Z agenda:saveJob processDbResult() called with success, checking whether to process job immediately or not
-huegelfest-app-staging-1  | 2025-06-11T09:47:08.376Z agenda:saveJob [sendPushEvent:undefined] job would have ran by nextScanAt, processing the job immediately
-huegelfest-app-staging-1  | 2025-06-11T09:47:08.376Z agenda:internal:processJobs starting to process jobs: [sendPushEvent:6849509c2756ec7d0d133308]
-huegelfest-app-staging-1  | 2025-06-11T09:47:08.376Z agenda:internal:processJobs job [sendPushEvent:6849509c2756ec7d0d133308] was passed directly to processJobs(), locking and running immediately
-huegelfest-app-staging-1  | 2025-06-11T09:47:08.376Z agenda:internal:processJobs lockOnTheFly: isLockingOnTheFly: false
-huegelfest-app-staging-1  | 2025-06-11T09:47:08.379Z agenda:internal:processJobs job [sendPushEvent] lock status: shouldLock = true
-huegelfest-app-staging-1  | 2025-06-11T09:47:08.383Z agenda:internal:processJobs found job [sendPushEvent:6849509c2756ec7d0d133308] that can be locked on the fly
-huegelfest-app-staging-1  | 2025-06-11T09:47:08.384Z agenda:internal:processJobs [sendPushEvent:6849509c2756ec7d0d133308] about to process job
-huegelfest-app-staging-1  | 2025-06-11T09:47:08.384Z agenda:internal:processJobs [sendPushEvent:6849509c2756ec7d0d133308] nextRunAt is in the past, run the job immediately
-huegelfest-app-staging-1  | 2025-06-11T09:47:08.384Z agenda:internal:processJobs [sendPushEvent:6849509c2756ec7d0d133308] processing job
-huegelfest-app-staging-1  | 2025-06-11T09:47:08.384Z agenda:job [sendPushEvent:6849509c2756ec7d0d133308] setting lastRunAt to: 2025-06-11T09:47:08.384Z
-huegelfest-app-staging-1  | 2025-06-11T09:47:08.385Z agenda:saveJob attempting to save a job into Agenda instance
-huegelfest-app-staging-1  | 2025-06-11T09:47:08.385Z agenda:saveJob [job 6849509c2756ec7d0d133308] set job props: 
+huegelfest-app-staging-1  | 2025-06-11T10:39:55.173Z agenda:saveJob processDbResult() called with success, checking whether to process job immediately or not
+huegelfest-app-staging-1  | 2025-06-11T10:39:55.176Z agenda:saveJob [send-announcement-notification:undefined] job would have ran by nextScanAt, processing the job immediately
+huegelfest-app-staging-1  | 2025-06-11T10:39:55.176Z agenda:internal:processJobs starting to process jobs: [send-announcement-notification:68495cfbd489c703463efd75]
+huegelfest-app-staging-1  | 2025-06-11T10:39:55.177Z agenda:internal:processJobs job [send-announcement-notification:68495cfbd489c703463efd75] was passed directly to processJobs(), locking and running immediately
+huegelfest-app-staging-1  | 2025-06-11T10:39:55.177Z agenda:internal:processJobs lockOnTheFly: isLockingOnTheFly: false
+huegelfest-app-staging-1  | 2025-06-11T10:39:55.177Z agenda:internal:processJobs job [send-announcement-notification] lock status: shouldLock = true
+huegelfest-app-staging-1  | 2025-06-11T10:39:55.180Z agenda:internal:processJobs found job [send-announcement-notification:68495cfbd489c703463efd75] that can be locked on the fly
+huegelfest-app-staging-1  | 2025-06-11T10:39:55.181Z agenda:internal:processJobs [send-announcement-notification:68495cfbd489c703463efd75] about to process job
+huegelfest-app-staging-1  | 2025-06-11T10:39:55.181Z agenda:internal:processJobs [send-announcement-notification:68495cfbd489c703463efd75] nextRunAt is in the past, run the job immediately
+huegelfest-app-staging-1  | 2025-06-11T10:39:55.181Z agenda:internal:processJobs [send-announcement-notification:68495cfbd489c703463efd75] processing job
+huegelfest-app-staging-1  | 2025-06-11T10:39:55.182Z agenda:job [send-announcement-notification:68495cfbd489c703463efd75] setting lastRunAt to: 2025-06-11T10:39:55.181Z
+huegelfest-app-staging-1  | 2025-06-11T10:39:55.182Z agenda:saveJob attempting to save a job into Agenda instance
+huegelfest-app-staging-1  | 2025-06-11T10:39:55.182Z agenda:saveJob [job 68495cfbd489c703463efd75] set job props: 
 huegelfest-app-staging-1  | {
-huegelfest-app-staging-1  |   name: 'sendPushEvent',
-huegelfest-app-staging-1  |   data: { eventId: new ObjectId("6849509c04a75b3c703bd4f0") },
+huegelfest-app-staging-1  |   name: 'send-announcement-notification',
+huegelfest-app-staging-1  |   data: {
+huegelfest-app-staging-1  |     title: 'Gruppe Technik',
+huegelfest-app-staging-1  |     body: 'sdsa',
+huegelfest-app-staging-1  |     icon: '/icon-192x192.png',
+huegelfest-app-staging-1  |     badge: '/badge-96x96.png',
+huegelfest-app-staging-1  |     data: {
+huegelfest-app-staging-1  |       type: 'announcement',
+huegelfest-app-staging-1  |       groupId: new ObjectId("68495c375af1e903390722a3"),
+huegelfest-app-staging-1  |       announcementId: new ObjectId("68495cfb5af1e90339072665")
+huegelfest-app-staging-1  |     }
+huegelfest-app-staging-1  |   },
 huegelfest-app-staging-1  |   priority: 0,
 huegelfest-app-staging-1  |   shouldSaveResult: false,
 huegelfest-app-staging-1  |   lastModifiedBy: undefined,
-huegelfest-app-staging-1  |   lockedAt: 2025-06-11T09:47:08.379Z,
+huegelfest-app-staging-1  |   lockedAt: 2025-06-11T10:39:55.177Z,
 huegelfest-app-staging-1  |   type: 'normal',
 huegelfest-app-staging-1  |   nextRunAt: undefined,
-huegelfest-app-staging-1  |   lastRunAt: 2025-06-11T09:47:08.384Z
+huegelfest-app-staging-1  |   lastRunAt: 2025-06-11T10:39:55.181Z
 huegelfest-app-staging-1  | }
-huegelfest-app-staging-1  | 2025-06-11T09:47:08.385Z agenda:saveJob current time stored as 2025-06-11T09:47:08.385Z
-huegelfest-app-staging-1  | 2025-06-11T09:47:08.385Z agenda:saveJob job already has _id, calling findOneAndUpdate() using _id as query
-huegelfest-app-staging-1  | 2025-06-11T09:47:08.386Z agenda:internal:processJobs lockOnTheFly: isLockingOnTheFly: false
-huegelfest-app-staging-1  | 2025-06-11T09:47:08.386Z agenda:internal:processJobs no jobs to current lock on the fly, returning
-huegelfest-app-staging-1  | 2025-06-11T09:47:08.391Z agenda:saveJob processDbResult() called with success, checking whether to process job immediately or not
-huegelfest-app-staging-1  | [2025-06-11T09:47:08.392Z] [INFO] [n@39.js] [Agenda] Job started: sendPushEvent
-huegelfest-app-staging-1  | 2025-06-11T09:47:08.392Z agenda:job [sendPushEvent:6849509c2756ec7d0d133308] starting job
-huegelfest-app-staging-1  | 2025-06-11T09:47:08.392Z agenda:job [sendPushEvent:6849509c2756ec7d0d133308] process function being called
-huegelfest-app-staging-1  | [2025-06-11T09:47:08.397Z] [INFO] [n@39.js] [WebPush] Service erfolgreich initialisiert
-huegelfest-app-staging-1  | [2025-06-11T09:47:08.401Z] [INFO] [n@39.js] [WebPush] Starte Senden der Benachrichtigungen {"title":"Neues Event veröffentlicht","body":"Jdjdj","payloadSize":177}
-huegelfest-app-staging-1  | [2025-06-11T09:47:08.404Z] [INFO] [n@39.js] [WebPush] Starte Senden der Benachrichtigungen {"title":"Jdjdj","body":"Programmpunkt \"Jdjdj\" startet jetzt!","payloadSize":65}
-huegelfest-app-staging-1  | [2025-06-11T09:47:09.839Z] [INFO] [n@39.js] [WebPush] Alle Benachrichtigungen abgeschlossen {"total":7,"success":7,"failed":0,"timestamp":"2025-06-11T09:47:09.839Z"}
-huegelfest-app-staging-1  | [agenda] Allgemeine Push-Nachricht („Jdjdj") an alle (7 unique Subscriber) gesendet.
-huegelfest-app-staging-1  | [agenda] Einmaliges PushEvent („Jdjdj") (6849509c04a75b3c703bd4f0) deaktiviert.
-huegelfest-app-staging-1  | 2025-06-11T09:47:09.845Z agenda:saveJob attempting to save a job into Agenda instance
-huegelfest-app-staging-1  | 2025-06-11T09:47:09.845Z agenda:saveJob [job 6849509c2756ec7d0d133308] set job props: 
+huegelfest-app-staging-1  | 2025-06-11T10:39:55.183Z agenda:saveJob current time stored as 2025-06-11T10:39:55.182Z
+huegelfest-app-staging-1  | 2025-06-11T10:39:55.183Z agenda:saveJob job already has _id, calling findOneAndUpdate() using _id as query
+huegelfest-app-staging-1  | 2025-06-11T10:39:55.183Z agenda:internal:processJobs lockOnTheFly: isLockingOnTheFly: false
+huegelfest-app-staging-1  | 2025-06-11T10:39:55.183Z agenda:internal:processJobs no jobs to current lock on the fly, returning
+huegelfest-app-staging-1  | [2025-06-11T10:39:55.184Z] [INFO] [n@39.js] [saveAnnouncements] Ankündigungen erfolgreich gespeichert
+huegelfest-app-staging-1  | 2025-06-11T10:39:55.193Z agenda:saveJob processDbResult() called with success, checking whether to process job immediately or not
+huegelfest-app-staging-1  | [2025-06-11T10:39:55.194Z] [INFO] [n@39.js] [Agenda] Job started: send-announcement-notification (68495cfbd489c703463efd75)
+huegelfest-app-staging-1  | 2025-06-11T10:39:55.194Z agenda:job [send-announcement-notification:68495cfbd489c703463efd75] starting job
+huegelfest-app-staging-1  | 2025-06-11T10:39:55.195Z agenda:job [send-announcement-notification:68495cfbd489c703463efd75] process function being called
+huegelfest-app-staging-1  | [2025-06-11T10:39:55.196Z] [INFO] [n@39.js] [WebPush] Service erfolgreich initialisiert
+huegelfest-app-staging-1  | [2025-06-11T10:39:55.196Z] [INFO] [n@39.js] [WebPush] Starte Senden der Benachrichtigungen {"title":"Gruppe Technik","body":"sdsa","payloadSize":206}
+huegelfest-app-staging-1  | [WebSocket] Broadcast "announcement" an 2 Clients: {"topic":"announcement","payload":{"updated":true}}
+huegelfest-app-staging-1  | [WebSocket] Broadcast via HTTP erfolgreich ausgelöst
+huegelfest-app-staging-1  | [2025-06-11T10:39:59.635Z] [INFO] [n@39.js] [WebPush] Alle Benachrichtigungen abgeschlossen {"total":1,"success":1,"failed":0,"timestamp":"2025-06-11T10:39:59.634Z"}
+huegelfest-app-staging-1  | 2025-06-11T10:39:59.635Z agenda:saveJob attempting to save a job into Agenda instance
+huegelfest-app-staging-1  | 2025-06-11T10:39:59.636Z agenda:saveJob [job 68495cfbd489c703463efd75] set job props: 
 huegelfest-app-staging-1  | {
-huegelfest-app-staging-1  |   name: 'sendPushEvent',
-huegelfest-app-staging-1  |   data: { eventId: new ObjectId("6849509c04a75b3c703bd4f0") },
+huegelfest-app-staging-1  |   name: 'send-announcement-notification',
+huegelfest-app-staging-1  |   data: {
+huegelfest-app-staging-1  |     title: 'Gruppe Technik',
+huegelfest-app-staging-1  |     body: 'sdsa',
+huegelfest-app-staging-1  |     icon: '/icon-192x192.png',
+huegelfest-app-staging-1  |     badge: '/badge-96x96.png',
+huegelfest-app-staging-1  |     data: {
+huegelfest-app-staging-1  |       type: 'announcement',
+huegelfest-app-staging-1  |       groupId: new ObjectId("68495c375af1e903390722a3"),
+huegelfest-app-staging-1  |       announcementId: new ObjectId("68495cfb5af1e90339072665")
+huegelfest-app-staging-1  |     }
+huegelfest-app-staging-1  |   },
 huegelfest-app-staging-1  |   priority: 0,
 huegelfest-app-staging-1  |   shouldSaveResult: false,
 huegelfest-app-staging-1  |   lastModifiedBy: undefined,
 huegelfest-app-staging-1  |   lockedAt: null,
 huegelfest-app-staging-1  |   type: 'normal',
 huegelfest-app-staging-1  |   nextRunAt: null,
-huegelfest-app-staging-1  |   lastRunAt: 2025-06-11T09:47:08.384Z,
-huegelfest-app-staging-1  |   lastFinishedAt: 2025-06-11T09:47:09.844Z
+huegelfest-app-staging-1  |   lastRunAt: 2025-06-11T10:39:55.181Z,
+huegelfest-app-staging-1  |   lastFinishedAt: 2025-06-11T10:39:59.635Z
 huegelfest-app-staging-1  | }
-huegelfest-app-staging-1  | 2025-06-11T09:47:09.845Z agenda:saveJob current time stored as 2025-06-11T09:47:09.845Z
-huegelfest-app-staging-1  | 2025-06-11T09:47:09.845Z agenda:saveJob job already has _id, calling findOneAndUpdate() using _id as query
-huegelfest-app-staging-1  | 2025-06-11T09:47:09.848Z agenda:saveJob processDbResult() called with success, checking whether to process job immediately or not
-huegelfest-app-staging-1  | 2025-06-11T09:47:09.849Z agenda:job [sendPushEvent:6849509c2756ec7d0d133308] was saved successfully to MongoDB
-huegelfest-app-staging-1  | 2025-06-11T09:47:09.852Z agenda:job [sendPushEvent:6849509c2756ec7d0d133308] has succeeded
-huegelfest-app-staging-1  | 2025-06-11T09:47:09.852Z agenda:job [sendPushEvent:6849509c2756ec7d0d133308] job finished at [2025-06-11T09:47:09.844Z] and was unlocked
-huegelfest-app-staging-1  | [2025-06-11T09:47:09.850Z] [INFO] [n@39.js] [Agenda] Job succeeded: sendPushEvent
-huegelfest-app-staging-1  | [2025-06-11T09:47:09.852Z] [INFO] [n@39.js] [Agenda] Job completed: sendPushEvent
-huegelfest-app-staging-1  | [2025-06-11T09:47:09.859Z] [INFO] [n@39.js] [WebPush] Alle Benachrichtigungen abgeschlossen {"total":7,"success":7,"failed":0,"timestamp":"2025-06-11T09:47:09.859Z"}
-huegelfest-app-staging-1  | [2025-06-11T09:47:09.859Z] [INFO] [n@39.js] [createEventAction] Push notification sent for admin-created event {"eventId":"6849509c04a75b3c703bd4ea","title":"Jdjdj"}
-huegelfest-app-staging-1  | [WebSocket] Neue Verbindung eingegangen
-huegelfest-app-staging-1  | [WebSocket] User 68433c3006746615220405c0 registriert
-huegelfest-app-staging-1  | [WebSocket] Neue Verbindung eingegangen
-huegelfest-app-staging-1  | [WebSocket] User 68433c3006746615220405c0 bereits verbunden - schließe alte Verbindung
-huegelfest-app-staging-1  | [WebSocket] User 68433c3006746615220405c0 registriert
-huegelfest-app-staging-1  | [WebSocket] User 68433c3006746615220405c0 getrennt
-huegelfest-app-staging-1  | [WebSocket] Neue Verbindung eingegangen
-huegelfest-app-staging-1  | [WebSocket] User 68433c3006746615220405c0 registriert
-huegelfest-app-staging-1  | [WebSocket] User 68433c3006746615220405c0 getrennt
-huegelfest-app-staging-1  | [WebSocket] User 68433c3006746615220405c0 getrennt
-huegelfest-app-staging-1  | 2025-06-11T09:47:24.292Z agenda:internal:processJobs starting to process jobs: [unknownName:unknownId]
-huegelfest-app-staging-1  | 2025-06-11T09:47:24.292Z agenda:internal:processJobs queuing up job to process: [send-announcement-notification]
-huegelfest-app-staging-1  | 2025-06-11T09:47:24.292Z agenda:internal:processJobs jobQueueFilling: send-announcement-notification isJobQueueFilling: false
-huegelfest-app-staging-1  | 2025-06-11T09:47:24.292Z agenda:internal:processJobs job [send-announcement-notification] lock status: shouldLock = true
-huegelfest-app-staging-1  | 2025-06-11T09:47:24.292Z agenda:internal:_findAndLockNextJob _findAndLockNextJob(send-announcement-notification, [Function])
-huegelfest-app-staging-1  | 2025-06-11T09:47:24.293Z agenda:internal:processJobs queuing up job to process: [sendPushEvent]
-huegelfest-app-staging-1  | 2025-06-11T09:47:24.293Z agenda:internal:processJobs jobQueueFilling: sendPushEvent isJobQueueFilling: false
-huegelfest-app-staging-1  | 2025-06-11T09:47:24.293Z agenda:internal:processJobs job [sendPushEvent] lock status: shouldLock = true
-huegelfest-app-staging-1  | 2025-06-11T09:47:24.293Z agenda:internal:_findAndLockNextJob _findAndLockNextJob(sendPushEvent, [Function])
-huegelfest-app-staging-1  | 2025-06-11T09:47:25.566Z agenda:internal:processJobs starting to process jobs: [unknownName:unknownId]
-huegelfest-app-staging-1  | 2025-06-11T09:47:25.566Z agenda:internal:processJobs queuing up job to process: [send-announcement-notification]
-huegelfest-app-staging-1  | 2025-06-11T09:47:25.567Z agenda:internal:processJobs jobQueueFilling: send-announcement-notification isJobQueueFilling: false
-huegelfest-app-staging-1  | 2025-06-11T09:47:25.567Z agenda:internal:processJobs job [send-announcement-notification] lock status: shouldLock = true
-huegelfest-app-staging-1  | 2025-06-11T09:47:25.567Z agenda:internal:_findAndLockNextJob _findAndLockNextJob(send-announcement-notification, [Function])
-huegelfest-app-staging-1  | 2025-06-11T09:47:25.569Z agenda:internal:processJobs queuing up job to process: [sendPushEvent]
-huegelfest-app-staging-1  | 2025-06-11T09:47:25.569Z agenda:internal:processJobs jobQueueFilling: sendPushEvent isJobQueueFilling: false
-huegelfest-app-staging-1  | 2025-06-11T09:47:25.569Z agenda:internal:processJobs job [sendPushEvent] lock status: shouldLock = true
-huegelfest-app-staging-1  | 2025-06-11T09:47:25.569Z agenda:internal:_findAndLockNextJob _findAndLockNextJob(sendPushEvent, [Function])
-huegelfest-app-staging-1  | 2025-06-11T09:47:26.422Z agenda:internal:processJobs starting to process jobs: [unknownName:unknownId]
-huegelfest-app-staging-1  | 2025-06-11T09:47:26.422Z agenda:internal:processJobs queuing up job to process: [send-announcement-notification]
-huegelfest-app-staging-1  | 2025-06-11T09:47:26.422Z agenda:internal:processJobs jobQueueFilling: send-announcement-notification isJobQueueFilling: false
-huegelfest-app-staging-1  | 2025-06-11T09:47:26.422Z agenda:internal:processJobs job [send-announcement-notification] lock status: shouldLock = true
-huegelfest-app-staging-1  | 2025-06-11T09:47:26.422Z agenda:internal:_findAndLockNextJob _findAndLockNextJob(send-announcement-notification, [Function])
-huegelfest-app-staging-1  | 2025-06-11T09:47:26.422Z agenda:internal:processJobs queuing up job to process: [sendPushEvent]
-huegelfest-app-staging-1  | 2025-06-11T09:47:26.422Z agenda:internal:processJobs jobQueueFilling: sendPushEvent isJobQueueFilling: false
-huegelfest-app-staging-1  | 2025-06-11T09:47:26.423Z agenda:internal:processJobs job [sendPushEvent] lock status: shouldLock = true
-huegelfest-app-staging-1  | 2025-06-11T09:47:26.423Z agenda:internal:_findAndLockNextJob _findAndLockNextJob(sendPushEvent, [Function])
+huegelfest-app-staging-1  | 2025-06-11T10:39:59.636Z agenda:saveJob current time stored as 2025-06-11T10:39:59.636Z
+huegelfest-app-staging-1  | 2025-06-11T10:39:59.636Z agenda:saveJob job already has _id, calling findOneAndUpdate() using _id as query
+huegelfest-app-staging-1  | 2025-06-11T10:39:59.640Z agenda:saveJob processDbResult() called with success, checking whether to process job immediately or not
+huegelfest-app-staging-1  | 2025-06-11T10:39:59.640Z agenda:job [send-announcement-notification:68495cfbd489c703463efd75] was saved successfully to MongoDB
+huegelfest-app-staging-1  | [2025-06-11T10:39:59.641Z] [INFO] [n@39.js] [Agenda] Job succeeded: send-announcement-notification (68495cfbd489c703463efd75)
+huegelfest-app-staging-1  | 2025-06-11T10:39:59.641Z agenda:job [send-announcement-notification:68495cfbd489c703463efd75] has succeeded
+huegelfest-app-staging-1  | [2025-06-11T10:39:59.641Z] [INFO] [n@39.js] [Agenda] Job completed: send-announcement-notification (68495cfbd489c703463efd75)
+huegelfest-app-staging-1  | 2025-06-11T10:39:59.641Z agenda:job [send-announcement-notification:68495cfbd489c703463efd75] job finished at [2025-06-11T10:39:59.635Z] and was unlocked
+huegelfest-app-staging-1  | 2025-06-11T10:40:07.945Z agenda:now Agenda.now(send-announcement-notification, [Object])
+huegelfest-app-staging-1  | 2025-06-11T10:40:07.945Z agenda:create Agenda.create(send-announcement-notification, [Object])
+huegelfest-app-staging-1  | 2025-06-11T10:40:07.947Z agenda:saveJob attempting to save a job into Agenda instance
+huegelfest-app-staging-1  | 2025-06-11T10:40:07.948Z agenda:saveJob [job undefined] set job props: 
+huegelfest-app-staging-1  | {
+huegelfest-app-staging-1  |   name: 'send-announcement-notification',
+huegelfest-app-staging-1  |   data: {
+huegelfest-app-staging-1  |     title: 'Gruppe Infrastruktur',
+huegelfest-app-staging-1  |     body: 'sdsa',
+huegelfest-app-staging-1  |     icon: '/icon-192x192.png',
+huegelfest-app-staging-1  |     badge: '/badge-96x96.png',
+huegelfest-app-staging-1  |     data: {
+huegelfest-app-staging-1  |       type: 'announcement',
+huegelfest-app-staging-1  |       groupId: new ObjectId('68495c375af1e903390722a1'),
+huegelfest-app-staging-1  |       announcementId: new ObjectId('68495d075af1e90339072674')
+huegelfest-app-staging-1  |     }
+huegelfest-app-staging-1  |   },
+huegelfest-app-staging-1  |   priority: 0,
+huegelfest-app-staging-1  |   shouldSaveResult: false,
+huegelfest-app-staging-1  |   type: 'normal',
+huegelfest-app-staging-1  |   nextRunAt: 2025-06-11T10:40:07.947Z,
+huegelfest-app-staging-1  |   lastModifiedBy: undefined
+huegelfest-app-staging-1  | }
+huegelfest-app-staging-1  | 2025-06-11T10:40:07.948Z agenda:saveJob current time stored as 2025-06-11T10:40:07.948Z
+huegelfest-app-staging-1  | 2025-06-11T10:40:07.948Z agenda:saveJob using default behavior, inserting new job via insertOne() with props that were set: 
+huegelfest-app-staging-1  | {
+huegelfest-app-staging-1  |   name: 'send-announcement-notification',
+huegelfest-app-staging-1  |   data: {
+huegelfest-app-staging-1  |     title: 'Gruppe Infrastruktur',
+huegelfest-app-staging-1  |     body: 'sdsa',
+huegelfest-app-staging-1  |     icon: '/icon-192x192.png',
+huegelfest-app-staging-1  |     badge: '/badge-96x96.png',
+huegelfest-app-staging-1  |     data: {
+huegelfest-app-staging-1  |       type: 'announcement',
+huegelfest-app-staging-1  |       groupId: new ObjectId('68495c375af1e903390722a1'),
+huegelfest-app-staging-1  |       announcementId: new ObjectId('68495d075af1e90339072674')
+huegelfest-app-staging-1  |     }
+huegelfest-app-staging-1  |   },
+huegelfest-app-staging-1  |   priority: 0,
+huegelfest-app-staging-1  |   shouldSaveResult: false,
+huegelfest-app-staging-1  |   type: 'normal',
+huegelfest-app-staging-1  |   nextRunAt: 2025-06-11T10:40:07.947Z,
+huegelfest-app-staging-1  |   lastModifiedBy: undefined
+huegelfest-app-staging-1  | }
+huegelfest-app-staging-1  | 2025-06-11T10:40:07.951Z agenda:saveJob processDbResult() called with success, checking whether to process job immediately or not
+huegelfest-app-staging-1  | 2025-06-11T10:40:07.953Z agenda:saveJob [send-announcement-notification:undefined] job would have ran by nextScanAt, processing the job immediately
+huegelfest-app-staging-1  | 2025-06-11T10:40:07.954Z agenda:internal:processJobs starting to process jobs: [send-announcement-notification:68495d07d489c703463efd76]
+huegelfest-app-staging-1  | 2025-06-11T10:40:07.954Z agenda:internal:processJobs job [send-announcement-notification:68495d07d489c703463efd76] was passed directly to processJobs(), locking and running immediately
+huegelfest-app-staging-1  | 2025-06-11T10:40:07.954Z agenda:internal:processJobs lockOnTheFly: isLockingOnTheFly: false
+huegelfest-app-staging-1  | 2025-06-11T10:40:07.954Z agenda:internal:processJobs job [send-announcement-notification] lock status: shouldLock = true
+huegelfest-app-staging-1  | 2025-06-11T10:40:07.957Z agenda:internal:processJobs found job [send-announcement-notification:68495d07d489c703463efd76] that can be locked on the fly
+huegelfest-app-staging-1  | 2025-06-11T10:40:07.957Z agenda:internal:processJobs [send-announcement-notification:68495d07d489c703463efd76] about to process job
+huegelfest-app-staging-1  | 2025-06-11T10:40:07.957Z agenda:internal:processJobs [send-announcement-notification:68495d07d489c703463efd76] nextRunAt is in the past, run the job immediately
+huegelfest-app-staging-1  | 2025-06-11T10:40:07.957Z agenda:internal:processJobs [send-announcement-notification:68495d07d489c703463efd76] processing job
+huegelfest-app-staging-1  | 2025-06-11T10:40:07.960Z agenda:job [send-announcement-notification:68495d07d489c703463efd76] setting lastRunAt to: 2025-06-11T10:40:07.960Z
+huegelfest-app-staging-1  | 2025-06-11T10:40:07.960Z agenda:saveJob attempting to save a job into Agenda instance
+huegelfest-app-staging-1  | 2025-06-11T10:40:07.960Z agenda:saveJob [job 68495d07d489c703463efd76] set job props: 
+huegelfest-app-staging-1  | {
+huegelfest-app-staging-1  |   name: 'send-announcement-notification',
+huegelfest-app-staging-1  |   data: {
+huegelfest-app-staging-1  |     title: 'Gruppe Infrastruktur',
+huegelfest-app-staging-1  |     body: 'sdsa',
+huegelfest-app-staging-1  |     icon: '/icon-192x192.png',
+huegelfest-app-staging-1  |     badge: '/badge-96x96.png',
+huegelfest-app-staging-1  |     data: {
+huegelfest-app-staging-1  |       type: 'announcement',
+huegelfest-app-staging-1  |       groupId: new ObjectId("68495c375af1e903390722a1"),
+huegelfest-app-staging-1  |       announcementId: new ObjectId("68495d075af1e90339072674")
+huegelfest-app-staging-1  |     }
+huegelfest-app-staging-1  |   },
+huegelfest-app-staging-1  |   priority: 0,
+huegelfest-app-staging-1  |   shouldSaveResult: false,
+huegelfest-app-staging-1  |   lastModifiedBy: undefined,
+huegelfest-app-staging-1  |   lockedAt: 2025-06-11T10:40:07.954Z,
+huegelfest-app-staging-1  |   type: 'normal',
+huegelfest-app-staging-1  |   nextRunAt: undefined,
+huegelfest-app-staging-1  |   lastRunAt: 2025-06-11T10:40:07.960Z
+huegelfest-app-staging-1  | }
+huegelfest-app-staging-1  | 2025-06-11T10:40:07.961Z agenda:saveJob current time stored as 2025-06-11T10:40:07.960Z
+huegelfest-app-staging-1  | 2025-06-11T10:40:07.961Z agenda:saveJob job already has _id, calling findOneAndUpdate() using _id as query
+huegelfest-app-staging-1  | 2025-06-11T10:40:07.961Z agenda:internal:processJobs lockOnTheFly: isLockingOnTheFly: false
+huegelfest-app-staging-1  | 2025-06-11T10:40:07.961Z agenda:internal:processJobs no jobs to current lock on the fly, returning
+huegelfest-app-staging-1  | [2025-06-11T10:40:07.962Z] [INFO] [n@39.js] [saveAnnouncements] Ankündigungen erfolgreich gespeichert
+huegelfest-app-staging-1  | 2025-06-11T10:40:07.966Z agenda:saveJob processDbResult() called with success, checking whether to process job immediately or not
+huegelfest-app-staging-1  | [2025-06-11T10:40:07.967Z] [INFO] [n@39.js] [Agenda] Job started: send-announcement-notification (68495d07d489c703463efd76)
+huegelfest-app-staging-1  | 2025-06-11T10:40:07.967Z agenda:job [send-announcement-notification:68495d07d489c703463efd76] starting job
+huegelfest-app-staging-1  | 2025-06-11T10:40:07.967Z agenda:job [send-announcement-notification:68495d07d489c703463efd76] process function being called
+huegelfest-app-staging-1  | [2025-06-11T10:40:07.967Z] [INFO] [n@39.js] [WebPush] Service erfolgreich initialisiert
+huegelfest-app-staging-1  | [2025-06-11T10:40:07.968Z] [INFO] [n@39.js] [WebPush] Starte Senden der Benachrichtigungen {"title":"Gruppe Infrastruktur","body":"sdsa","payloadSize":212}
+huegelfest-app-staging-1  | [WebSocket] Broadcast "announcement" an 2 Clients: {"topic":"announcement","payload":{"updated":true}}
+huegelfest-app-staging-1  | [WebSocket] Broadcast via HTTP erfolgreich ausgelöst
+huegelfest-app-staging-1  | 2025-06-11T10:40:09.472Z agenda:internal:processJobs starting to process jobs: [unknownName:unknownId]
+huegelfest-app-staging-1  | 2025-06-11T10:40:09.472Z agenda:internal:processJobs queuing up job to process: [send-announcement-notification]
+huegelfest-app-staging-1  | 2025-06-11T10:40:09.472Z agenda:internal:processJobs jobQueueFilling: send-announcement-notification isJobQueueFilling: false
+huegelfest-app-staging-1  | 2025-06-11T10:40:09.472Z agenda:internal:processJobs job [send-announcement-notification] lock status: shouldLock = true
+huegelfest-app-staging-1  | 2025-06-11T10:40:09.473Z agenda:internal:_findAndLockNextJob _findAndLockNextJob(send-announcement-notification, [Function])
+huegelfest-app-staging-1  | 2025-06-11T10:40:09.473Z agenda:internal:processJobs queuing up job to process: [sendPushEvent]
+huegelfest-app-staging-1  | 2025-06-11T10:40:09.473Z agenda:internal:processJobs jobQueueFilling: sendPushEvent isJobQueueFilling: false
+huegelfest-app-staging-1  | 2025-06-11T10:40:09.473Z agenda:internal:processJobs job [sendPushEvent] lock status: shouldLock = true
+huegelfest-app-staging-1  | 2025-06-11T10:40:09.474Z agenda:internal:_findAndLockNextJob _findAndLockNextJob(sendPushEvent, [Function])
+huegelfest-app-staging-1  | [2025-06-11T10:40:12.281Z] [INFO] [n@39.js] [WebPush] Alle Benachrichtigungen abgeschlossen {"total":1,"success":1,"failed":0,"timestamp":"2025-06-11T10:40:12.281Z"}
+huegelfest-app-staging-1  | 2025-06-11T10:40:12.281Z agenda:saveJob attempting to save a job into Agenda instance
+huegelfest-app-staging-1  | 2025-06-11T10:40:12.282Z agenda:saveJob [job 68495d07d489c703463efd76] set job props: 
+huegelfest-app-staging-1  | {
+huegelfest-app-staging-1  |   name: 'send-announcement-notification',
+huegelfest-app-staging-1  |   data: {
+huegelfest-app-staging-1  |     title: 'Gruppe Infrastruktur',
+huegelfest-app-staging-1  |     body: 'sdsa',
+huegelfest-app-staging-1  |     icon: '/icon-192x192.png',
+huegelfest-app-staging-1  |     badge: '/badge-96x96.png',
+huegelfest-app-staging-1  |     data: {
+huegelfest-app-staging-1  |       type: 'announcement',
+huegelfest-app-staging-1  |       groupId: new ObjectId("68495c375af1e903390722a1"),
+huegelfest-app-staging-1  |       announcementId: new ObjectId("68495d075af1e90339072674")
+huegelfest-app-staging-1  |     }
+huegelfest-app-staging-1  |   },
+huegelfest-app-staging-1  |   priority: 0,
+huegelfest-app-staging-1  |   shouldSaveResult: false,
+huegelfest-app-staging-1  |   lastModifiedBy: undefined,
+huegelfest-app-staging-1  |   lockedAt: null,
+huegelfest-app-staging-1  |   type: 'normal',
+huegelfest-app-staging-1  |   nextRunAt: null,
+huegelfest-app-staging-1  |   lastRunAt: 2025-06-11T10:40:07.960Z,
+huegelfest-app-staging-1  |   lastFinishedAt: 2025-06-11T10:40:12.281Z
+huegelfest-app-staging-1  | }
+huegelfest-app-staging-1  | 2025-06-11T10:40:12.282Z agenda:saveJob current time stored as 2025-06-11T10:40:12.282Z
+huegelfest-app-staging-1  | 2025-06-11T10:40:12.283Z agenda:saveJob job already has _id, calling findOneAndUpdate() using _id as query
+huegelfest-app-staging-1  | 2025-06-11T10:40:12.285Z agenda:saveJob processDbResult() called with success, checking whether to process job immediately or not
+huegelfest-app-staging-1  | [2025-06-11T10:40:12.286Z] [INFO] [n@39.js] [Agenda] Job succeeded: send-announcement-notification (68495d07d489c703463efd76)
+huegelfest-app-staging-1  | 2025-06-11T10:40:12.286Z agenda:job [send-announcement-notification:68495d07d489c703463efd76] was saved successfully to MongoDB
+huegelfest-app-staging-1  | 2025-06-11T10:40:12.286Z agenda:job [send-announcement-notification:68495d07d489c703463efd76] has succeeded
+huegelfest-app-staging-1  | [2025-06-11T10:40:12.287Z] [INFO] [n@39.js] [Agenda] Job completed: send-announcement-notification (68495d07d489c703463efd76)
+huegelfest-app-staging-1  | 2025-06-11T10:40:12.287Z agenda:job [send-announcement-notification:68495d07d489c703463efd76] job finished at [2025-06-11T10:40:12.281Z] and was unlocked
+huegelfest-app-staging-1  | [2025-06-11T10:40:20.070Z] [INFO] [i@758.js] [MusicService] Hole alle Musik-Einträge
+huegelfest-app-staging-1  | [2025-06-11T10:40:20.075Z] [INFO] [i@758.js] [MusicService] Gefundene Einträge: 0
+huegelfest-app-staging-1  | 2025-06-11T10:40:22.079Z agenda:internal:processJobs starting to process jobs: [unknownName:unknownId]
+huegelfest-app-staging-1  | 2025-06-11T10:40:22.079Z agenda:internal:processJobs queuing up job to process: [send-announcement-notification]
+huegelfest-app-staging-1  | 2025-06-11T10:40:22.079Z agenda:internal:processJobs jobQueueFilling: send-announcement-notification isJobQueueFilling: false
+huegelfest-app-staging-1  | 2025-06-11T10:40:22.079Z agenda:internal:processJobs job [send-announcement-notification] lock status: shouldLock = true
+huegelfest-app-staging-1  | 2025-06-11T10:40:22.080Z agenda:internal:_findAndLockNextJob _findAndLockNextJob(send-announcement-notification, [Function])
+huegelfest-app-staging-1  | 2025-06-11T10:40:22.080Z agenda:internal:processJobs queuing up job to process: [sendPushEvent]
+huegelfest-app-staging-1  | 2025-06-11T10:40:22.080Z agenda:internal:processJobs jobQueueFilling: sendPushEvent isJobQueueFilling: false
+huegelfest-app-staging-1  | 2025-06-11T10:40:22.080Z agenda:internal:processJobs job [sendPushEvent] lock status: shouldLock = true
+huegelfest-app-staging-1  | 2025-06-11T10:40:22.080Z agenda:internal:_findAndLockNextJob _findAndLockNextJob(sendPushEvent, [Function])
+huegelfest-app-staging-1  | [2025-06-11T10:40:25.316Z] [INFO] [i@758.js] [MusicService] Hole alle Musik-Einträge
+huegelfest-app-staging-1  | [2025-06-11T10:40:25.320Z] [INFO] [i@758.js] [MusicService] Gefundene Einträge: 0
+huegelfest-app-staging-1  | [2025-06-11T10:40:25.445Z] [INFO] [i@758.js] [UserService] getAllUsers - Gefundene User: 1
+huegelfest-app-staging-1  | [WebSocket] Broadcast "event-created" an 2 Clients: {"topic":"event-created","payload":{"eventId":"68495d245af1e903390726d7","dayId":"68495c375af1e903390722f6"}}
+huegelfest-app-staging-1  | [WebSocket] Broadcast via HTTP erfolgreich ausgelöst
+huegelfest-app-staging-1  | 2025-06-11T10:40:36.342Z agenda:schedule Agenda.schedule(2025-07-31T08:30:00.000Z, 'sendPushEvent', [undefined], cb)
+huegelfest-app-staging-1  | 2025-06-11T10:40:36.343Z agenda:create Agenda.create(sendPushEvent, [Object])
+huegelfest-app-staging-1  | 2025-06-11T10:40:36.343Z agenda:saveJob attempting to save a job into Agenda instance
+huegelfest-app-staging-1  | 2025-06-11T10:40:36.343Z agenda:saveJob [job undefined] set job props: 
+huegelfest-app-staging-1  | {
+huegelfest-app-staging-1  |   name: 'sendPushEvent',
+huegelfest-app-staging-1  |   data: { eventId: new ObjectId('68495d245af1e903390726db') },
+huegelfest-app-staging-1  |   priority: 0,
+huegelfest-app-staging-1  |   shouldSaveResult: false,
+huegelfest-app-staging-1  |   type: 'normal',
+huegelfest-app-staging-1  |   nextRunAt: 2025-07-31T08:30:00.000Z,
+huegelfest-app-staging-1  |   lastModifiedBy: undefined
+huegelfest-app-staging-1  | }
+huegelfest-app-staging-1  | 2025-06-11T10:40:36.343Z agenda:saveJob current time stored as 2025-06-11T10:40:36.343Z
+huegelfest-app-staging-1  | 2025-06-11T10:40:36.344Z agenda:saveJob using default behavior, inserting new job via insertOne() with props that were set: 
+huegelfest-app-staging-1  | {
+huegelfest-app-staging-1  |   name: 'sendPushEvent',
+huegelfest-app-staging-1  |   data: { eventId: new ObjectId('68495d245af1e903390726db') },
+huegelfest-app-staging-1  |   priority: 0,
+huegelfest-app-staging-1  |   shouldSaveResult: false,
+huegelfest-app-staging-1  |   type: 'normal',
+huegelfest-app-staging-1  |   nextRunAt: 2025-07-31T08:30:00.000Z,
+huegelfest-app-staging-1  |   lastModifiedBy: undefined
+huegelfest-app-staging-1  | }
+huegelfest-app-staging-1  | 2025-06-11T10:40:36.347Z agenda:saveJob processDbResult() called with success, checking whether to process job immediately or not
+huegelfest-app-staging-1  | [2025-06-11T10:40:36.371Z] [INFO] [n@39.js] [WebPush] Starte Senden der Benachrichtigungen {"title":"Neues Event veröffentlicht","body":"sdasa","payloadSize":177}
+huegelfest-app-staging-1  | 2025-06-11T10:40:39.472Z agenda:internal:processJobs starting to process jobs: [unknownName:unknownId]
+huegelfest-app-staging-1  | 2025-06-11T10:40:39.472Z agenda:internal:processJobs queuing up job to process: [send-announcement-notification]
+huegelfest-app-staging-1  | 2025-06-11T10:40:39.472Z agenda:internal:processJobs jobQueueFilling: send-announcement-notification isJobQueueFilling: false
+huegelfest-app-staging-1  | 2025-06-11T10:40:39.472Z agenda:internal:processJobs job [send-announcement-notification] lock status: shouldLock = true
+huegelfest-app-staging-1  | 2025-06-11T10:40:39.472Z agenda:internal:_findAndLockNextJob _findAndLockNextJob(send-announcement-notification, [Function])
+huegelfest-app-staging-1  | 2025-06-11T10:40:39.473Z agenda:internal:processJobs queuing up job to process: [sendPushEvent]
+huegelfest-app-staging-1  | 2025-06-11T10:40:39.473Z agenda:internal:processJobs jobQueueFilling: sendPushEvent isJobQueueFilling: false
+huegelfest-app-staging-1  | 2025-06-11T10:40:39.473Z agenda:internal:processJobs job [sendPushEvent] lock status: shouldLock = true
+huegelfest-app-staging-1  | 2025-06-11T10:40:39.473Z agenda:internal:_findAndLockNextJob _findAndLockNextJob(sendPushEvent, [Function])
+huegelfest-app-staging-1  | [2025-06-11T10:40:40.850Z] [INFO] [n@39.js] [WebPush] Alle Benachrichtigungen abgeschlossen {"total":1,"success":1,"failed":0,"timestamp":"2025-06-11T10:40:40.850Z"}
+huegelfest-app-staging-1  | [2025-06-11T10:40:40.851Z] [INFO] [n@39.js] [createEventAction] Push notification sent for admin-created event {"eventId":"68495d245af1e903390726d7","title":"sdasa"}
+huegelfest-app-staging-1  | 2025-06-11T10:40:52.079Z agenda:internal:processJobs starting to process jobs: [unknownName:unknownId]
+huegelfest-app-staging-1  | 2025-06-11T10:40:52.079Z agenda:internal:processJobs queuing up job to process: [send-announcement-notification]
+huegelfest-app-staging-1  | 2025-06-11T10:40:52.080Z agenda:internal:processJobs jobQueueFilling: send-announcement-notification isJobQueueFilling: false
+huegelfest-app-staging-1  | 2025-06-11T10:40:52.080Z agenda:internal:processJobs job [send-announcement-notification] lock status: shouldLock = true
+huegelfest-app-staging-1  | 2025-06-11T10:40:52.080Z agenda:internal:_findAndLockNextJob _findAndLockNextJob(send-announcement-notification, [Function])
+huegelfest-app-staging-1  | 2025-06-11T10:40:52.080Z agenda:internal:processJobs queuing up job to process: [sendPushEvent]
+huegelfest-app-staging-1  | 2025-06-11T10:40:52.080Z agenda:internal:processJobs jobQueueFilling: sendPushEvent isJobQueueFilling: false
+huegelfest-app-staging-1  | 2025-06-11T10:40:52.081Z agenda:internal:processJobs job [sendPushEvent] lock status: shouldLock = true
+huegelfest-app-staging-1  | 2025-06-11T10:40:52.081Z agenda:internal:_findAndLockNextJob _findAndLockNextJob(sendPushEvent, [Function])
+huegelfest-app-staging-1  | [2025-06-11T10:41:01.057Z] [INFO] [i@758.js] [MusicService] Hole alle Musik-Einträge
+huegelfest-app-staging-1  | [2025-06-11T10:41:01.062Z] [INFO] [i@758.js] [MusicService] Gefundene Einträge: 0
+huegelfest-app-staging-1  | 2025-06-11T10:41:09.472Z agenda:internal:processJobs starting to process jobs: [unknownName:unknownId]
+huegelfest-app-staging-1  | 2025-06-11T10:41:09.472Z agenda:internal:processJobs queuing up job to process: [send-announcement-notification]
+huegelfest-app-staging-1  | 2025-06-11T10:41:09.472Z agenda:internal:processJobs jobQueueFilling: send-announcement-notification isJobQueueFilling: false
+huegelfest-app-staging-1  | 2025-06-11T10:41:09.472Z agenda:internal:processJobs job [send-announcement-notification] lock status: shouldLock = true
+huegelfest-app-staging-1  | 2025-06-11T10:41:09.473Z agenda:internal:_findAndLockNextJob _findAndLockNextJob(send-announcement-notification, [Function])
+huegelfest-app-staging-1  | 2025-06-11T10:41:09.473Z agenda:internal:processJobs queuing up job to process: [sendPushEvent]
+huegelfest-app-staging-1  | 2025-06-11T10:41:09.474Z agenda:internal:processJobs jobQueueFilling: sendPushEvent isJobQueueFilling: false
+huegelfest-app-staging-1  | 2025-06-11T10:41:09.474Z agenda:internal:processJobs job [sendPushEvent] lock status: shouldLock = true
+huegelfest-app-staging-1  | 2025-06-11T10:41:09.474Z agenda:internal:_findAndLockNextJob _findAndLockNextJob(sendPushEvent, [Function])
+huegelfest-app-staging-1  | 2025-06-11T10:41:22.080Z agenda:internal:processJobs starting to process jobs: [unknownName:unknownId]
+huegelfest-app-staging-1  | 2025-06-11T10:41:22.080Z agenda:internal:processJobs queuing up job to process: [send-announcement-notification]
+huegelfest-app-staging-1  | 2025-06-11T10:41:22.080Z agenda:internal:processJobs jobQueueFilling: send-announcement-notification isJobQueueFilling: false
+huegelfest-app-staging-1  | 2025-06-11T10:41:22.080Z agenda:internal:processJobs job [send-announcement-notification] lock status: shouldLock = true
+huegelfest-app-staging-1  | 2025-06-11T10:41:22.080Z agenda:internal:_findAndLockNextJob _findAndLockNextJob(send-announcement-notification, [Function])
+huegelfest-app-staging-1  | 2025-06-11T10:41:22.081Z agenda:internal:processJobs queuing up job to process: [sendPushEvent]
+huegelfest-app-staging-1  | 2025-06-11T10:41:22.081Z agenda:internal:processJobs jobQueueFilling: sendPushEvent isJobQueueFilling: false
+huegelfest-app-staging-1  | 2025-06-11T10:41:22.081Z agenda:internal:processJobs job [sendPushEvent] lock status: shouldLock = true
+huegelfest-app-staging-1  | 2025-06-11T10:41:22.082Z agenda:internal:_findAndLockNextJob _findAndLockNextJob(sendPushEvent, [Function])
+huegelfest-app-staging-1  | 2025-06-11T10:41:39.473Z agenda:internal:processJobs starting to process jobs: [unknownName:unknownId]
+huegelfest-app-staging-1  | 2025-06-11T10:41:39.473Z agenda:internal:processJobs queuing up job to process: [send-announcement-notification]
+huegelfest-app-staging-1  | 2025-06-11T10:41:39.473Z agenda:internal:processJobs jobQueueFilling: send-announcement-notification isJobQueueFilling: false
+huegelfest-app-staging-1  | 2025-06-11T10:41:39.473Z agenda:internal:processJobs job [send-announcement-notification] lock status: shouldLock = true
+huegelfest-app-staging-1  | 2025-06-11T10:41:39.474Z agenda:internal:_findAndLockNextJob _findAndLockNextJob(send-announcement-notification, [Function])
+huegelfest-app-staging-1  | 2025-06-11T10:41:39.474Z agenda:internal:processJobs queuing up job to process: [sendPushEvent]
+huegelfest-app-staging-1  | 2025-06-11T10:41:39.475Z agenda:internal:processJobs jobQueueFilling: sendPushEvent isJobQueueFilling: false
+huegelfest-app-staging-1  | 2025-06-11T10:41:39.475Z agenda:internal:processJobs job [sendPushEvent] lock status: shouldLock = true
+huegelfest-app-staging-1  | 2025-06-11T10:41:39.475Z agenda:internal:_findAndLockNextJob _findAndLockNextJob(sendPushEvent, [Function])
+huegelfest-app-staging-1  | 2025-06-11T10:41:52.081Z agenda:internal:processJobs starting to process jobs: [unknownName:unknownId]
+huegelfest-app-staging-1  | 2025-06-11T10:41:52.081Z agenda:internal:processJobs queuing up job to process: [send-announcement-notification]
+huegelfest-app-staging-1  | 2025-06-11T10:41:52.081Z agenda:internal:processJobs jobQueueFilling: send-announcement-notification isJobQueueFilling: false
+huegelfest-app-staging-1  | 2025-06-11T10:41:52.081Z agenda:internal:processJobs job [send-announcement-notification] lock status: shouldLock = true
+huegelfest-app-staging-1  | 2025-06-11T10:41:52.081Z agenda:internal:_findAndLockNextJob _findAndLockNextJob(send-announcement-notification, [Function])
+huegelfest-app-staging-1  | 2025-06-11T10:41:52.082Z agenda:internal:processJobs queuing up job to process: [sendPushEvent]
+huegelfest-app-staging-1  | 2025-06-11T10:41:52.082Z agenda:internal:processJobs jobQueueFilling: sendPushEvent isJobQueueFilling: false
+huegelfest-app-staging-1  | 2025-06-11T10:41:52.082Z agenda:internal:processJobs job [sendPushEvent] lock status: shouldLock = true
+huegelfest-app-staging-1  | 2025-06-11T10:41:52.082Z agenda:internal:_findAndLockNextJob _findAndLockNextJob(sendPushEvent, [Function])
 fansel@fansel.dev:/opt/huegelfest/staging$ 

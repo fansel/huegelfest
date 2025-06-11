@@ -1,30 +1,33 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState } from 'react';
 import { Switch } from "@/shared/components/ui/switch";
-import { useServerStatus } from '@/shared/hooks/useServerStatus';
 import UserSettingsCard from './UserSettingsCard';
 import { Bell, AlertCircle, Settings, WifiOff } from 'lucide-react';
 import { usePushSubscription } from '@/features/push/hooks/usePushSubscription';
-import { toast } from 'react-hot-toast';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/shared/components/ui/dialog";
+import { useServerStatus } from '@/shared/hooks/useServerStatus';
+import { useAuth } from '@/features/auth/AuthContext';
 
 interface PushNotificationSettingsProps {
   variant?: 'row' | 'tile';
 }
 
 export default function PushNotificationSettings({ variant = 'row' }: PushNotificationSettingsProps) {
-  const { isServerOnline, isBrowserOnline, isFullyOnline } = useServerStatus();
+  const { isServerOnline, isBrowserOnline } = useServerStatus();
+  const { isTemporarySession } = useAuth();
   const {
     isSubscribed,
     isLoading,
     isSupported,
+    isOnline,
     error,
     subscribe,
     unsubscribe
   } = usePushSubscription();
 
-  // Browser-Permission Status
+  const [showStatusDetails, setShowStatusDetails] = useState(false);
+  
   const browserPermission = (() => {
     try {
       return typeof window !== 'undefined' && 'Notification' in window && Notification
@@ -36,63 +39,16 @@ export default function PushNotificationSettings({ variant = 'row' }: PushNotifi
     }
   })();
 
-  // Status-Dialog
-  const [showStatusDetails, setShowStatusDetails] = useState(false);
-  const [lastSync, setLastSync] = useState<Date | null>(null);
-
-  // Hole Pending Changes Status
-  const pendingChanges = typeof window !== 'undefined' 
-    ? JSON.parse(localStorage.getItem('push-pending-changes') || '[]')
-    : [];
-  const hasPendingChanges = pendingChanges.length > 0;
-
-  // Aktualisiere lastSync wenn Änderungen synchronisiert wurden
-  useEffect(() => {
-    if (!hasPendingChanges && lastSync === null) {
-      setLastSync(new Date());
-    }
-  }, [hasPendingChanges]);
-
   const handleToggle = async (checked: boolean) => {
-    try {
-      if (isLoading || !isSupported) return;
+    if (isLoading || !isSupported || !isOnline || isTemporarySession) return;
 
-      if (checked) {
-        // Check if Notification API is available
-        if (typeof window === 'undefined' || !('Notification' in window) || !Notification) {
-          toast.error('Push-Benachrichtigungen werden von diesem Browser nicht unterstützt');
-          return;
-        }
-
-        try {
-          // Nur aktivieren wenn Berechtigung bereits erteilt wurde oder neu angefragt wird
-          if (browserPermission === 'granted') {
-            await subscribe();
-          } else {
-            const permission = await Notification.requestPermission();
-            if (permission === 'granted') {
-              await subscribe();
-            } else {
-              toast.error('Bitte erlaube Push-Benachrichtigungen in den Browser-Einstellungen');
-            }
-          }
-        } catch (error) {
-          console.error('[PushNotificationSettings] Error requesting notification permission:', error);
-          toast.error('Fehler beim Anfordern der Push-Berechtigung');
-          return;
-        }
-      } else {
-        await unsubscribe();
-      }
-    } catch (err) {
-      // Ignoriere userId-bezogene Fehler, da diese normal sind wenn der User nicht eingeloggt ist
-      if (err instanceof Error && !err.message.includes('userId') && !err.message.includes('user.id')) {
-        toast.error('Fehler bei Push-Benachrichtigungen: ' + err.message);
-      }
+    if (checked) {
+      await subscribe();
+    } else {
+      await unsubscribe();
     }
   };
 
-  // Status Details Dialog
   const StatusDetailsDialog = () => (
     <Dialog open={showStatusDetails} onOpenChange={setShowStatusDetails}>
       <DialogContent className="max-w-md">
@@ -126,22 +82,12 @@ export default function PushNotificationSettings({ variant = 'row' }: PushNotifi
             <div className="grid grid-cols-2 gap-2 text-sm">
               <span className="text-gray-500">Aktiv:</span>
               <span>{isSubscribed ? '✅' : '❌'}</span>
-              
-              <span className="text-gray-500">Ausstehende Änderungen:</span>
-              <span>{hasPendingChanges ? `Ja (${pendingChanges.length})` : 'Nein'}</span>
-              
-              {lastSync && (
-                <>
-                  <span className="text-gray-500">Letzte Synchronisation:</span>
-                  <span>{lastSync.toLocaleString()}</span>
-                </>
-              )}
             </div>
           </div>
 
-          {error && !error.includes('userId') && (
+          {error && (
             <div className="space-y-2">
-              <h4 className="font-medium text-red-500">Fehler</h4>
+              <h4 className="font-medium text-red-500">Letzter Fehler</h4>
               <p className="text-sm text-red-500">{error}</p>
             </div>
           )}
@@ -150,21 +96,17 @@ export default function PushNotificationSettings({ variant = 'row' }: PushNotifi
     </Dialog>
   );
 
-  // Icon basierend auf Status
   const getIcon = () => {
     if (!isSupported) return <AlertCircle className="h-5 w-5 text-[#ff9900]" />;
     if (isLoading) return <Settings className="h-5 w-5 text-[#ff9900] animate-spin" />;
-    if (!isFullyOnline) return <WifiOff className="h-5 w-5 text-[#ff9900]" />;
-    if (hasPendingChanges) return <Settings className="h-5 w-5 text-[#ff9900]" />;
+    if (!isOnline) return <WifiOff className="h-5 w-5 text-[#ff9900]" />;
     if (isSubscribed) return <Bell className="h-5 w-5 text-[#ff9900]" />;
     return <Bell className="h-5 w-5 text-[#ff9900]" />;
   };
 
-  // Info Text mit Status Details Button
   const info = (
     <div className="space-y-2">
-      <p>Push-Benachrichtigungen ermöglichen es dir, wichtige Updates zum Festival direkt zu erhalten, auch wenn die App geschlossen ist.</p>
-      <p>Du kannst sie jederzeit aktivieren oder deaktivieren.</p>
+      <p>Erhalte wichtige Updates zum Festival direkt auf dein Gerät, auch wenn die App geschlossen ist.</p>
       <button 
         onClick={() => setShowStatusDetails(true)}
         className="text-[#ff9900] hover:text-[#ff9900]/80 underline text-sm"
@@ -183,15 +125,25 @@ export default function PushNotificationSettings({ variant = 'row' }: PushNotifi
           <Switch
             checked={isSubscribed}
             onCheckedChange={handleToggle}
-            disabled={!isSupported || isLoading}
+            disabled={!isSupported || isLoading || !isOnline || isTemporarySession}
           />
         }
         info={info}
         variant={variant}
       >
+        {isTemporarySession && (
+          <div className="text-sm text-amber-600 mt-2">
+            In einer temporären Session deaktiviert.
+          </div>
+        )}
         {browserPermission === 'denied' && (
           <div className="text-sm text-red-500 mt-2">
-            Push-Benachrichtigungen sind blockiert
+            Push-Benachrichtigungen sind in den Browser-Einstellungen blockiert.
+          </div>
+        )}
+        {!isOnline && (
+          <div className="text-sm text-amber-600 mt-2">
+            Du bist offline. Eine Änderung ist nicht möglich.
           </div>
         )}
       </UserSettingsCard>

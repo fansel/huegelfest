@@ -283,28 +283,26 @@ export async function deactivateUser(userId: string) {
 /**
  * Lädt einen User mit Shadow Users (für spezielle Admin-Zwecke)
  * @param identifier - Username oder E-Mail
- * @returns User oder null
+ * @returns User-Objekt (oder null) mit populated-Feldern, WENN es existiert
  */
 export async function getUserIncludingShadow(identifier: string) {
+  await connectDB();
+  const isEmail = identifier.includes('@');
+
+  const query = isEmail
+    ? { email: { $regex: new RegExp(`^${identifier}$`, 'i') } }
+    : { username: { $regex: new RegExp(`^${identifier}$`, 'i') } };
+
   try {
-    await connectDB();
-    
-    const user = await User.findOne({
-      $or: [
-        { email: identifier.toLowerCase() },
-        { username: identifier }
-      ],
-      isActive: true
-      // Hier KEINE Einschränkung für Shadow Users
-    })
-    .populate('registrationId')
-    .populate('groupId')
-    .exec();
+    const user = await User.findOne(query)
+      .populate('registrationId')
+      .populate('groupId')
+      .exec();
     
     return user;
   } catch (error) {
-    console.error('Fehler beim Laden von User (inkl. Shadow):', error);
-    throw error;
+    console.error(`Fehler bei der Suche nach User mit Identifier: ${identifier}`, error);
+    return null;
   }
 }
 

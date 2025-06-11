@@ -14,6 +14,7 @@ export interface IScheduledPushEvent extends Document {
   groupId?: mongoose.Types.ObjectId; // For dynamic group-based push notifications
   type: 'general' | 'user' | 'group';  // Art der Nachricht
   targetUserId?: string;               // Für user-spezifische Nachrichten
+  data?: Record<string, any>;          // Für beliebige Zusatzdaten
 }
 
 const scheduledPushEventSchema = new mongoose.Schema<IScheduledPushEvent>({
@@ -33,6 +34,7 @@ const scheduledPushEventSchema = new mongoose.Schema<IScheduledPushEvent>({
     default: 'general'
   },
   targetUserId: { type: String },
+  data: { type: mongoose.Schema.Types.Mixed, default: {} },
 }, {
   timestamps: true,
   toJSON: {

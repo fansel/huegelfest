@@ -43,7 +43,7 @@ export function TemporarySessionBanner() {
   const isAdminUser = user?.role === 'admin';
 
   return (
-    <div className={`fixed top-0 left-0 right-0 z-[9999] border-b shadow-sm ${
+    <div className={`fixed top-0 left-0 right-0 z-50 border-b shadow-sm ${
       isAdminUser 
         ? 'bg-blue-50 border-blue-200' 
         : 'bg-gray-100 border-gray-200'

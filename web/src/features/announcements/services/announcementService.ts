@@ -1,3 +1,4 @@
+'use server';
 import { connectDB } from '@/lib/db/connector';
 import Announcement from '@/lib/db/models/Announcement';
 import { WorkingGroup } from '@/lib/db/models/WorkingGroup';
@@ -10,7 +11,7 @@ import { initServices } from '@/lib/initServices';
 import { broadcast } from '@/lib/websocket/broadcast';
 import Reaction from '@/lib/db/models/Reaction';
 import { verifySession } from '@/features/auth/actions/userAuth';
-import getAgenda from '@/lib/pushScheduler/agenda';
+import { getAgendaClient } from '@/lib/pushScheduler/agenda';
 
 export async function getAllAnnouncements() {
   await initServices();
@@ -35,21 +36,27 @@ export async function getAllAnnouncements() {
   }));
 }
 
-export async function sendAnnouncementNotification(title: string, message: string) {
+export async function sendAnnouncementNotification(title: string, message: string, groupId?: string, announcementId?: string) {
   await initServices();
-  if (webPushService.isInitialized()) {
-    await webPushService.sendNotificationToAll({
+  try {
+    const agenda = await getAgendaClient();
+    await agenda.now('send-announcement-notification', {
       title,
       body: message,
       icon: '/icon-192x192.png',
       badge: '/badge-96x96.png',
       data: {
         type: 'announcement',
-        timestamp: new Date().toISOString()
+        groupId: groupId || 'all',
+        announcementId: announcementId || 'none'
       }
     });
+    logger.info('[AnnouncementService] Announcement job scheduled successfully');
+    return { status: 'success', message: 'Ankündigung erfolgreich versendet' };
+  } catch (error) {
+    logger.error('[AnnouncementService] Failed to schedule announcement job', { error });
+    return { status: 'error', message: 'Ankündigung konnte nicht versendet werden' };
   }
-  return { status: 'success', message: 'Ankündigung erfolgreich gesendet' };
 }
 
 export async function deleteAnnouncement(id: string) {
@@ -80,7 +87,7 @@ export async function deleteAnnouncement(id: string) {
 
 export async function saveAnnouncements(announcements: IAnnouncement[]): Promise<void> {
   await initServices();
-  const agenda = getAgenda();
+  const agenda = await getAgendaClient();
   try {
     for (const announcement of announcements) {
       let group = null;

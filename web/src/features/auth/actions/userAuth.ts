@@ -43,7 +43,8 @@ async function getVerifiedUserFromToken(token: string | undefined) {
  */
 export async function loginUser(identifier: string, password: string) {
   try {
-    const { user, error } = await validateCredentials(identifier, password);
+    const lowerCaseIdentifier = identifier.toLowerCase();
+    const { user, error } = await validateCredentials(lowerCaseIdentifier, password);
     
     if (error || !user) {
       return { success: false, error: error || 'Benutzername oder Passwort stimmen nicht überein' };

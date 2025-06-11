@@ -40,6 +40,9 @@ export async function getCurrentUserWithRegistrationAction() {
  */
 export async function updateCurrentUserPreferencesAction(updates: { name?: string; username?: string }) {
   try {
+    if (updates.username) {
+      updates.username = updates.username.toLowerCase();
+    }
     return await updateCurrentUserPreferences(updates);
   } catch (error) {
     console.error('[UserActions] Fehler bei updateCurrentUserPreferences:', error);
@@ -126,6 +129,7 @@ export async function changeUserRoleAction(userId: string, newRole: 'user' | 'ad
 
     // Broadcast für andere Clients
     await broadcast('user-role-changed', { userId, newRole });
+    await broadcast('user-updated', { userId });
     
     return { success: true, data: user };
   } catch (error) {
@@ -248,6 +252,7 @@ export async function deleteUserCompletelyAction(userId: string) {
     if (result.success) {
       // Broadcast für andere Clients
       await broadcast('user-deleted', { userId });
+      revalidatePath('/admin/groups'); // Revalidate user list
     }
     
     return result;

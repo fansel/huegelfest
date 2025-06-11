@@ -18,6 +18,7 @@ interface BottomBarProps {
   isAdminActive: boolean;
   onAdminToggle: () => void;
   showAdminButton: boolean;
+  isTemporarySession?: boolean;
 }
 
 const userTabs: Tab[] = [
@@ -48,7 +49,7 @@ const signupPhaseTabs: Tab[] = [
   { id: 'settings', icon: <SettingsIcon size={24} />, label: 'Einstellungen' },
 ];
 
-const BottomBar: React.FC<BottomBarProps> = ({ mode, activeTab, onTabChange, isAdminActive, onAdminToggle, showAdminButton }) => {
+const BottomBar: React.FC<BottomBarProps> = ({ mode, activeTab, onTabChange, isAdminActive, onAdminToggle, showAdminButton, isTemporarySession }) => {
   const { signupOpen } = useGlobalState();
   const isOnline = useNetworkStatus();
   const { deviceType } = useDeviceContext();
@@ -90,38 +91,37 @@ const BottomBar: React.FC<BottomBarProps> = ({ mode, activeTab, onTabChange, isA
   }, [mode, tabs.length]);
 
   if (!isMobileLayout) {
+    const topClass = isTemporarySession ? 'top-10' : 'top-0';
     return (
-      <div className="fixed left-0 right-0 top-0 z-50 bg-[#460b6c]/90 backdrop-blur-sm">
-        <div className="flex items-center justify-center max-w-5xl mx-auto h-16 px-4 sm:px-6 lg:px-8 w-full">
-          <div className="flex items-center justify-between w-full max-w-4xl gap-2 sm:gap-4 md:gap-6 lg:gap-8 xl:gap-12">
-            {tabs.map(({ id, label }) => (
-              <span
-                key={id}
-                onClick={() => onTabChange(id)}
-                className={`cursor-pointer px-1 sm:px-2 select-none text-sm sm:text-base transition-colors duration-200 text-[#ff9900] whitespace-nowrap
-                  ${activeTab === id ? 'font-semibold' : 'hover:font-semibold hover:line-through'}`}
-                aria-label={label}
-                tabIndex={0}
-                role="button"
-                onKeyDown={e => { if (e.key === 'Enter' || e.key === ' ') onTabChange(id); }}
-              >
-                {label}
-              </span>
-            ))}
-            {showAdminButtonFinal && (
-              <span
-                onClick={onAdminToggle}
-                className={`cursor-pointer px-1 sm:px-2 select-none text-sm sm:text-base transition-colors duration-200 text-[#ff9900] whitespace-nowrap
-                  ${isAdminActive ? 'font-semibold underline underline-offset-4' : 'hover:font-semibold hover:line-through'}`}
-                aria-label="Admin-Modus"
-                tabIndex={0}
-                role="button"
-                onKeyDown={e => { if (e.key === 'Enter' || e.key === ' ') onAdminToggle(); }}
-              >
-                Admin
-              </span>
-            )}
-          </div>
+      <div className={`fixed left-0 right-0 ${topClass} z-50 bg-[#460b6c]/90 backdrop-blur-sm`}>
+        <div className="flex items-center justify-center max-w-5xl mx-auto h-16 px-4 sm:px-6 lg:px-8 w-full gap-2 sm:gap-4 md:gap-6 lg:gap-8 xl:gap-12">
+          {tabs.map(({ id, label }) => (
+            <span
+              key={id}
+              onClick={() => onTabChange(id)}
+              className={`cursor-pointer px-1 sm:px-2 select-none text-sm sm:text-base transition-colors duration-200 text-[#ff9900] whitespace-nowrap
+                ${activeTab === id ? 'font-semibold' : 'hover:font-semibold hover:line-through'}`}
+              aria-label={label}
+              tabIndex={0}
+              role="button"
+              onKeyDown={e => { if (e.key === 'Enter' || e.key === ' ') onTabChange(id); }}
+            >
+              {label}
+            </span>
+          ))}
+          {showAdminButtonFinal && (
+            <span
+              onClick={onAdminToggle}
+              className={`cursor-pointer px-1 sm:px-2 select-none text-sm sm:text-base transition-colors duration-200 text-[#ff9900] whitespace-nowrap
+                ${isAdminActive ? 'font-semibold underline underline-offset-4' : 'hover:font-semibold hover:line-through'}`}
+              aria-label="Admin-Modus"
+              tabIndex={0}
+              role="button"
+              onKeyDown={e => { if (e.key === 'Enter' || e.key === ' ') onAdminToggle(); }}
+            >
+              Admin
+            </span>
+          )}
         </div>
       </div>
     );

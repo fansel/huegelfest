@@ -1,176 +1,249 @@
-import Agenda, { Job } from 'agenda';
+import { Agenda, Job } from 'agenda';
 import mongoose from 'mongoose';
-import { connectDB } from '../db/connector';
+import { connectDB, getMongoUri } from '../db/connector';
 import { logger } from '../logger';
 import { webPushService } from '../webpush/webPushService';
-import ScheduledPushEvent from '../db/models/ScheduledPushEvent';
-import { Subscriber } from '../db/models/Subscriber';
 import { initWebpush } from '../initWebpush';
-import { Group } from '../db/models/Group';
+import ScheduledPushEvent from '../db/models/ScheduledPushEvent';
+import { User } from '../db/models/User';
 
-interface SendPushEventData { eventId: string; }
-
-interface SendAnnouncementNotificationData {
+// Data structure for the 'send-announcement-notification' job
+export interface SendAnnouncementNotificationData {
   title: string;
   body: string;
   icon?: string;
   badge?: string;
-  data?: Record<string, any>;
+  data: {
+    type: 'announcement';
+    groupId: string;
+    announcementId: string;
+  };
 }
-
-const mongoUri = `mongodb://${process.env.MONGO_HOST || 'localhost'}:${process.env.MONGO_PORT || '27017'}/${process.env.MONGO_DB || 'huegelfest'}`;
 
 let agenda: Agenda | null = null;
+let agendaReady: Promise<Agenda> | null = null;
+let isWorker = false;
 
-const defineJobs = (agendaInstance: Agenda) => {
-  agendaInstance.define('send-announcement-notification', async (job: Job<SendAnnouncementNotificationData>) => {
-    await initWebpush();
-    if (!webPushService.isInitialized()) {
-      logger.error('[Agenda] WebPush not initialized, skipping announcement push.');
-      return;
-    }
-    const { title, body, icon, badge, data } = job.attrs.data;
-    await webPushService.sendNotificationToAll({ title, body, icon, badge, data });
-  });
+const AGENDA_COLLECTION = 'agendaJobs';
 
-  agendaInstance.define('sendPushEvent', async (job: Job<SendPushEventData>) => {
-    const { eventId } = job.attrs.data;
-    const event = await ScheduledPushEvent.findById(eventId).lean();
-    if (!event || !event.active) {
-      logger.info(`[agenda] PushEvent ${eventId} nicht gefunden oder inaktiv – überspringe.`);
-      job.remove();
-      return;
-    }
-
-    await initWebpush();
-    if (!webPushService.isInitialized()) {
-      logger.warn(`[agenda] WebPush nicht initialisiert – überspringe.`);
-      return;
-    }
-
-    logger.info(`[agenda] Verarbeite PushEvent ${eventId} vom Typ ${event.type}`);
-
-    // 1. Allgemeine Nachrichten (z.B. Ankündigungen) – an alle aktiven Subscriptions
-    if (event.type === 'general') {
-      await webPushService.sendNotificationToAll({ title: event.title, body: event.body });
-      logger.info(`[agenda] Allgemeine Push-Nachricht („${event.title}") an alle gesendet.`);
-    }
-
-    // 2. User-spezifische Nachrichten (z.B. Erinnerungen, Aufgaben) – nur an eingeloggte User (Session aktiv) auf dem Gerät
-    else if (event.type === 'user' && event.targetUserId) {
-      await webPushService.sendNotificationToUser(event.targetUserId.toString(), { title: event.title, body: event.body });
-      logger.info(`[agenda] User-Push („${event.title}") an User ${event.targetUserId} gesendet.`);
-    }
-
-    // 3. Gruppenbasierte Nachrichten (z.B. „Eure Aufgabe hat begonnen") – dynamisch an aktuelle Gruppenmitglieder
-    else if (event.type === 'group' && event.groupId) {
-      const group = await Group.findById(event.groupId).populate('members').lean();
-      if (!group) {
-        logger.warn(`[agenda] Gruppe ${event.groupId} nicht gefunden – überspringe Push.`);
-        return;
-      }
-      const memberIds = (group as any).members?.map((m: any) => m._id.toString()) || [];
-      for (const userId of memberIds) {
-        await webPushService.sendNotificationToUser(userId, { title: event.title, body: event.body });
-      }
-      logger.info(`[agenda] Gruppen-Push („${event.title}") an Gruppe ${group.name} (${memberIds.length} Mitglieder) gesendet.`);
-    }
-
-    // Wenn es ein einmaliger Job ist, entferne ihn nach Ausführung
-    if (event.repeat === 'once') {
-        logger.info(`[agenda] Einmaliger Job ${job.attrs.name} für Event ${eventId} wird nach Ausführung entfernt.`);
-        job.remove();
-    }
-  });
-
-  logger.info('[Agenda] Jobs defined');
-};
-
-const setupEventListeners = (agendaInstance: Agenda) => {
-    agendaInstance
-        .on('ready', () => logger.info('[Agenda] Connected & ready'))
-        .on('start', job => logger.info(`[Agenda] Job started: ${job.attrs.name} (${job.attrs._id})`))
-        .on('complete', job => logger.info(`[Agenda] Job completed: ${job.attrs.name} (${job.attrs._id})`))
-        .on('success', job => logger.info(`[Agenda] Job succeeded: ${job.attrs.name} (${job.attrs._id})`))
-        .on('fail', (err, job) => logger.error(`[Agenda] Job failed: ${job?.attrs.name} (${job?.attrs._id})`, { error: err.message }))
-        .on('error', err => logger.error('[Agenda] Scheduler error:', { error: err.message }));
+/**
+ * Checks if the full Agenda worker instance is running.
+ */
+export function isAgendaRunning(): boolean {
+	return agenda !== null && isWorker;
 }
 
-export const initializeAgenda = async (): Promise<Agenda> => {
-    if (agenda) {
-        logger.info('[Agenda] Scheduler already initialized.');
-        return agenda;
-    }
+/**
+ * Initializes or retrieves a lightweight Agenda client for scheduling jobs.
+ * This instance does not start the scheduler and is safe to use in serverless functions.
+ */
+export function getAgendaClient(): Promise<Agenda> {
+  if (agenda) {
+    return Promise.resolve(agenda);
+  }
+  
+  if (agendaReady) {
+    return agendaReady;
+  }
 
-    logger.info('[Agenda] Initializing scheduler...');
-
+  agendaReady = (async () => {
+    logger.info('[Agenda/Client] Initializing new agenda client...');
     try {
-        await connectDB();
-        logger.info('[Agenda] Database connection established.');
-    } catch (err) {
-        logger.error('[Agenda] Failed to connect to DB for scheduler:', err);
-        throw err; // Re-throw to prevent startup
+      await connectDB();
+      const mongoUri = getMongoUri();
+      const newAgenda = new Agenda({
+        db: { address: mongoUri, collection: AGENDA_COLLECTION },
+      });
+      
+      agenda = newAgenda;
+      isWorker = false;
+      
+      defineJobs(agenda);
+
+      await newAgenda.start();
+      await newAgenda.stop();
+
+      logger.info('[Agenda/Client] Client ready.');
+      return agenda;
+    } catch (error) {
+      logger.error('[Agenda/Client] Failed to initialize Agenda client:', error);
+      agendaReady = null;
+      throw error;
     }
-    
-    const newAgenda = new Agenda({
-        db: { address: mongoUri, collection: 'agendaJobs' },
-        processEvery: '30 seconds',
-        defaultConcurrency: 5,
-        maxConcurrency: 20,
+  })();
+  
+  return agendaReady;
+}
+
+/**
+ * Initializes the full Agenda worker instance.
+ * This should only be called once in the main, long-running server process.
+ */
+export function initializeAgendaWorker(): Promise<Agenda> {
+	if (agenda) {
+    if (isWorker) {
+      logger.warn('[Agenda/Worker] Worker already initialized.');
+      return Promise.resolve(agenda);
+    }
+    const err = new Error('An agenda client is already initialized. Stop the client before starting a worker.');
+    logger.error('[Agenda/Worker] An agenda client is already initialized. Cannot initialize worker.');
+    throw err;
+  }
+
+	if (agendaReady) {
+		return agendaReady;
+	}
+
+  agendaReady = (async () => {
+    try {
+      await connectDB();
+      logger.info('[Agenda/Worker] Initializing agenda worker...');
+      const mongoUri = getMongoUri();
+      const newAgenda = new Agenda({
+        db: { address: mongoUri, collection: AGENDA_COLLECTION },
+        processEvery: '10 seconds',
         defaultLockLifetime: 10 * 60 * 1000, // 10 minutes
-    });
+      });
 
-    defineJobs(newAgenda);
-    setupEventListeners(newAgenda);
-    
-    await newAgenda.start();
-    logger.info('[Agenda] Scheduler started successfully.');
+      agenda = newAgenda;
+      isWorker = true;
+      
+      await initWebpush();
+      
+      defineJobs(agenda);
 
-    // Graceful shutdown
-    process.on('SIGTERM', () => gracefulShutdown(newAgenda));
-    process.on('SIGINT', () => gracefulShutdown(newAgenda));
-    
-    agenda = newAgenda;
-    return agenda;
-};
+      const readyPromise = new Promise<Agenda>(resolve => {
+        newAgenda.on('ready', async () => {
+          logger.info('[Agenda/Worker] Worker connected & ready.');
+          await cleanupStaleJobs(newAgenda);
+          await newAgenda.start();
+          logger.info('[Agenda/Worker] Worker started successfully.');
+          resolve(newAgenda);
+        });
+      });
 
-const gracefulShutdown = async (agendaInstance: Agenda) => {
-    logger.info('[Agenda] Stopping scheduler...');
-    await agendaInstance.stop();
-    logger.info('[Agenda] Scheduler stopped.');
-    process.exit(0);
-};
-
-// Bereinigungsfunktion für verwaiste Jobs beim Start
-export const cleanupStaleJobs = async () => {
-    if (!agenda) {
-        logger.warn('[Agenda] Cannot cleanup stale jobs, scheduler not initialized.');
-        return;
+      newAgenda.on('error', (err: Error) => logger.error('[Agenda/Worker] Agenda error:', err));
+      newAgenda.on('start', (job: Job) => logger.info(`[Agenda] Job started: ${job.attrs.name} (${job.attrs._id})`));
+      newAgenda.on('success', (job: Job) => logger.info(`[Agenda] Job succeeded: ${job.attrs.name} (${job.attrs._id})`));
+      newAgenda.on('fail', (err: Error, job: Job) => logger.error(`[Agenda] Job failed: ${job.attrs.name} (${job.attrs._id})`, { error: err.message }));
+      newAgenda.on('complete', (job: Job) => logger.info(`[Agenda] Job completed: ${job.attrs.name} (${job.attrs._id})`));
+      
+      return await readyPromise;
+    } catch (error) {
+      logger.error('[Agenda/Worker] Failed to initialize Agenda worker:', error);
+      agendaReady = null;
+      agenda = null;
+      throw error;
     }
-    logger.info('[Agenda] Cleaning up stale or stuck jobs...');
-    // Logik, um Jobs zu finden, die "locked" sind, aber nicht mehr laufen
-    // Diese Implementierung hängt von der genauen Anforderung ab.
-    // Ein einfacher Ansatz wäre, sehr alte, gesperrte Jobs freizugeben.
-    const jobs = await agenda.jobs({ lockedAt: { $exists: true, $ne: null } });
-    let unlockedCount = 0;
-    for (const job of jobs) {
-        if (job.attrs.lockedAt && job.attrs.lockedAt < new Date(Date.now() - 15 * 60 * 1000)) { // älter als 15 min
-            logger.warn(`[Agenda] Unlocking stale job: ${job.attrs.name} (${job.attrs._id}) locked at ${job.attrs.lockedAt}`);
-            job.attrs.lockedAt = null;
-            await job.save();
-            unlockedCount++;
+  })();
+
+  return agendaReady;
+}
+
+function defineJobs(agenda: Agenda) {
+  agenda.define('send-announcement-notification', { concurrency: 5 }, async (job: Job<SendAnnouncementNotificationData>) => {
+		const { title, body, icon, badge, data } = job.attrs.data;
+
+		if (!webPushService.isInitialized()) {
+			logger.warn('[Agenda/Job] WebPush service not ready, cannot send announcement.');
+			return;
+		}
+
+    logger.info('[Agenda/Job] Sending announcement notification to all users.');
+		await webPushService.sendNotificationToAll({ title, body, icon, badge, data });
+	});
+
+	agenda.define('sendPushEvent', { concurrency: 5 }, async (job: Job<{ eventId: string }>) => {
+    const { eventId } = job.attrs.data;
+    if (!eventId) {
+      logger.error('[Agenda/Job] sendPushEvent job is missing eventId');
+      return;
+    }
+
+    const scheduledEvent = await ScheduledPushEvent.findById(eventId).lean();
+    if (!scheduledEvent || !scheduledEvent.active) {
+      logger.warn(`[Agenda/Job] Scheduled push event ${eventId} not found or inactive. Removing job.`);
+      await job.remove();
+      return;
+    }
+
+    const payload = {
+      title: scheduledEvent.title,
+      body: scheduledEvent.body,
+    };
+
+    switch (scheduledEvent.type) {
+      case 'general':
+        await webPushService.sendNotificationToAll(payload);
+        break;
+      case 'user':
+        if (scheduledEvent.targetUserId) {
+          await webPushService.sendNotificationToUser(scheduledEvent.targetUserId, payload);
+        } else {
+          logger.error(`[Agenda/Job] sendPushEvent job ${scheduledEvent._id} is type 'user' but has no targetUserId.`);
         }
+        break;
+      case 'group':
+        if (scheduledEvent.groupId) {
+          await webPushService.sendNotificationsToGroup(scheduledEvent.groupId.toString(), payload);
+        } else {
+          logger.error(`[Agenda/Job] sendPushEvent job ${scheduledEvent._id} is type 'group' but has no groupId.`);
+        }
+        break;
     }
-    if (unlockedCount > 0) {
-        logger.info(`[Agenda] Unlocked ${unlockedCount} stale jobs.`);
+
+    if (scheduledEvent.repeat === 'once') {
+      logger.info(`[Agenda/Job] Removing completed 'once' job for event ${eventId}.`);
+      await job.remove();
     }
+  });
+  logger.info('[Agenda] All jobs defined');
 }
 
-const getAgenda = (): Agenda => {
-    if (!agenda) {
-        throw new Error('Agenda has not been initialized. Call initializeAgenda() first.');
-    }
-    return agenda;
+/**
+ * Retrieves the currently active agenda instance.
+ * Throws an error if no instance (client or worker) is initialized.
+ * @deprecated Use getAgendaClient() instead for scheduling.
+ */
+export function getAgenda(): Agenda {
+	if (!agenda) {
+		throw new Error('Agenda has not been initialized. Call getAgendaClient() first.');
+	}
+	return agenda;
 }
 
-export default getAgenda;
+/**
+ * Gracefully shuts down the Agenda scheduler worker.
+ */
+export async function stopAgenda(): Promise<void> {
+	if (agenda && isWorker) {
+		logger.info('[Agenda/Worker] Stopping scheduler...');
+		await agenda.stop();
+    agenda = null;
+    agendaReady = null;
+    isWorker = false;
+    logger.info('[Agenda/Worker] Scheduler stopped.');
+	}
+}
+
+/**
+ * Cleans up stale jobs that might have been left running.
+ * This should be run by the worker on startup.
+ */
+export async function cleanupStaleJobs(agendaInstance: Agenda): Promise<void> {
+	logger.info('[Agenda/Worker] Cleaning up stale or stuck jobs...');
+	try {
+    const numRemoved = await agendaInstance.cancel({
+      lockedAt: { $exists: true, $ne: null },
+      lastFinishedAt: { $exists: false }
+    });
+		
+		if (numRemoved && numRemoved > 0) {
+			logger.warn(`[Agenda/Worker] Removed ${numRemoved} stale/locked jobs.`);
+		} else {
+			logger.info('[Agenda/Worker] No stale jobs found.');
+		}
+	} catch (error) {
+		logger.error('[Agenda/Worker] Error cleaning up stale jobs:', error);
+	}
+}

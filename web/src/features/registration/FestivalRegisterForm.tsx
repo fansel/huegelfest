@@ -57,7 +57,7 @@ const LOCAL_STORAGE_KEY = 'festival_register_form';
 
 export default function FestivalRegisterForm({ onRegister, setCookies = true, skipRegistrationCheck = false }: FestivalRegisterFormProps) {
   const { deviceType } = useDeviceContext();
-  const { user, isLoading: authLoading } = useAuth();
+  const { user, isLoading: authLoading, refreshSession } = useAuth();
   const { festivalDays: FESTIVAL_DAYS, loading: festivalDaysLoading } = useFestivalDays();
   const isMobile = deviceType === "mobile";
   
@@ -604,6 +604,9 @@ export default function FestivalRegisterForm({ onRegister, setCookies = true, sk
         // Sofort UI-Feedback geben
         toast.success(`${skipRegistrationCheck ? 'Nachmeldung' : (user ? 'Anmeldung' : 'Account und Anmeldung')} erfolgreich gespeichert!`);
         
+        // Session aktualisieren, um den neuen Login-Status zu übernehmen
+        await refreshSession();
+
         // Sofort zur Bestätigungsseite wechseln
         setStep(steps.length - 1);
         
@@ -612,15 +615,6 @@ export default function FestivalRegisterForm({ onRegister, setCookies = true, sk
           // Dispatch registration-updated event
           window.dispatchEvent(new CustomEvent('registration-updated', {
             detail: { userId: (result as any).user?.id || user?.id, registrationData: form }
-          }));
-          
-          // Dispatch user-logged-in event with complete user data
-          window.dispatchEvent(new CustomEvent('user-logged-in', {
-            detail: { 
-              userId: (result as any).user?.id || user?.id, 
-              userName: form.name,
-              user: (result as any).user || null
-            }
           }));
         }
         

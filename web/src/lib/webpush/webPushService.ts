@@ -1,6 +1,7 @@
 import webpush from 'web-push';
 import { Subscriber } from '../db/models/Subscriber';
 import { logger } from '../logger';
+import { User } from '../db/models/User';
 
 interface PushNotificationPayload {
   title: string;
@@ -244,6 +245,80 @@ class WebPushService {
     } catch (error) {
       logger.error('[WebPush] Fehler beim Cleanup:', error);
       return { removed: 0, total: 0 };
+    }
+  }
+
+  /**
+   * Sendet eine Push-Nachricht an eine spezifische Gruppe
+   */
+  async sendNotificationsToGroup(groupId: string, payload: PushNotificationPayload, options: { batchSize: number } = { batchSize: 100 }) {
+    if (!this.initialized) {
+      logger.error('[WebPush] Service ist nicht initialisiert');
+      throw new Error('WebPush-Service ist nicht initialisiert');
+    }
+
+    try {
+      logger.info('[WebPush] Sende Benachrichtigung an Gruppe', { groupId, title: payload.title });
+
+      const usersInGroup = await User.find({ groupId }).select('_id').lean();
+      const userIds = usersInGroup.map(u => u._id);
+
+      if (userIds.length === 0) {
+        logger.warn('[WebPush] Keine Benutzer in der Gruppe gefunden', { groupId });
+        return { success: true, stats: { total: 0, success: 0, failed: 0 } };
+      }
+
+      const subscriberCursor = Subscriber.find({ userId: { $in: userIds } }).cursor();
+      
+      let totalSuccessCount = 0;
+      let totalFailureCount = 0;
+      let totalSubscribers = 0;
+      let batch = [];
+
+      for (let subscriber = await subscriberCursor.next(); subscriber != null; subscriber = await subscriberCursor.next()) {
+        totalSubscribers++;
+        const subscription = {
+          endpoint: subscriber.endpoint,
+          keys: subscriber.keys
+        };
+        batch.push(this.sendNotification(subscription, payload));
+
+        if (batch.length >= options.batchSize) {
+          const results = await Promise.allSettled(batch);
+          totalSuccessCount += results.filter(r => r.status === 'fulfilled').length;
+          totalFailureCount += results.filter(r => r.status === 'rejected').length;
+          batch = [];
+        }
+      }
+
+      if (batch.length > 0) {
+        const results = await Promise.allSettled(batch);
+        totalSuccessCount += results.filter(r => r.status === 'fulfilled').length;
+        totalFailureCount += results.filter(r => r.status === 'rejected').length;
+      }
+      
+      logger.info('[WebPush] Benachrichtigungen an Gruppe gesendet', {
+        groupId,
+        total: totalSubscribers,
+        success: totalSuccessCount,
+        failed: totalFailureCount
+      });
+
+      return {
+        success: totalSuccessCount > 0,
+        stats: {
+          total: totalSubscribers,
+          success: totalSuccessCount,
+          failed: totalFailureCount
+        }
+      };
+
+    } catch (error) {
+      logger.error('[WebPush] Fehler beim Senden der Benachrichtigung an Gruppe', {
+        groupId,
+        error: (error as Error).message
+      });
+      throw error;
     }
   }
 }

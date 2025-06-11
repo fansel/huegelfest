@@ -178,12 +178,16 @@ export default function PWAContainerClient({ isAdmin, timelineData, infoBoardDat
     );
   }
 
+  const paddingTopClass = isTemporarySession
+    ? isMobileLayout ? 'pt-10' : 'pt-[104px]'
+    : !isMobileLayout ? 'pt-16' : '';
+
   return (
     <div className="relative min-h-screen bg-[#460b6c] text-[#ff9900] flex flex-col">
       <InstallPrompt />
       <OfflineIndicator />
       <TemporarySessionBanner />
-      <AutoPushPrompt onSubscriptionChange={handlePushSubscriptionChange} />
+      <AutoPushPrompt onSubscriptionChange={handlePushSubscriptionChange} isTemporarySession={isTemporarySession} />
       {showStarfield && <Starfield />}
       {hasMounted && showMusicNote && mode !== 'admin' && activeTab !== 'signup' && isOnline && (
         <div className="fixed left-4 top-4 z-[9999] select-none">
@@ -191,7 +195,7 @@ export default function PWAContainerClient({ isAdmin, timelineData, infoBoardDat
         </div>
       )}
 
-      <div className={`flex flex-col ${!isMobileLayout ? 'pt-16' : ''} ${isTemporarySession ? 'pt-8' : ''}`}>
+      <div className={`flex-1 ${paddingTopClass}`}>
         {activeTab !== 'signup' && (
           <div className="flex flex-col items-center justify-center gap-2 pt-4">
             <div className="flex items-center justify-center w-full">
@@ -226,6 +230,7 @@ export default function PWAContainerClient({ isAdmin, timelineData, infoBoardDat
         isAdminActive={mode === 'admin'}
         onAdminToggle={handleAdminToggleWithRefresh}
         showAdminButton={showAdminButton}
+        isTemporarySession={isTemporarySession}
       />
     </div>
   );

@@ -1,22 +1,22 @@
 "use server";
 
 import ScheduledPushEvent from '../../lib/db/models/ScheduledPushEvent';
-import getAgenda from '../../lib/pushScheduler/agenda';
+import { getAgendaClient } from '../../lib/pushScheduler/agenda';
 import { IScheduledPushEvent } from '../../lib/db/models/ScheduledPushEvent';
 import { Types } from 'mongoose';
 
 export async function createScheduledPushEvent(data: Partial<IScheduledPushEvent>) {
-  const agenda = getAgenda();
+  const agenda = await getAgendaClient();
   const event = await ScheduledPushEvent.create(data);
 
   // Agenda-Job anlegen
   if (event.repeat === 'once' && event.schedule instanceof Date) {
-    const job = await agenda.schedule(event.schedule, 'sendPushEvent', { eventId: event._id });
-    event.agendaJobId = job.attrs._id.toString();
+    const job = await agenda.schedule(event.schedule, 'sendPushEvent', { eventId: event._id!.toString() });
+    event.agendaJobId = job.attrs._id?.toString();
     await event.save();
   } else if (event.repeat === 'recurring' && typeof event.schedule === 'string') {
-    const job = await agenda.every(event.schedule, 'sendPushEvent', { eventId: event._id });
-    event.agendaJobId = job.attrs._id.toString();
+    const job = await agenda.every(event.schedule, 'sendPushEvent', { eventId: event._id!.toString() });
+    event.agendaJobId = job.attrs._id?.toString();
     await event.save();
   }
 
@@ -24,39 +24,48 @@ export async function createScheduledPushEvent(data: Partial<IScheduledPushEvent
 }
 
 export async function updateScheduledPushEvent(eventId: string, data: Partial<IScheduledPushEvent>) {
-  const agenda = getAgenda();
+  const agenda = await getAgendaClient();
   const event = await ScheduledPushEvent.findById(eventId);
   if (!event) throw new Error('Event not found');
 
   // Alten Job löschen
   if (event.agendaJobId) {
-    await agenda.cancel({ _id: new Types.ObjectId(event.agendaJobId) });
+    try {
+      await agenda.cancel({ _id: new Types.ObjectId(event.agendaJobId) });
+    } catch (error) {
+      console.error(`[PushEventService] Could not cancel job ${event.agendaJobId}, it might not exist.`, error);
+    }
   }
 
   // Event aktualisieren
   Object.assign(event, data);
-  await event.save();
 
   // Neuen Job anlegen
   if (event.repeat === 'once' && event.schedule instanceof Date) {
-    const job = await agenda.schedule(event.schedule, 'sendPushEvent', { eventId: event._id });
-    event.agendaJobId = job.attrs._id.toString();
-    await event.save();
+    const job = await agenda.schedule(event.schedule, 'sendPushEvent', { eventId: event._id.toString() });
+    event.agendaJobId = job.attrs._id?.toString();
   } else if (event.repeat === 'recurring' && typeof event.schedule === 'string') {
-    const job = await agenda.every(event.schedule, 'sendPushEvent', { eventId: event._id });
-    event.agendaJobId = job.attrs._id.toString();
-    await event.save();
+    const job = await agenda.every(event.schedule, 'sendPushEvent', { eventId: event._id.toString() });
+    event.agendaJobId = job.attrs._id?.toString();
+  } else {
+    event.agendaJobId = undefined; // Kein Job wenn kein schedule
   }
+  
+  await event.save();
 
   return event;
 }
 
 export async function deleteScheduledPushEvent(eventId: string) {
-  const agenda = getAgenda();
+  const agenda = await getAgendaClient();
   const event = await ScheduledPushEvent.findById(eventId);
   if (!event) return;
   if (event.agendaJobId) {
-    await agenda.cancel({ _id: new Types.ObjectId(event.agendaJobId) });
+    try {
+      await agenda.cancel({ _id: new Types.ObjectId(event.agendaJobId) });
+    } catch (error) {
+      console.error(`[PushEventService] Could not cancel job ${event.agendaJobId}, it might not exist.`, error);
+    }
   }
   await event.deleteOne();
 }
@@ -66,7 +75,7 @@ export async function deleteScheduledPushEvent(eventId: string) {
  * Diese sollten nicht existieren und können sicher gelöscht werden
  */
 export async function cleanupPastPushEvents(): Promise<{ deleted: number; cleaned: number }> {
-  const agenda = getAgenda();
+  const agenda = await getAgendaClient();
   const now = new Date();
   
   console.log(`[cleanupPastPushEvents] Starting cleanup for events scheduled before ${now.toISOString()}`);

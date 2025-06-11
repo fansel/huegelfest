@@ -1,14 +1,15 @@
 'use server';
 
-import { connectDB } from '@/lib/db/connector';
-import { webPushService } from '@/lib/webpush/webPushService';
-import { User } from '@/lib/db/models/User';
-import { Subscriber } from '@/lib/db/models/Subscriber';
-import { Event } from '@/lib/db/models/Event';
-import { Activity } from '@/lib/db/models/Activity';
-import ScheduledPushEvent from '@/lib/db/models/ScheduledPushEvent';
-import getAgenda from '@/lib/pushScheduler/agenda';
+import { connectDB } from '../db/connector';
+import { webPushService } from '../webpush/webPushService';
+import { User } from '../db/models/User';
+import { Subscriber } from '../db/models/Subscriber';
+import { Event } from '../db/models/Event';
+import { Activity } from '../db/models/Activity';
+import ScheduledPushEvent from '../db/models/ScheduledPushEvent';
 import mongoose from 'mongoose';
+import { getAgendaClient } from '../pushScheduler/agenda';
+import { broadcast } from '../websocket/broadcast';
 
 export interface SystemStatus {
   services: {
@@ -182,7 +183,8 @@ export async function getSystemStatus(): Promise<SystemStatus> {
     // Get Agenda job count
     let agendaJobs = 0;
     try {
-      const jobs = await getAgenda().jobs({});
+      const agenda = await getAgendaClient();
+      const jobs = await agenda.jobs({});
       agendaJobs = jobs.length;
     } catch (error) {
       console.error('Failed to get agenda jobs:', error);
@@ -333,4 +335,15 @@ export async function getScheduledPushEvents() {
     updatedAt: event.updatedAt instanceof Date ? event.updatedAt.toISOString() : String(event.updatedAt),
     agendaJobId: event.agendaJobId ? String(event.agendaJobId) : undefined,
   }));
+}
+
+export async function getAgendaStatistics() {
+  const agenda = await getAgendaClient();
+  const jobs = await agenda.jobs({});
+  // ... existing code ...
+}
+
+export async function broadcastSystemStatus() {
+  const status = await getSystemStatus();
+  await broadcast('system-status-updated', status);
 } 

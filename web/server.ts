@@ -4,6 +4,7 @@ import { parse } from 'url';
 import next from 'next';
 import { WebSocketServer, WebSocket } from 'ws';
 import { setWebSocketServer, broadcast } from './src/lib/websocket/broadcast.js';
+import { initializeAgendaWorker, stopAgenda } from './src/lib/pushScheduler/agenda.js';
 
 const port = parseInt(process.env.PORT || '3000', 10);
 const dev = process.env.NODE_ENV !== 'production';
@@ -17,15 +18,15 @@ export const activeConnections = new Map<WebSocket, { id: string | null; type: '
 
 // Function to get current WebSocket statistics
 export function getWebSocketStats() {
-  const connectionsByUser = new Map<string, number>();
-  const activeUsers: Array<{userId: string, connected: boolean, readyState: number}> = [];
+  const connectionsByDevice = new Map<string, number>();
+  const devicesList: Array<{userId: string, connected: boolean, readyState: number}> = [];
   
   // User connections
   for (const [userId, ws] of userConnections) {
-    const count = connectionsByUser.get(userId) || 0;
-    connectionsByUser.set(userId, count + 1);
+    const count = connectionsByDevice.get(userId) || 0;
+    connectionsByDevice.set(userId, count + 1);
     
-    activeUsers.push({
+    devicesList.push({
       userId,
       connected: ws.readyState === WebSocket.OPEN,
       readyState: ws.readyState
@@ -34,16 +35,19 @@ export function getWebSocketStats() {
   
   return {
     totalConnections: activeConnections.size,
-    totalUsers: userConnections.size,
+    totalDevices: userConnections.size,
     totalAnonymous: anonymousConnections.size,
-    usersList: activeUsers,
-    connectionsByUser: Object.fromEntries(connectionsByUser)
+    devicesList: devicesList,
+    connectionsByDevice: Object.fromEntries(connectionsByDevice)
   };
 }
 
 app
   .prepare()
   .then(async () => {
+
+    // Initialize Agenda worker
+    await initializeAgendaWorker();
 
     // ─── 1. HTTP-Server aufsetzen ────────────────────────────────────────────────
     const server = createServer((req, res) => {
@@ -218,6 +222,18 @@ app
       console.log(`> [Server] Ready on http://localhost:${port}`);
       console.log(`> [WebSocket] Verfügbar auf ws://localhost:${port}/ws`);
     });
+
+    const gracefulShutdown = async () => {
+      console.log('[Server] Shutting down...');
+      await stopAgenda();
+      server.close(() => {
+        console.log('[Server] HTTP server closed.');
+        process.exit(0);
+      });
+    };
+
+    process.on('SIGTERM', gracefulShutdown);
+    process.on('SIGINT', gracefulShutdown);
   })
   .catch(err => {
     console.error('[Server] Fehler in app.prepare():', err);
