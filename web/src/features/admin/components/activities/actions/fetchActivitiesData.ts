@@ -19,7 +19,7 @@ export interface ActivitiesData {
 export interface GroupUser {
   _id: string;
   name: string;
-  email: string;
+  email?: string;
 }
 
 /**
@@ -102,6 +102,7 @@ async function loadActivitiesWithPopulatedData(): Promise<any[]> {
         responsiblePushJobId: activity.responsiblePushJobId,
         createdAt: activity.createdAt.toISOString(),
         updatedAt: activity.updatedAt.toISOString(),
+        lastMessageAt: activity.lastMessageAt?.toISOString() || undefined,
         
         // Populated data with safe serialization
         category: category ? {

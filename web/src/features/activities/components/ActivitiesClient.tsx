@@ -78,7 +78,7 @@ export default function ActivitiesClient() {
           msg.topic === 'group-updated' ||
           msg.topic === 'user-assigned' ||
           msg.topic === 'user-removed' ||
-          msg.topic === 'CHAT_MESSAGE_CREATED') {
+          msg.topic === 'ACTIVITY_CHAT_MESSAGE') {
         
         console.log('[ActivitiesClient] Activities-Update erkannt, invalidiere SWR Cache');
         mutate();
@@ -91,7 +91,7 @@ export default function ActivitiesClient() {
       'group-updated',
       'user-assigned',
       'user-removed',
-      'CHAT_MESSAGE_CREATED'
+      'ACTIVITY_CHAT_MESSAGE'
     ]
   });
 
@@ -106,7 +106,7 @@ export default function ActivitiesClient() {
     
     return active.map((activity: ActivityWithCategoryAndTemplate) => {
       const isResponsible = activity.responsibleUsersData?.some(
-        (userData: { _id: string; name: string; email: string }) => userData._id === user.id
+        (userData) => userData._id === user.id
       ) || false;
       return { ...activity, isResponsible };
     });
@@ -161,14 +161,14 @@ export default function ActivitiesClient() {
   const handleOpenActivityChat = (activity: ActivityWithCategoryAndTemplate) => {
     setChatActivityId(activity._id);
     setChatGroupId(null);
-    setChatTitle(`Aufgaben-Chat: ${activity.template?.name || activity.customName || 'Unbenannte Aufgabe'}`);
+    setChatTitle(`Aufgaben-Chat: ${activity.customName || activity.template?.name || activity.category?.name || 'Unbenannte Aufgabe'}`);
     setChatModalOpen(true);
   };
 
   const handleOpenActivityInfo = (activity: ActivityWithCategoryAndTemplate) => {
     setChatActivityId(activity._id);
     setChatGroupId(null);
-    setChatTitle(`Aufgaben-Chat: ${activity.template?.name || activity.customName || 'Unbenannte Aufgabe'}`);
+    setChatTitle(`Aufgaben-Chat: ${activity.customName || activity.template?.name || activity.category?.name || 'Unbenannte Aufgabe'}`);
     setChatModalOpen(true);
     // Will open with info section visible via prop
   };
@@ -200,6 +200,9 @@ export default function ActivitiesClient() {
   };
 
   const handleCloseChat = () => {
+    // When closing the chat, we need to manually trigger a re-render
+    // so the "new message" indicator disappears.
+    mutate(); 
     setChatModalOpen(false);
     setChatActivityId(null);
     setChatGroupId(null);
@@ -296,7 +299,7 @@ export default function ActivitiesClient() {
                     <div className="space-y-3">
                       {currentActivities.map((activity: any) => {
                         const IconComponent = activity.category ? getIconComponent(activity.category.icon) : LucideIcons.HelpCircle;
-                        const activityName = activity.template?.name || activity.customName || 'Unbekannte Aufgabe';
+                        const activityName = activity.customName || activity.template?.name || activity.category?.name || 'Unbekannte Aufgabe';
 
                         return (
                           <div 
@@ -312,30 +315,45 @@ export default function ActivitiesClient() {
                               style={{ color: activity.category?.color || '#ff9900' }}
                             />
                             <div className="flex-1">
-                              <div className="font-medium text-[#ff9900] text-lg">
-                                {activityName}
-                                {activity.isResponsible && (
-                                  <span className="ml-2 text-xs bg-[#ff9900] text-white px-2 py-1 rounded-full">
-                                    Hauptverantwortung
-                                  </span>
-                                )}
-                              </div>
-                              {activity.startTime && (
-                                <div className="text-sm text-[#ff9900]/70">
-                                  {formatActivityTime(activity)}
+                              <div className="flex items-start justify-between">
+                                <div className="flex-1">
+                                  <h4 className="font-medium text-[#ff9900] text-sm">
+                                    {activityName}
+                                    {activity.isResponsible && (
+                                      <span className="ml-2 text-xs bg-[#ff9900] text-white px-2 py-1 rounded-full">
+                                        Hauptverantwortung
+                                      </span>
+                                    )}
+                                  </h4>
+                                  
+                                  {/* Time */}
+                                  {activity.startTime && (
+                                    <div className="flex items-center gap-1 text-xs text-gray-500 mt-1">
+                                      <Clock className="h-3 w-3" />
+                                      {formatActivityTime(activity)}
+                                    </div>
+                                  )}
                                 </div>
-                              )}
+
+                                {/* Action Buttons */}
+                                <div className="flex gap-1">
+                                  {activity.groupId && (
+                                    <Button
+                                      variant="ghost"
+                                      size="icon"
+                                      onClick={() => handleOpenActivityChat(activity)}
+                                      className="h-8 w-8 text-[#ff9900]/70 hover:text-[#ff9900] hover:bg-[#ff9900]/10 relative"
+                                      title="Aufgaben-Chat"
+                                    >
+                                      <MessageCircle className="h-4 w-4" />
+                                      {activity.lastMessageAt && typeof window !== 'undefined' && new Date(activity.lastMessageAt) > new Date(localStorage.getItem(`chat_last_viewed_${activity._id}`) || 0) && (
+                                        <span className="absolute top-1 right-1 block h-2 w-2 rounded-full bg-red-500 ring-2 ring-white/50" />
+                                      )}
+                                    </Button>
+                                  )}
+                                </div>
+                              </div>
                             </div>
-                            {/* Chat Button for Current Activity */}
-                            <Button
-                              variant="ghost"
-                              size="icon"
-                              onClick={() => handleOpenActivityChat(activity)}
-                              className="h-8 w-8 text-[#ff9900]/70 hover:text-[#ff9900] hover:bg-[#ff9900]/10 flex-shrink-0"
-                              title="Chat öffnen"
-                            >
-                              <MessageCircle className="h-4 w-4" />
-                            </Button>
                           </div>
                         );
                       })}
@@ -429,10 +447,10 @@ export default function ActivitiesClient() {
                   <div className="space-y-2">
                     {day.activities.map((activity) => {
                       const IconComponent = activity.category ? getIconComponent(activity.category.icon) : LucideIcons.HelpCircle;
-                      const activityName = activity.template?.name || activity.customName || 'Unbekannte Aufgabe';
+                      const activityName = activity.customName || activity.template?.name || activity.category?.name || 'Unbekannte Aufgabe';
                       
                       // Check if current user is responsible (by userId)
-                      const isResponsible = user && activity.responsibleUsersData?.some((userData: { _id: string; name: string; email: string }) => userData._id === user.id) || false;
+                      const isResponsible = user && activity.responsibleUsersData?.some((userData) => userData._id === user.id) || false;
 
                       return (
                         <div 
@@ -508,15 +526,22 @@ export default function ActivitiesClient() {
                                 </div>
 
                                 {/* Chat Button */}
-                                <Button
-                                  variant="ghost"
-                                  size="icon"
-                                  onClick={() => handleOpenActivityChat(activity)}
-                                  className="h-8 w-8 text-[#ff9900]/70 hover:text-[#ff9900] hover:bg-[#ff9900]/10 flex-shrink-0 ml-2"
-                                  title="Chat öffnen"
-                                >
-                                  <MessageCircle className="h-4 w-4" />
-                                </Button>
+                                <div className="flex gap-1">
+                                  {activity.groupId && (
+                                    <Button
+                                      variant="ghost"
+                                      size="icon"
+                                      onClick={() => handleOpenActivityChat(activity)}
+                                      className="h-8 w-8 text-[#ff9900]/70 hover:text-[#ff9900] hover:bg-[#ff9900]/10 relative"
+                                      title="Aufgaben-Chat"
+                                    >
+                                      <MessageCircle className="h-4 w-4" />
+                                      {activity.lastMessageAt && typeof window !== 'undefined' && new Date(activity.lastMessageAt) > new Date(localStorage.getItem(`chat_last_viewed_${activity._id}`) || 0) && (
+                                        <span className="absolute top-1 right-1 block h-2 w-2 rounded-full bg-red-500 ring-2 ring-white/50" />
+                                      )}
+                                    </Button>
+                                  )}
+                                </div>
                               </div>
                             </div>
                           </div>
@@ -539,7 +564,7 @@ export default function ActivitiesClient() {
         groupId={chatGroupId || undefined}
         title={chatTitle}
         isAdminView={false}
-        showInfoOnOpen={chatActivityId !== null}
+        showInfoOnOpen={false}
       />
 
       {/* Group Members Dialog */}

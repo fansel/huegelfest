@@ -117,6 +117,7 @@ async function fetchUserActivities(userId: string): Promise<UserActivitiesData> 
         responsiblePushJobId: activity.responsiblePushJobId,
         createdAt: activity.createdAt?.toISOString() || '',
         updatedAt: activity.updatedAt?.toISOString() || '',
+        lastMessageAt: activity.lastMessageAt?.toISOString() || undefined,
         
         category: activity.categoryId ? {
           _id: String((activity.categoryId as any)._id),

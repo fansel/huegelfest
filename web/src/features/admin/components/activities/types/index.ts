@@ -54,6 +54,7 @@ export interface Activity {
   responsiblePushJobId?: string; // For responsible users push reminders
   createdAt: string;
   updatedAt: string;
+  lastMessageAt?: string;
 }
 
 export interface CreateActivityData {
@@ -78,6 +79,11 @@ export interface UpdateActivityData {
   description?: string; // Optional description
   groupId?: string;
   responsibleUsers?: string[]; // IDs der hauptverantwortlichen Benutzer
+  responsibleUsersData?: {
+    _id: string;
+    name: string;
+    email?: string;
+  }[];
 }
 
 // Extended interfaces with populated data
@@ -100,8 +106,9 @@ export interface ActivityWithCategoryAndTemplate extends Activity {
   responsibleUsersData?: {
     _id: string;
     name: string;
-    email: string;
+    email?: string;
   }[];
+  lastMessageAt?: string;
 }
 
 // Activity assignment interface

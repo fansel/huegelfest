@@ -1,6 +1,7 @@
 'use client';
 
 import React, { useState, useEffect, useRef, useCallback } from 'react';
+import useSWR from 'swr';
 import { X, Send, MessageCircle, Crown, Users, ChevronUp } from 'lucide-react';
 import { Dialog, DialogContent } from '@/shared/components/ui/dialog';
 import { Button } from '@/shared/components/ui/button';
@@ -19,6 +20,7 @@ import {
 } from '../actions/chatActions';
 import { format } from 'date-fns';
 import { de } from 'date-fns/locale';
+import { useGlobalWebSocket } from '@/shared/hooks/useGlobalWebSocket';
 
 interface ChatModalProps {
   isOpen: boolean;
@@ -39,15 +41,59 @@ const ChatModal: React.FC<ChatModalProps> = ({
   isAdminView = false,
   showInfoOnOpen = false
 }) => {
-  const [messages, setMessages] = useState<ChatMessageResponse[]>([]);
   const [newMessage, setNewMessage] = useState('');
-  const [loading, setLoading] = useState(false);
   const [sending, setSending] = useState(false);
   const [showInfo, setShowInfo] = useState(showInfoOnOpen);
   const [activityDetails, setActivityDetails] = useState<ActivityDetails | null>(null);
   const [groupMembers, setGroupMembers] = useState<GroupMember[]>([]);
   const [groupName, setGroupName] = useState<string>('');
   const messagesEndRef = useRef<HTMLDivElement>(null);
+  
+  const swrKey = isOpen ? (activityId ? `chat/activity/${activityId}` : groupId ? `chat/group/${groupId}` : null) : null;
+
+  const fetcher = async (url: string) => {
+    const [type, id] = url.split('/').slice(1);
+    let result;
+    if (type === 'activity' && id) {
+      result = await getActivityChatAction(id);
+    } else if (type === 'group' && id) {
+      const cleanGroupId = String(id).trim();
+      if (cleanGroupId === '[object Object]') {
+        console.error('[ChatModal] GroupId is an object, cannot load messages:', id);
+        toast.error('Ungültige Gruppen-ID - kann Nachrichten nicht laden');
+        throw new Error('Ungültige Gruppen-ID');
+      }
+      result = await getGroupChatAction(cleanGroupId);
+    }
+    if (result?.success && result.messages) {
+      return result.messages;
+    }
+    toast.error(result?.error || 'Fehler beim Laden der Nachrichten');
+    throw new Error(result?.error || 'Fehler beim Laden der Nachrichten');
+  };
+
+  const { data: messages = [], error, mutate, isLoading: loading } = useSWR<ChatMessageResponse[]>(swrKey, fetcher, {
+    revalidateOnFocus: false,
+    revalidateOnReconnect: true,
+  });
+
+  // Mark chat as viewed when modal opens with an activityId
+  useEffect(() => {
+    if (isOpen && activityId) {
+      localStorage.setItem(`chat_last_viewed_${activityId}`, new Date().toISOString());
+    }
+  }, [isOpen, activityId]);
+
+  // WebSocket for live updates
+  useGlobalWebSocket({
+    onMessage: (msg: any) => {
+      if ((msg.topic === 'ACTIVITY_CHAT_MESSAGE' && msg.payload.data?.activityId === activityId) ||
+          (msg.topic === 'GROUP_CHAT_MESSAGE' && msg.payload.data?.groupId === groupId)) {
+        mutate();
+      }
+    },
+    topicFilter: ['ACTIVITY_CHAT_MESSAGE', 'GROUP_CHAT_MESSAGE']
+  });
 
   // Set showInfo on open
   useEffect(() => {
@@ -61,10 +107,10 @@ const ChatModal: React.FC<ChatModalProps> = ({
     messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
   }, []);
 
-  // Load messages when modal opens
+  // Load details and revalidate messages when modal opens
   useEffect(() => {
     if (isOpen && (activityId || groupId)) {
-      loadMessages();
+      mutate();
       loadDetails();
     }
   }, [isOpen, activityId, groupId]);
@@ -73,41 +119,6 @@ const ChatModal: React.FC<ChatModalProps> = ({
   useEffect(() => {
     scrollToBottom();
   }, [messages, scrollToBottom]);
-
-  const loadMessages = async () => {
-    setLoading(true);
-    try {
-      let result;
-      if (activityId) {
-        result = await getActivityChatAction(activityId);
-      } else if (groupId) {
-        // Validate and clean groupId before using it
-        const cleanGroupId = String(groupId).trim();
-        
-        // Check if it's actually an object string representation
-        if (cleanGroupId === '[object Object]') {
-          console.error('[ChatModal] GroupId is an object, cannot load messages:', groupId);
-          toast.error('Ungültige Gruppen-ID - kann Nachrichten nicht laden');
-          return;
-        }
-        
-        console.log('[ChatModal] Loading messages for groupId:', cleanGroupId, 'Original:', groupId);
-        result = await getGroupChatAction(cleanGroupId);
-      }
-
-      if (result?.success && result.messages) {
-        setMessages(result.messages);
-      } else {
-        console.error('[ChatModal] Error loading messages:', result?.error);
-        toast.error(result?.error || 'Fehler beim Laden der Nachrichten');
-      }
-    } catch (error) {
-      console.error('Error loading messages:', error);
-      toast.error('Fehler beim Laden der Nachrichten');
-    } finally {
-      setLoading(false);
-    }
-  };
 
   const loadDetails = async () => {
     try {
@@ -174,8 +185,7 @@ const ChatModal: React.FC<ChatModalProps> = ({
       }
 
       if (result?.success) {
-        // Reload messages to get the new one
-        await loadMessages();
+        // No longer need to manually reload, WebSocket will handle it
       } else {
         console.error('[ChatModal] Error sending message:', result?.error);
         toast.error(result?.error || 'Fehler beim Senden der Nachricht');

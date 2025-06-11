@@ -8,10 +8,6 @@ export async function updateActivityAction(id: string, data: UpdateActivityData)
   try {
     await connectDB();
 
-    if (!data.description?.trim()) {
-      throw new Error('Beschreibung ist erforderlich');
-    }
-
     const result = await updateActivity(id, data);
     return {
       success: true,

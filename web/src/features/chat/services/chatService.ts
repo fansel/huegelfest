@@ -113,6 +113,11 @@ export async function sendActivityChatMessage(data: CreateChatMessageData) {
 
   await message.save();
 
+  // Update the activity's lastMessageAt field
+  await Activity.findByIdAndUpdate(data.activityId, {
+    lastMessageAt: new Date(),
+  });
+
   const serializedMessage = serializeChatMessage(message);
 
   // Broadcast to all connected clients

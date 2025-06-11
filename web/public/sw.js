@@ -410,30 +410,11 @@ self.addEventListener('notificationclick', function(event) {
   console.log('[SW] Benachrichtigung geklickt:', event.notification);
   event.notification.close();
   
-  const targetUrl = event.notification.data.url || '/';
-
   event.waitUntil(
-    clients.matchAll({
-      type: 'window',
-      includeUncontrolled: true
-    }).then(clientList => {
-      // Prüfen, ob bereits ein Fenster mit der URL geöffnet ist
-      for (const client of clientList) {
-        if (client.url === targetUrl && 'focus' in client) {
-          return client.focus();
-        }
-      }
-      // Wenn kein passendes Fenster gefunden wurde, ein neues öffnen
-      if (clients.openWindow) {
-        return clients.openWindow(targetUrl);
-      }
-    }).catch(error => {
-      console.error('[SW] Fehler beim Öffnen des Fensters:', error);
-      // Fallback, falls alles andere fehlschlägt
-      if (clients.openWindow) {
-        return clients.openWindow('/');
-      }
-    })
+    clients.openWindow(event.notification.data.url)
+      .catch(error => {
+        console.error('[SW] Fehler beim Öffnen des Fensters:', error);
+      })
   );
 });
 

@@ -27,6 +27,7 @@ import { formatActivityTime, getActivityTimeStatus } from './utils/timeUtils';
 import { useCentralFestivalDays } from '@/shared/hooks/useCentralFestivalDays';
 import type { CentralFestivalDay } from '@/shared/services/festivalDaysService';
 import ChatModal from '@/features/chat/components/ChatModal';
+import { useGlobalWebSocket } from '@/shared/hooks/useGlobalWebSocket';
 
 interface ActivityManagerProps {
   initialData: ActivitiesData;
@@ -85,6 +86,15 @@ const ActivityManagerClient: React.FC<ActivityManagerProps> = ({ initialData }) 
 
   // Use realtime hook with initial data
   const { data, loading, connected, refreshData } = useActivitiesRealtime(initialData);
+
+  useGlobalWebSocket({
+    onMessage: (msg: any) => {
+      if (['ACTIVITY_CREATED', 'ACTIVITY_UPDATED', 'ACTIVITY_DELETED', 'ACTIVITY_CHAT_MESSAGE'].includes(msg.topic)) {
+        refreshData();
+      }
+    },
+    topicFilter: ['ACTIVITY_CREATED', 'ACTIVITY_UPDATED', 'ACTIVITY_DELETED', 'ACTIVITY_CHAT_MESSAGE']
+  });
 
   // Debug: Log realtime data
   if (DEBUG) {
@@ -407,7 +417,7 @@ const ActivityManagerClient: React.FC<ActivityManagerProps> = ({ initialData }) 
           categoryId: activityForm.categoryId,
           templateId: activityForm.templateId || undefined,
           customName: activityForm.customName || undefined,
-          description: activityForm.description,
+          description: activityForm.description || undefined,
           groupId: activityForm.groupId || undefined,
           responsibleUsers: activityForm.responsibleUsers || undefined,
         });
@@ -422,12 +432,12 @@ const ActivityManagerClient: React.FC<ActivityManagerProps> = ({ initialData }) 
       } else {
         // Create new activity - userId wird server-side aus Session extrahiert
         
-        // Wenn kein customName, aber eine TemplateId vorhanden ist, wird der Template-Name als customName verwendet
         let finalCustomName = activityForm.customName;
-        if (!finalCustomName && activityForm.templateId) {
-          const template = templates.find(t => t._id === activityForm.templateId);
-          if (template) {
-            finalCustomName = template.name;
+        // If no custom name is provided, use the category name, as stated in the UI.
+        if (!finalCustomName && activityForm.categoryId) {
+          const category = categories.find(c => c._id === activityForm.categoryId);
+          if (category) {
+            finalCustomName = category.name;
           }
         }
         
@@ -501,13 +511,13 @@ const ActivityManagerClient: React.FC<ActivityManagerProps> = ({ initialData }) 
 
   const handleOpenActivityChat = (activity: ActivityWithCategoryAndTemplate) => {
     setChatActivityId(activity._id);
-    setChatTitle(`Aufgaben-Chat: ${activity.customName || activity.category?.name || 'Unbenannte Aufgabe'}`);
+    setChatTitle(`Aufgaben-Chat: ${activity.customName || activity.template?.name || activity.category?.name || 'Unbenannte Aufgabe'}`);
     setChatModalOpen(true);
   };
 
   const handleOpenActivityInfo = (activity: ActivityWithCategoryAndTemplate) => {
     setChatActivityId(activity._id);
-    setChatTitle(`Aufgaben-Chat: ${activity.customName || activity.category?.name || 'Unbenannte Aufgabe'}`);
+    setChatTitle(`Aufgaben-Chat: ${activity.customName || activity.template?.name || activity.category?.name || 'Unbenannte Aufgabe'}`);
     setChatModalOpen(true);
     // Will open with info section visible via prop
   };
@@ -648,7 +658,7 @@ const ActivityManagerClient: React.FC<ActivityManagerProps> = ({ initialData }) 
                         <div className="flex items-start justify-between">
                           <div>
                             <h4 className="font-medium text-[#ff9900] text-sm">
-                              {activity.customName || activity.category?.name || 'Unbenannte Aufgabe'}
+                              {activity.customName || activity.template?.name || activity.category?.name || 'Unbenannte Aufgabe'}
                             </h4>
                             
                             {/* Time */}
@@ -696,10 +706,13 @@ const ActivityManagerClient: React.FC<ActivityManagerProps> = ({ initialData }) 
                                   variant="ghost"
                                   size="icon"
                                   onClick={() => handleOpenActivityInfo(activity)}
-                                  className="h-8 w-8 text-[#ff9900]/70 hover:text-[#ff9900] hover:bg-[#ff9900]/10"
+                                  className="h-8 w-8 text-[#ff9900]/70 hover:text-[#ff9900] hover:bg-[#ff9900]/10 relative"
                                   title="Info für diese Aufgabe öffnen"
                                 >
                                   <MessageCircle className="h-4 w-4" />
+                                  {activity.lastMessageAt && typeof window !== 'undefined' && new Date(activity.lastMessageAt) > new Date(localStorage.getItem(`chat_last_viewed_${activity._id}`) || 0) && (
+                                    <span className="absolute top-1 right-1 block h-2 w-2 rounded-full bg-red-500 ring-2 ring-white/50" />
+                                  )}
                                 </Button>
                                 <Button
                                   variant="ghost"

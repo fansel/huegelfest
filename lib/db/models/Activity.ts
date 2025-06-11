@@ -17,6 +17,7 @@ export interface IActivity extends Document {
   createdBy: Types.ObjectId | IUser;
   createdAt: Date;
   updatedAt: Date;
+  lastMessageAt?: Date;
 }
 
 const ActivitySchema = new Schema<IActivity>({
@@ -52,6 +53,9 @@ const ActivitySchema = new Schema<IActivity>({
     type: Schema.Types.ObjectId,
     ref: 'User',
     required: true
+  },
+  lastMessageAt: {
+    type: Date
   }
 }, {
   timestamps: true
