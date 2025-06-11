@@ -82,7 +82,7 @@ async function fetchUserActivities(userId: string): Promise<UserActivitiesData> 
     const userStatus: UserStatus = {
       isRegistered: true,
       name: user.name,
-      groupId: user.groupId?.toString(),
+      groupId: user.groupId ? (typeof user.groupId === 'string' ? user.groupId : (user.groupId as any)._id?.toString()) : undefined,
       groupName: (user.groupId as any)?.name,
       groupColor: (user.groupId as any)?.color,
     };

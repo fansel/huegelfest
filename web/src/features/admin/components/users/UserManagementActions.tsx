@@ -21,13 +21,17 @@ import {
   Eye,
   EyeOff,
   Key,
-  Archive
+  Archive,
+  LogIn,
+  Trash2,
+  AlertTriangle
 } from 'lucide-react';
 import { sendPasswordResetAction } from '@/features/auth/actions/passwordReset';
-import { changeUserRoleAction, changeShadowUserStatusAction } from '@/features/auth/actions/userActions';
+import { changeUserRoleAction, changeShadowUserStatusAction, deleteUserCompletelyAction } from '@/features/auth/actions/userActions';
 import { useAuth } from '@/features/auth/AuthContext';
 import toast from 'react-hot-toast';
 import { ShadowUserArchive } from './ShadowUserArchive';
+import { authEvents, AUTH_EVENTS } from '@/features/auth/authEvents';
 
 interface UserForReset {
   _id: string;
@@ -47,7 +51,7 @@ interface UserManagementActionsProps {
 }
 
 export function UserManagementActions({ users, onRefreshUsers }: UserManagementActionsProps) {
-  const { user: currentUser, isAdmin } = useAuth();
+  const { user: currentUser, isAdmin, becomeUser, isTemporarySession, restoreAdminSession } = useAuth();
   const [searchTerm, setSearchTerm] = useState('');
   const [selectedUser, setSelectedUser] = useState<UserForReset | null>(null);
   const [isSendingReset, setIsSendingReset] = useState(false);
@@ -55,6 +59,11 @@ export function UserManagementActions({ users, onRefreshUsers }: UserManagementA
   const [sentResets, setSentResets] = useState<Set<string>>(new Set());
   const [openDropdown, setOpenDropdown] = useState<string | null>(null);
   const [showArchive, setShowArchive] = useState(false);
+  
+  // New state for the additional features
+  const [isBecomingUser, setIsBecomingUser] = useState(false);
+  const [isDeletingUser, setIsDeletingUser] = useState(false);
+  const [showDeleteConfirmation, setShowDeleteConfirmation] = useState<string | null>(null);
 
   if (!isAdmin) {
     return (
@@ -127,6 +136,9 @@ export function UserManagementActions({ users, onRefreshUsers }: UserManagementA
       
       if (result.success) {
         toast.success(`${user.name} ist jetzt ${newRole === 'admin' ? 'Admin' : 'normaler User'}`);
+        if (user._id === currentUser?.id) {
+          authEvents.emit(AUTH_EVENTS.ROLE_CHANGED);
+        }
         if (onRefreshUsers) {
           onRefreshUsers();
         }
@@ -141,27 +153,23 @@ export function UserManagementActions({ users, onRefreshUsers }: UserManagementA
     }
   };
 
-  const handleChangeShadowStatus = async (user: UserForReset, isShadowUser: boolean) => {
+  const handleChangeShadowStatus = async (user: UserForReset, isShadow: boolean) => {
     setIsUpdatingUser(true);
-    setSelectedUser(user);
-    setOpenDropdown(null);
-
+    
     try {
-      const result = await changeShadowUserStatusAction(user._id, isShadowUser);
+      const result = await changeShadowUserStatusAction(user._id, isShadow);
       
       if (result.success) {
-        toast.success(`${user.name} ist jetzt ${isShadowUser ? 'Shadow User' : 'sichtbarer User'}`);
-        if (onRefreshUsers) {
-          onRefreshUsers();
-        }
+        toast.success(`${user.name} wurde ${isShadow ? 'als Shadow User markiert' : 'als normaler User markiert'}`);
+        onRefreshUsers();
       } else {
-        toast.error(result.error || 'Fehler beim Ändern des Shadow-Status');
+        toast.error(result.error || 'Fehler beim Ändern des Shadow Status');
       }
     } catch (error) {
+      console.error('Fehler beim Ändern des Shadow Status:', error);
       toast.error('Ein unerwarteter Fehler ist aufgetreten');
     } finally {
       setIsUpdatingUser(false);
-      setSelectedUser(null);
     }
   };
 
@@ -194,6 +202,82 @@ export function UserManagementActions({ users, onRefreshUsers }: UserManagementA
     }
   };
 
+  // New handler functions for the additional features
+  const handleBecomeUser = async (targetUser: UserForReset) => {
+    if (!becomeUser) {
+      toast.error('Become User Funktion nicht verfügbar');
+      return;
+    }
+
+    setIsBecomingUser(true);
+    
+    try {
+      const result = await becomeUser(targetUser._id);
+      
+      if (result.success) {
+        toast.success(`Sie sind jetzt temporär als ${targetUser.name} angemeldet`);
+        // Redirect to main view in user mode
+        window.location.href = '/';
+      } else {
+        toast.error(result.error || 'Fehler beim Wechseln zum User');
+      }
+    } catch (error) {
+      console.error('Fehler beim Become User:', error);
+      toast.error('Ein unerwarteter Fehler ist aufgetreten');
+    } finally {
+      setIsBecomingUser(false);
+    }
+  };
+
+  const handleRestoreAdminSession = async () => {
+    if (!restoreAdminSession) {
+      toast.error('Restore Admin Funktion nicht verfügbar');
+      return;
+    }
+
+    setIsBecomingUser(true);
+    
+    try {
+      const result = await restoreAdminSession();
+      
+      if (result.success) {
+        toast.success('Admin-Session wiederhergestellt');
+        // Redirect back to main interface
+        window.location.href = '/';
+      } else {
+        toast.error(result.error || 'Fehler beim Wiederherstellen der Admin-Session');
+      }
+    } catch (error) {
+      console.error('Fehler beim Restore Admin Session:', error);
+      toast.error('Ein unerwarteter Fehler ist aufgetreten');
+    } finally {
+      setIsBecomingUser(false);
+    }
+  };
+
+  const handleDeleteUserCompletely = async (userId: string) => {
+    if (!showDeleteConfirmation) return;
+
+    setIsDeletingUser(true);
+    
+    try {
+      const result = await deleteUserCompletelyAction(userId);
+      
+      if (result.success) {
+        toast.success('User und alle zugehörigen Daten wurden komplett gelöscht');
+        onRefreshUsers();
+        setShowDeleteConfirmation(null);
+      } else {
+        toast.error(result.error || 'Fehler beim Löschen des Users');
+      }
+    } catch (error) {
+      console.error('Fehler beim vollständigen Löschen des Users:', error);
+      toast.error('Ein unerwarteter Fehler ist aufgetreten');
+    } finally {
+      setIsDeletingUser(false);
+    }
+  };
+
   const formatDate = (date?: Date) => {
     if (!date) return 'Nie';
     return new Intl.DateTimeFormat('de-DE', {
@@ -206,33 +290,59 @@ export function UserManagementActions({ users, onRefreshUsers }: UserManagementA
   };
 
   return (
-    <div className="space-y-6">
-      <Card className="overflow-hidden">
-        <CardHeader>
-          <div className="space-y-1.5">
-            <div className="flex items-center gap-2">
-              <Shield className="h-5 w-5 text-[#ff9900]" />
-              <CardTitle className="flex-1">Benutzerverwaltung</CardTitle>
+    <Card>
+      <CardHeader>
+        <CardTitle className="flex items-center gap-2">
+          <Shield className="h-5 w-5" />
+          User Management
+        </CardTitle>
+        <CardDescription>
+          Verwalte alle registrierten User, sende Passwort-Resets und ändere Berechtigungen.
+        </CardDescription>
+      </CardHeader>
+      <CardContent className="space-y-6">
+        {/* Temporary Session Alert */}
+        {isTemporarySession && (
+          <Alert className="border-orange-200 bg-orange-50">
+            <AlertTriangle className="h-4 w-4 text-orange-600" />
+            <AlertDescription className="text-orange-800">
+              Sie sind momentan als User angemeldet (temporäre Session).
               <Button
-                variant="ghost"
+                variant="outline"
                 size="sm"
-                className="h-8 w-8 p-0 -mr-2"
-                onClick={() => setShowArchive(!showArchive)}
-                title={showArchive ? "Aktive User anzeigen" : `Archiv (${shadowUsers.length})`}
+                className="ml-2"
+                onClick={handleRestoreAdminSession}
+                disabled={isBecomingUser}
               >
-                {showArchive ? (
-                  <Eye className="h-4 w-4" />
-                ) : (
-                  <Archive className="h-4 w-4" />
-                )}
+                {isBecomingUser ? 'Wiederherstellen...' : 'Zurück zur Admin-Session'}
               </Button>
-            </div>
-            <CardDescription>
-              Benutzerverwaltung mit Passwort-Reset und Rollenverwaltung
-            </CardDescription>
+            </AlertDescription>
+          </Alert>
+        )}
+
+        {/* Search and Archive Toggle */}
+        <div className="flex flex-col sm:flex-row gap-4 items-start sm:items-center justify-between">
+          <div className="relative flex-1 max-w-md">
+            <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-gray-400" />
+            <Input
+              placeholder="Nach Name, E-Mail oder Username suchen..."
+              value={searchTerm}
+              onChange={(e) => setSearchTerm(e.target.value)}
+              className="pl-10"
+            />
           </div>
-        </CardHeader>
-        
+          <div className="flex gap-2">
+            <Button
+              variant={showArchive ? "default" : "outline"}
+              onClick={() => setShowArchive(!showArchive)}
+              className="flex items-center gap-2"
+            >
+              <Archive className="h-4 w-4" />
+              {showArchive ? 'Normale User' : 'Shadow Archive'}
+            </Button>
+          </div>
+        </div>
+
         {showArchive ? (
           <CardContent className="p-0">
             <ShadowUserArchive 
@@ -242,17 +352,6 @@ export function UserManagementActions({ users, onRefreshUsers }: UserManagementA
           </CardContent>
         ) : (
           <CardContent className="p-4 sm:p-6">
-            {/* Search */}
-            <div className="relative mb-4">
-              <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 w-4 h-4" />
-              <Input
-                placeholder="User suchen..."
-                value={searchTerm}
-                onChange={(e) => setSearchTerm(e.target.value)}
-                className="pl-10"
-              />
-            </div>
-
             {/* Statistics */}
             <div className="grid grid-cols-3 gap-2 mb-4">
               <div className="bg-blue-50 p-3 rounded-lg text-center">
@@ -420,12 +519,39 @@ export function UserManagementActions({ users, onRefreshUsers }: UserManagementA
                           <Button
                             size="sm"
                             variant="outline"
-                            onClick={() => handleArchiveUser(user)}
-                            className="bg-white hover:bg-purple-50 hover:text-purple-700 hover:border-purple-200"
-                            disabled={user._id === currentUser?.id || isUpdatingUser}
+                            onClick={() => {
+                              setSelectedUser(user);
+                              // Here you could open a confirmation dialog
+                            }}
+                            className="bg-white"
+                            disabled={isUpdatingUser}
                           >
                             <Archive className="mr-2 h-3 w-3" />
-                            User archivieren
+                            Archivieren
+                          </Button>
+                          
+                          {/* Become User Button */}
+                          <Button
+                            size="sm"
+                            variant="outline"
+                            onClick={() => handleBecomeUser(user)}
+                            className="bg-white border-blue-300 text-blue-700 hover:bg-blue-50"
+                            disabled={isBecomingUser || isUpdatingUser}
+                          >
+                            <LogIn className="mr-2 h-3 w-3" />
+                            {isBecomingUser ? 'Wechseln...' : 'Als User anmelden'}
+                          </Button>
+                          
+                          {/* Delete User Completely Button */}
+                          <Button
+                            size="sm"
+                            variant="outline"
+                            onClick={() => setShowDeleteConfirmation(user._id)}
+                            className="bg-white border-red-300 text-red-700 hover:bg-red-50"
+                            disabled={isDeletingUser || isUpdatingUser}
+                          >
+                            <Trash2 className="mr-2 h-3 w-3" />
+                            Komplett löschen
                           </Button>
                         </div>
                         
@@ -460,7 +586,62 @@ export function UserManagementActions({ users, onRefreshUsers }: UserManagementA
             </Alert>
           </CardContent>
         )}
-      </Card>
-    </div>
+        
+        {/* Delete Confirmation Dialog */}
+        {showDeleteConfirmation && (
+          <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+            <div className="bg-white rounded-lg p-6 max-w-md w-full mx-4">
+              <div className="flex items-center gap-3 mb-4">
+                <AlertTriangle className="h-6 w-6 text-red-600" />
+                <h3 className="text-lg font-semibold text-gray-900">
+                  User komplett löschen
+                </h3>
+              </div>
+              
+              <p className="text-gray-600 mb-6">
+                Sind Sie sicher, dass Sie diesen User und <strong>alle zugehörigen Daten</strong> unwiderruflich löschen möchten? 
+                Dies umfasst:
+              </p>
+              
+              <ul className="text-sm text-gray-600 mb-6 list-disc list-inside space-y-1">
+                <li>User-Account und Profil</li>
+                <li>Registrierungsdaten</li>
+                <li>Gruppenzugehörigkeiten</li>
+                <li>Push-Benachrichtigungen</li>
+                <li>Alle weiteren benutzerbezogenen Daten</li>
+              </ul>
+              
+              <div className="flex gap-3 justify-end">
+                <Button
+                  variant="outline"
+                  onClick={() => setShowDeleteConfirmation(null)}
+                  disabled={isDeletingUser}
+                >
+                  Abbrechen
+                </Button>
+                <Button
+                  variant="destructive"
+                  onClick={() => handleDeleteUserCompletely(showDeleteConfirmation)}
+                  disabled={isDeletingUser}
+                  className="flex items-center gap-2"
+                >
+                  {isDeletingUser ? (
+                    <>
+                      <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin" />
+                      Lösche...
+                    </>
+                  ) : (
+                    <>
+                      <Trash2 className="h-4 w-4" />
+                      Endgültig löschen
+                    </>
+                  )}
+                </Button>
+              </div>
+            </div>
+          </div>
+        )}
+      </CardContent>
+    </Card>
   );
 } 

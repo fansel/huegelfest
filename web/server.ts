@@ -132,6 +132,19 @@ app
             sendInitialUpdateStatus(ws);
             return;
           }
+
+          // Neue Behandlung von USER_CONNECTED Events
+          if (data.type === 'USER_CONNECTED') {
+            console.log(`[WebSocket] User connected event:`, data);
+            // Bestätige die Verbindung
+            ws.send(JSON.stringify({
+              type: 'CONNECTION_CONFIRMED',
+              userId: data.userId,
+              role: data.role,
+              timestamp: new Date().toISOString()
+            }));
+            return;
+          }
           
           // Fallback: Legacy Chat-Support
           const text = message.toString();

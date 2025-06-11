@@ -1,8 +1,11 @@
 'use client';
-import React, { createContext, useContext, useEffect, useState } from 'react';
-import { loginUser, registerNewUser, logoutUser, verifySession, verifyAdminSession } from './actions/userAuth';
+import React, { createContext, useContext, useEffect, useState, useCallback, useRef } from 'react';
+import { useRouter } from 'next/navigation';
+import { toast } from 'react-hot-toast';
+import { loginUser, registerNewUser, logoutUser, refreshSessionAction, verifyAdminSession, becomeUserAction, restoreAdminSessionAction, isTemporaryUserSession } from './actions/userAuth';
 import { unsubscribePushAction } from '@/features/push/actions/unsubscribePush';
-import type { User } from './types';
+import { useGlobalWebSocket } from '@/shared/hooks/useGlobalWebSocket';
+import { authEvents, AUTH_EVENTS } from './authEvents';
 
 /**
  * Vereinheitlichtes Auth-Context für das neue User-System
@@ -22,12 +25,18 @@ interface User {
   isActive: boolean;
 }
 
+interface UserRoleChangedPayload {
+  userId: string;
+  newRole: 'user' | 'admin';
+}
+
 export interface AuthContextType {
   // User State
   user: User | null;
   isAuthenticated: boolean;
   isAdmin: boolean;
   isLoading: boolean;
+  isTemporarySession: boolean;
   
   // Auth Actions
   login: (email: string, password: string) => Promise<{ success: boolean; error?: string }>;
@@ -37,40 +46,66 @@ export interface AuthContextType {
   
   // Admin Actions (nur für Admins verfügbar)
   registerAdmin: (name: string, email: string, password: string, username?: string) => Promise<{ success: boolean; error?: string }>;
+  
+  // Become User Features
+  becomeUser: (targetUserId: string) => Promise<{ success: boolean; error?: string }>;
+  restoreAdminSession: () => Promise<{ success: boolean; error?: string }>;
 }
 
 export const AuthContext = createContext<AuthContextType | undefined>(undefined);
 
+function AuthWebSocketHandler() {
+  const { user, refreshSession } = useAuth();
+
+  const handleWebSocketMessage = useCallback(async (message: { topic: string; payload: unknown }) => {
+    console.log('[AuthContext] Received WebSocket message:', message);
+    
+    if (message.topic === 'user-role-changed') {
+      const payload = message.payload as { userId: string; newRole: 'user' | 'admin' };
+      
+      if (user && payload.userId === user.id) {
+        console.log('[AuthContext] Role changed for current user, refreshing session');
+        await refreshSession();
+      }
+    }
+  }, [user, refreshSession]);
+
+  useGlobalWebSocket({
+    topicFilter: ['user-role-changed'],
+    onMessage: handleWebSocketMessage,
+    onOpen: () => console.log('[AuthContext] WebSocket connected'),
+    onClose: () => console.log('[AuthContext] WebSocket disconnected'),
+    onError: (error) => console.error('[AuthContext] WebSocket error:', error)
+  });
+
+  return null;
+}
+
 export function AuthProvider({ children }: { children: React.ReactNode }) {
+  const router = useRouter();
   const [user, setUser] = useState<User | null>(null);
   const [isLoading, setIsLoading] = useState(true);
+  const [isTemporarySession, setIsTemporarySession] = useState(false);
+  const userRef = useRef(user);
+  userRef.current = user;
 
   // Abgeleitete States
   const isAuthenticated = !!user;
   const isAdmin = user?.role === 'admin';
 
-  // Session beim Mount prüfen
-  useEffect(() => {
-    refreshSession();
-  }, []);
-
-  // Listen for user-logged-in events
-  useEffect(() => {
-    const handleUserLoggedIn = () => {
-      console.log('[AuthContext] Received user-logged-in event, refreshing session');
-      refreshSession();
-    };
-
-    window.addEventListener('user-logged-in', handleUserLoggedIn);
-    return () => window.removeEventListener('user-logged-in', handleUserLoggedIn);
-  }, []);
-
-  const refreshSession = async () => {
+  const refreshSession = useCallback(async () => {
     try {
       setIsLoading(true);
-      const session = await verifySession();
+      const oldUser = userRef.current;
+      const session = await refreshSessionAction();
+      
+      // Check if this is a temporary session
+      const tempSession = await isTemporaryUserSession();
+      console.log('[AuthContext] isTemporaryUserSession result:', tempSession);
+      setIsTemporarySession(tempSession);
       
       if (session) {
+        console.log('[AuthContext] Session found:', session);
         setUser({
           id: session.userId,
           name: session.name,
@@ -79,20 +114,47 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
           role: session.role,
           emailVerified: session.emailVerified,
           isShadowUser: session.isShadowUser,
-          groupId: undefined, // Wird bei Bedarf nachgeladen
-          registrationId: undefined, // Wird bei Bedarf nachgeladen
-          isActive: true
+          isActive: true,
         });
+
+        // If user was demoted from admin, redirect them from admin pages
+        if (oldUser?.role === 'admin' && session.role !== 'admin') {
+          if (window.location.pathname.startsWith('/admin')) {
+            toast.error('Ihre Admin-Berechtigungen wurden entzogen.');
+            // Use smooth redirect like temporary sessions
+            setTimeout(() => {
+              window.location.href = '/';
+            }, 1500); // Give time for toast to be read
+          }
+        }
       } else {
-        setUser(null);
+        console.log('[AuthContext] No session found');
+        // If user was logged in but session is now invalid, log them out
+        if (oldUser) {
+          setUser(null);
+          setIsTemporarySession(false);
+          if (window.location.pathname.startsWith('/admin')) {
+            toast.error('Ihre Sitzung ist abgelaufen. Bitte erneut anmelden.');
+            router.push('/user-login');
+          }
+        } else {
+          setUser(null);
+          setIsTemporarySession(false);
+        }
       }
     } catch (error) {
       console.error('Session-Refresh fehlgeschlagen:', error);
       setUser(null);
+      setIsTemporarySession(false);
     } finally {
       setIsLoading(false);
     }
-  };
+  }, [router]);
+
+  // Session beim Mount prüfen
+  useEffect(() => {
+    refreshSession();
+  }, [refreshSession]);
 
   const login = async (email: string, password: string) => {
     try {
@@ -101,6 +163,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       
       if (result.success && result.user) {
         setUser(result.user);
+        setIsTemporarySession(false);
         return { success: true };
       } else {
         return { success: false, error: result.error };
@@ -123,6 +186,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         const loginResult = await loginUser(username || email, password);
         if (loginResult.success && loginResult.user) {
           setUser(loginResult.user);
+          setIsTemporarySession(false);
         } else {
           console.warn('[Auth] Auto-Login nach Registrierung fehlgeschlagen:', loginResult.error);
         }
@@ -169,10 +233,56 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
       // Zum Schluss lokalen State zurücksetzen
       setUser(null);
+      setIsTemporarySession(false);
     } catch (error) {
       console.error('Logout fehlgeschlagen:', error);
       // Auch bei Fehlern den lokalen State clearen
       setUser(null);
+      setIsTemporarySession(false);
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  const becomeUser = async (targetUserId: string) => {
+    try {
+      setIsLoading(true);
+      console.log('[AuthContext] becomeUser called for targetUserId:', targetUserId);
+      const result = await becomeUserAction(targetUserId);
+      
+      if (result.success) {
+        console.log('[AuthContext] becomeUser success, refreshing session...');
+        await refreshSession();
+        return { success: true };
+      } else {
+        console.log('[AuthContext] becomeUser failed:', result.error);
+        return { success: false, error: result.error };
+      }
+    } catch (error) {
+      console.error('Become User fehlgeschlagen:', error);
+      return { success: false, error: 'Ein unerwarteter Fehler ist aufgetreten' };
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  const restoreAdminSession = async () => {
+    try {
+      setIsLoading(true);
+      console.log('[AuthContext] restoreAdminSession called');
+      const result = await restoreAdminSessionAction();
+      
+      if (result.success) {
+        console.log('[AuthContext] restoreAdminSession success, refreshing session...');
+        await refreshSession();
+        return { success: true };
+      } else {
+        console.log('[AuthContext] restoreAdminSession failed:', result.error);
+        return { success: false, error: result.error };
+      }
+    } catch (error) {
+      console.error('Restore Admin Session fehlgeschlagen:', error);
+      return { success: false, error: 'Ein unerwarteter Fehler ist aufgetreten' };
     } finally {
       setIsLoading(false);
     }
@@ -183,16 +293,20 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     isAuthenticated,
     isAdmin,
     isLoading,
+    isTemporarySession,
     login,
     register,
     logout,
     refreshSession,
-    registerAdmin
+    registerAdmin,
+    becomeUser,
+    restoreAdminSession
   };
 
   return (
     <AuthContext.Provider value={contextValue}>
       {children}
+      <AuthWebSocketHandler />
     </AuthContext.Provider>
   );
 }

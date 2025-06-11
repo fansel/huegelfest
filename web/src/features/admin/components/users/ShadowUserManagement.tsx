@@ -23,6 +23,7 @@ import {
 import { sendPasswordResetAction } from '@/features/auth/actions/passwordReset';
 import { changeUserRoleAction, changeShadowUserStatusAction } from '@/features/auth/actions/userActions';
 import { useAuth } from '@/features/auth/AuthContext';
+import { authEvents, AUTH_EVENTS } from '@/features/auth/authEvents';
 import toast from 'react-hot-toast';
 
 interface ShadowUser {
@@ -104,6 +105,9 @@ export function ShadowUserManagement({ shadowUsers, onRefreshUsers }: ShadowUser
       
       if (result.success) {
         toast.success(`${user.name} ist jetzt ${newRole === 'admin' ? 'Admin' : 'normaler User'}`);
+        if (user._id === currentUser?.id) {
+          authEvents.emit(AUTH_EVENTS.ROLE_CHANGED);
+        }
         if (onRefreshUsers) {
           onRefreshUsers();
         }

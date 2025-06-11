@@ -1,4 +1,4 @@
-localhost {
+
+macbook-pro.local {
     reverse_proxy 127.0.0.1:3000
-    tls internal
 }

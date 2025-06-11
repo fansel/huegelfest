@@ -13,6 +13,7 @@ import { removeUserFromGroupAction } from '@/features/admin/components/groups/ac
 import { verifyAdminSession } from './userAuth';
 import { User } from '@/lib/db/models/User';
 import { connectDB } from '@/lib/db/connector';
+import { authEvents, AUTH_EVENTS } from '../authEvents';
 
 /**
  * Modernisierte User Actions - verwendet das neue Auth-System
@@ -71,6 +72,8 @@ export async function getCurrentUserStatsAction() {
  */
 export async function getAllUsersAction() {
   try {
+    const admin = await verifyAdminSession();
+    if (!admin) throw new Error('Nicht autorisiert');
     return await getAllUsers();
   } catch (error) {
     console.error('[UserActions] Fehler bei getAllUsers:', error);
@@ -83,6 +86,8 @@ export async function getAllUsersAction() {
  */
 export async function deleteUserAction(userId: string) {
   try {
+    const admin = await verifyAdminSession();
+    if (!admin) throw new Error('Nicht autorisiert');
     const result = await deleteUser(userId);
     if (result.success) {
       await broadcast('user-deleted', { userId });
@@ -115,6 +120,8 @@ export async function changeUserRoleAction(userId: string, newRole: 'user' | 'ad
     }
     
     const user = await changeUserRole(userId, newRole);
+
+    // Broadcast für andere Clients
     await broadcast('user-role-changed', { userId, newRole });
     
     return { success: true, data: user };
@@ -190,6 +197,59 @@ export async function getShadowUsersAction() {
  * Server Action: Lädt alle Shadow Users für Archive (Admin-Funktion)
  */
 export async function getShadowUsersForArchiveAction() {
-  const { getAllShadowUsersForArchive } = await import('../services/authService');
-  return await getAllShadowUsersForArchive();
+  try {
+    const { getAllShadowUsersForArchive } = await import('../services/authService');
+    const { verifyAdminSession } = await import('./userAuth');
+    
+    // Prüfe Admin-Berechtigung
+    const adminSession = await verifyAdminSession();
+    if (!adminSession) {
+      return { success: false, error: 'Admin-Berechtigung erforderlich' };
+    }
+    
+    const shadowUsers = await getAllShadowUsersForArchive();
+    return { success: true, data: shadowUsers };
+  } catch (error) {
+    console.error('[UserActions] Fehler bei getShadowUsersForArchive:', error);
+    return { success: false, error: 'Ein unerwarteter Fehler ist aufgetreten' };
+  }
+}
+
+/**
+ * Server Action: Löscht einen User komplett mit allen zugehörigen Daten (Admin-Funktion)
+ * Diese Funktion löscht:
+ * - Den User selbst
+ * - Seine Registration (falls vorhanden)
+ * - Entfernt ihn aus Groups
+ * - Löscht alle Push-Abonnements
+ * - Andere benutzerbezogene Daten
+ */
+export async function deleteUserCompletelyAction(userId: string) {
+  try {
+    const { deleteUserCompletely } = await import('../services/userService');
+    const { verifyAdminSession } = await import('./userAuth');
+    
+    // Prüfe Admin-Berechtigung
+    const adminSession = await verifyAdminSession();
+    if (!adminSession) {
+      return { success: false, error: 'Admin-Berechtigung erforderlich' };
+    }
+    
+    // Verhindere Selbstlöschung
+    if (adminSession.userId === userId) {
+      return { success: false, error: 'Sie können sich nicht selbst löschen' };
+    }
+    
+    const result = await deleteUserCompletely(userId);
+    
+    if (result.success) {
+      // Broadcast für andere Clients
+      await broadcast('user-deleted', { userId });
+    }
+    
+    return result;
+  } catch (error) {
+    console.error('[UserActions] Fehler bei deleteUserCompletely:', error);
+    return { success: false, error: 'Ein unerwarteter Fehler ist aufgetreten' };
+  }
 } 

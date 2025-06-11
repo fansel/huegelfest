@@ -24,14 +24,17 @@ import {
   EyeOff,
   UserCheck,
   UserX,
-  Archive
+  Archive,
+  LogIn,
+  AlertTriangle
 } from 'lucide-react';
 import { assignUserToGroupAction, removeUserFromGroupAction } from '../actions/groupActions';
 import { sendPasswordResetAction } from '@/features/auth/actions/passwordReset';
-import { changeUserRoleAction, changeShadowUserStatusAction } from '@/features/auth/actions/userActions';
+import { changeUserRoleAction, changeShadowUserStatusAction, deleteUserCompletelyAction } from '@/features/auth/actions/userActions';
 import type { GroupData } from '../types';
 import type { User } from './types';
 import { useAuth } from '@/features/auth/AuthContext';
+import { authEvents, AUTH_EVENTS } from '@/features/auth/authEvents';
 
 interface IntegratedUsersTabProps {
   users: User[];
@@ -62,16 +65,20 @@ export function IntegratedUsersTab({
   setShowArchive
 }: IntegratedUsersTabProps) {
   const { deviceType } = useDeviceContext();
-  const { user: currentUser } = useAuth();
+  const { user: currentUser, isAdmin, becomeUser, isTemporarySession, restoreAdminSession } = useAuth();
   const isMobile = deviceType === 'mobile';
   
-  const [loadingUsers, setLoadingUsers] = useState<Set<string>>(new Set());
   const [groupFilter, setGroupFilter] = useState<GroupFilter>('all');
   const [sortBy, setSortBy] = useState<SortOption>('name');
   const [showFilters, setShowFilters] = useState(false);
-  const [resetPasswordLoading, setResetPasswordLoading] = useState<Set<string>>(new Set());
   const [showActionsFor, setShowActionsFor] = useState<string | null>(null);
+  const [isPasswordLoading, setIsPasswordLoading] = useState(false);
+  const [resetPasswordLoading, setResetPasswordLoading] = useState<Set<string>>(new Set());
   const [isUpdatingRole, setIsUpdatingRole] = useState<Set<string>>(new Set());
+  const [isUpdatingShadowStatus, setIsUpdatingShadowStatus] = useState<Set<string>>(new Set());
+  const [isBecomingUser, setIsBecomingUser] = useState(false);
+  const [isDeletingUser, setIsDeletingUser] = useState(false);
+  const [showDeleteConfirmation, setShowDeleteConfirmation] = useState<string | null>(null);
 
   const handleRefreshData = () => {
     onRefreshData();
@@ -79,11 +86,12 @@ export function IntegratedUsersTab({
 
   // Filter users based on search term and group filter
   const filteredUsers = users.filter(user => {
-    // Shadow-User ausschließen
     if (user.isShadowUser) return false;
     
-    const matchesSearch = user.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-                         user.email.toLowerCase().includes(searchTerm.toLowerCase());
+    const searchLower = searchTerm.toLowerCase();
+    const matchesSearch = user.name.toLowerCase().includes(searchLower) ||
+                         (user.username && user.username.toLowerCase().includes(searchLower)) ||
+                         user.email.toLowerCase().includes(searchLower);
     
     if (!matchesSearch) return false;
     
@@ -120,7 +128,6 @@ export function IntegratedUsersTab({
   });
 
   const handleAssignToGroup = async (userId: string, groupId: string) => {
-    setLoadingUsers(prev => new Set(prev).add(userId));
     try {
       const result = await assignUserToGroupAction(userId, groupId);
       if (result.success) {
@@ -131,17 +138,10 @@ export function IntegratedUsersTab({
       }
     } catch (error) {
       toast.error('Ein unerwarteter Fehler ist aufgetreten');
-    } finally {
-      setLoadingUsers(prev => {
-        const newSet = new Set(prev);
-        newSet.delete(userId);
-        return newSet;
-      });
     }
   };
 
   const handleRemoveFromGroup = async (userId: string, groupId: string) => {
-    setLoadingUsers(prev => new Set(prev).add(userId));
     try {
       const result = await removeUserFromGroupAction(userId);
       if (result.success) {
@@ -152,12 +152,6 @@ export function IntegratedUsersTab({
       }
     } catch (error) {
       toast.error('Ein unerwarteter Fehler ist aufgetreten');
-    } finally {
-      setLoadingUsers(prev => {
-        const newSet = new Set(prev);
-        newSet.delete(userId);
-        return newSet;
-      });
     }
   };
 
@@ -167,7 +161,7 @@ export function IntegratedUsersTab({
       return;
     }
 
-    setResetPasswordLoading(prev => new Set(prev).add(user._id));
+    setIsPasswordLoading(true);
     try {
       const result = await sendPasswordResetAction(user.email);
       if (result.success) {
@@ -178,11 +172,7 @@ export function IntegratedUsersTab({
     } catch (error) {
       toast.error('Ein unerwarteter Fehler ist aufgetreten');
     } finally {
-      setResetPasswordLoading(prev => {
-        const newSet = new Set(prev);
-        newSet.delete(user._id);
-        return newSet;
-      });
+      setIsPasswordLoading(false);
     }
   };
 
@@ -198,6 +188,10 @@ export function IntegratedUsersTab({
       
       if (result.success) {
         toast.success(`${user.name} ist jetzt ${newRole === 'admin' ? 'Admin' : 'normaler User'}`);
+        // Emit auth event if the role change was for the current user
+        if (user._id === currentUser?.id) {
+          authEvents.emit(AUTH_EVENTS.ROLE_CHANGED);
+        }
         onRefreshData();
       } else {
         toast.error(result.error || 'Fehler beim Ändern der Rolle');
@@ -213,26 +207,26 @@ export function IntegratedUsersTab({
     }
   };
 
-  const handleChangeShadowStatus = async (userId: string, isShadow: boolean) => {
-    setLoadingUsers(prev => new Set(prev).add(userId));
-    setShowActionsFor(null);
-
+  const handleChangeShadowStatus = async (user: User, isShadow: boolean) => {
+    setIsUpdatingShadowStatus(prev => new Set(prev).add(user._id));
+    
     try {
-      const result = await changeShadowUserStatusAction(userId, isShadow);
+      const result = await changeShadowUserStatusAction(user._id, isShadow);
       
       if (result.success) {
-        toast.success(`Benutzer wurde ${isShadow ? 'als Shadow User markiert' : 'aus dem Shadow-Modus entfernt'}`);
-        onRefreshData();
+        toast.success(`${user.name} wurde ${isShadow ? 'als Shadow User markiert' : 'als normaler User markiert'}`);
+        handleRefreshData();
       } else {
-        toast.error(result.error || 'Fehler beim Ändern des Shadow-Status');
+        toast.error(result.error || 'Fehler beim Ändern des Shadow Status');
       }
     } catch (error) {
+      console.error('Fehler beim Ändern des Shadow Status:', error);
       toast.error('Ein unerwarteter Fehler ist aufgetreten');
     } finally {
-      setLoadingUsers(prev => {
-        const next = new Set(prev);
-        next.delete(userId);
-        return next;
+      setIsUpdatingShadowStatus(prev => {
+        const newSet = new Set(prev);
+        newSet.delete(user._id);
+        return newSet;
       });
     }
   };
@@ -370,7 +364,7 @@ export function IntegratedUsersTab({
         <div className="space-y-3">
           {sortedUsers.map(user => {
             const userGroup = getUserGroup(user);
-            const isLoading = loadingUsers.has(user._id);
+            const isLoading = false;
             const isPasswordLoading = resetPasswordLoading.has(user._id);
             const showActions = showActionsFor === user._id;
             
@@ -478,21 +472,14 @@ export function IntegratedUsersTab({
                     )}
                     
                     <Button
-                      variant="ghost"
                       size="sm"
-                      className="w-full justify-start px-3 py-1.5 h-auto text-sm text-purple-600 hover:bg-purple-50 hover:text-purple-700"
-                      onClick={() => {
-                        handleChangeShadowStatus(user._id, true);
-                        setShowActionsFor(null);
-                      }}
-                      disabled={loadingUsers.has(user._id)}
+                      variant="outline"
+                      onClick={() => handleChangeShadowStatus(user, true)}
+                      disabled={isUpdatingShadowStatus.has(user._id)}
+                      className="w-full justify-start text-left"
                     >
-                      {loadingUsers.has(user._id) ? (
-                        <Loader2 className="mr-2 h-4 w-4 flex-shrink-0 animate-spin" />
-                      ) : (
-                        <EyeOff className="mr-2 h-4 w-4 flex-shrink-0" />
-                      )}
-                      <span className="truncate">Als Shadow User markieren</span>
+                      <EyeOff className="mr-2 h-4 w-4" />
+                      Als Shadow User
                     </Button>
                     
                     <Button
@@ -720,7 +707,7 @@ export function IntegratedUsersTab({
             <tbody className="bg-white divide-y divide-gray-200">
               {sortedUsers.map(user => {
                 const userGroup = getUserGroup(user);
-                const isLoading = loadingUsers.has(user._id);
+                const isLoading = false;
                 const isPasswordLoading = resetPasswordLoading.has(user._id);
                 const showActions = showActionsFor === user._id;
                 
@@ -909,12 +896,12 @@ export function IntegratedUsersTab({
                               <button
                                 className="w-full px-3 py-2 text-left text-sm hover:bg-purple-50 flex items-center gap-2 text-purple-600"
                                 onClick={() => {
-                                  handleChangeShadowStatus(user._id, true);
+                                  handleChangeShadowStatus(user, true);
                                   setShowActionsFor(null);
                                 }}
-                                disabled={loadingUsers.has(user._id)}
+                                disabled={isUpdatingShadowStatus.has(user._id)}
                               >
-                                {loadingUsers.has(user._id) ? (
+                                {isUpdatingShadowStatus.has(user._id) ? (
                                   <Loader2 className="mr-2 h-4 w-4 flex-shrink-0 animate-spin" />
                                 ) : (
                                   <EyeOff className="mr-2 h-4 w-4 flex-shrink-0" />

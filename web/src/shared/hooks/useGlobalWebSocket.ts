@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useCallback, useState } from 'react';
+import { useEffect, useCallback, useState, useRef } from 'react';
 import { globalWebSocketManager } from '@/shared/utils/globalWebSocketManager';
 import { useAuth } from '@/features/auth/AuthContext';
 
@@ -52,6 +52,14 @@ function topicMatches(topic: string, pattern: string): boolean {
 export function useGlobalWebSocket(options: UseGlobalWebSocketOptions): void {
   const { user, isAuthenticated, isLoading } = useAuth();
   
+  // Ref to hold the latest onMessage handler
+  const onMessageRef = useRef(options.onMessage);
+
+  // Keep the ref updated with the latest handler
+  useEffect(() => {
+    onMessageRef.current = options.onMessage;
+  }, [options.onMessage]);
+  
   // Wrapper für Message-Handler mit Topic-Filter
   const messageHandler = useCallback((data: any) => {
     const topic = data.topic || 'chat';
@@ -83,8 +91,9 @@ export function useGlobalWebSocket(options: UseGlobalWebSocketOptions): void {
       });
     }
     
-    options.onMessage(message);
-  }, [options.onMessage, options.topicFilter]);
+    // Use the latest handler from the ref
+    onMessageRef.current(message);
+  }, [options.topicFilter]);
 
   const openHandler = useCallback(() => {
     if (DEBUG) {

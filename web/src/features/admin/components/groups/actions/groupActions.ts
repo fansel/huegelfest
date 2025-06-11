@@ -1,5 +1,6 @@
 "use server";
 
+import { verifyAdminSession } from '@/features/auth/actions/userAuth';
 import {
   getAllGroups,
   createGroup,
@@ -32,6 +33,8 @@ export async function getAllGroupsAction() {
  */
 export async function createGroupAction(data: CreateGroupData) {
   try {
+    const admin = await verifyAdminSession();
+    if (!admin) throw new Error('Nicht autorisiert');
     const result = await createGroup(data);
     if (result.success && result.data) {
       await broadcast('group-created', { 
@@ -51,6 +54,8 @@ export async function createGroupAction(data: CreateGroupData) {
  */
 export async function updateGroupAction(groupId: string, data: UpdateGroupData) {
   try {
+    const admin = await verifyAdminSession();
+    if (!admin) throw new Error('Nicht autorisiert');
     const result = await updateGroup(groupId, data);
     if (result.success && result.data) {
       await broadcast('group-updated', { 
@@ -70,6 +75,8 @@ export async function updateGroupAction(groupId: string, data: UpdateGroupData) 
  */
 export async function deleteGroupAction(groupId: string) {
   try {
+    const admin = await verifyAdminSession();
+    if (!admin) throw new Error('Nicht autorisiert');
     const result = await deleteGroup(groupId);
     if (result.success) {
       await broadcast('group-deleted', { groupId });
@@ -98,6 +105,8 @@ export async function getGroupMembersAction(groupId: string) {
  */
 export async function assignUserToGroupAction(userId: string, groupId: string) {
   try {
+    const admin = await verifyAdminSession();
+    if (!admin) throw new Error('Nicht autorisiert');
     const result = await assignUserToGroup(userId, groupId);
     if (result.success) {
       await broadcast('user-assigned', { userId, groupId });
@@ -114,6 +123,8 @@ export async function assignUserToGroupAction(userId: string, groupId: string) {
  */
 export async function removeUserFromGroupAction(userId: string) {
   try {
+    const admin = await verifyAdminSession();
+    if (!admin) throw new Error('Nicht autorisiert');
     const result = await removeUserFromGroup(userId);
     if (result.success) {
       await broadcast('user-removed', { userId });
@@ -130,6 +141,8 @@ export async function removeUserFromGroupAction(userId: string) {
  */
 export async function assignUserToRandomGroupAction(userId: string) {
   try {
+    const admin = await verifyAdminSession();
+    if (!admin) throw new Error('Nicht autorisiert');
     const result = await assignUserToRandomGroup(userId);
     if (result.success && result.groupName) {
       await broadcast('user-assigned', { userId, groupName: result.groupName });
@@ -158,6 +171,8 @@ export async function getGroupStatsAction() {
  */
 export async function assignAllUnassignedUsersAction() {
   try {
+    const admin = await verifyAdminSession();
+    if (!admin) throw new Error('Nicht autorisiert');
     const result = await assignAllUnassignedUsers();
     if (result.success) {
       await broadcast('groups-updated', { massAssignment: true, assignedCount: result.assignedCount });

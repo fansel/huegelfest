@@ -1,7 +1,7 @@
 'use client';
 
 import React, { useState, useEffect, useRef, useCallback, useMemo } from 'react';
-import { Plus, Calendar, Clock, Users, Bell, Trash2, Pencil, AlertCircle, Crown, Edit } from 'lucide-react';
+import { Plus, Calendar, Clock, Users, Bell, Trash2, Pencil, AlertCircle, Crown, Edit, MessageCircle } from 'lucide-react';
 import * as LucideIcons from 'lucide-react';
 import toast from 'react-hot-toast';
 import { useDeviceContext } from '@/shared/contexts/DeviceContext';
@@ -26,6 +26,7 @@ import type { GroupUser, ActivitiesData } from './actions/fetchActivitiesData';
 import { formatActivityTime, getActivityTimeStatus } from './utils/timeUtils';
 import { useCentralFestivalDays } from '@/shared/hooks/useCentralFestivalDays';
 import type { CentralFestivalDay } from '@/shared/services/festivalDaysService';
+import ChatModal from '@/features/chat/components/ChatModal';
 
 interface ActivityManagerProps {
   initialData: ActivitiesData;
@@ -241,6 +242,11 @@ const ActivityManagerClient: React.FC<ActivityManagerProps> = ({ initialData }) 
   const [confirmDelete, setConfirmDelete] = useState<string | null>(null);
   const [groupUsers, setGroupUsers] = useState<GroupUser[]>([]);
   const previousGroupIdRef = useRef<string>('');
+  
+  // Chat state
+  const [chatModalOpen, setChatModalOpen] = useState(false);
+  const [chatActivityId, setChatActivityId] = useState<string | null>(null);
+  const [chatTitle, setChatTitle] = useState('');
 
   // Form state
   const [activityForm, setActivityForm] = useState<CreateActivityData>({
@@ -401,7 +407,7 @@ const ActivityManagerClient: React.FC<ActivityManagerProps> = ({ initialData }) 
           categoryId: activityForm.categoryId,
           templateId: activityForm.templateId || undefined,
           customName: activityForm.customName || undefined,
-          description: activityForm.description || undefined,
+          description: activityForm.description,
           groupId: activityForm.groupId || undefined,
           responsibleUsers: activityForm.responsibleUsers || undefined,
         });
@@ -481,6 +487,25 @@ const ActivityManagerClient: React.FC<ActivityManagerProps> = ({ initialData }) 
       console.error('Error sending reminder:', error);
       toast.error(error.message || 'Fehler beim Senden der Erinnerung');
     }
+  };
+
+  const handleOpenActivityChat = (activity: ActivityWithCategoryAndTemplate) => {
+    setChatActivityId(activity._id);
+    setChatTitle(`Aufgaben-Chat: ${activity.customName || activity.category?.name || 'Unbenannte Aufgabe'}`);
+    setChatModalOpen(true);
+  };
+
+  const handleOpenActivityInfo = (activity: ActivityWithCategoryAndTemplate) => {
+    setChatActivityId(activity._id);
+    setChatTitle(`Aufgaben-Chat: ${activity.customName || activity.category?.name || 'Unbenannte Aufgabe'}`);
+    setChatModalOpen(true);
+    // Will open with info section visible via prop
+  };
+
+  const handleCloseChat = () => {
+    setChatModalOpen(false);
+    setChatActivityId(null);
+    setChatTitle('');
   };
 
   const getIconComponent = (iconName: string) => {
@@ -613,7 +638,7 @@ const ActivityManagerClient: React.FC<ActivityManagerProps> = ({ initialData }) 
                         <div className="flex items-start justify-between">
                           <div>
                             <h4 className="font-medium text-[#ff9900] text-sm">
-                              {activity.template?.name || activity.customName}
+                              {activity.customName || activity.category?.name || 'Unbenannte Aufgabe'}
                             </h4>
                             
                             {/* Time */}
@@ -641,7 +666,12 @@ const ActivityManagerClient: React.FC<ActivityManagerProps> = ({ initialData }) 
                             {activity.responsibleUsers && activity.responsibleUsers.length > 0 && (
                               <div className="flex items-center gap-1 text-xs text-[#ff9900]/70 mt-1">
                                 <Crown className="h-3 w-3" />
-                                <Badge variant="outline" className="text-xs px-1 py-0 border-[#ff9900]/30">
+                                <Badge 
+                                  variant="outline" 
+                                  className="text-xs px-1 py-0 border-[#ff9900]/30 cursor-pointer hover:border-[#ff9900]/50 hover:bg-[#ff9900]/10 transition-colors"
+                                  onClick={() => handleOpenActivityInfo(activity)}
+                                  title="Info für diese Aufgabe öffnen"
+                                >
                                   {activity.responsibleUsers.length} Hauptverantwortliche
                                 </Badge>
                               </div>
@@ -651,18 +681,29 @@ const ActivityManagerClient: React.FC<ActivityManagerProps> = ({ initialData }) 
                           {/* Action Buttons */}
                           <div className="flex gap-1">
                             {activity.groupId && (
-                              <Button
-                                variant="ghost"
-                                size="icon"
-                                onClick={() => handleSendReminder(activity._id)}
-                                className="h-8 w-8 text-[#ff9900]/70 hover:text-[#ff9900] hover:bg-[#ff9900]/10"
-                                title={getActivityTimeStatus(activity).hasStarted 
-                                  ? "Erinnerung senden" 
-                                  : "Erinnerungen können erst nach Beginn der Aufgabe gesendet werden"}
-                                disabled={!getActivityTimeStatus(activity).hasStarted}
-                              >
-                                <Bell className="h-4 w-4" />
-                              </Button>
+                              <>
+                                <Button
+                                  variant="ghost"
+                                  size="icon"
+                                  onClick={() => handleOpenActivityInfo(activity)}
+                                  className="h-8 w-8 text-[#ff9900]/70 hover:text-[#ff9900] hover:bg-[#ff9900]/10"
+                                  title="Info für diese Aufgabe öffnen"
+                                >
+                                  <MessageCircle className="h-4 w-4" />
+                                </Button>
+                                <Button
+                                  variant="ghost"
+                                  size="icon"
+                                  onClick={() => handleSendReminder(activity._id)}
+                                  className="h-8 w-8 text-[#ff9900]/70 hover:text-[#ff9900] hover:bg-[#ff9900]/10"
+                                  title={getActivityTimeStatus(activity).hasStarted 
+                                    ? "Erinnerung an Gruppe senden" 
+                                    : "Erinnerungen können erst nach Beginn der Aufgabe gesendet werden"}
+                                  disabled={!getActivityTimeStatus(activity).hasStarted}
+                                >
+                                  <Bell className="h-4 w-4" />
+                                </Button>
+                              </>
                             )}
                             <Button
                               variant="ghost"
@@ -773,13 +814,20 @@ const ActivityManagerClient: React.FC<ActivityManagerProps> = ({ initialData }) 
             {/* Custom Name */}
             <div>
               <label className="text-sm font-medium text-gray-700 block mb-1">
-                Aufgaben-Name
+                Aufgaben-Name (optional)
               </label>
               <Input
-                placeholder="z.B. Frühstück zubereiten"
+                placeholder={
+                  activityForm.categoryId 
+                    ? categories.find(cat => cat._id === activityForm.categoryId)?.name || "Name der Aufgabe"
+                    : "Name der Aufgabe"
+                }
                 value={activityForm.customName}
                 onChange={(e) => setActivityForm(prev => ({ ...prev, customName: e.target.value }))}
               />
+              <p className="text-xs text-gray-500 mt-1">
+                Leer lassen, um automatisch den Kategorienamen zu verwenden
+              </p>
             </div>
 
             {/* Description */}
@@ -915,6 +963,17 @@ const ActivityManagerClient: React.FC<ActivityManagerProps> = ({ initialData }) 
           </AlertDialogContent>
         </AlertDialog>
       )}
+
+      {/* Chat Modal */}
+      <ChatModal
+        isOpen={chatModalOpen}
+        onClose={handleCloseChat}
+        activityId={chatActivityId || undefined}
+        groupId={undefined}
+        title={chatTitle}
+        isAdminView={true}
+        showInfoOnOpen={chatActivityId !== null}
+      />
     </div>
   );
 };

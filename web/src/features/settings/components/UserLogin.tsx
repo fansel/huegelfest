@@ -5,7 +5,7 @@ import { Switch } from "@/shared/components/ui/switch";
 import { Dialog, DialogTrigger, DialogContent, DialogTitle, DialogDescription } from "@/shared/components/ui/dialog";
 import { Input } from "@/shared/components/ui/input";
 import { Button } from "@/shared/components/ui/button";
-import { useAuth } from '@/features/auth/AuthContext';
+import { useAuth, useVerifiedAdminSession } from '@/features/auth/AuthContext';
 import { unsubscribePushAction } from '@/features/push/actions/unsubscribePush';
 import UserSettingsCard from './UserSettingsCard';
 import { Shield, User, Mail, Lock, Eye, EyeOff, LogIn, Loader2 } from 'lucide-react';
@@ -29,7 +29,8 @@ export default function UserLogin({ variant = 'row' }: UserLoginProps) {
   const [showForgotPassword, setShowForgotPassword] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState(false);
-  const { user, isAuthenticated, isAdmin, login, logout, isLoading: authLoading } = useAuth();
+  const { user, isAuthenticated, login, logout } = useAuth();
+  const { adminSession, isLoading: adminLoading } = useVerifiedAdminSession();
   const isOnline = useNetworkStatus();
   const formRef = useRef<HTMLFormElement>(null);
 
@@ -134,7 +135,7 @@ export default function UserLogin({ variant = 'row' }: UserLoginProps) {
   // Icon und Titel je nach Session-Status
   const getIconAndTitle = () => {
     if (isAuthenticated) {
-      if (isAdmin) {
+      if (adminSession) {
         return {
           icon: <Shield className="w-5 h-5 text-[#ff9900]" />,
           title: `Admin-Session (${user?.name})`
@@ -160,7 +161,7 @@ export default function UserLogin({ variant = 'row' }: UserLoginProps) {
       return "Login ist nur online möglich.";
     }
     if (isAuthenticated) {
-      if (isAdmin) {
+      if (adminSession) {
         return "Admin-Session aktiv. Erweiterte Funktionen verfügbar.";
       } else {
         return "Session aktiv. Andere Komponenten können Account-Daten abrufen.";

@@ -214,6 +214,7 @@ export async function changeUserRole(userId: string, newRole: 'user' | 'admin') 
   try {
     await connectDB();
     
+    // Fetch the full Mongoose document to use .save()
     const user = await User.findById(userId);
     if (!user) {
       throw new Error('User nicht gefunden');
@@ -222,7 +223,8 @@ export async function changeUserRole(userId: string, newRole: 'user' | 'admin') 
     user.role = newRole;
     await user.save();
     
-    return user;
+    // Convert the Mongoose document to a plain object before returning
+    return JSON.parse(JSON.stringify(user));
   } catch (error) {
     console.error('Fehler beim Ändern der User-Rolle:', error);
     throw error;
@@ -362,6 +364,20 @@ export async function getAllShadowUsersForArchive() {
     return shadowUsers;
   } catch (error) {
     console.error('Fehler beim Laden der Shadow Users für das Archiv:', error);
+    throw error;
+  }
+}
+
+/**
+ * Holt einen User anhand seiner ID - auch Shadow Users
+ */
+export async function getUserById(userId: string) {
+  try {
+    await connectDB();
+    const user = await User.findById(userId).lean().exec();
+    return user;
+  } catch (error) {
+    console.error(`[AuthService] Fehler beim Laden des Users mit ID ${userId}:`, error);
     throw error;
   }
 } 

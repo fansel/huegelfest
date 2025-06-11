@@ -6,6 +6,7 @@ export type TabType = 'groups' | 'users' | 'registrations';
 export interface User {
   _id: string;
   name: string;
+  username?: string;
   email: string;
   role: 'user' | 'admin';
   groupId?: string;

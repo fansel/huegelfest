@@ -38,14 +38,21 @@ import {
   FileDown,
   FileText,
   Phone,
-  MessageCircle
+  MessageCircle,
+  Unlink,
+  Trash2,
+  MoreVertical
 } from 'lucide-react';
 import type { RegistrationWithId } from './types';
+import { unlinkUserRegistrationAction, unlinkRegistrationFromUserAction } from '@/features/registration/actions/unlinkRegistration';
+import { deleteRegistrationCompletelyAction } from '@/features/registration/actions/deleteRegistrationCompletely';
+import { toast } from 'react-hot-toast';
 
 interface RegistrationsTabProps {
   registrations: RegistrationWithId[];
   onSelectRegistration: (registration: RegistrationWithId) => void;
   onEditRegistration: (registration: RegistrationWithId) => void;
+  onRefreshRegistrations?: () => void;
 }
 
 const FESTIVAL_DAYS = ["31.07.", "01.08.", "02.08.", "03.08."];
@@ -53,7 +60,8 @@ const FESTIVAL_DAYS = ["31.07.", "01.08.", "02.08.", "03.08."];
 export function RegistrationsTab({
   registrations,
   onSelectRegistration,
-  onEditRegistration
+  onEditRegistration,
+  onRefreshRegistrations
 }: RegistrationsTabProps) {
   const [rowsPerPage, setRowsPerPage] = useState(30);
   const [globalFilter, setGlobalFilter] = useState('');
@@ -68,6 +76,12 @@ export function RegistrationsTab({
   const [soberFilter, setSoberFilter] = useState(false);
   const [photosFilter, setPhotosFilter] = useState('');
   const [kitchenFilter, setKitchenFilter] = useState(false);
+
+  // New state for registration management
+  const [openDropdown, setOpenDropdown] = useState<string | null>(null);
+  const [isUnlinking, setIsUnlinking] = useState(false);
+  const [isDeleting, setIsDeleting] = useState(false);
+  const [showDeleteConfirmation, setShowDeleteConfirmation] = useState<string | null>(null);
 
   // Registration DataTable Setup
   const columnHelper = createColumnHelper<RegistrationWithId>();
@@ -242,22 +256,69 @@ export function RegistrationsTab({
       id: 'actions',
       header: () => <span className="sr-only">Aktionen</span>,
       cell: info => (
-        <Button
-          variant="ghost"
-          size="icon"
-          aria-label="Bearbeiten"
-          onClick={e => {
-            e.stopPropagation();
-            onEditRegistration(info.row.original);
-          }}
-        >
-          <span className="sr-only">Bearbeiten</span>
-          <Edit className="w-5 h-5 text-blue-500" />
-        </Button>
+        <div className="flex items-center gap-1">
+          <div className="flex items-start justify-between">
+            <h3 className="font-medium text-[#460b6c] truncate flex-1">{info.row.original.name}</h3>
+            <div className="flex items-center gap-1 ml-2 -mt-1 -mr-2">
+              <Button
+                variant="ghost"
+                size="icon"
+                onClick={e => {
+                  e.stopPropagation();
+                  onEditRegistration(info.row.original);
+                }}
+              >
+                <Edit className="w-4 h-4 text-blue-500" />
+              </Button>
+              
+              <div className="relative">
+                <Button
+                  variant="ghost"
+                  size="icon"
+                  onClick={e => {
+                    e.stopPropagation();
+                    setOpenDropdown(openDropdown === info.row.original._id ? null : info.row.original._id);
+                  }}
+                >
+                  <MoreVertical className="w-4 h-4 text-gray-500" />
+                </Button>
+                
+                {openDropdown === info.row.original._id && (
+                  <div className="absolute right-0 top-8 bg-white border border-gray-200 rounded-lg shadow-lg z-10 min-w-48">
+                    <div className="py-1">
+                      <button
+                        className="w-full text-left px-4 py-2 text-sm text-gray-700 hover:bg-gray-100 flex items-center gap-2"
+                        onClick={e => {
+                          e.stopPropagation();
+                          handleUnlinkRegistration(info.row.original);
+                        }}
+                        disabled={isUnlinking}
+                      >
+                        <Unlink className="w-4 h-4 text-orange-500" />
+                        {isUnlinking ? 'Verknüpfung aufheben...' : 'Verknüpfung aufheben'}
+                      </button>
+                      <button
+                        className="w-full text-left px-4 py-2 text-sm text-red-700 hover:bg-red-50 flex items-center gap-2"
+                        onClick={e => {
+                          e.stopPropagation();
+                          setShowDeleteConfirmation(info.row.original._id);
+                        }}
+                        disabled={isDeleting}
+                      >
+                        <Trash2 className="w-4 h-4 text-red-500" />
+                        Anmeldung löschen
+                      </button>
+                    </div>
+                  </div>
+                )}
+              </div>
+            </div>
+          </div>
+        </div>
       ),
       enableSorting: false,
       enableColumnFilter: false,
-      meta: { className: 'w-[48px] min-w-[48px] max-w-[48px] p-0 text-center' },
+      meta: { className: 'w-[100px] min-w-[100px] max-w-[100px] p-0 text-center' },
     });
     return baseCols;
   }, [showSani, columnHelper, onEditRegistration]);
@@ -404,6 +465,56 @@ export function RegistrationsTab({
     registrationTable.setPageSize(rowsPerPage);
     registrationTable.setPageIndex(0);
   }, [rowsPerPage, registrationTable]);
+
+  // Close dropdown when clicking outside
+  useEffect(() => {
+    const handleClickOutside = () => {
+      setOpenDropdown(null);
+    };
+    if (openDropdown) {
+      document.addEventListener('click', handleClickOutside);
+      return () => document.removeEventListener('click', handleClickOutside);
+    }
+  }, [openDropdown]);
+
+  // Handler für Verknüpfung aufheben
+  const handleUnlinkRegistration = async (registration: RegistrationWithId) => {
+    setIsUnlinking(true);
+    setOpenDropdown(null);
+    try {
+      const result = await unlinkRegistrationFromUserAction(registration._id);
+      if (result.success) {
+        toast.success(`Verknüpfung von ${registration.name} aufgehoben`);
+        onRefreshRegistrations?.();
+      } else {
+        toast.error(result.error || 'Fehler beim Aufheben der Verknüpfung');
+      }
+    } catch (error) {
+      toast.error('Ein unerwarteter Fehler ist aufgetreten');
+    } finally {
+      setIsUnlinking(false);
+    }
+  };
+
+  // Handler für Registration komplett löschen
+  const handleDeleteRegistration = async (registration: RegistrationWithId) => {
+    setIsDeleting(true);
+    setOpenDropdown(null);
+    setShowDeleteConfirmation(null);
+    try {
+      const result = await deleteRegistrationCompletelyAction(registration._id);
+      if (result.success) {
+        toast.success(`Anmeldung von ${registration.name} wurde gelöscht`);
+        onRefreshRegistrations?.();
+      } else {
+        toast.error(result.error || 'Fehler beim Löschen der Anmeldung');
+      }
+    } catch (error) {
+      toast.error('Ein unerwarteter Fehler ist aufgetreten');
+    } finally {
+      setIsDeleting(false);
+    }
+  };
 
   return (
     <div className="h-[calc(100vh-300px)] flex flex-col">
@@ -577,17 +688,60 @@ export function RegistrationsTab({
               >
               <div className="flex items-start justify-between">
                 <h3 className="font-medium text-[#460b6c] truncate flex-1">{row.original.name}</h3>
-                <Button
-                  variant="ghost"
-                  size="icon"
-                  className="ml-2 -mt-1 -mr-2"
-                  onClick={e => {
-                    e.stopPropagation();
-                    onEditRegistration(row.original);
-                  }}
-                >
-                  <Edit className="w-4 h-4 text-blue-500" />
-                </Button>
+                <div className="flex items-center gap-1 ml-2 -mt-1 -mr-2">
+                  <Button
+                    variant="ghost"
+                    size="icon"
+                    onClick={e => {
+                      e.stopPropagation();
+                      onEditRegistration(row.original);
+                    }}
+                  >
+                    <Edit className="w-4 h-4 text-blue-500" />
+                  </Button>
+                  
+                  <div className="relative">
+                    <Button
+                      variant="ghost"
+                      size="icon"
+                      onClick={e => {
+                        e.stopPropagation();
+                        setOpenDropdown(openDropdown === row.original._id ? null : row.original._id);
+                      }}
+                    >
+                      <MoreVertical className="w-4 h-4 text-gray-500" />
+                    </Button>
+                    
+                    {openDropdown === row.original._id && (
+                      <div className="absolute right-0 top-8 bg-white border border-gray-200 rounded-lg shadow-lg z-10 min-w-48">
+                        <div className="py-1">
+                          <button
+                            className="w-full text-left px-4 py-2 text-sm text-gray-700 hover:bg-gray-100 flex items-center gap-2"
+                            onClick={e => {
+                              e.stopPropagation();
+                              handleUnlinkRegistration(row.original);
+                            }}
+                            disabled={isUnlinking}
+                          >
+                            <Unlink className="w-4 h-4 text-orange-500" />
+                            {isUnlinking ? 'Verknüpfung aufheben...' : 'Verknüpfung aufheben'}
+                          </button>
+                          <button
+                            className="w-full text-left px-4 py-2 text-sm text-red-700 hover:bg-red-50 flex items-center gap-2"
+                            onClick={e => {
+                              e.stopPropagation();
+                              setShowDeleteConfirmation(row.original._id);
+                            }}
+                            disabled={isDeleting}
+                          >
+                            <Trash2 className="w-4 h-4 text-red-500" />
+                            Anmeldung löschen
+                          </button>
+                        </div>
+                      </div>
+                    )}
+                  </div>
+                </div>
               </div>
 
               {/* Status Icons */}
@@ -708,6 +862,58 @@ export function RegistrationsTab({
           <ChevronRight className="w-4 h-4" />
         </Button>
       </div>
+
+      {/* Delete Confirmation Dialog */}
+      {showDeleteConfirmation && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+          <div className="bg-white rounded-lg p-6 max-w-md w-full mx-4">
+            <div className="flex items-center gap-3 mb-4">
+              <AlertTriangle className="h-6 w-6 text-red-600" />
+              <h3 className="text-lg font-semibold text-gray-900">
+                Anmeldung löschen
+              </h3>
+            </div>
+            
+            <p className="text-gray-600 mb-6">
+              Sind Sie sicher, dass Sie diese Anmeldung <strong>komplett löschen</strong> möchten? 
+              Dabei wird auch die Verknüpfung mit dem User-Account aufgehoben.
+            </p>
+            
+            <p className="text-sm text-gray-500 mb-6">
+              Diese Aktion kann nicht rückgängig gemacht werden.
+            </p>
+            
+            <div className="flex gap-3 justify-end">
+              <Button
+                variant="outline"
+                onClick={() => setShowDeleteConfirmation(null)}
+                disabled={isDeleting}
+              >
+                Abbrechen
+              </Button>
+              <Button
+                variant="destructive"
+                onClick={() => {
+                  const registration = registrations.find(r => r._id === showDeleteConfirmation);
+                  if (registration) {
+                    handleDeleteRegistration(registration);
+                  }
+                }}
+                disabled={isDeleting}
+              >
+                {isDeleting ? (
+                  <>
+                    <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white mr-2" />
+                    Löschen...
+                  </>
+                ) : (
+                  'Endgültig löschen'
+                )}
+              </Button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 } 

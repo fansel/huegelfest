@@ -98,12 +98,27 @@ class GlobalWebSocketManager {
   /**
    * Sendet Nachricht über WebSocket
    */
-  send(message: string) {
+  public send(message: string) {
     if (this.ws?.readyState === WebSocket.OPEN) {
       this.ws.send(message);
-      return true;
+    } else {
+      console.warn('[GlobalWebSocket] Versuch zu senden während Socket nicht verbunden');
     }
-    return false;
+  }
+
+  /**
+   * Sendet JSON-Nachricht über WebSocket
+   */
+  public sendJSON(data: any) {
+    if (this.ws?.readyState === WebSocket.OPEN) {
+      try {
+        this.ws.send(JSON.stringify(data));
+      } catch (error) {
+        console.error('[GlobalWebSocket] Fehler beim Senden der JSON-Nachricht:', error);
+      }
+    } else {
+      console.warn('[GlobalWebSocket] Versuch JSON zu senden während Socket nicht verbunden');
+    }
   }
 
   /**

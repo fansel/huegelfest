@@ -1,11 +1,17 @@
 "use server";
 
+import { verifyAdminSession } from '@/features/auth/actions/userAuth';
 import { IAnnouncement } from '@/shared/types/types';
 import { saveAnnouncements, deleteAnnouncement } from '../services/announcementService';
 import { broadcast } from '@/lib/websocket/broadcast';
 
 export async function createAnnouncementAction(announcementData: IAnnouncement) {
   try {
+    const admin = await verifyAdminSession();
+    if (!admin) {
+      throw new Error('Nicht autorisiert');
+    }
+
     // Verwende den bestehenden Service mit Array-Argument
     await saveAnnouncements([announcementData]);
     
@@ -31,6 +37,11 @@ export async function createAnnouncementAction(announcementData: IAnnouncement) 
 
 export async function updateAnnouncementAction(id: string, announcementData: Partial<IAnnouncement>) {
   try {
+    const admin = await verifyAdminSession();
+    if (!admin) {
+      throw new Error('Nicht autorisiert');
+    }
+
     // Erstelle vollständiges Announcement-Objekt mit ID
     const fullAnnouncement: IAnnouncement = {
       id,
@@ -71,6 +82,11 @@ export async function updateAnnouncementAction(id: string, announcementData: Par
 
 export async function deleteAnnouncementAction(id: string) {
   try {
+    const admin = await verifyAdminSession();
+    if (!admin) {
+      throw new Error('Nicht autorisiert');
+    }
+
     const result = await deleteAnnouncement(id);
     
     if (result.success) {

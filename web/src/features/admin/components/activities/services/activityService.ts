@@ -85,10 +85,6 @@ export async function createActivity(data: CreateActivityData, createdBy: string
     throw new Error('Startzeit ist erforderlich');
   }
 
-  if (!data.templateId && !data.customName) {
-    throw new Error('Entweder ein Template oder ein eigener Name muss angegeben werden');
-  }
-
   const dateObj = typeof data.date === 'string' ? new Date(data.date) : data.date;
 
   const activityData = {
@@ -319,9 +315,10 @@ export async function sendActivityReminder(activityId: string) {
 
   // Type assertion since we know the data is populated
   const populatedTemplate = activity.templateId;
+  const populatedCategory = activity.categoryId;
   const populatedGroup = activity.groupId;
 
-  const activityName = populatedTemplate?.name || activity.customName || 'Unbekannte Aktivität';
+  const activityName = activity.customName || populatedTemplate?.name || populatedCategory?.name || 'Unbekannte Aktivität';
   const groupName = populatedGroup?.name || 'Unbekannte Gruppe';
 
   // Send push notification using new user-based system
@@ -389,7 +386,7 @@ async function sendResponsibleUserNotification(activity: any) {
   const dayNames = ['Sonntag', 'Montag', 'Dienstag', 'Mittwoch', 'Donnerstag', 'Freitag', 'Samstag'];
   const dayName = dayNames[activityDate.getDay()];
   
-  const activityName = activity.customName || 'Aktivität';
+  const activityName = activity.customName || activity.templateId?.name || activity.categoryId?.name || 'Aktivität';
   const timeText = activity.startTime ? ` um ${activity.startTime}` : '';
   
   const title = `Gruppe ${groupName}`;
@@ -453,7 +450,7 @@ async function createActivityPushEvents(activity: any) {
     customName: activity.customName
   });
 
-  const activityName = activity.customName || 'Aktivität';
+  const activityName = activity.customName || activity.templateId?.name || activity.categoryId?.name || 'Aktivität';
   
   // Get group information for group name
   const { Group } = await import('@/lib/db/models/Group');

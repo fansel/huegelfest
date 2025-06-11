@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useMemo } from 'react';
+import React, { useMemo, useState } from 'react';
 import { fetchUserActivitiesAction } from '@/features/admin/components/activities/actions/fetchUserActivities';
 import type { UserActivitiesData } from '@/features/admin/components/activities/actions/fetchUserActivities';
 import type { ActivityWithCategoryAndTemplate } from '@/features/admin/components/activities/types';
@@ -14,13 +14,21 @@ import {
   Clock, 
   AlertCircle, 
   Wifi, 
-  WifiOff 
+  WifiOff,
+  MessageCircle,
+  Users2,
+  Crown
 } from 'lucide-react';
 import * as LucideIcons from 'lucide-react';
 import { startOfDay, format, isToday, isTomorrow, isYesterday } from 'date-fns';
 import { de } from 'date-fns/locale';
 import { formatActivityTime, groupActivitiesByStatus } from '@/features/admin/components/activities/utils/timeUtils';
 import { useAuth } from '@/features/auth/AuthContext';
+import { useUserActivitiesRealtime } from '@/features/admin/components/activities/hooks/useUserActivitiesRealtime';
+import { Badge } from '@/shared/components/ui/badge';
+import { Button } from '@/shared/components/ui/button';
+import ChatModal from '@/features/chat/components/ChatModal';
+import { GroupMembersDialog } from './GroupMembersDialog';
 
 export interface ActivityDay {
   date: Date;
@@ -34,8 +42,19 @@ export interface ActivityDay {
 export default function ActivitiesClient() {
   const { user } = useAuth();
   const { deviceType } = useDeviceContext();
-  const isOnline = useNetworkStatus();
+  const { isOnline } = useNetworkStatus();
   const isMobile = deviceType === 'mobile';
+
+  // Chat state
+  const [chatModalOpen, setChatModalOpen] = useState(false);
+  const [chatActivityId, setChatActivityId] = useState<string | null>(null);
+  const [chatGroupId, setChatGroupId] = useState<string | null>(null);
+  const [chatTitle, setChatTitle] = useState('');
+
+  // Group members dialog state
+  const [groupInfoModalOpen, setGroupInfoModalOpen] = useState(false);
+  const [infoGroupId, setInfoGroupId] = useState<string | null>(null);
+  const [infoGroupName, setInfoGroupName] = useState<string | null>(null);
 
   // SWR für User Activities mit session-basierter Authentifizierung
   const { data, mutate, isLoading } = useSWR<UserActivitiesData>(
@@ -135,6 +154,54 @@ export default function ActivitiesClient() {
   const getIconComponent = (iconName: string) => {
     const IconComponent = (LucideIcons as any)[iconName];
     return IconComponent || LucideIcons.HelpCircle;
+  };
+
+  const handleOpenActivityChat = (activity: ActivityWithCategoryAndTemplate) => {
+    setChatActivityId(activity._id);
+    setChatGroupId(null);
+    setChatTitle(`Aufgaben-Chat: ${activity.template?.name || activity.customName || 'Unbenannte Aufgabe'}`);
+    setChatModalOpen(true);
+  };
+
+  const handleOpenActivityInfo = (activity: ActivityWithCategoryAndTemplate) => {
+    setChatActivityId(activity._id);
+    setChatGroupId(null);
+    setChatTitle(`Aufgaben-Chat: ${activity.template?.name || activity.customName || 'Unbenannte Aufgabe'}`);
+    setChatModalOpen(true);
+    // Will open with info section visible via prop
+  };
+
+  const handleOpenGroupInfo = () => {
+    if (userStatus.groupId) {
+      const groupId = typeof userStatus.groupId === 'string' 
+        ? userStatus.groupId 
+        : (userStatus.groupId as any)?._id || String(userStatus.groupId);
+      
+      setInfoGroupId(groupId);
+      setInfoGroupName(userStatus.groupName || null);
+      setGroupInfoModalOpen(true);
+    }
+  };
+
+  const handleOpenGroupChat = () => {
+    if (userStatus.groupId) {
+      // Ensure groupId is a string, handle if it's an object with _id
+      const groupId = typeof userStatus.groupId === 'string' 
+        ? userStatus.groupId 
+        : (userStatus.groupId as any)?._id || String(userStatus.groupId);
+        
+      setChatActivityId(null);
+      setChatGroupId(groupId);
+      setChatTitle(`Gruppen-Chat: ${userStatus.groupName || 'Unbekannte Gruppe'}`);
+      setChatModalOpen(true);
+    }
+  };
+
+  const handleCloseChat = () => {
+    setChatModalOpen(false);
+    setChatActivityId(null);
+    setChatGroupId(null);
+    setChatTitle('');
   };
 
   if (isLoading) {
@@ -257,6 +324,16 @@ export default function ActivitiesClient() {
                                 </div>
                               )}
                             </div>
+                            {/* Chat Button for Current Activity */}
+                            <Button
+                              variant="ghost"
+                              size="icon"
+                              onClick={() => handleOpenActivityChat(activity)}
+                              className="h-8 w-8 text-[#ff9900]/70 hover:text-[#ff9900] hover:bg-[#ff9900]/10 flex-shrink-0"
+                              title="Chat öffnen"
+                            >
+                              <MessageCircle className="h-4 w-4" />
+                            </Button>
                           </div>
                         );
                       })}
@@ -268,7 +345,7 @@ export default function ActivitiesClient() {
                   )}
                 </div>
                 
-                {/* Gruppe */}
+                {/* Gruppe mit Chat-Button */}
                 <div className="flex items-center justify-center gap-2">
                   <span 
                     className="font-semibold px-3 py-1 rounded-full text-white text-sm"
@@ -276,10 +353,42 @@ export default function ActivitiesClient() {
                   >
                     {userStatus.groupName}
                   </span>
+                  <Button
+                    variant="ghost"
+                    size="icon"
+                    onClick={handleOpenGroupInfo}
+                    className="h-8 w-8 text-[#ff9900]/70 hover:text-[#ff9900] hover:bg-[#ff9900]/10"
+                    title="Gruppenmitglieder anzeigen"
+                  >
+                    <Users2 className="h-4 w-4" />
+                  </Button>
                 </div>
               </div>
             )}
           </div>
+
+          {/* Group Chat Button (when user is in a group but not necessarily active) */}
+          {userStatus.groupId && userStatus.groupName && (
+            <div className="bg-white/10 backdrop-blur-sm rounded-lg border border-[#ff9900]/20 p-4">
+              <div className="flex items-center justify-between">
+                <div className="flex items-center gap-3">
+                  <Users2 className="h-5 w-5 text-[#ff9900]" />
+                  <div>
+                    <h3 className="text-[#ff9900] font-medium">Gruppen-Chat</h3>
+                    <p className="text-[#ff9900]/70 text-sm">Mit deiner Gruppe {userStatus.groupName} schreiben</p>
+                  </div>
+                </div>
+                <Button
+                  onClick={handleOpenGroupChat}
+                  className="bg-[#ff9900] hover:bg-orange-600 text-[#460b6c] px-4"
+                  size="sm"
+                >
+                  <MessageCircle className="h-4 w-4 mr-2" />
+                  Chat öffnen
+                </Button>
+              </div>
+            </div>
+          )}
 
           {/* Activities by Day */}
           {activityDays.length === 0 ? (
@@ -350,30 +459,62 @@ export default function ActivitiesClient() {
                             <div className="flex-1 min-w-0">
                               <div className="flex items-start justify-between">
                                 <div className="flex-1">
-                                  <div className="flex items-center gap-2 mb-1">
-                                    <h4 className={`font-medium text-sm ${
-                                      day.isToday ? 'text-[#ff9900]' : 'text-[#ff9900]/80'
-                                    }`}>
-                                      {activityName}
-                                    </h4>
+                                  <h4 className="font-medium text-[#ff9900] text-sm">
+                                    {activityName}
                                     {isResponsible && (
-                                      <span className="text-xs bg-[#ff9900] text-white px-2 py-1 rounded-full">
+                                      <span className="ml-2 text-xs bg-[#ff9900] text-white px-2 py-1 rounded-full">
                                         Hauptverantwortung
                                       </span>
                                     )}
-                                  </div>
+                                  </h4>
                                   
+                                  {/* Time */}
                                   {activity.startTime && (
-                                    <div className="flex items-center gap-1 text-sm text-[#ff9900]/70 mb-1">
+                                    <div className="flex items-center gap-1 text-xs text-gray-500 mt-1">
                                       <Clock className="h-3 w-3" />
-                                      <span className="font-medium">{formatActivityTime(activity)}</span>
+                                      {formatActivityTime(activity)}
                                     </div>
                                   )}
 
-                                  <p className="text-xs mt-2 text-[#ff9900]/60">
-                                    {activity.description}
-                                  </p>
+                                  {/* Description */}
+                                  {activity.description && (
+                                    <p className="text-xs text-[#ff9900]/60 mt-2">
+                                      {activity.description}
+                                    </p>
+                                  )}
+
+                                  {/* Responsible Users */}
+                                  {activity.responsibleUsersData && activity.responsibleUsersData.length > 0 && (
+                                    <div className="flex items-center gap-1 text-xs text-[#ff9900]/70 mt-2">
+                                      <Crown className="h-3 w-3" />
+                                      <div className="flex flex-wrap gap-1">
+                                        {activity.responsibleUsersData?.map((userData, index) => (
+                                          <Badge 
+                                            key={userData._id} 
+                                            variant="outline" 
+                                            className="text-xs px-1 py-0 border-[#ff9900]/30 cursor-pointer hover:border-[#ff9900]/50 hover:bg-[#ff9900]/10 transition-colors"
+                                            onClick={() => handleOpenActivityInfo(activity)}
+                                            title="Info für diese Aufgabe anzeigen"
+                                          >
+                                            {userData.name}
+                                            {index < (activity.responsibleUsersData?.length || 0) - 1 && ','}
+                                          </Badge>
+                                        ))}
+                                      </div>
+                                    </div>
+                                  )}
                                 </div>
+
+                                {/* Chat Button */}
+                                <Button
+                                  variant="ghost"
+                                  size="icon"
+                                  onClick={() => handleOpenActivityChat(activity)}
+                                  className="h-8 w-8 text-[#ff9900]/70 hover:text-[#ff9900] hover:bg-[#ff9900]/10 flex-shrink-0 ml-2"
+                                  title="Chat öffnen"
+                                >
+                                  <MessageCircle className="h-4 w-4" />
+                                </Button>
                               </div>
                             </div>
                           </div>
@@ -387,6 +528,25 @@ export default function ActivitiesClient() {
           )}
         </div>
       </div>
+
+      {/* Chat Modal */}
+      <ChatModal
+        isOpen={chatModalOpen}
+        onClose={handleCloseChat}
+        activityId={chatActivityId || undefined}
+        groupId={chatGroupId || undefined}
+        title={chatTitle}
+        isAdminView={false}
+        showInfoOnOpen={chatActivityId !== null}
+      />
+
+      {/* Group Members Dialog */}
+      <GroupMembersDialog
+        isOpen={groupInfoModalOpen}
+        onClose={() => setGroupInfoModalOpen(false)}
+        groupId={infoGroupId}
+        groupName={infoGroupName}
+      />
     </div>
   );
 } 

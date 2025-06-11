@@ -38,7 +38,7 @@ interface MainContentProps {
     tracks: any[];
     groupsData: any;
     activitiesData: any;
-  };
+  } | null;
   loadingAdminData?: boolean;
 }
 

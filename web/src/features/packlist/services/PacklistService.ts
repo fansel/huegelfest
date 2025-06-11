@@ -3,17 +3,10 @@ import { connectDB } from '@/lib/db/connector';
 import type { PacklistItem } from '../types/PacklistItem';
 import { initServices } from '@/lib/initServices';
 
-const DEFAULT_ITEMS: PacklistItem[] = [
-  { id: '1', text: 'Schlafsack', checked: false },
-  { id: '2', text: 'Zahnbürste', checked: false },
-  { id: '3', text: 'Handtuch', checked: false },
-  { id: '4', text: 'Taschenlampe', checked: false },
-];
-
 export async function getGlobalPacklist(): Promise<PacklistItem[]> {
   await initServices();
   const packlist = await Packlist.findOne({ key: 'global' });
-  if (!packlist) return DEFAULT_ITEMS;
+  if (!packlist) return [];
   return packlist.items.map((item, idx) => ({
     id: idx.toString(),
     text: item.text,

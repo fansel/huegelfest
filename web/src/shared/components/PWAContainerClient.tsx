@@ -21,6 +21,8 @@ import { getPendingEventsAction } from '@/features/timeline/actions/getPendingEv
 import { getAllTracks } from '@/features/music/actions/getAllTracks';
 import { fetchGroupsData } from '@/features/admin/components/groups/actions/fetchGroupsData';
 import { fetchActivitiesData } from '@/features/admin/components/activities/actions/fetchActivitiesData';
+import { useAuth } from '@/features/auth/AuthContext';
+import { TemporarySessionBanner } from './TemporarySessionBanner';
 
 const Starfield = dynamic(() => import('./Starfield'), { ssr: false });
 const OfflineIndicator = dynamic(() => import('./OfflineIndicator').then(mod => ({ default: mod.OfflineIndicator })), { ssr: false });
@@ -47,37 +49,33 @@ interface PWAContainerClientProps {
     tracks: any[];
     groupsData: any;
     activitiesData: any;
-  };
+  } | null;
 }
 
 const DEBUG = false;
 
 export default function PWAContainerClient({ isAdmin, timelineData, infoBoardData, carpoolData, packlistData, adminData: initialAdminData }: PWAContainerClientProps) {
-  const { mode, activeTab, adminActiveTab, handleAdminToggle, handleTabChange } = useNavigation(isAdmin);
+  const { mode, activeTab, adminActiveTab, handleAdminToggle, handleTabChange, showAdminButton } = useNavigation(isAdmin);
   const { showStarfield, showMusicNote } = useUISettings();
   const { deviceType } = useDeviceContext();
   const isOnline = useNetworkStatus();
+  const { isLoading, loadingProgress, error } = useAppLoading({
+    minDisplayTime: 3000,
+    maxDisplayTime: 6000,
+    dependsOnNetwork: true
+  });
+  const { isTemporarySession } = useAuth();
   
-  // Admin data state - can be refreshed independently of SSR
   const [adminData, setAdminData] = useState(initialAdminData);
   const [loadingAdminData, setLoadingAdminData] = useState(false);
   
-  // App Loading State
-  const { isLoading, isInitialLoad, loadingProgress, error } = useAppLoading({
-    minDisplayTime: 3000, // Mindestens 3s anzeigen (vorher 1.2s)
-    maxDisplayTime: 6000, // Maximal 6s warten (vorher 4s)
-    dependsOnNetwork: true
-  });
-
   const isMobileLayout = deviceType === 'mobile';
 
-  // Hydration-Fix: MusicNote erst nach Mount anzeigen
   const [hasMounted, setHasMounted] = useState(false);
   const [splashComplete, setSplashComplete] = useState(false);
   
   useEffect(() => setHasMounted(true), []);
 
-  // Markiere App als bereit für Loading-Check
   useEffect(() => {
     if (hasMounted && timelineData?.days && !document.querySelector('[data-app-ready]')) {
       const marker = document.createElement('div');
@@ -87,9 +85,8 @@ export default function PWAContainerClient({ isAdmin, timelineData, infoBoardDat
     }
   }, [hasMounted, timelineData]);
 
-  // Load fresh admin data when entering admin mode
   const loadFreshAdminData = useCallback(async () => {
-    if (!isAdmin || !isOnline) return;
+    if (!isOnline) return;
     
     setLoadingAdminData(true);
     try {
@@ -107,7 +104,6 @@ export default function PWAContainerClient({ isAdmin, timelineData, infoBoardDat
         fetchActivitiesData()
       ]);
 
-      // Map announcements with group info
       const announcements = announcementsData.map((a: any) => ({
         ...a,
         groupName: a.groupInfo?.name || '',
@@ -134,55 +130,43 @@ export default function PWAContainerClient({ isAdmin, timelineData, infoBoardDat
     } finally {
       setLoadingAdminData(false);
     }
-  }, [isAdmin, isOnline]);
+  }, [isOnline]);
 
-  // Load fresh admin data when entering admin mode
   useEffect(() => {
-    if (mode === 'admin' && !adminData && isAdmin) {
+    if (mode === 'admin' && !adminData) {
       loadFreshAdminData();
     }
-  }, [mode, adminData, isAdmin, loadFreshAdminData]);
+  }, [mode, adminData, loadFreshAdminData]);
 
-  // NEU: Handler für Push-Subscription Änderungen
   const handlePushSubscriptionChange = (isSubscribed: boolean) => {
     if (DEBUG) {
       console.log('[PWA] Push subscription changed:', isSubscribed);
     }
-    // Zusätzliche Aktionen bei Subscription-Änderung falls nötig
-    // Z.B. State Updates, Analytics, etc.
   };
 
-  // Splash Screen Handler
   const handleSplashComplete = () => {
     setSplashComplete(true);
   };
 
-  // Enhanced refresh function that also refreshes admin data if in admin mode
   const handleGlobalRefresh = useCallback(async () => {
-    // Einfach: Alle SWR Caches auf einmal invalidieren
     await mutate(() => true);
     
-    // If in admin mode, also refresh admin data
     if (mode === 'admin' && isAdmin) {
       await loadFreshAdminData();
     }
   }, [mode, isAdmin, loadFreshAdminData]);
 
-  // Custom admin toggle that loads fresh data
   const handleAdminToggleWithRefresh = useCallback(() => {
     if (mode === 'admin') {
-      // Leaving admin mode - use original toggle
       handleAdminToggle();
     } else if (isAdmin) {
-      // Entering admin mode - load fresh data first
-      handleAdminToggle(); // Switch mode first
+      handleAdminToggle();
       if (isOnline) {
-        loadFreshAdminData(); // Then load fresh data
+        loadFreshAdminData();
       }
     }
   }, [mode, isAdmin, isOnline, handleAdminToggle, loadFreshAdminData]);
 
-  // Zeige Splash Screen während Initial Load
   if (isLoading || !splashComplete) {
     return (
       <SplashScreen 
@@ -198,6 +182,7 @@ export default function PWAContainerClient({ isAdmin, timelineData, infoBoardDat
     <div className="relative min-h-screen bg-[#460b6c] text-[#ff9900] flex flex-col">
       <InstallPrompt />
       <OfflineIndicator />
+      <TemporarySessionBanner />
       <AutoPushPrompt onSubscriptionChange={handlePushSubscriptionChange} />
       {showStarfield && <Starfield />}
       {hasMounted && showMusicNote && mode !== 'admin' && activeTab !== 'signup' && isOnline && (
@@ -206,8 +191,7 @@ export default function PWAContainerClient({ isAdmin, timelineData, infoBoardDat
         </div>
       )}
 
-      {/* Main content container with proper top padding for desktop topbar */}
-      <div className={`flex flex-col ${!isMobileLayout ? 'pt-16' : ''}`}>
+      <div className={`flex flex-col ${!isMobileLayout ? 'pt-16' : ''} ${isTemporarySession ? 'pt-8' : ''}`}>
         {activeTab !== 'signup' && (
           <div className="flex flex-col items-center justify-center gap-2 pt-4">
             <div className="flex items-center justify-center w-full">
@@ -241,7 +225,7 @@ export default function PWAContainerClient({ isAdmin, timelineData, infoBoardDat
         onTabChange={handleTabChange}
         isAdminActive={mode === 'admin'}
         onAdminToggle={handleAdminToggleWithRefresh}
-        showAdminButton={isAdmin}
+        showAdminButton={showAdminButton}
       />
     </div>
   );

@@ -87,11 +87,10 @@ const activitySchema = new Schema<IActivity>(
   },
 );
 
-// Validation: Either templateId OR customName must be provided
+// Validation: Template and customName are both optional now (category name will be used as fallback)
 activitySchema.pre('save', function(next) {
-  if (!this.templateId && !this.customName) {
-    return next(new Error('Entweder ein Template oder ein eigener Name muss angegeben werden.'));
-  }
+  // Removed validation requiring either templateId or customName
+  // Both can now be optional - category name will be used as fallback in the frontend
   
   if (this.templateId && this.customName) {
     return next(new Error('Es kann nicht gleichzeitig ein Template und ein eigener Name angegeben werden.'));
