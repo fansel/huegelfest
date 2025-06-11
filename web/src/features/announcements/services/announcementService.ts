@@ -10,7 +10,7 @@ import { initServices } from '@/lib/initServices';
 import { broadcast } from '@/lib/websocket/broadcast';
 import Reaction from '@/lib/db/models/Reaction';
 import { verifySession } from '@/features/auth/actions/userAuth';
-import agenda from '@/lib/pushScheduler/agenda';
+import getAgenda from '@/lib/pushScheduler/agenda';
 
 export async function getAllAnnouncements() {
   await initServices();
@@ -80,6 +80,7 @@ export async function deleteAnnouncement(id: string) {
 
 export async function saveAnnouncements(announcements: IAnnouncement[]): Promise<void> {
   await initServices();
+  const agenda = getAgenda();
   try {
     for (const announcement of announcements) {
       let group = null;
