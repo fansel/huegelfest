@@ -156,8 +156,8 @@ export const cleanupStaleJobs = async () => {
     for (const job of jobs) {
         if (job.attrs.lockedAt && job.attrs.lockedAt < new Date(Date.now() - 15 * 60 * 1000)) { // älter als 15 min
             logger.warn(`[Agenda] Unlocking stale job: ${job.attrs.name} (${job.attrs._id}) locked at ${job.attrs.lockedAt}`);
-            job.unlock();
-            job.save();
+            job.attrs.lockedAt = null;
+            await job.save();
             unlockedCount++;
         }
     }

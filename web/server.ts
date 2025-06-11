@@ -1,5 +1,5 @@
 // server.ts
-import { initializeAgenda } from './src/lib/pushScheduler/agenda.js';
+import { initializeAgenda, cleanupStaleJobs } from './src/lib/pushScheduler/agenda.js';
 import { createServer } from 'http';
 import { parse } from 'url';
 import next from 'next';
@@ -50,6 +50,7 @@ app
     try {
       await initializeAgenda();
       console.log('> [Agenda] Scheduler initialized successfully.');
+      await cleanupStaleJobs();
     } catch (error) {
       console.error('> [Agenda] Failed to initialize scheduler:', error);
       process.exit(1); // Exit if scheduler fails to start
