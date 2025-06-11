@@ -1,5 +1,5 @@
 // server.ts
-import  './src/lib/pushScheduler/agenda.js';
+import { initializeAgenda } from './src/lib/pushScheduler/agenda.js';
 import { createServer } from 'http';
 import { parse } from 'url';
 import next from 'next';
@@ -45,6 +45,15 @@ export function getWebSocketStats() {
 app
   .prepare()
   .then(async () => {
+
+    // ─── 0. Agenda Scheduler initialisieren ───────────────────────────────────────
+    try {
+      await initializeAgenda();
+      console.log('> [Agenda] Scheduler initialized successfully.');
+    } catch (error) {
+      console.error('> [Agenda] Failed to initialize scheduler:', error);
+      process.exit(1); // Exit if scheduler fails to start
+    }
 
     // ─── 1. HTTP-Server aufsetzen ────────────────────────────────────────────────
     const server = createServer((req, res) => {

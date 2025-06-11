@@ -1,8 +1,12 @@
+"use server";
+
 import ScheduledPushEvent from '../../lib/db/models/ScheduledPushEvent';
-import agenda from '../../lib/pushScheduler/agenda';
+import getAgenda from '../../lib/pushScheduler/agenda';
 import { IScheduledPushEvent } from '../../lib/db/models/ScheduledPushEvent';
+import { Types } from 'mongoose';
 
 export async function createScheduledPushEvent(data: Partial<IScheduledPushEvent>) {
+  const agenda = getAgenda();
   const event = await ScheduledPushEvent.create(data);
 
   // Agenda-Job anlegen
@@ -20,12 +24,13 @@ export async function createScheduledPushEvent(data: Partial<IScheduledPushEvent
 }
 
 export async function updateScheduledPushEvent(eventId: string, data: Partial<IScheduledPushEvent>) {
+  const agenda = getAgenda();
   const event = await ScheduledPushEvent.findById(eventId);
   if (!event) throw new Error('Event not found');
 
   // Alten Job löschen
   if (event.agendaJobId) {
-    await agenda.cancel({ _id: event.agendaJobId });
+    await agenda.cancel({ _id: new Types.ObjectId(event.agendaJobId) });
   }
 
   // Event aktualisieren
@@ -47,10 +52,11 @@ export async function updateScheduledPushEvent(eventId: string, data: Partial<IS
 }
 
 export async function deleteScheduledPushEvent(eventId: string) {
+  const agenda = getAgenda();
   const event = await ScheduledPushEvent.findById(eventId);
   if (!event) return;
   if (event.agendaJobId) {
-    await agenda.cancel({ _id: event.agendaJobId });
+    await agenda.cancel({ _id: new Types.ObjectId(event.agendaJobId) });
   }
   await event.deleteOne();
 }
@@ -60,6 +66,7 @@ export async function deleteScheduledPushEvent(eventId: string) {
  * Diese sollten nicht existieren und können sicher gelöscht werden
  */
 export async function cleanupPastPushEvents(): Promise<{ deleted: number; cleaned: number }> {
+  const agenda = getAgenda();
   const now = new Date();
   
   console.log(`[cleanupPastPushEvents] Starting cleanup for events scheduled before ${now.toISOString()}`);
@@ -80,7 +87,7 @@ export async function cleanupPastPushEvents(): Promise<{ deleted: number; cleane
     try {
       // Lösche Agenda-Job falls vorhanden
       if (event.agendaJobId) {
-        await agenda.cancel({ _id: event.agendaJobId });
+        await agenda.cancel({ _id: new Types.ObjectId(event.agendaJobId) });
         deletedJobs++;
         console.log(`[cleanupPastPushEvents] Deleted agenda job: ${event.agendaJobId} for event: ${event._id}`);
       }
