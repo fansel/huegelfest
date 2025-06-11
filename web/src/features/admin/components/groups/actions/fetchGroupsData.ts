@@ -6,6 +6,7 @@ import { getRegistrations } from '@/features/registration/actions/getRegistratio
 import type { GroupData, GroupAssignmentStats } from '../types';
 import type { User } from '@/features/admin/components/groups/components/types';
 import type { RegistrationWithId } from '@/features/admin/components/groups/components/types';
+import { unstable_cache as cache } from 'next/cache';
 
 export interface GroupsData {
   groups: GroupData[];
@@ -17,31 +18,38 @@ export interface GroupsData {
 /**
  * Aggregiert alle Daten für das Groups-Management: Gruppen, Statistiken, Benutzer, Anmeldungen
  */
-export async function fetchGroupsData(): Promise<GroupsData> {
-  try {
-    const [groupsResult, statsResult, usersData, registrationsData] = await Promise.all([
-      getAllGroups(),
-      getGroupStats(),
-      getAllUsersAction(),
-      getRegistrations()
-    ]);
+export const fetchGroupsData = cache(
+  async (): Promise<GroupsData> => {
+    try {
+      const [groupsResult, statsResult, usersData, registrationsData] = await Promise.all([
+        getAllGroups(),
+        getGroupStats(),
+        getAllUsersAction(),
+        getRegistrations()
+      ]);
 
-    const groups = groupsResult.success && groupsResult.data ? groupsResult.data : [];
-    const statistics = statsResult.success && statsResult.data ? statsResult.data : null;
+      const groups = groupsResult.success && groupsResult.data ? groupsResult.data : [];
+      const statistics = statsResult.success && statsResult.data ? statsResult.data : null;
 
-    return {
-      groups,
-      statistics,
-      users: usersData,
-      registrations: registrationsData
-    };
-  } catch (error) {
-    console.error('[fetchGroupsData] Fehler beim Laden der Gruppen-Daten:', error);
-    return {
-      groups: [],
-      statistics: null,
-      users: [],
-      registrations: []
-    };
+      return {
+        groups,
+        statistics,
+        users: usersData,
+        registrations: registrationsData
+      };
+    } catch (error) {
+      console.error('[fetchGroupsData] Fehler beim Laden der Gruppen-Daten:', error);
+      return {
+        groups: [],
+        statistics: null,
+        users: [],
+        registrations: []
+      };
+    }
+  },
+  ['groups-data'],
+  {
+    revalidate: 60, // Cache für 1 Minute
+    tags: ['groups', 'users', 'registrations'],
   }
-} 
+); 

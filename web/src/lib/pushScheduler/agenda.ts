@@ -10,6 +10,14 @@ import { Group, IGroup } from '../db/models/Group';
 
 interface SendPushEventData { eventId: string; }
 
+interface SendAnnouncementNotificationData {
+  title: string;
+  body: string;
+  icon?: string;
+  badge?: string;
+  data?: Record<string, any>;
+}
+
 const mongoUri = `mongodb://${process.env.MONGO_HOST || 'localhost'}:${process.env.MONGO_PORT || '27017'}/${process.env.MONGO_DB || 'huegelfest'}`;
 
 connectDB()
@@ -23,6 +31,16 @@ const agenda = new Agenda({
   defaultConcurrency: 5,
   maxConcurrency: 20,
   defaultLockLifetime: 600000,
+});
+
+agenda.define('send-announcement-notification', async (job: Job<SendAnnouncementNotificationData>) => {
+  await initWebpush();
+  if (!webPushService.isInitialized()) {
+    logger.error('[Agenda] WebPush not initialized, skipping announcement push.');
+    return;
+  }
+  const { title, body, icon, badge, data } = job.attrs.data;
+  await webPushService.sendNotificationToAll({ title, body, icon, badge, data });
 });
 
 agenda.define('sendPushEvent', async (job: Job<SendPushEventData>) => {

@@ -11,8 +11,5 @@ export async function updateAnnouncementReactionsAction(
   // Update in DB - Service verwendet nun Session-basierte Auth
   const result = await updateAnnouncementReaction(announcementId, reactionType);
   
-  // WebSocket-Broadcast für alle Clients
-  await broadcast('announcement-reaction-updated', { announcementId });
-  
   return result;
 } 

@@ -10,6 +10,7 @@ import { initServices } from '@/lib/initServices';
 import { broadcast } from '@/lib/websocket/broadcast';
 import Reaction from '@/lib/db/models/Reaction';
 import { verifySession } from '@/features/auth/actions/userAuth';
+import agenda from '@/lib/pushScheduler/agenda';
 
 export async function getAllAnnouncements() {
   await initServices();
@@ -104,15 +105,14 @@ export async function saveAnnouncements(announcements: IAnnouncement[]): Promise
           existingAnnouncement.updatedAt = new Date();
           await existingAnnouncement.save();
           // Push für aktualisierte Ankündigung
-          if (webPushService.isInitialized()) {
-            await webPushService.sendNotificationToAll({
-              title: `Gruppe ${group.name}`,
-              body: announcement.content,
-              icon: '/icon-192x192.png',
-              badge: '/badge-96x96.png',
-              data: { type: 'announcement', groupId: group._id, announcementId: existingAnnouncement._id }
-            });
-          }
+          const pushPayload = {
+            title: `Gruppe ${group.name}`,
+            body: announcement.content,
+            icon: '/icon-192x192.png',
+            badge: '/badge-96x96.png',
+            data: { type: 'announcement', groupId: group._id, announcementId: existingAnnouncement._id }
+          };
+          await agenda.now('send-announcement-notification', pushPayload);
           continue;
         }
       }
@@ -134,15 +134,14 @@ export async function saveAnnouncements(announcements: IAnnouncement[]): Promise
       });
       await newAnnouncement.save();
       // Push für neue Ankündigung
-      if (webPushService.isInitialized()) {
-        await webPushService.sendNotificationToAll({
-          title: `Gruppe ${group.name}`,
-          body: announcement.content,
-          icon: '/icon-192x192.png',
-          badge: '/badge-96x96.png',
-          data: { type: 'announcement', groupId: group._id, announcementId: newAnnouncement._id }
-        });
-      }
+      const pushPayload = {
+        title: `Gruppe ${group.name}`,
+        body: announcement.content,
+        icon: '/icon-192x192.png',
+        badge: '/badge-96x96.png',
+        data: { type: 'announcement', groupId: group._id, announcementId: newAnnouncement._id }
+      };
+      await agenda.now('send-announcement-notification', pushPayload);
     }
     if (typeof global !== 'undefined' && (global as any).sseService) {
       try {

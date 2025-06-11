@@ -165,19 +165,23 @@ app
           
         } catch (error) {
           // Fallback für nicht-JSON Nachrichten
-          const text = message.toString();
-          const senderId = connectionId || 'Anonymous';
-          console.log(`${senderId} (${connectionType}) sagt:`, text);
-          
-          for (const [client] of activeConnections) {
-            if (client.readyState === WebSocket.OPEN) {
-              client.send(JSON.stringify({ 
-                type: 'chat', 
-                sender: senderId,
-                senderType: connectionType,
-                text 
-              }));
+          try {
+            const text = message.toString();
+            const senderId = connectionId || 'Anonymous';
+            console.log(`${senderId} (${connectionType}) sagt:`, text);
+            
+            for (const [client] of activeConnections) {
+              if (client.readyState === WebSocket.OPEN) {
+                client.send(JSON.stringify({ 
+                  type: 'chat', 
+                  sender: senderId,
+                  senderType: connectionType,
+                  text 
+                }));
+              }
             }
+          } catch (e) {
+            console.error('[WebSocket] Fehler beim Verarbeiten einer nicht-JSON-Nachricht:', e);
           }
         }
       });

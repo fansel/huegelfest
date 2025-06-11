@@ -6,7 +6,10 @@ import {
   getAllUsers,
   deleteUser,
   getCurrentUserStats,
-  linkCurrentUserWithRegistration
+  linkCurrentUserWithRegistration,
+  createUser,
+  updateUser,
+  updateUserRole,
 } from '../services/userService';
 import { broadcast } from '@/lib/websocket/broadcast';
 import { removeUserFromGroupAction } from '@/features/admin/components/groups/actions/groupActions';
@@ -14,6 +17,8 @@ import { verifyAdminSession } from './userAuth';
 import { User } from '@/lib/db/models/User';
 import { connectDB } from '@/lib/db/connector';
 import { authEvents, AUTH_EVENTS } from '../authEvents';
+import { revalidatePath } from "next/cache";
+import { unstable_cache as cache } from 'next/cache';
 
 /**
  * Modernisierte User Actions - verwendet das neue Auth-System
@@ -71,10 +76,17 @@ export async function getCurrentUserStatsAction() {
  * Server Action: Holt alle User (Admin-Funktion)
  */
 export async function getAllUsersAction() {
+  const getAllUsersCached = cache(
+    async () => getAllUsers(),
+    ['get-all-users'],
+    {
+      revalidate: 60, // Cache für 1 Minute
+      tags: ['users'],
+    }
+  );
+
   try {
-    const admin = await verifyAdminSession();
-    if (!admin) throw new Error('Nicht autorisiert');
-    return await getAllUsers();
+    return await getAllUsersCached();
   } catch (error) {
     console.error('[UserActions] Fehler bei getAllUsers:', error);
     return [];

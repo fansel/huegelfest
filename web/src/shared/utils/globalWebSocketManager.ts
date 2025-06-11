@@ -28,6 +28,7 @@ class GlobalWebSocketManager {
   private reconnectAttempts = 0;
   private maxReconnectAttempts = 10;
   private baseReconnectDelay = 1000; // 1s
+  private reconnectTimeoutId: NodeJS.Timeout | null = null;
   private listeners: WebSocketListeners = {
     onMessage: new Set(),
     onOpen: new Set(),
@@ -43,6 +44,17 @@ class GlobalWebSocketManager {
   }
 
   /**
+   * Erzwingt eine neue Verbindung
+   * Nützlich bei User-Wechsel
+   */
+  reconnect() {
+    if (this.ws) {
+      this.disconnect();
+    }
+    this.connect();
+  }
+
+  /**
    * Initialisiert WebSocket-Verbindung
    * @param userId - ID des authentifizierten Benutzers (null für anonyme Verbindungen)
    */
@@ -53,14 +65,14 @@ class GlobalWebSocketManager {
     if (this.userId !== userId) {
       this.userId = userId;
       
-      // Schließe bestehende Verbindung wenn User sich ändert
-      if (this.ws && this.ws.readyState === WebSocket.OPEN) {
-        this.disconnect();
+      // Schließe bestehende Verbindung und baue neue auf
+      if (this.ws) {
+        this.reconnect();
       }
     }
 
-    // Verbinden wenn noch keine Verbindung existiert (sowohl für authentifizierte als auch anonyme User)
-    if (!this.ws || this.ws.readyState === WebSocket.CLOSED) {
+    // Verbinden wenn noch keine Verbindung existiert
+    if (!this.ws && !this.isConnecting) {
       this.connect();
     }
   }
@@ -181,6 +193,7 @@ class GlobalWebSocketManager {
       this.ws.onclose = (event) => {
         console.log(`[GlobalWebSocket] Verbindung getrennt:`, event.code, event.reason);
         this.isConnecting = false;
+        this.ws = null;
         
         // Alle onClose-Handler aufrufen
         this.listeners.onClose.forEach(handler => {
@@ -191,7 +204,7 @@ class GlobalWebSocketManager {
           }
         });
 
-        // Intelligente Reconnection (sowohl für authentifizierte als auch anonyme User)
+        // Intelligente Reconnection
         this.scheduleReconnect();
       };
 
@@ -233,7 +246,7 @@ class GlobalWebSocketManager {
     this.reconnectAttempts++;
     console.log(`[GlobalWebSocket] Reconnect in ${delay}ms (Versuch ${this.reconnectAttempts})`);
 
-    setTimeout(() => {
+    this.reconnectTimeoutId = setTimeout(() => {
       if (typeof window !== 'undefined') {
         this.connect();
       }
@@ -241,14 +254,26 @@ class GlobalWebSocketManager {
   }
 
   /**
-   * Schließt Verbindung
+   * Schließt die Verbindung und unterbindet Reconnects
    */
   disconnect() {
+    // Laufende Reconnect-Versuche stoppen
+    if (this.reconnectTimeoutId) {
+      clearTimeout(this.reconnectTimeoutId);
+      this.reconnectTimeoutId = null;
+    }
+    this.reconnectAttempts = 0; // Reset für manuelle Wiederverbindung
+
     if (this.ws) {
+      console.log('[GlobalWebSocket] Schließe Verbindung explizit');
+      // Event-Listener entfernen um getrennt-Logik zu umgehen
+      this.ws.onclose = null; 
+      this.ws.onerror = null;
+      this.ws.onopen = null;
+      this.ws.onmessage = null;
       this.ws.close();
       this.ws = null;
     }
-    // userId nicht auf null setzen - wird beim nächsten initialize() gesetzt
   }
 
   /**

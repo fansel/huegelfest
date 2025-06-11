@@ -140,49 +140,61 @@ class WebPushService {
     }
 
     try {
-      logger.info('[WebPush] Starte Senden der Benachrichtigungen', { 
+      logger.info('[WebPush] Starte Senden der Benachrichtigungen', {
         title: payload.title,
         body: payload.body,
         payloadSize: JSON.stringify(payload).length
       });
 
-      // Sende an alle Subscriber (egal ob userId gesetzt oder nicht)
-      const subscribers = await Subscriber.find().exec();
-      const subscriberCount = subscribers.length;
-      
-      if (subscriberCount === 0) {
-        logger.warn('[WebPush] Keine Subscriber gefunden');
-        return { success: true, stats: { total: 0, success: 0, failed: 0 } };
+      const BATCH_SIZE = 100;
+      let totalSuccessCount = 0;
+      let totalFailureCount = 0;
+      let totalSubscribers = 0;
+      let hasMore = true;
+      let page = 0;
+
+      while (hasMore) {
+        const subscribers = await Subscriber.find()
+          .skip(page * BATCH_SIZE)
+          .limit(BATCH_SIZE)
+          .exec();
+        
+        if (subscribers.length === 0) {
+          hasMore = false;
+          continue;
+        }
+
+        totalSubscribers += subscribers.length;
+
+        const results = await Promise.allSettled(
+          subscribers.map(subscriber => {
+            const subscription = {
+              endpoint: subscriber.endpoint,
+              keys: subscriber.keys
+            };
+            return this.sendNotification(subscription, payload);
+          })
+        );
+
+        totalSuccessCount += results.filter(r => r.status === 'fulfilled').length;
+        totalFailureCount += results.filter(r => r.status === 'rejected').length;
+
+        page++;
       }
 
-      // Sende parallel an alle Subscriber
-      const results = await Promise.allSettled(
-        subscribers.map(subscriber => {
-          const subscription = {
-            endpoint: subscriber.endpoint,
-            keys: subscriber.keys
-          };
-          return this.sendNotification(subscription, payload);
-        })
-      );
-
-      // Analysiere Ergebnisse
-      const successCount = results.filter(r => r.status === 'fulfilled').length;
-      const failureCount = results.filter(r => r.status === 'rejected').length;
-
       logger.info('[WebPush] Alle Benachrichtigungen abgeschlossen', {
-        total: subscriberCount,
-        success: successCount,
-        failed: failureCount,
+        total: totalSubscribers,
+        success: totalSuccessCount,
+        failed: totalFailureCount,
         timestamp: new Date().toISOString()
       });
 
       return {
-        success: successCount > 0,
+        success: totalSuccessCount > 0,
         stats: {
-          total: subscriberCount,
-          success: successCount,
-          failed: failureCount
+          total: totalSubscribers,
+          success: totalSuccessCount,
+          failed: totalFailureCount
         }
       };
     } catch (error) {

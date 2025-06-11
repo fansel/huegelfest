@@ -248,7 +248,7 @@ export async function deleteUser(userId: string): Promise<{ success: boolean; er
     logger.info(`[UserService] User ${userToDelete.name} (${userToDelete.email}) durch Admin ${sessionData.email} gelöscht`);
     return { success: true };
   } catch (error) {
-    logger.error('[UserService] Fehler bei deleteUser:', error);
+    logger.error(`[UserService] Fehler beim Löschen von User ${userId}:`, error);
     return { success: false, error: 'Fehler beim Löschen des Users' };
   }
 }
@@ -365,4 +365,25 @@ export async function deleteUserCompletely(userId: string): Promise<{ success: b
     logger.error('[UserService] Fehler bei deleteUserCompletely:', error);
     return { success: false, error: 'Fehler beim vollständigen Löschen des Users' };
   }
+}
+
+export async function createUser(data: any) {
+  // admin check is in action
+  await connectDB();
+  const newUser = await User.create(data);
+  return newUser;
+}
+
+export async function updateUser(id: string, data: any) {
+  // admin check is in action
+  await connectDB();
+  const updatedUser = await User.findByIdAndUpdate(id, data, { new: true });
+  return updatedUser;
+}
+
+export async function updateUserRole(id: string, role: 'user' | 'admin') {
+  // admin check is in action
+  await connectDB();
+  const updatedUser = await User.findByIdAndUpdate(id, { role }, { new: true });
+  return updatedUser;
 } 
