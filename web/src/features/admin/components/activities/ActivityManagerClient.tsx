@@ -421,13 +421,23 @@ const ActivityManagerClient: React.FC<ActivityManagerProps> = ({ initialData }) 
         }
       } else {
         // Create new activity - userId wird server-side aus Session extrahiert
+        
+        // Wenn kein customName, aber eine TemplateId vorhanden ist, wird der Template-Name als customName verwendet
+        let finalCustomName = activityForm.customName;
+        if (!finalCustomName && activityForm.templateId) {
+          const template = templates.find(t => t._id === activityForm.templateId);
+          if (template) {
+            finalCustomName = template.name;
+          }
+        }
+        
         const result = await createActivityAction({
           date: selectedDate,
           startTime: activityForm.startTime,
           endTime: activityForm.endTime || undefined,
           categoryId: activityForm.categoryId,
           templateId: activityForm.templateId || undefined,
-          customName: activityForm.customName || undefined,
+          customName: finalCustomName || undefined,
           description: activityForm.description || undefined,
           groupId: activityForm.groupId || undefined,
           responsibleUsers: activityForm.responsibleUsers || undefined,

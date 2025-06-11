@@ -77,7 +77,8 @@ export default function ActivitiesClient() {
           msg.topic === 'ACTIVITY_DELETED' ||
           msg.topic === 'group-updated' ||
           msg.topic === 'user-assigned' ||
-          msg.topic === 'user-removed') {
+          msg.topic === 'user-removed' ||
+          msg.topic === 'CHAT_MESSAGE_CREATED') {
         
         console.log('[ActivitiesClient] Activities-Update erkannt, invalidiere SWR Cache');
         mutate();
@@ -89,7 +90,8 @@ export default function ActivitiesClient() {
       'ACTIVITY_DELETED',
       'group-updated',
       'user-assigned',
-      'user-removed'
+      'user-removed',
+      'CHAT_MESSAGE_CREATED'
     ]
   });
 
