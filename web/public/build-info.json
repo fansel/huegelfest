@@ -1,8 +1,8 @@
 {
   "version": "0.1.0",
-  "buildId": "c954fe0",
-  "buildTime": 1749594491313,
-  "buildDate": "2025-06-10T22:28:11.313Z",
-  "nodeVersion": "v23.11.0",
-  "platform": "darwin"
+  "buildId": "4b57fc4",
+  "buildTime": 1751560197406,
+  "buildDate": "2025-07-03T16:29:57.406Z",
+  "nodeVersion": "v20.19.2",
+  "platform": "linux"
 }
