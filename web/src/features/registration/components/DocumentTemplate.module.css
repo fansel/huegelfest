@@ -1,0 +1,179 @@
+/* Document Template Styles */
+.documentTemplate {
+  max-width: 1024px;
+  margin: 0 auto;
+  background: white;
+  padding: 2rem;
+  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
+  line-height: 1.6;
+  color: #333;
+}
+
+.documentBody {
+  margin-bottom: 2rem;
+}
+
+/* Bank Details Section */
+.bankDetailsSection {
+  background: #f9fafb;
+  border: 1px solid #e5e7eb;
+  border-radius: 8px;
+  padding: 1.5rem;
+  margin-bottom: 1.5rem;
+}
+
+.bankDetailsTitle {
+  font-size: 1.125rem;
+  font-weight: 600;
+  color: #1f2937;
+  margin-bottom: 1rem;
+  border-bottom: 2px solid #ff9900;
+  padding-bottom: 8px;
+}
+
+.bankDetailsContent {
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+}
+
+.bankDetailRow {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+@media (min-width: 640px) {
+  .bankDetailRow {
+    flex-direction: row;
+    align-items: center;
+  }
+}
+
+.bankDetailLabel {
+  font-weight: 500;
+  color: #374151;
+  flex: 0 0 auto;
+  width: 120px;
+  min-width: 0;
+}
+
+.bankDetailValue {
+  color: #111827;
+  flex: 1;
+  min-width: 0;
+}
+
+/* IBAN specific styling with line break support */
+.iban {
+  font-family: 'SF Mono', Monaco, 'Cascadia Code', 'Roboto Mono', Consolas, 'Courier New', monospace;
+  letter-spacing: 0.05em;
+  word-break: break-all;
+  word-wrap: break-word;
+  hyphens: auto;
+  /* Ensure IBAN groups are preserved when possible */
+  white-space: pre-wrap;
+  font-weight: 500;
+}
+
+/* For very long IBANs, allow breaking at specific points */
+.iban::after {
+  content: "";
+  display: inline-block;
+  width: 0;
+}
+
+/* Responsive handling for mobile devices */
+@media (max-width: 640px) {
+  .bankDetailRow {
+    flex-direction: column;
+    align-items: flex-start;
+  }
+  
+  .bankDetailLabel {
+    width: 100%;
+  }
+  
+  .iban {
+    font-size: 0.875rem;
+    /* Allow breaking IBAN into chunks on mobile */
+    overflow-wrap: break-word;
+    word-break: break-all;
+  }
+}
+
+/* Document Sections (Terms and Public Notes) */
+.documentSection {
+  margin-top: 2rem;
+  padding-top: 1.5rem;
+  border-top: 1px solid #e5e7eb;
+}
+
+.sectionTitle {
+  font-size: 1.125rem;
+  font-weight: 600;
+  color: #460b6c;
+  margin-bottom: 1rem;
+}
+
+.sectionContent {
+  color: #374151;
+  line-height: 1.75;
+}
+
+.sectionContent p {
+  margin-bottom: 0.75rem;
+}
+
+.sectionContent ul,
+.sectionContent ol {
+  margin-left: 1.5rem;
+  margin-bottom: 0.75rem;
+}
+
+.sectionContent li {
+  margin-bottom: 0.25rem;
+}
+
+.sectionContent h4 {
+  font-weight: 600;
+  color: #1f2937;
+  margin-top: 1rem;
+  margin-bottom: 0.5rem;
+}
+
+.sectionContent strong {
+  font-weight: 600;
+  color: #1f2937;
+}
+
+/* Print styles */
+@media print {
+  .documentTemplate {
+    padding: 1rem;
+    max-width: none;
+    background: white;
+    box-shadow: none;
+  }
+  
+  .bankDetailsSection {
+    border: 1px solid #6b7280;
+    background: white;
+  }
+  
+  .iban {
+    /* Ensure IBAN is readable when printed */
+    font-size: 12px;
+    letter-spacing: 0.5px;
+  }
+  
+  .documentSection {
+    border-top: 1px solid #6b7280;
+  }
+  
+  /* Avoid page breaks inside important sections */
+  .bankDetailsSection,
+  .documentSection {
+    page-break-inside: avoid;
+  }
+}

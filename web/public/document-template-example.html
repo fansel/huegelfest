@@ -1,0 +1,112 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Dokumentvorlage mit Platzhaltern</title>
+    <style>
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
+            line-height: 1.6;
+            color: #333;
+            max-width: 800px;
+            margin: 0 auto;
+            padding: 2rem;
+        }
+        
+        .bank-details {
+            background: #f9fafb;
+            border: 1px solid #e5e7eb;
+            border-radius: 8px;
+            padding: 1.5rem;
+            margin: 2rem 0;
+        }
+        
+        .bank-details h3 {
+            color: #1f2937;
+            margin-bottom: 1rem;
+            border-bottom: 2px solid #ff9900;
+            padding-bottom: 8px;
+        }
+        
+        .bank-detail {
+            display: flex;
+            margin-bottom: 0.5rem;
+        }
+        
+        .bank-detail .label {
+            font-weight: 500;
+            color: #374151;
+            width: 120px;
+            flex-shrink: 0;
+        }
+        
+        .bank-detail .value {
+            color: #111827;
+        }
+        
+        .iban {
+            font-family: 'SF Mono', Monaco, 'Cascadia Code', 'Roboto Mono', Consolas, 'Courier New', monospace;
+            letter-spacing: 0.05em;
+            word-break: break-all;
+            font-weight: 500;
+        }
+        
+        .document-section {
+            margin-top: 2rem;
+            padding-top: 1.5rem;
+            border-top: 1px solid #e5e7eb;
+        }
+        
+        .document-section h3 {
+            color: #460b6c;
+            margin-bottom: 1rem;
+        }
+        
+        @media (max-width: 640px) {
+            .bank-detail {
+                flex-direction: column;
+            }
+            
+            .bank-detail .label {
+                width: 100%;
+            }
+            
+            .iban {
+                font-size: 0.875rem;
+                overflow-wrap: break-word;
+            }
+        }
+    </style>
+</head>
+<body>
+    <h1>Bestätigung - Hügelfest Anmeldung</h1>
+    
+    <p>Vielen Dank für Ihre Anmeldung zum Hügelfest! Hier sind die Zahlungsdetails:</p>
+    
+    <div class="bank-details">
+        <h3>Bankverbindung</h3>
+        <div class="bank-detail">
+            <span class="label">Kontoinhaber:</span>
+            <span class="value">Hügelfest e.V.</span>
+        </div>
+        <div class="bank-detail">
+            <span class="label">IBAN:</span>
+            <span class="value iban">DE89 3701 0050 0123 4567 89</span>
+        </div>
+        <div class="bank-detail">
+            <span class="label">BIC:</span>
+            <span class="value">BYLADEM1001</span>
+        </div>
+        <div class="bank-detail">
+            <span class="label">Bank:</span>
+            <span class="value">Postbank</span>
+        </div>
+    </div>
+    
+    <!-- Placeholder divs at the bottom of document body -->
+    <div id="terms">$terms</div>
+    <div id="public-notes">$public_notes</div>
+    
+</body>
+</html>
