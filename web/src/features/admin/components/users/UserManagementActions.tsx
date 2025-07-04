@@ -390,23 +390,19 @@ export function UserManagementActions({ users, onRefreshUsers }: UserManagementA
                     <div className="flex items-center justify-between">
                       <div className="flex-1 min-w-0">
                         <div className="flex items-center gap-2 mb-1">
-                          <h3 className="font-medium text-gray-900 truncate">
-                            {user.name}
+                          <h3 className="text-sm font-medium text-gray-900 truncate">
+                            @{user.username || user.name.toLowerCase().replace(/\s+/g, '')}
                           </h3>
-                          
-                          {/* Role Badge */}
-                          <Badge variant={user.role === 'admin' ? 'destructive' : 'secondary'}>
+                          <Badge variant={user.role === 'admin' ? 'destructive' : 'secondary'} className="text-xs">
                             {user.role === 'admin' ? 'Admin' : 'User'}
                           </Badge>
-                          
-                          {/* Reset sent indicator */}
                           {sentResets.has(user._id) && (
-                            <Badge className="bg-green-100 text-green-700 border-green-300">
-                              <CheckCircle className="h-3 w-3 mr-1" />
-                              Reset gesendet
+                            <Badge className="bg-green-100 text-green-700 border-green-300 text-xs">
+                              <CheckCircle className="h-3 w-3 mr-1" /> Reset gesendet
                             </Badge>
                           )}
                         </div>
+                        <p className="text-xs text-gray-500 truncate">{user.name}</p>
                         
                         <div className="text-sm text-gray-600 space-y-1">
                           {user.email ? (
@@ -418,13 +414,6 @@ export function UserManagementActions({ users, onRefreshUsers }: UserManagementA
                             <div className="text-orange-600">
                               <AlertCircle className="h-3 w-3 inline mr-1" />
                               Keine E-Mail hinterlegt
-                            </div>
-                          )}
-                          
-                          {user.username && (
-                            <div className="flex items-center gap-1">
-                              <UserIcon className="h-3 w-3" />
-                              <span>@{user.username}</span>
                             </div>
                           )}
                           

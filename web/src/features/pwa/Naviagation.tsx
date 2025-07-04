@@ -26,26 +26,43 @@ function useAutoHideNavigation() {
   const [isVisible, setIsVisible] = useState(true);
   const [lastScrollY, setLastScrollY] = useState(0);
   const [ticking, setTicking] = useState(false);
+  const [isScrolling, setIsScrolling] = useState(false);
 
   useEffect(() => {
+    let scrollTimeout: NodeJS.Timeout;
+
     const updateScrollDir = () => {
       const scrollY = window.pageYOffset || document.documentElement.scrollTop;
       
-      if (Math.abs(scrollY - lastScrollY) < 10) {
+      // Kleinerer Schwellenwert für sanftere Reaktion
+      if (Math.abs(scrollY - lastScrollY) < 5) {
         setTicking(false);
         return;
       }
+
+      setIsScrolling(true);
       
-      // Nach unten scrollen = ausblenden (außer ganz oben)
-      if (scrollY > lastScrollY && scrollY > 100) {
+      // Scroll-Timeout zurücksetzen
+      clearTimeout(scrollTimeout);
+      scrollTimeout = setTimeout(() => {
+        setIsScrolling(false);
+      }, 150);
+      
+      // Größere Schwellenwerte für stabileres Verhalten
+      const HIDE_THRESHOLD = 80; // Erst nach 80px nach unten scrollen ausblenden
+      const SHOW_THRESHOLD = 20; // Bei 20px nach oben scrollen wieder einblenden
+      const TOP_THRESHOLD = 100; // Ganz oben immer sichtbar
+      
+      // Nach unten scrollen = ausblenden (nur bei ausreichend Scroll-Abstand)
+      if (scrollY > lastScrollY && scrollY > HIDE_THRESHOLD && (scrollY - lastScrollY) > 10) {
         setIsVisible(false);
       } 
-      // Nach oben scrollen = einblenden
-      else if (scrollY < lastScrollY) {
+      // Nach oben scrollen = einblenden (schon bei kleiner Bewegung)
+      else if (scrollY < lastScrollY && (lastScrollY - scrollY) > 5) {
         setIsVisible(true);
       }
       // Ganz oben = immer sichtbar
-      else if (scrollY <= 50) {
+      else if (scrollY <= TOP_THRESHOLD) {
         setIsVisible(true);
       }
 
@@ -60,9 +77,35 @@ function useAutoHideNavigation() {
       }
     };
 
-    window.addEventListener('scroll', onScroll);
-    return () => window.removeEventListener('scroll', onScroll);
-  }, [lastScrollY, ticking]);
+    // Touch-Events für bessere mobile Behandlung
+    const onTouchStart = () => {
+      // Bei Touch-Start Navigation sichtbar machen für bessere Interaktion
+      setIsVisible(true);
+    };
+
+    const onTouchEnd = () => {
+      // Nach Touch-Ende kurz warten bevor Auto-Hide wieder aktiv wird
+      setTimeout(() => {
+        if (!isScrolling) {
+          const scrollY = window.pageYOffset || document.documentElement.scrollTop;
+          if (scrollY > 100) {
+            setIsVisible(false);
+          }
+        }
+      }, 300);
+    };
+
+    window.addEventListener('scroll', onScroll, { passive: true });
+    window.addEventListener('touchstart', onTouchStart, { passive: true });
+    window.addEventListener('touchend', onTouchEnd, { passive: true });
+    
+    return () => {
+      window.removeEventListener('scroll', onScroll);
+      window.removeEventListener('touchstart', onTouchStart);
+      window.removeEventListener('touchend', onTouchEnd);
+      clearTimeout(scrollTimeout);
+    };
+  }, [lastScrollY, ticking, isScrolling]);
 
   return isVisible;
 }
@@ -179,16 +222,12 @@ const BottomBar: React.FC<BottomBarProps> = ({ mode, activeTab, onTabChange, isA
   if (isMobileLayout) {
     const barPositionClasses = 'bottom-0 h-16 bg-[#460b6c] border-t-2 border-[#ff9900]';
     
-    // Auto-Hide Animation: translateY und opacity
-    const hideTransform = isNavVisible ? 'translateY(0)' : 'translateY(100%)';
-    const hideOpacity = isNavVisible ? '1' : '0';
-
     return (
       <nav 
-        className={`main-bar fixed left-0 right-0 z-40 flex items-center ${barPositionClasses} shadow-t transition-all duration-300 ease-in-out`}
+        className={`main-bar fixed left-0 right-0 z-40 flex items-center ${barPositionClasses} shadow-t transition-transform duration-500 ease-out`}
         style={{
-          transform: hideTransform,
-          opacity: hideOpacity,
+          transform: isNavVisible ? 'translateY(0)' : 'translateY(100%)',
+          willChange: 'transform',
         }}
       >
         <div className="flex w-full justify-between">

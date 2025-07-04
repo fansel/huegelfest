@@ -257,3 +257,37 @@ input, textarea {
   }
 }
 
+/* Mobile-optimiertes Scroll-Verhalten für besseres Auto-Hide */
+@media (max-width: 768px) {
+  html {
+    /* Stabilerer Viewport für mobile Geräte */
+    -webkit-text-size-adjust: 100%;
+    height: 100%;
+  }
+  
+  body {
+    /* Smooth Scrolling und stabiler Viewport */
+    -webkit-overflow-scrolling: touch;
+    overscroll-behavior: none;
+    min-height: 100vh;
+    /* Zusätzlicher Platz um Auto-Hide zu ermöglichen ohne Sprünge */
+    min-height: calc(100vh + 200px);
+  }
+  
+  /* Verhindere Touch-Zooming während Scroll-Interaktionen */
+  .main-bar {
+    touch-action: manipulation;
+  }
+  
+  /* Sanftere Touch-Interaktionen */
+  * {
+    -webkit-tap-highlight-color: transparent;
+    touch-action: manipulation;
+  }
+  
+  /* Ausnahmen für interaktive Elemente */
+  button, input, textarea, select {
+    touch-action: auto;
+  }
+}
+

@@ -31,7 +31,7 @@ export function useGroupsWebSocket(initialData?: GroupsData) {
   });
   const [loading, setLoading] = useState(!initialData); // No loading if initial data provided
   const [connected, setConnected] = useState(false);
-  
+
   // Refs für Debouncing und Stabilisierung
   const connectionDebounceRef = useRef<NodeJS.Timeout | null>(null);
   const lastConnectionStateRef = useRef<boolean | null>(null);

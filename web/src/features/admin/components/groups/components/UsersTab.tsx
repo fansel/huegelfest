@@ -41,7 +41,7 @@ export function UsersTab({
 
   const filteredUsers = users.filter(user => 
     user.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-    user.email.toLowerCase().includes(searchTerm.toLowerCase())
+    (user.email && user.email.toLowerCase().includes(searchTerm.toLowerCase()))
   );
 
   const handleAssignToGroup = async (userId: string, groupId: string) => {
@@ -158,8 +158,11 @@ export function UsersTab({
                     }}
                   />
                   <div className="min-w-0 flex-1">
-                    <div className="font-medium text-sm truncate">{user.name}</div>
-                    <div className="text-xs text-gray-500 font-mono truncate">{user.email}</div>
+                    <div className="font-medium text-sm truncate">
+                      @{user.name.toLowerCase().replace(/\s+/g, '')}
+                    </div>
+                    <div className="text-xs text-gray-500 truncate">{user.name}</div>
+                    <div className="text-xs text-gray-500 font-mono truncate">{user.email || 'Keine E-Mail'}</div>
                   </div>
                   <div className="flex items-center gap-1">
                     <button
@@ -322,8 +325,11 @@ export function UsersTab({
                     backgroundColor: userGroup?.color || '#cccccc'
                   }}
                 />
-                <span className="font-medium">{user.name}</span>
-                <span className="text-sm text-gray-500 font-mono">{user.email}</span>
+                <div className="flex flex-col">
+                  <span className="font-medium">@{user.name.toLowerCase().replace(/\s+/g, '')}</span>
+                  <span className="text-xs text-gray-500">{user.name}</span>
+                </div>
+                <span className="text-sm text-gray-500 font-mono">{user.email || 'Keine E-Mail'}</span>
                 {userGroup && (
                   <span className={`text-xs px-2 py-1 rounded ${
                     userGroup.isAssignable 
