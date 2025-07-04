@@ -59,14 +59,14 @@ class NetworkStatusManager {
     window.addEventListener('focus', this.handleFocus);
     document.addEventListener('visibilitychange', this.handleVisibilityChange);
 
-    // Regular health checks (30 seconds)
+    // Weniger häufige Regular Health Checks (45 Sekunden statt 30)
     this.healthCheckInterval = setInterval(() => {
       if (navigator.onLine) {
         this.checkServerConnection();
       } else {
         this.updateServerStatus(false);
       }
-    }, 30000);
+    }, 45000);
   }
 
   private cleanup() {
@@ -118,9 +118,9 @@ class NetworkStatusManager {
   };
 
   private async checkServerConnection() {
-    // Rate limiting: minimum 10 seconds between checks
+    // Erhöhtes Rate Limiting: minimum 15 Sekunden zwischen Checks (statt 10)
     const now = Date.now();
-    if (now - this.lastHealthCheckTime < 10000) {
+    if (now - this.lastHealthCheckTime < 15000) {
       return;
     }
     
@@ -130,7 +130,7 @@ class NetworkStatusManager {
       const cacheBuster = `?cb=${Date.now()}`;
       const response = await fetch(`/api/health${cacheBuster}`, { 
         method: 'HEAD',
-        signal: AbortSignal.timeout(3000),
+        signal: AbortSignal.timeout(8000), // Erhöht von 3000ms auf 8000ms für langsamere Netzwerke
         cache: 'no-store',
         headers: {
           'Cache-Control': 'no-cache, no-store, must-revalidate',
@@ -172,7 +172,7 @@ class NetworkStatusManager {
     this.lastHealthCheckTime = 0; // Reset rate limiting
     await this.checkServerConnection();
     
-    // Start moderate aggressive checking for 60 seconds
+    // Weniger aggressive Checks für 90 Sekunden (statt 60)
     if (this.aggressiveHealthCheckRef) {
       clearInterval(this.aggressiveHealthCheckRef);
     }
@@ -182,13 +182,13 @@ class NetworkStatusManager {
       checksCount++;
       await this.checkServerConnection();
       
-      if (checksCount >= 6) { // 6 checks = 60 seconds
+      if (checksCount >= 6) { // 6 checks = 90 Sekunden (15s * 6)
         if (this.aggressiveHealthCheckRef) {
           clearInterval(this.aggressiveHealthCheckRef);
           this.aggressiveHealthCheckRef = undefined;
         }
       }
-    }, 10000);
+    }, 15000); // Erhöht von 10000ms auf 15000ms
   }
 
   getCurrentStatus(): NetworkStatus {

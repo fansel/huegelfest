@@ -85,12 +85,12 @@ export function GroupsOverviewWebSocketClient({ initialData }: GroupsOverviewWeb
   if (isMobile) {
     return (
       <div className="bg-white min-h-screen">
-        {/* Mobile Connection Status */}
+        {/* Mobile Connection Status - Verbesserte Stabilität */}
         <div className="bg-gray-50 px-4 py-2 text-xs flex justify-between items-center border-b">
           <span className="font-medium">Groups Manager</span>
           <div className="flex items-center gap-2">
-            <div className={`w-2 h-2 rounded-full ${connected ? 'bg-green-500' : 'bg-red-500'}`}></div>
-            <span className={connected ? 'text-green-600' : 'text-red-600'}>
+            <div className={`w-2 h-2 rounded-full transition-colors duration-1000 ${connected ? 'bg-green-500' : 'bg-orange-500'}`}></div>
+            <span className={`transition-colors duration-1000 ${connected ? 'text-green-600' : 'text-orange-600'}`}>
               {connected ? 'Live' : 'Offline'}
             </span>
             {!connected && (
@@ -301,13 +301,13 @@ export function GroupsOverviewWebSocketClient({ initialData }: GroupsOverviewWeb
   // Desktop Layout: Original Layout beibehalten
   return (
     <div className="bg-white min-h-screen">
-      {/* Connection Status */}
+      {/* Connection Status - Verbesserte Anzeige */}
       <div className="bg-gray-50 px-6 py-2 text-xs flex justify-between items-center border-b">
         <span>Groups Management</span>
         <div className="flex items-center gap-2">
-          <div className={`w-2 h-2 rounded-full ${connected ? 'bg-green-500' : 'bg-red-500'}`}></div>
-          <span className={connected ? 'text-green-600' : 'text-red-600'}>
-            {connected ? 'Live-Updates aktiv' : 'WebSocket nicht verfügbar'}
+          <div className={`w-2 h-2 rounded-full transition-colors duration-1000 ${connected ? 'bg-green-500' : 'bg-orange-500'}`}></div>
+          <span className={`transition-colors duration-1000 ${connected ? 'text-green-600' : 'text-orange-600'}`}>
+            {connected ? 'Live-Updates aktiv' : 'Netzwerk stabilisiert sich'}
           </span>
           {!connected && (
             <button 

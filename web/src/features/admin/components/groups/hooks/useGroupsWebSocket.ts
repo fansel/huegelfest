@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState, useCallback } from 'react';
+import { useEffect, useState, useCallback, useRef } from 'react';
 import { toast } from 'react-hot-toast';
 import { useGlobalWebSocket, WebSocketMessage } from '@/shared/hooks/useGlobalWebSocket';
 import { getWebSocketUrl } from '@/shared/utils/getWebSocketUrl';
@@ -20,6 +20,7 @@ type GroupsWebSocketEventType =
 /**
  * Hook für Echtzeit-Synchronisation der Groups-Daten über die bestehende WebSocket-Infrastruktur
  * Folgt dem Muster von useTimelineWebSocket
+ * Mit verbesserter Stabilisierung für instabile Netzwerke
  */
 export function useGroupsWebSocket(initialData?: GroupsData) {
   const [data, setData] = useState<GroupsData>(initialData || {
@@ -30,18 +31,67 @@ export function useGroupsWebSocket(initialData?: GroupsData) {
   });
   const [loading, setLoading] = useState(!initialData); // No loading if initial data provided
   const [connected, setConnected] = useState(false);
+  
+  // Refs für Debouncing und Stabilisierung
+  const connectionDebounceRef = useRef<NodeJS.Timeout | null>(null);
+  const lastConnectionStateRef = useRef<boolean | null>(null);
+  const connectionStabilityCountRef = useRef(0);
 
-  // Echten WebSocket-Status vom globalen Manager abfragen
+  // Verbesserte Verbindungsstatusüberwachung mit Debouncing
   const updateConnectionStatus = useCallback(() => {
     const status = globalWebSocketManager.getStatus();
-    setConnected(status.connected);
-  }, []);
+    const currentConnectionState = status.connected;
+    
+    // Wenn sich der Status geändert hat, beginne Stabilisierungsperiode
+    if (lastConnectionStateRef.current !== currentConnectionState) {
+      // Reset Zähler bei Statusänderung
+      connectionStabilityCountRef.current = 0;
+      lastConnectionStateRef.current = currentConnectionState;
+      
+      // Bestehenden Debounce-Timer löschen
+      if (connectionDebounceRef.current) {
+        clearTimeout(connectionDebounceRef.current);
+      }
+      
+      // Stabilisierungsperiode: 3 aufeinanderfolgende gleiche Status-Checks
+      connectionDebounceRef.current = setTimeout(() => {
+        connectionStabilityCountRef.current += 1;
+        
+        // Nach 3 stabilen Checks (6 Sekunden) Status übernehmen
+        if (connectionStabilityCountRef.current >= 3) {
+          console.log(`[useGroupsWebSocket] Stabiler Verbindungsstatus erkannt: ${currentConnectionState}`);
+          setConnected(currentConnectionState);
+          connectionStabilityCountRef.current = 0;
+        } else {
+          // Weitere Überprüfung nach 2 Sekunden
+          updateConnectionStatus();
+        }
+      }, 2000);
+    } else {
+      // Status ist gleich geblieben, erhöhe Stabilitätszähler
+      connectionStabilityCountRef.current += 1;
+      
+      // Nach 3 aufeinanderfolgenden gleichen Checks Status übernehmen
+      if (connectionStabilityCountRef.current >= 3) {
+        if (connected !== currentConnectionState) {
+          console.log(`[useGroupsWebSocket] Stabiler Verbindungsstatus bestätigt: ${currentConnectionState}`);
+          setConnected(currentConnectionState);
+        }
+        connectionStabilityCountRef.current = 0;
+      }
+    }
+  }, [connected]);
 
-  // Status-Updates alle 2 Sekunden prüfen (falls Callbacks nicht funktionieren)
+  // Status-Updates alle 5 Sekunden prüfen (reduziert von 2 Sekunden)
   useEffect(() => {
     updateConnectionStatus(); // Sofort prüfen
-    const interval = setInterval(updateConnectionStatus, 2000);
-    return () => clearInterval(interval);
+    const interval = setInterval(updateConnectionStatus, 5000);
+    return () => {
+      clearInterval(interval);
+      if (connectionDebounceRef.current) {
+        clearTimeout(connectionDebounceRef.current);
+      }
+    };
   }, [updateConnectionStatus]);
 
   // Initiale Daten laden - nur wenn keine initial data bereitgestellt
@@ -104,15 +154,16 @@ export function useGroupsWebSocket(initialData?: GroupsData) {
   useGlobalWebSocket({
     onMessage: handleWebSocketMessage,
     onOpen: () => {
-      setConnected(true);
-      console.log('[useGroupsWebSocket] WebSocket verbunden');
+      // Verbindung nur nach Stabilisierungsperiode als "connected" markieren
+      console.log('[useGroupsWebSocket] WebSocket verbunden - warte auf Stabilisierung');
     },
     onClose: () => {
-      setConnected(false);
-      console.log('[useGroupsWebSocket] WebSocket getrennt');
+      // Sofortiges Offline-Signal nur bei WebSocket-Fehlern, nicht bei Netzwerkwechseln
+      console.log('[useGroupsWebSocket] WebSocket getrennt - warte auf Stabilisierung');
     },
     onError: (err) => {
       console.error('[useGroupsWebSocket] WebSocket-Fehler:', err);
+      // Bei Fehlern sofort als disconnected markieren
       setConnected(false);
     },
     topicFilter: [
