@@ -21,6 +21,52 @@ interface BottomBarProps {
   isTemporarySession?: boolean;
 }
 
+// Custom Hook für Auto-Hide Navigation
+function useAutoHideNavigation() {
+  const [isVisible, setIsVisible] = useState(true);
+  const [lastScrollY, setLastScrollY] = useState(0);
+  const [ticking, setTicking] = useState(false);
+
+  useEffect(() => {
+    const updateScrollDir = () => {
+      const scrollY = window.pageYOffset || document.documentElement.scrollTop;
+      
+      if (Math.abs(scrollY - lastScrollY) < 10) {
+        setTicking(false);
+        return;
+      }
+      
+      // Nach unten scrollen = ausblenden (außer ganz oben)
+      if (scrollY > lastScrollY && scrollY > 100) {
+        setIsVisible(false);
+      } 
+      // Nach oben scrollen = einblenden
+      else if (scrollY < lastScrollY) {
+        setIsVisible(true);
+      }
+      // Ganz oben = immer sichtbar
+      else if (scrollY <= 50) {
+        setIsVisible(true);
+      }
+
+      setLastScrollY(scrollY);
+      setTicking(false);
+    };
+
+    const onScroll = () => {
+      if (!ticking) {
+        requestAnimationFrame(updateScrollDir);
+        setTicking(true);
+      }
+    };
+
+    window.addEventListener('scroll', onScroll);
+    return () => window.removeEventListener('scroll', onScroll);
+  }, [lastScrollY, ticking]);
+
+  return isVisible;
+}
+
 const userTabs: Tab[] = [
   { id: 'home', icon: <Calendar size={24} />, label: 'Timeline' },
   { id: 'carpool', icon: <Car size={24} />, label: 'Mitfahren' },
@@ -54,6 +100,9 @@ const BottomBar: React.FC<BottomBarProps> = ({ mode, activeTab, onTabChange, isA
   const isOnline = useNetworkStatus();
   const { deviceType } = useDeviceContext();
   const isMobileLayout = deviceType === 'mobile';
+  
+  // Auto-Hide nur auf mobilen Geräten
+  const isNavVisible = useAutoHideNavigation();
 
   // Admin-Button nur online anzeigen
   const showAdminButtonFinal = showAdminButton && isOnline;
@@ -126,14 +175,23 @@ const BottomBar: React.FC<BottomBarProps> = ({ mode, activeTab, onTabChange, isA
       </div>
     );
   }
+  
   if (isMobileLayout) {
     const barPositionClasses = 'bottom-0 h-16 bg-[#460b6c] border-t-2 border-[#ff9900]';
+    
+    // Auto-Hide Animation: translateY und opacity
+    const hideTransform = isNavVisible ? 'translateY(0)' : 'translateY(100%)';
+    const hideOpacity = isNavVisible ? '1' : '0';
 
     return (
-      <nav className={`main-bar fixed left-0 right-0 z-40 flex items-center ${barPositionClasses} shadow-t`}>
-        <div
-          className="flex w-full justify-between"
-        >
+      <nav 
+        className={`main-bar fixed left-0 right-0 z-40 flex items-center ${barPositionClasses} shadow-t transition-all duration-300 ease-in-out`}
+        style={{
+          transform: hideTransform,
+          opacity: hideOpacity,
+        }}
+      >
+        <div className="flex w-full justify-between">
           {tabs.map(({ id, icon }) => (
             <button
               key={id}
