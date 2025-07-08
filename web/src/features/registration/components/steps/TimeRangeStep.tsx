@@ -2,10 +2,8 @@
 
 import React from 'react';
 import { ChevronLeft, ChevronRight, SwatchBook } from 'lucide-react';
+import { useFestivalDays } from '@/shared/hooks/useFestivalDays';
 import type { FestivalRegisterData } from './types';
-
-// Hardcodierte Festival-Tage - diese ändern sich nie
-const FESTIVAL_DAYS = ["31.07.", "01.08.", "02.08.", "03.08."];
 
 interface TimeRangeStepProps {
   form: FestivalRegisterData;
@@ -24,6 +22,8 @@ const TimeRangeStep: React.FC<TimeRangeStepProps> = ({
   setFromDay, 
   setToDay 
 }) => {
+  const { festivalDays: FESTIVAL_DAYS, loading: festivalDaysLoading } = useFestivalDays();
+
   // Handler für die Änderung des Start-Tages
   const handleFromDayChange = (newFromDay: number) => {
     const fromDayNum = Number(newFromDay);
@@ -55,6 +55,18 @@ const TimeRangeStep: React.FC<TimeRangeStepProps> = ({
     }
     setForm(prev => ({ ...prev, days: newDays }));
   };
+
+  // Show loading state if festival days are still loading
+  if (festivalDaysLoading || FESTIVAL_DAYS.length === 0) {
+    return (
+      <div className="flex flex-col items-center gap-4 w-full">
+        <div className="flex flex-col gap-2 w-full items-center mb-2">
+          <SwatchBook className="inline-block w-7 h-7 text-[#ff9900]" />
+          <span className="text-sm text-[#460b6c]/80 text-center">Festival-Tage werden geladen...</span>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="flex flex-col items-center gap-4 w-full">

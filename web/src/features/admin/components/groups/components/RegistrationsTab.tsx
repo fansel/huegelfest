@@ -47,6 +47,7 @@ import type { RegistrationWithId } from './types';
 import { unlinkUserRegistrationAction, unlinkRegistrationFromUserAction } from '@/features/registration/actions/unlinkRegistration';
 import { deleteRegistrationCompletelyAction } from '@/features/registration/actions/deleteRegistrationCompletely';
 import { toast } from 'react-hot-toast';
+import { useFestivalDays } from '@/shared/hooks/useFestivalDays';
 
 interface RegistrationsTabProps {
   registrations: RegistrationWithId[];
@@ -55,14 +56,13 @@ interface RegistrationsTabProps {
   onRefreshRegistrations?: () => void;
 }
 
-const FESTIVAL_DAYS = ["31.07.", "01.08.", "02.08.", "03.08."];
-
 export function RegistrationsTab({
   registrations,
   onSelectRegistration,
   onEditRegistration,
   onRefreshRegistrations
 }: RegistrationsTabProps) {
+  const { festivalDays: FESTIVAL_DAYS, loading: festivalDaysLoading } = useFestivalDays();
   const [rowsPerPage, setRowsPerPage] = useState(30);
   const [globalFilter, setGlobalFilter] = useState('');
   

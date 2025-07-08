@@ -188,6 +188,7 @@ export async function getAllUsers() {
       _id: String(user._id),
       name: user.name,
       email: user.email,
+      username: user.username, // Add the actual username from the database
       role: user.role,
       groupId: user.groupId?._id?.toString() || user.groupId?.toString(),
       groupName: (user.groupId as any)?.name,

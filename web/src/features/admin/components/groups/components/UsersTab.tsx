@@ -124,7 +124,7 @@ export function UsersTab({
             _id: user._id,
             name: user.name,
             email: user.email,
-            username: user.name.toLowerCase().replace(/\s+/g, ''), // Fallback username without @
+            username: user.username, // Use actual username from database instead of generating fake one
             role: user.role,
             emailVerified: true, // E-Mail-Verifizierung nicht mehr erforderlich
             isShadowUser: user.isShadowUser || false, // Shadow User Status
@@ -289,7 +289,7 @@ export function UsersTab({
           _id: user._id,
           name: user.name,
           email: user.email,
-          username: user.name.toLowerCase().replace(/\s+/g, ''), // Fallback username without @
+          username: user.username, // Use actual username from database instead of generating fake one
           role: user.role,
           emailVerified: true, // E-Mail-Verifizierung nicht mehr erforderlich
           isShadowUser: user.isShadowUser || false, // Shadow User Status

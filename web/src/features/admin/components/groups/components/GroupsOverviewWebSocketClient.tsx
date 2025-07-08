@@ -170,7 +170,7 @@ export function GroupsOverviewWebSocketClient({ initialData }: GroupsOverviewWeb
                 _id: u._id,
                 name: u.name,
                 email: u.email,
-                username: u.name ? u.name.toLowerCase().replace(/\s+/g, '') : undefined,
+                username: u.username, // Use actual username from database instead of generating fake one
                 role: u.role,
                 emailVerified: true, // Default, da nicht im Typ vorhanden
                 isShadowUser: u.isShadowUser === true,
@@ -364,7 +364,7 @@ export function GroupsOverviewWebSocketClient({ initialData }: GroupsOverviewWeb
               _id: u._id,
               name: u.name,
               email: u.email,
-              username: u.name ? u.name.toLowerCase().replace(/\s+/g, '') : undefined,
+              username: u.username, // Use actual username from database instead of generating fake one
               role: u.role,
               emailVerified: true, // Default, da nicht im Typ vorhanden
               isShadowUser: u.isShadowUser === true,

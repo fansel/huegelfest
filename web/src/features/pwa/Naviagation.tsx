@@ -90,6 +90,7 @@ const adminTabs: Tab[] = [
 const signupPhaseTabs: Tab[] = [
   { id: 'signup', icon: <Users size={24} />, label: 'Anmeldung' },
   { id: 'carpool', icon: <Car size={24} />, label: 'Mitfahren' },
+  { id: 'infoboard', icon: <Megaphone size={24} />, label: 'News' },
   { id: 'packlist', icon: <ClipboardList size={24} />, label: 'Packliste' },
   { id: 'concepts', icon: <HelpCircle size={24} />, label: 'FAQ' },
   { id: 'settings', icon: <SettingsIcon size={24} />, label: 'Einstellungen' },

@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import { Button } from '@/shared/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/shared/components/ui/card';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '@/shared/components/ui/dialog';
@@ -19,6 +19,7 @@ import { useNetworkStatus } from '@/shared/hooks/useNetworkStatus';
 import { OfflineDisabled } from '@/shared/components/ui/OfflineDisabledButton';
 import { useAuth } from '@/features/auth/AuthContext';
 import { checkRegistrationStatusAction } from '../actions/register';
+import { useFestivalDays } from '@/shared/hooks/useFestivalDays';
 import useSWR from 'swr';
 
 interface Ride {
@@ -38,22 +39,34 @@ interface CarpoolClientProps {
   initialRides: Ride[];
 }
 
-const festivalDates = [
-  { date: '2025-07-30', label: '30. Juli 2025' },
-  { date: '2025-07-31', label: '31. Juli 2025' },
-  { date: '2025-08-01', label: '1. August 2025' },
-  { date: '2025-08-02', label: '2. August 2025' },
-  { date: '2025-08-03', label: '3. August 2025' },
-];
-
 const festivalLocation = 'Hügelfest';
 
 export default function CarpoolClient({ initialRides }: CarpoolClientProps) {
   const { deviceType } = useDeviceContext();
   const { isOnline } = useNetworkStatus();
   const { user } = useAuth();
+  const { festivalDays, loading: festivalDaysLoading } = useFestivalDays();
   const isMobile = deviceType === 'mobile';
   
+  // Transform festival days to the expected format for carpool dates
+  const festivalDates = useMemo(() => {
+    if (!festivalDays || festivalDays.length === 0) return [];
+    
+    // Convert from "31.07." format to date objects and create the expected structure
+    const currentYear = new Date().getFullYear();
+    return [
+      { date: `${currentYear}-07-30`, label: '30. Juli 2025' }, // Day before festival
+      ...festivalDays.map((day, index) => {
+        // Parse day format "31.07." to create proper date
+        const [dayNum, month] = day.replace('.', '').split('.');
+        const monthNames = ['', 'Januar', 'Februar', 'März', 'April', 'Mai', 'Juni', 'Juli', 'August', 'September', 'Oktober', 'November', 'Dezember'];
+        const formattedDate = `${currentYear + 1}-${month.padStart(2, '0')}-${dayNum.padStart(2, '0')}`;
+        const label = `${dayNum}. ${monthNames[parseInt(month)]} ${currentYear + 1}`;
+        return { date: formattedDate, label };
+      })
+    ];
+  }, [festivalDays]);
+
   // SWR für Carpool-Daten mit verbessertem Offline-Caching
   const { data: rides = [], mutate, isLoading } = useSWR<Ride[]>(
     'carpool-rides',
@@ -80,7 +93,7 @@ export default function CarpoolClient({ initialRides }: CarpoolClientProps) {
     direction: 'hinfahrt',
     start: '',
     destination: festivalLocation,
-    date: festivalDates[1].date,
+    date: festivalDates.length > 1 ? festivalDates[1].date : '',
     time: '',
     seats: 1,
     contact: '',
@@ -88,6 +101,13 @@ export default function CarpoolClient({ initialRides }: CarpoolClientProps) {
 
   const [passengerContact, setPassengerContact] = useState('');
   const [showPassengerContact, setShowPassengerContact] = useState<{ name: string, contact?: string } | null>(null);
+
+  // Update default date when festivalDates become available
+  useEffect(() => {
+    if (festivalDates.length > 1 && !newRide.date) {
+      setNewRide(prev => ({ ...prev, date: festivalDates[1].date }));
+    }
+  }, [festivalDates, newRide.date]);
 
   // Lade Anmeldedaten für automatische Namens-Befüllung
   useEffect(() => {
@@ -145,7 +165,7 @@ export default function CarpoolClient({ initialRides }: CarpoolClientProps) {
         direction: 'hinfahrt',
         start: '',
         destination: festivalLocation,
-        date: festivalDates[1].date,
+        date: festivalDates.length > 1 ? festivalDates[1].date : '',
         time: '',
         seats: 1,
         contact: '',
@@ -237,6 +257,20 @@ export default function CarpoolClient({ initialRides }: CarpoolClientProps) {
       });
     }
   };
+
+  // Show loading state if festival days are still loading
+  if (festivalDaysLoading || festivalDates.length === 0) {
+    return (
+      <div className="w-full max-w-4xl mx-auto">
+        <div className="flex justify-center py-12">
+          <div className="flex flex-col items-center gap-4">
+            <div className="animate-spin rounded-full h-12 w-12 border-4 border-[#ff9900] border-t-transparent"></div>
+            <span className="text-[#ff9900] text-lg">Festival-Daten werden geladen...</span>
+          </div>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="w-full max-w-4xl mx-auto">
