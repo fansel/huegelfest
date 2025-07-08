@@ -15,7 +15,7 @@ export { EquipmentStep } from './EquipmentStep';
 export { SleepingStep } from './SleepingStep';
 export { MedicStep } from './MedicStep';
 export { ConcernsStep } from './ConcernsStep';
-export { SummaryStep } from './SummaryStep';
+export { default as SummaryStep } from './SummaryStep';
 export { ContactStep } from './ContactStep';
 
 export * from './types';

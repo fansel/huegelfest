@@ -47,7 +47,7 @@ import type { RegistrationWithId } from './types';
 import { unlinkUserRegistrationAction, unlinkRegistrationFromUserAction } from '@/features/registration/actions/unlinkRegistration';
 import { deleteRegistrationCompletelyAction } from '@/features/registration/actions/deleteRegistrationCompletely';
 import { toast } from 'react-hot-toast';
-import { useFestivalDays } from '@/shared/hooks/useFestivalDays';
+import { useCentralFestivalDays } from '@/shared/hooks/useCentralFestivalDays';
 
 interface RegistrationsTabProps {
   registrations: RegistrationWithId[];
@@ -62,9 +62,26 @@ export function RegistrationsTab({
   onEditRegistration,
   onRefreshRegistrations
 }: RegistrationsTabProps) {
-  const { festivalDays: FESTIVAL_DAYS, loading: festivalDaysLoading } = useFestivalDays();
+  const { data: centralDays, loading: festivalDaysLoading } = useCentralFestivalDays();
   const [rowsPerPage, setRowsPerPage] = useState(30);
   const [globalFilter, setGlobalFilter] = useState('');
+  
+  // Convert central festival days to legacy format for display
+  const FESTIVAL_DAYS = useMemo(() => {
+    if (!centralDays || centralDays.length === 0) return [];
+    
+    return centralDays.map((day: any) => {
+      try {
+        const date = new Date(day.date);
+        const dayNum = date.getDate().toString().padStart(2, '0');
+        const month = (date.getMonth() + 1).toString().padStart(2, '0');
+        return `${dayNum}.${month}.`;
+      } catch (error) {
+        console.error('Error converting festival day:', day, error);
+        return '01.01.'; // Fallback
+      }
+    });
+  }, [centralDays]);
   
   // Registration filters
   const [sleepFilter, setSleepFilter] = useState('');

@@ -1,20 +1,33 @@
 "use client";
 
-import React from 'react';
+import React, { useMemo } from 'react';
 import { User, Bed, Car as CarIcon, SwatchBook, AlertTriangle, Shield, Camera, Stethoscope, ChefHat, Lightbulb, Music, Wrench, MessageCircle, Phone } from 'lucide-react';
 import { FormStep } from './FormComponents';
 import type { StepProps } from './types';
-import { useFestivalDays } from '@/shared/hooks/useFestivalDays';
+import { useCentralFestivalDays } from '@/shared/hooks/useCentralFestivalDays';
 
-export function SummaryStep({ form, setForm }: StepProps) {
-  const { festivalDays: FESTIVAL_DAYS, loading } = useFestivalDays();
+export default function SummaryStep({ form }: StepProps) {
+  const { data: centralDays, loading: festivalDaysLoading } = useCentralFestivalDays();
 
-  if (loading) {
-    return (
-      <div className="text-center text-gray-500 py-4">
-        Lade Zusammenfassung...
-      </div>
-    );
+  // Convert central festival days to legacy format for display
+  const FESTIVAL_DAYS = useMemo(() => {
+    if (!centralDays || centralDays.length === 0) return [];
+    
+    return centralDays.map((day: any) => {
+      try {
+        const date = new Date(day.date);
+        const dayNum = date.getDate().toString().padStart(2, '0');
+        const month = (date.getMonth() + 1).toString().padStart(2, '0');
+        return `${dayNum}.${month}.`;
+      } catch (error) {
+        console.error('Error converting festival day for summary:', day, error);
+        return '01.01.'; // Fallback
+      }
+    });
+  }, [centralDays]);
+
+  if (festivalDaysLoading) {
+    return <div>Lade Festival-Daten...</div>;
   }
 
   return (

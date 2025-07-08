@@ -1,6 +1,6 @@
 "use client";
 
-import React from 'react';
+import React, { useEffect, useMemo } from 'react';
 import { ChevronLeft, ChevronRight, SwatchBook } from 'lucide-react';
 import { useCentralFestivalDays } from '@/shared/hooks/useCentralFestivalDays';
 import type { FestivalRegisterData } from './types';
@@ -25,12 +25,48 @@ const TimeRangeStep: React.FC<TimeRangeStepProps> = ({
   const { data: centralFestivalDays, loading: festivalDaysLoading } = useCentralFestivalDays();
 
   // Convert central festival days to the legacy format that existing registrations expect
-  const FESTIVAL_DAYS = centralFestivalDays.map(day => {
-    const date = new Date(day.date);
-    const dayNum = date.getDate().toString().padStart(2, '0');
-    const month = (date.getMonth() + 1).toString().padStart(2, '0');
-    return `${dayNum}.${month}.`;
-  });
+  const FESTIVAL_DAYS = useMemo(() => {
+    if (!centralFestivalDays || centralFestivalDays.length === 0) return [];
+    
+    return centralFestivalDays.map(day => {
+      try {
+        const date = new Date(day.date);
+        const dayNum = date.getDate().toString().padStart(2, '0');
+        const month = (date.getMonth() + 1).toString().padStart(2, '0');
+        return `${dayNum}.${month}.`;
+      } catch (error) {
+        console.error('Error converting festival day:', day, error);
+        return '01.01.'; // Fallback
+      }
+    });
+  }, [centralFestivalDays]);
+
+  // Update form data whenever the day selection changes
+  useEffect(() => {
+    if (FESTIVAL_DAYS.length > 0) {
+      // Debounce the update to prevent rapid-fire changes
+      const timeoutId = setTimeout(() => {
+        const selectedDays: number[] = [];
+        for (let i = fromDay; i <= toDay; i++) {
+          selectedDays.push(i);
+        }
+        
+        // Only update if the days array actually changed to prevent infinite loops
+        const currentDays = form.days || [];
+        const daysChanged = selectedDays.length !== currentDays.length || 
+                           selectedDays.some((day, index) => day !== currentDays[index]);
+        
+        if (daysChanged) {
+          setForm(prev => ({
+            ...prev,
+            days: selectedDays
+          }));
+        }
+      }, 10); // Very short debounce to batch rapid changes
+      
+      return () => clearTimeout(timeoutId);
+    }
+  }, [fromDay, toDay, setForm]);
 
   // Show loading state if festival days are still loading
   if (festivalDaysLoading || FESTIVAL_DAYS.length === 0) {
@@ -46,19 +82,29 @@ const TimeRangeStep: React.FC<TimeRangeStepProps> = ({
 
   // Handler für die Änderung des Start-Tages
   const handleFromDayChange = (newFromDay: number) => {
-    setFromDay(newFromDay);
-    // Sicherstellen, dass der End-Tag nicht vor dem Start-Tag liegt
-    if (newFromDay > toDay) {
-      setToDay(newFromDay);
+    if (newFromDay >= 0 && newFromDay < FESTIVAL_DAYS.length) {
+      // Use React's automatic batching to update both states together
+      React.startTransition(() => {
+        setFromDay(newFromDay);
+        // Sicherstellen, dass der End-Tag nicht vor dem Start-Tag liegt
+        if (newFromDay > toDay) {
+          setToDay(newFromDay);
+        }
+      });
     }
   };
 
   // Handler für die Änderung des End-Tages  
   const handleToDayChange = (newToDay: number) => {
-    setToDay(newToDay);
-    // Sicherstellen, dass der Start-Tag nicht nach dem End-Tag liegt
-    if (newToDay < fromDay) {
-      setFromDay(newToDay);
+    if (newToDay >= 0 && newToDay < FESTIVAL_DAYS.length) {
+      // Use React's automatic batching to update both states together
+      React.startTransition(() => {
+        setToDay(newToDay);
+        // Sicherstellen, dass der Start-Tag nicht nach dem End-Tag liegt
+        if (newToDay < fromDay) {
+          setFromDay(newToDay);
+        }
+      });
     }
   };
 
@@ -81,16 +127,16 @@ const TimeRangeStep: React.FC<TimeRangeStepProps> = ({
           <div className="flex items-center justify-between">
             <button
               type="button"
-              onClick={() => handleFromDayChange(Math.max(0, fromDay - 1))}
+              onClick={() => handleFromDayChange(fromDay - 1)}
               disabled={fromDay <= 0}
-              className="p-2 text-gray-400 hover:text-gray-600 disabled:opacity-50"
+              className="p-2 text-gray-400 hover:text-gray-600 disabled:opacity-50 disabled:cursor-not-allowed"
             >
               <ChevronLeft className="h-5 w-5" />
             </button>
             
             <div className="text-center">
               <div className="text-lg font-semibold text-gray-900">
-                {FESTIVAL_DAYS[fromDay]}
+                {FESTIVAL_DAYS[fromDay] || 'Laden...'}
               </div>
               <div className="text-sm text-gray-500">
                 Tag {fromDay + 1}
@@ -99,9 +145,9 @@ const TimeRangeStep: React.FC<TimeRangeStepProps> = ({
             
             <button
               type="button"
-              onClick={() => handleFromDayChange(Math.min(FESTIVAL_DAYS.length - 1, fromDay + 1))}
+              onClick={() => handleFromDayChange(fromDay + 1)}
               disabled={fromDay >= FESTIVAL_DAYS.length - 1}
-              className="p-2 text-gray-400 hover:text-gray-600 disabled:opacity-50"
+              className="p-2 text-gray-400 hover:text-gray-600 disabled:opacity-50 disabled:cursor-not-allowed"
             >
               <ChevronRight className="h-5 w-5" />
             </button>
@@ -116,16 +162,16 @@ const TimeRangeStep: React.FC<TimeRangeStepProps> = ({
           <div className="flex items-center justify-between">
             <button
               type="button"
-              onClick={() => handleToDayChange(Math.max(fromDay, toDay - 1))}
+              onClick={() => handleToDayChange(toDay - 1)}
               disabled={toDay <= fromDay}
-              className="p-2 text-gray-400 hover:text-gray-600 disabled:opacity-50"
+              className="p-2 text-gray-400 hover:text-gray-600 disabled:opacity-50 disabled:cursor-not-allowed"
             >
               <ChevronLeft className="h-5 w-5" />
             </button>
             
             <div className="text-center">
               <div className="text-lg font-semibold text-gray-900">
-                {FESTIVAL_DAYS[toDay]}
+                {FESTIVAL_DAYS[toDay] || 'Laden...'}
               </div>
               <div className="text-sm text-gray-500">
                 Tag {toDay + 1}
@@ -134,9 +180,9 @@ const TimeRangeStep: React.FC<TimeRangeStepProps> = ({
             
             <button
               type="button"
-              onClick={() => handleToDayChange(Math.min(FESTIVAL_DAYS.length - 1, toDay + 1))}
+              onClick={() => handleToDayChange(toDay + 1)}
               disabled={toDay >= FESTIVAL_DAYS.length - 1}
-              className="p-2 text-gray-400 hover:text-gray-600 disabled:opacity-50"
+              className="p-2 text-gray-400 hover:text-gray-600 disabled:opacity-50 disabled:cursor-not-allowed"
             >
               <ChevronRight className="h-5 w-5" />
             </button>

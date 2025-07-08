@@ -15,7 +15,7 @@ import { createRideAction } from '../actions/createRide';
 import { updateRideAction } from '../actions/updateRide';
 import { deleteRideAction } from '../actions/deleteRide';
 import { useDeviceContext } from '@/shared/contexts/DeviceContext';
-import { useFestivalDays } from '@/shared/hooks/useFestivalDays';
+import { useCentralFestivalDays } from '@/shared/hooks/useCentralFestivalDays';
 
 interface Ride {
   _id?: string;
@@ -34,27 +34,32 @@ const festivalLocation = 'Hügelfest';
 
 export default function CarpoolManager() {
   const { deviceType } = useDeviceContext();
-  const { festivalDays, loading: festivalDaysLoading } = useFestivalDays();
+  const { data: centralDays, loading: festivalDaysLoading } = useCentralFestivalDays();
   const isMobile = deviceType === 'mobile';
   
-  // Transform festival days to the expected format for carpool dates
+  // Transform central festival days to the expected format for carpool dates
   const festivalDates = useMemo(() => {
-    if (!festivalDays || festivalDays.length === 0) return [];
+    if (!centralDays || centralDays.length === 0) return [];
     
-    // Convert from "31.07." format to date objects and create the expected structure
-    const currentYear = new Date().getFullYear();
+    // Convert central festival days to proper date format with labels
     return [
-      { date: `${currentYear}-07-30`, label: '30. Juli 2025' }, // Day before festival
-      ...festivalDays.map((day, index) => {
-        // Parse day format "31.07." to create proper date
-        const [dayNum, month] = day.replace('.', '').split('.');
-        const monthNames = ['', 'Januar', 'Februar', 'März', 'April', 'Mai', 'Juni', 'Juli', 'August', 'September', 'Oktober', 'November', 'Dezember'];
-        const formattedDate = `${currentYear + 1}-${month.padStart(2, '0')}-${dayNum.padStart(2, '0')}`;
-        const label = `${dayNum}. ${monthNames[parseInt(month)]} ${currentYear + 1}`;
-        return { date: formattedDate, label };
+      ...centralDays.map((day: any, index: number) => {
+        try {
+          const date = new Date(day.date);
+          const dayNum = date.getDate();
+          const month = date.getMonth() + 1;
+          const monthNames = ['', 'Januar', 'Februar', 'März', 'April', 'Mai', 'Juni', 'Juli', 'August', 'September', 'Oktober', 'November', 'Dezember'];
+          const formattedDate = `2025-${month.toString().padStart(2, '0')}-${dayNum.toString().padStart(2, '0')}`;
+          const label = `${dayNum}. ${monthNames[month]} 2025`;
+          
+          return { date: formattedDate, label };
+        } catch (error) {
+          console.error('Error converting festival day for carpool:', day, error);
+          return { date: '2025-07-31', label: '31. Juli 2025' }; // Fallback
+        }
       })
     ];
-  }, [festivalDays]);
+  }, [centralDays]);
   
   const [rides, setRides] = useState<Ride[]>([]);
   const [loading, setLoading] = useState(true);
@@ -161,7 +166,7 @@ export default function CarpoolManager() {
       const updatedPassengers = [...ride.passengers, { name: passengerName.trim(), contact: passengerContact.trim() }];
       await updateRideAction(rideId, { passengers: updatedPassengers });
       
-      toast.success('Du bist jetzt als Mitfahrer angemeldet!');
+      toast.success('Du bist jetzt als Mitfahrer:in angemeldet!');
       setPassengerName('');
       setPassengerContact('');
       setShowPassengerDialog(null);
@@ -180,7 +185,7 @@ export default function CarpoolManager() {
       const updatedPassengers = ride.passengers.filter(p => p.name !== passengerToRemove);
       await updateRideAction(rideId, { passengers: updatedPassengers });
       
-      toast.success('Mitfahrer entfernt');
+      toast.success('Mitfahrer:in entfernt');
       loadRides();
     } catch (error) {
       console.error('Fehler beim Entfernen:', error);
@@ -287,7 +292,7 @@ export default function CarpoolManager() {
             </DialogHeader>
             <div className="space-y-4">
               <div>
-                <Label className="text-[#460b6c]">Fahrer *</Label>
+                <Label className="text-[#460b6c]">Fahrer:in *</Label>
                 <Input
                   value={newRide.driver}
                   onChange={(e) => setNewRide({ ...newRide, driver: e.target.value })}
@@ -493,7 +498,7 @@ export default function CarpoolManager() {
                             <Input
                               value={passengerName}
                               onChange={(e) => setPassengerName(e.target.value)}
-                              placeholder="Wie soll dich der Fahrer nennen?"
+                              placeholder="Wie soll dich der:die Fahrer:in nennen?"
                               className="mt-1"
                             />
                           </div>
@@ -502,7 +507,7 @@ export default function CarpoolManager() {
                             <Textarea
                               value={passengerContact}
                               onChange={(e) => setPassengerContact(e.target.value)}
-                              placeholder="z.B. Telegram: @user123 / WhatsApp: Max / Nachricht an den Fahrer ..."
+                              placeholder="z.B. Telegram: @user123 / WhatsApp: Max / Nachricht an den:die Fahrer:in ..."
                               className="mt-1 min-h-[48px] resize-none"
                             />
                           </div>

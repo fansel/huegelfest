@@ -13,10 +13,10 @@ import { registerFestival, checkRegistrationStatusAction } from './actions/regis
 import { useDeviceContext } from "@/shared/contexts/DeviceContext";
 import { useAuth } from "@/features/auth/AuthContext";
 import Cookies from 'js-cookie';
-import { useFestivalDays } from '@/shared/hooks/useFestivalDays';
+import { useCentralFestivalDays } from '@/shared/hooks/useCentralFestivalDays';
 import { ShadowUserBlock } from '@/shared/components/ShadowUserBlock';
 import type { FestivalRegisterData, FestivalRegisterDataWithStatus } from './components/steps/types';
-import { defaultData } from './components/steps/types';
+import { defaultData, createDefaultDataWithAllDays } from './components/steps/types';
 
 // Import step components
 import {
@@ -58,8 +58,16 @@ const LOCAL_STORAGE_KEY = 'festival_register_form';
 export default function FestivalRegisterForm({ onRegister, setCookies = true, skipRegistrationCheck = false }: FestivalRegisterFormProps) {
   const { deviceType } = useDeviceContext();
   const { user, isLoading: authLoading, refreshSession } = useAuth();
-  const { festivalDays: FESTIVAL_DAYS, loading: festivalDaysLoading } = useFestivalDays();
+  const { data: centralFestivalDays, loading: festivalDaysLoading } = useCentralFestivalDays();
   const isMobile = deviceType === "mobile";
+  
+  // Convert central festival days to the legacy format that existing registrations expect
+  const FESTIVAL_DAYS = centralFestivalDays.map(day => {
+    const date = new Date(day.date);
+    const dayNum = date.getDate().toString().padStart(2, '0');
+    const month = (date.getMonth() + 1).toString().padStart(2, '0');
+    return `${dayNum}.${month}.`;
+  });
   
   // ✅ Shadow User Check - Shadow Users sehen die Anmeldung nicht, außer bei Nachmeldung
   if (!skipRegistrationCheck && user && (user as any).isShadowUser) {
@@ -140,7 +148,6 @@ export default function FestivalRegisterForm({ onRegister, setCookies = true, sk
       label: 'Zeitraum',
       content: <TimeRangeStep form={form} setForm={setForm} fromDay={fromDay} toDay={toDay} setFromDay={setFromDay} setToDay={setToDay} />,
       isValid: fromDay <= toDay,
-      onNext: () => setForm(f => ({ ...f, days: Array.from({ length: toDay - fromDay + 1 }, (_, i) => i + fromDay) })),
     },
     {
       label: 'Finanzkonzept',
@@ -246,26 +253,32 @@ export default function FestivalRegisterForm({ onRegister, setCookies = true, sk
     }
   }, [FESTIVAL_DAYS, toDay]);
   
+  // Initialize form with all festival days selected when data loads
+  useEffect(() => {
+    if (FESTIVAL_DAYS.length > 0 && form.days.length === 0) {
+      const allDaysData = createDefaultDataWithAllDays(FESTIVAL_DAYS.length);
+      setForm(prev => ({
+        ...prev,
+        days: allDaysData.days
+      }));
+      setFromDay(0);
+      setToDay(FESTIVAL_DAYS.length - 1);
+    }
+  }, [FESTIVAL_DAYS.length, form.days.length]);
+  
   // Synchronisiere fromDay/toDay mit form.days wenn Daten geladen werden
   useEffect(() => {
     if (form.days && form.days.length > 0) {
       const minDay = Math.min(...form.days);
       const maxDay = Math.max(...form.days);
       
-      // Nur aktualisieren wenn sich die Werte geändert haben
+      // Only update if the values actually changed to prevent infinite loops
       if (minDay !== fromDay || maxDay !== toDay) {
-        console.log('[FestivalRegisterForm] Synchronisiere Zeitraumauswahl:', {
-          formDays: form.days,
-          newFromDay: minDay,
-          newToDay: maxDay,
-          currentFromDay: fromDay,
-          currentToDay: toDay
-        });
         setFromDay(minDay);
         setToDay(maxDay);
       }
     }
-  }, [form.days, fromDay, toDay]);
+  }, [form.days]);
   
   // Debug: Überwache form State Änderungen
   useEffect(() => {

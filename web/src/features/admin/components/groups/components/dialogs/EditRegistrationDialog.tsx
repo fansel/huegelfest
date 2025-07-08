@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '@/shared/components/ui/dialog';
 import { Button } from "@/shared/components/ui/button";
 import { Input } from "@/shared/components/ui/input";
@@ -10,7 +10,7 @@ import { Popover, PopoverContent, PopoverTrigger } from "@/shared/components/ui/
 import { toast } from "react-hot-toast";
 import { updateRegistrationAction } from '../../../../../registration/actions/updateRegistration';
 import type { RegistrationWithId } from '../types';
-import { useFestivalDays } from '@/shared/hooks/useFestivalDays';
+import { useCentralFestivalDays } from '@/shared/hooks/useCentralFestivalDays';
 import { User, Calendar, CarIcon, Bed, Phone, Shield, Stethoscope, ChefHat, Camera, Lightbulb, Info, Euro, AlertTriangle } from 'lucide-react';
 import { globalWebSocketManager } from '@/shared/utils/globalWebSocketManager';
 
@@ -27,9 +27,26 @@ export function EditRegistrationDialog({
   onOpenChange, 
   onRegistrationUpdated 
 }: EditRegistrationDialogProps) {
-  const { festivalDays: FESTIVAL_DAYS, loading: festivalDaysLoading } = useFestivalDays();
+  const { data: centralDays, loading: festivalDaysLoading } = useCentralFestivalDays();
   const [formData, setFormData] = useState<Partial<RegistrationWithId>>({});
   const [loading, setLoading] = useState(false);
+
+  // Convert central festival days to legacy format for display
+  const FESTIVAL_DAYS = useMemo(() => {
+    if (!centralDays || centralDays.length === 0) return [];
+    
+    return centralDays.map((day: any) => {
+      try {
+        const date = new Date(day.date);
+        const dayNum = date.getDate().toString().padStart(2, '0');
+        const month = (date.getMonth() + 1).toString().padStart(2, '0');
+        return `${dayNum}.${month}.`;
+      } catch (error) {
+        console.error('Error converting festival day:', day, error);
+        return '01.01.'; // Fallback
+      }
+    });
+  }, [centralDays]);
 
   // Initialize form data when registration changes
   useEffect(() => {

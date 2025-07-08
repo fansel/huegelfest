@@ -8,7 +8,7 @@ import { Input } from '@/shared/components/ui/input';
 import { Label } from '@/shared/components/ui/label';
 import { Textarea } from '@/shared/components/ui/textarea';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/shared/components/ui/select';
-import { Car, MapPin, Clock, Users, Phone, Plus, Trash2, Calendar, ArrowRight, ArrowLeft, ChevronRight, Filter } from 'lucide-react';
+import { Car, MapPin, Clock, Users, Phone, Plus, Trash2, Calendar, User, ChevronRight, Filter } from 'lucide-react';
 import { toast } from 'react-hot-toast';
 import { getRidesAction } from '../actions/getRides';
 import { createRideAction } from '../actions/createRide';
@@ -19,7 +19,7 @@ import { useNetworkStatus } from '@/shared/hooks/useNetworkStatus';
 import { OfflineDisabled } from '@/shared/components/ui/OfflineDisabledButton';
 import { useAuth } from '@/features/auth/AuthContext';
 import { checkRegistrationStatusAction } from '../actions/register';
-import { useFestivalDays } from '@/shared/hooks/useFestivalDays';
+import { useCentralFestivalDays } from '@/shared/hooks/useCentralFestivalDays';
 import useSWR from 'swr';
 
 interface Ride {
@@ -45,27 +45,29 @@ export default function CarpoolClient({ initialRides }: CarpoolClientProps) {
   const { deviceType } = useDeviceContext();
   const { isOnline } = useNetworkStatus();
   const { user } = useAuth();
-  const { festivalDays, loading: festivalDaysLoading } = useFestivalDays();
+  const { data: centralFestivalDays, loading: festivalDaysLoading } = useCentralFestivalDays();
   const isMobile = deviceType === 'mobile';
   
   // Transform festival days to the expected format for carpool dates
   const festivalDates = useMemo(() => {
-    if (!festivalDays || festivalDays.length === 0) return [];
+    if (!centralFestivalDays || centralFestivalDays.length === 0) return [];
     
-    // Convert from "31.07." format to date objects and create the expected structure
-    const currentYear = new Date().getFullYear();
+    // Convert central festival days to proper date format with labels
     return [
-      { date: `${currentYear}-07-30`, label: '30. Juli 2025' }, // Day before festival
-      ...festivalDays.map((day, index) => {
-        // Parse day format "31.07." to create proper date
-        const [dayNum, month] = day.replace('.', '').split('.');
+      ...centralFestivalDays.map(day => {
+        const date = new Date(day.date);
+        const year = date.getFullYear();
+        const month = (date.getMonth() + 1).toString().padStart(2, '0');
+        const dayNum = date.getDate().toString().padStart(2, '0');
+        
         const monthNames = ['', 'Januar', 'Februar', 'März', 'April', 'Mai', 'Juni', 'Juli', 'August', 'September', 'Oktober', 'November', 'Dezember'];
-        const formattedDate = `${currentYear + 1}-${month.padStart(2, '0')}-${dayNum.padStart(2, '0')}`;
-        const label = `${dayNum}. ${monthNames[parseInt(month)]} ${currentYear + 1}`;
+        const formattedDate = `${year}-${month}-${dayNum}`;
+        const label = `${dayNum}. ${monthNames[parseInt(month)]} ${year}`;
+        
         return { date: formattedDate, label };
       })
     ];
-  }, [festivalDays]);
+  }, [centralFestivalDays]);
 
   // SWR für Carpool-Daten mit verbessertem Offline-Caching
   const { data: rides = [], mutate, isLoading } = useSWR<Ride[]>(
@@ -200,7 +202,7 @@ export default function CarpoolClient({ initialRides }: CarpoolClientProps) {
       const updatedPassengers = [...ride.passengers, { name: passengerName.trim(), contact: passengerContact.trim() }];
       await updateRideAction(rideId, { passengers: updatedPassengers });
       
-      toast.success('Du bist jetzt als Mitfahrer angemeldet!');
+      toast.success('Du bist jetzt als Mitfahrer:in angemeldet!');
       setPassengerName(registeredName || '');
       setPassengerContact('');
       setShowPassengerDialog(null);
@@ -219,7 +221,7 @@ export default function CarpoolClient({ initialRides }: CarpoolClientProps) {
       const updatedPassengers = ride.passengers.filter(p => p.name !== passengerToRemove);
       await updateRideAction(rideId, { passengers: updatedPassengers });
       
-      toast.success('Mitfahrer entfernt');
+      toast.success('Mitfahrer:in entfernt');
       mutate();
     } catch (error) {
       console.error('Fehler beim Entfernen:', error);
@@ -369,7 +371,7 @@ export default function CarpoolClient({ initialRides }: CarpoolClientProps) {
               </DialogHeader>
               <div className="space-y-4">
                 <div>
-                  <Label className="text-[#ff9900]">Fahrer *</Label>
+                  <Label className="text-[#ff9900]">Fahrer:in *</Label>
                   <Input
                     value={newRide.driver}
                     onChange={(e) => setNewRide({ ...newRide, driver: e.target.value })}
@@ -565,7 +567,7 @@ export default function CarpoolClient({ initialRides }: CarpoolClientProps) {
                   {/* Passengers */}
                   {ride.passengers.length > 0 && (
                     <div className="mb-3">
-                      <div className="text-white/80 text-sm mb-2">Mitfahrer:</div>
+                      <div className="text-white/80 text-sm mb-2">Mitfahrer:innen:</div>
                       <div className="flex flex-wrap gap-2">
                         {ride.passengers.map((passenger, index) => (
                           <span
@@ -622,7 +624,7 @@ export default function CarpoolClient({ initialRides }: CarpoolClientProps) {
                                 <Input
                                   value={passengerName}
                                   onChange={(e) => setPassengerName(e.target.value)}
-                                  placeholder="Wie soll dich der Fahrer nennen?"
+                                  placeholder="Wie soll dich der:die Fahrer:in nennen?"
                                   className="mt-1 bg-[#460b6c]/50 border-[#ff9900]/30 text-white placeholder:text-white/60"
                                 />
                               </div>
@@ -631,7 +633,7 @@ export default function CarpoolClient({ initialRides }: CarpoolClientProps) {
                                 <Textarea
                                   value={passengerContact}
                                   onChange={(e) => setPassengerContact(e.target.value)}
-                                  placeholder="z.B. Telegram: @user123 / WhatsApp: Max / Nachricht an den Fahrer ..."
+                                  placeholder="z.B. Telegram: @user123 / WhatsApp: Max / Nachricht an den:die Fahrer:in ..."
                                   className="mt-1 min-h-[48px] resize-none bg-[#460b6c]/50 border-[#ff9900]/30 text-white placeholder:text-white/60"
                                 />
                               </div>

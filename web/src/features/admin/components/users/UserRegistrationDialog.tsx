@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/shared/components/ui/dialog';
 import { Button } from '@/shared/components/ui/button';
 import { Badge } from '@/shared/components/ui/badge';
@@ -28,7 +28,7 @@ import {
   Save
 } from 'lucide-react';
 import { getUserRegistrationByUserIdAction } from '@/features/admin/actions/userRegistrationActions';
-import { useFestivalDays } from '@/shared/hooks/useFestivalDays';
+import { useCentralFestivalDays } from '@/shared/hooks/useCentralFestivalDays';
 import { updateStatus } from '@/features/registration/actions/updateRegistrationStatus';
 import toast from 'react-hot-toast';
 
@@ -82,12 +82,29 @@ export function UserRegistrationDialog({
 }: UserRegistrationDialogProps) {
   const { deviceType } = useDeviceContext();
   const isMobile = deviceType === 'mobile';
-  const { festivalDays: FESTIVAL_DAYS, loading: festivalDaysLoading } = useFestivalDays();
+  const { data: centralDays, loading: festivalDaysLoading } = useCentralFestivalDays();
   const [registration, setRegistration] = useState<RegistrationData | null>(null);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [isEditing, setIsEditing] = useState(false);
   const [isUpdating, setIsUpdating] = useState(false);
+
+  // Convert central festival days to legacy format for display
+  const FESTIVAL_DAYS = useMemo(() => {
+    if (!centralDays || centralDays.length === 0) return [];
+    
+    return centralDays.map((day: any) => {
+      try {
+        const date = new Date(day.date);
+        const dayNum = date.getDate().toString().padStart(2, '0');
+        const month = (date.getMonth() + 1).toString().padStart(2, '0');
+        return `${dayNum}.${month}.`;
+      } catch (error) {
+        console.error('Error converting festival day:', day, error);
+        return '01.01.'; // Fallback
+      }
+    });
+  }, [centralDays]);
 
   useEffect(() => {
     if (open && userId) {

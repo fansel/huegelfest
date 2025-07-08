@@ -33,7 +33,7 @@ export interface FestivalRegisterDataWithStatus extends FestivalRegisterData {
 export const defaultData: FestivalRegisterData = {
   name: "",
   email: "",
-  days: [0, 1, 2, 3],
+  days: [], // Will be set dynamically to include all festival days
   isMedic: false,
   travelType: "zug",
   equipment: "",
@@ -52,6 +52,15 @@ export const defaultData: FestivalRegisterData = {
   wantsLineupContribution: false,
   contactType: "none",
   contactInfo: "",
+};
+
+// Helper function to create default data with all festival days selected
+export const createDefaultDataWithAllDays = (festivalDaysCount: number): FestivalRegisterData => {
+  const allDays = Array.from({ length: festivalDaysCount }, (_, i) => i);
+  return {
+    ...defaultData,
+    days: allDays
+  };
 };
 
 export interface StepProps {
