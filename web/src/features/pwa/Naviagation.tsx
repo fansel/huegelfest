@@ -26,27 +26,38 @@ function useAutoHideNavigation() {
   const [isVisible, setIsVisible] = useState(true);
   const [lastScrollY, setLastScrollY] = useState(0);
   const [ticking, setTicking] = useState(false);
+  const [scrollDirection, setScrollDirection] = useState<'up' | 'down' | null>(null);
 
   useEffect(() => {
     const updateScrollDir = () => {
       const scrollY = window.pageYOffset || document.documentElement.scrollTop;
       
-      if (Math.abs(scrollY - lastScrollY) < 10) {
+      // Mindestunterschied für Scroll-Erkennung
+      if (Math.abs(scrollY - lastScrollY) < 8) {
         setTicking(false);
         return;
       }
       
-      // Nach unten scrollen = ausblenden (außer ganz oben)
-      if (scrollY > lastScrollY && scrollY > 100) {
-        setIsVisible(false);
-      } 
-      // Nach oben scrollen = einblenden
-      else if (scrollY < lastScrollY) {
+      const direction = scrollY > lastScrollY ? 'down' : 'up';
+      setScrollDirection(direction);
+      
+      // Ganz oben = immer sichtbar
+      if (scrollY <= 50) {
         setIsVisible(true);
       }
-      // Ganz oben = immer sichtbar
-      else if (scrollY <= 50) {
-        setIsVisible(true);
+      // Nach unten scrollen = ausblenden (ab 100px)
+      else if (direction === 'down' && scrollY > 100) {
+        setIsVisible(false);
+      }
+      // Nach oben scrollen = einblenden, aber nur bei signifikanter Bewegung
+      else if (direction === 'up' && !isVisible) {
+        // Navbar nur einblenden wenn:
+        // 1. Mindestens 30px nach oben gescrollt wurde ODER
+        // 2. Nutzer ist fast wieder am Anfang (unter 150px)
+        const scrollDifference = lastScrollY - scrollY;
+        if (scrollDifference >= 30 || scrollY <= 150) {
+          setIsVisible(true);
+        }
       }
 
       setLastScrollY(scrollY);
@@ -62,7 +73,7 @@ function useAutoHideNavigation() {
 
     window.addEventListener('scroll', onScroll);
     return () => window.removeEventListener('scroll', onScroll);
-  }, [lastScrollY, ticking]);
+  }, [lastScrollY, ticking, isVisible]);
 
   return isVisible;
 }
