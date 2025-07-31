@@ -29,6 +29,7 @@ import { Badge } from '@/shared/components/ui/badge';
 import { Button } from '@/shared/components/ui/button';
 import ChatModal from '@/features/chat/components/ChatModal';
 import { GroupMembersDialog } from './GroupMembersDialog';
+import toast from 'react-hot-toast';
 
 export interface ActivityDay {
   date: Date;
@@ -188,10 +189,24 @@ export default function ActivitiesClient() {
   const handleOpenGroupChat = () => {
     if (userStatus.groupId) {
       // Ensure groupId is a string, handle if it's an object with _id
-      const groupId = typeof userStatus.groupId === 'string' 
-        ? userStatus.groupId 
-        : (userStatus.groupId as any)?._id || String(userStatus.groupId);
+      let groupId: string;
+      
+      if (typeof userStatus.groupId === 'string') {
+        groupId = userStatus.groupId.trim();
+      } else if (userStatus.groupId && typeof userStatus.groupId === 'object' && '_id' in userStatus.groupId) {
+        groupId = String((userStatus.groupId as any)._id);
+      } else {
+        groupId = String(userStatus.groupId);
+      }
+      
+      // Validate groupId is not empty and looks like a valid ObjectId
+      if (!groupId || groupId === 'undefined' || groupId === 'null' || groupId === '[object Object]') {
+        console.error('[ActivitiesClient] Invalid groupId:', userStatus.groupId);
+        toast.error('Fehler: Ungültige Gruppen-ID');
+        return;
+      }
         
+      console.log('[ActivitiesClient] Opening group chat with groupId:', groupId);
       setChatActivityId(null);
       setChatGroupId(groupId);
       setChatTitle(`Gruppen-Chat: ${userStatus.groupName || 'Unbekannte Gruppe'}`);
