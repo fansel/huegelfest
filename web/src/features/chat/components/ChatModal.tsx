@@ -227,7 +227,10 @@ const ChatModal: React.FC<ChatModalProps> = ({
   };
 
   const isResponsibleUser = (userId: string) => {
-    return activityDetails?.responsibleUsers.some(user => user._id === userId) || false;
+    if (activityId && activityDetails?.responsibleUsers) {
+      return activityDetails.responsibleUsers.some(user => user._id === userId) || false;
+    }
+    return false;
   };
 
   if (!isOpen) return null;
@@ -375,36 +378,45 @@ const ChatModal: React.FC<ChatModalProps> = ({
                 </div>
               </div>
             ) : (
-              messages.map((message) => (
-                <div
-                  key={message._id}
-                  className={`p-4 rounded-lg ${getMessageStyle(message)}`}
-                >
-                  <div className="flex items-start justify-between mb-2">
-                    <span className={`text-base font-medium ${
-                      message.isAdminMessage ? 'text-[#ff9900]' : 'text-white'
-                    } flex items-center gap-2`}>
-                      {message.userName}
-                      {message.isAdminMessage && (
-                        <span className="text-xs bg-[#ff9900] text-[#460b6c] px-2 py-1 rounded">
-                          Admin
-                        </span>
-                      )}
-                      {activityId && isResponsibleUser(message.userId) && (
-                        <div title="Hauptverantwortlich">
-                          <Crown className="h-4 w-4 text-[#ff9900]" />
-                        </div>
-                      )}
-                    </span>
-                    <span className="text-sm text-gray-400">
-                      {formatMessageTime(message.createdAt)}
-                    </span>
+              Array.isArray(messages) && messages.length > 0 ? (
+                messages.map((message, index) => (
+                  <div
+                    key={message._id || `message-${index}`}
+                    className={`p-4 rounded-lg ${getMessageStyle(message)}`}
+                  >
+                    <div className="flex items-start justify-between mb-2">
+                      <span className={`text-base font-medium ${
+                        message.isAdminMessage ? 'text-[#ff9900]' : 'text-white'
+                      } flex items-center gap-2`}>
+                        {message.userName}
+                        {message.isAdminMessage && (
+                          <span className="text-xs bg-[#ff9900] text-[#460b6c] px-2 py-1 rounded">
+                            Admin
+                          </span>
+                        )}
+                        {activityId && isResponsibleUser(message.userId) && (
+                          <div title="Hauptverantwortlich">
+                            <Crown className="h-4 w-4 text-[#ff9900]" />
+                          </div>
+                        )}
+                      </span>
+                      <span className="text-sm text-gray-400">
+                        {formatMessageTime(message.createdAt)}
+                      </span>
+                    </div>
+                    <p className="text-white whitespace-pre-wrap">
+                      {message.content}
+                    </p>
                   </div>
-                  <p className="text-white whitespace-pre-wrap">
-                    {message.content}
-                  </p>
+                ))
+              ) : (
+                <div className="flex items-center justify-center py-8">
+                  <div className="text-center">
+                    <MessageCircle className="h-12 w-12 mx-auto mb-3 text-[#ff9900]/40" />
+                    <p className="text-[#ff9900]/60">Keine Nachrichten verfügbar</p>
+                  </div>
                 </div>
-              ))
+              )
             )}
             <div ref={messagesEndRef} />
           </div>
