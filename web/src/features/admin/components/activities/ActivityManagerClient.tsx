@@ -257,6 +257,7 @@ const ActivityManagerClient: React.FC<ActivityManagerProps> = ({ initialData }) 
   const [chatModalOpen, setChatModalOpen] = useState(false);
   const [chatActivityId, setChatActivityId] = useState<string | null>(null);
   const [chatTitle, setChatTitle] = useState('');
+  const [isCreatingActivity, setIsCreatingActivity] = useState(false);
 
   // Form state
   const [activityForm, setActivityForm] = useState<CreateActivityData>({
@@ -405,6 +406,8 @@ const ActivityManagerClient: React.FC<ActivityManagerProps> = ({ initialData }) 
       return;
     }
 
+    setIsCreatingActivity(true);
+
     try {
       const selectedDate = festivalDays[selectedDay].date;
       
@@ -466,6 +469,8 @@ const ActivityManagerClient: React.FC<ActivityManagerProps> = ({ initialData }) 
         console.error('Error creating/updating activity:', error);
       }
       toast.error('Ein unerwarteter Fehler ist aufgetreten');
+    } finally {
+      setIsCreatingActivity(false);
     }
   };
 
@@ -951,9 +956,17 @@ const ActivityManagerClient: React.FC<ActivityManagerProps> = ({ initialData }) 
               </Button>
               <Button 
                 onClick={handleCreateActivity}
-                className="flex-1 bg-[#ff9900] hover:bg-orange-600"
+                disabled={isCreatingActivity}
+                className="flex-1 bg-[#ff9900] hover:bg-orange-600 disabled:opacity-50 disabled:cursor-not-allowed"
               >
-                {editingActivity ? 'Speichern' : 'Erstellen'}
+                {isCreatingActivity ? (
+                  <div className="flex items-center gap-2">
+                    <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white"></div>
+                    {editingActivity ? 'Speichern...' : 'Erstellen...'}
+                  </div>
+                ) : (
+                  editingActivity ? 'Speichern' : 'Erstellen'
+                )}
               </Button>
             </div>
           </div>
